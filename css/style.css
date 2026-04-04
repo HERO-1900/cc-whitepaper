@@ -1717,6 +1717,13 @@ html, body {
   .journey-steps { flex-direction: column; }
   .loop-track { flex-wrap: wrap; gap: 8px; }
   .loop-step .step-label { font-size: 10px; }
+
+  /* Nav bar: hide text labels, keep icons */
+  #topnav { padding: 0 12px; }
+  .nav-btn { padding: 6px 8px; font-size: 12px; }
+  .nav-center { display: none; }
+  .version-badge { display: none; }
+  .shortcuts-btn { display: none; }
 }
 @media (max-width: 600px) {
   #sidebar { display: none; }
@@ -1725,4 +1732,33 @@ html, body {
   .stat-num { font-size: 18px; }
   #command-grid { grid-template-columns: 1fr; padding: 0 12px; }
   #hidden-features-grid { grid-template-columns: 1fr; padding: 0 12px; }
+
+  /* Nav bar: icon-only mode */
+  #topnav { padding: 0 8px; height: 44px; }
+  .nav-left, .nav-right { gap: 4px; }
+  .nav-btn { padding: 6px; gap: 0; }
+  .nav-btn svg { width: 20px; height: 20px; }
+  /* Hide text labels inside nav buttons — show icon only */
+  .nav-btn { font-size: 0; }
+  .nav-btn svg { font-size: initial; }
+  .metaphor-toggle { padding: 4px 6px; font-size: 12px; }
+  #metaphor-label { display: none; }
+
+  /* Welcome page mobile */
+  .welcome-title { font-size: 32px; }
+  .welcome-tagline { font-size: 16px; }
+  .welcome-container { padding: 24px 16px 40px; }
+  .welcome-hero { margin-bottom: 32px; }
+  .metaphor-btn { min-width: unset; width: 100%; }
+  .btn-enter { width: 100%; }
+
+  /* Landing page mobile */
+  .landing-header { padding: 20px 16px; }
+  .title-glow { font-size: 20px; }
+  .subtitle { font-size: 14px; }
+  .stats-strip { flex-wrap: wrap; justify-content: center; gap: 12px; }
+
+  /* Reader view mobile */
+  .chapter-top-nav, .chapter-bottom-nav { padding: 8px 12px; }
+  .chapter-nav-btn { font-size: 12px; padding: 6px 10px; }
 }
