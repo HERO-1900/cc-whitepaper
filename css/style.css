@@ -422,6 +422,36 @@ html, body {
 .toc-chapter.hidden-by-search { display: none; }
 .toc-part.hidden-by-search { display: none; }
 
+/* Search results */
+.search-results { padding: 0; }
+.search-results.hidden { display: none; }
+.search-results-header {
+  font-size: 12px; color: var(--text-muted); padding: 8px 4px 6px;
+  border-bottom: 1px solid var(--border); margin-bottom: 4px;
+}
+.search-result-item {
+  padding: 10px 8px; border-radius: 6px; cursor: pointer;
+  transition: background 0.15s; border-bottom: 1px solid var(--border);
+}
+.search-result-item:hover { background: rgba(0,212,255,0.08); }
+.search-result-item:last-child { border-bottom: none; }
+.search-result-title {
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+  margin-bottom: 3px; line-height: 1.4;
+}
+.search-result-section {
+  font-size: 11px; color: var(--accent-cyan); margin-bottom: 4px;
+  font-weight: 500;
+}
+.search-result-snippet {
+  font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+  word-break: break-word;
+}
+mark.search-highlight {
+  background: rgba(255,214,0,0.3); color: var(--text-primary);
+  padding: 1px 2px; border-radius: 2px;
+}
+
 .btn-back {
   background: none; border: 1px solid var(--border);
   color: var(--text-secondary); padding: 6px 12px; border-radius: 6px;
@@ -1761,4 +1791,196 @@ html, body {
   /* Reader view mobile */
   .chapter-top-nav, .chapter-bottom-nav { padding: 8px 12px; }
   .chapter-nav-btn { font-size: 12px; padding: 6px 10px; }
+
+  /* ===== ENHANCED MOBILE ADAPTATIONS (600px) ===== */
+
+  /* --- Global: prevent horizontal overflow --- */
+  html, body { overflow-x: hidden; }
+  .view { overflow-x: hidden; }
+
+  /* --- Global: font size reductions --- */
+  #chapter-body { font-size: 14px; line-height: 1.75; }
+  #chapter-body h1 { font-size: 22px; margin-bottom: 18px; padding-bottom: 10px; }
+  #chapter-body h2 { font-size: 18px; margin-top: 28px; margin-bottom: 12px; }
+  #chapter-body h3 { font-size: 16px; margin-top: 22px; margin-bottom: 10px; }
+  #chapter-body code { font-size: 12px; }
+  #chapter-body pre code { font-size: 12px; }
+  .section-title { font-size: 20px; }
+  .section-subtitle { font-size: 13px; margin-bottom: 24px; }
+
+  /* --- Global: blockquote mobile padding --- */
+  #chapter-body blockquote { padding: 8px 12px; margin: 12px 0; }
+
+  /* --- Reader: full-width content area --- */
+  #chapter-content { padding: 12px; max-width: 100%; }
+
+  /* --- Reader: code blocks horizontal scroll, no overflow --- */
+  #chapter-body pre {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: calc(100vw - 24px);
+    padding: 12px;
+    font-size: 12px;
+  }
+
+  /* --- Reader: tables horizontal scroll --- */
+  #chapter-body .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: calc(100vw - 24px);
+  }
+  #chapter-body table { font-size: 12px; }
+  #chapter-body th, #chapter-body td { padding: 6px 8px; }
+
+  /* --- Reader: images responsive --- */
+  #chapter-body img { max-width: 100%; height: auto; }
+
+  /* --- Welcome: metaphor buttons full-width vertical --- */
+  .metaphor-choice { flex-direction: column; align-items: stretch; gap: 12px; }
+  .metaphor-btn { width: 100%; min-width: unset; padding: 16px 20px; }
+  .metaphor-emoji { font-size: 28px; }
+  .metaphor-btn strong { font-size: 15px; }
+
+  /* --- Welcome: journey steps vertical --- */
+  .journey-steps { flex-direction: column; gap: 12px; }
+  .journey-step { padding: 16px; }
+  .journey-step h4 { font-size: 14px; }
+  .journey-step p { font-size: 12px; }
+
+  /* --- Welcome: enter button full-width --- */
+  .btn-enter { width: 100%; padding: 14px 24px; font-size: 15px; }
+
+  /* --- Welcome: general --- */
+  .welcome-metaphor-intro h2 { font-size: 18px; margin-bottom: 16px; }
+  .welcome-journey h2 { font-size: 18px; margin-bottom: 16px; }
+  .story-card { padding: 16px; }
+  .story-card h3 { font-size: 14px; }
+  .story-card p { font-size: 13px; }
+  .story-icon { font-size: 28px; margin-bottom: 8px; }
+
+  /* --- Landing: stats strip wrap and center --- */
+  .stats-strip {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 12px;
+  }
+  .stat { min-width: 60px; }
+  .stat-num { font-size: 16px; }
+  .stat-label { font-size: 10px; }
+
+  /* --- Landing: Agent Loop track horizontal scroll or wrap --- */
+  .loop-track {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px 0;
+    gap: 2px;
+    justify-content: flex-start;
+  }
+  .loop-step {
+    min-width: 56px;
+    flex: 0 0 auto;
+    padding: 4px 2px;
+  }
+  .step-label { font-size: 9px; white-space: nowrap; }
+  .step-num { width: 24px; height: 24px; font-size: 10px; }
+  .loop-progress-bar { margin-left: 12px; margin-right: 12px; }
+  .loop-detail { padding: 16px; border-radius: 10px; }
+  .loop-card { min-height: 200px; }
+  .loop-desc { font-size: 13px; }
+  .loop-note { font-size: 12px; padding: 8px 10px; }
+  .loop-step-badge { font-size: 14px; }
+  .loop-controls { gap: 6px; }
+  .loop-btn { padding: 6px 12px; font-size: 13px; }
+  .loop-title { font-size: 22px; }
+  .loop-subtitle { font-size: 13px; }
+
+  /* --- Landing: tool grid single column --- */
+  #tool-grid { grid-template-columns: 1fr; gap: 12px; }
+  .tool-category { padding: 12px; }
+  .tool-category-name { font-size: 13px; }
+  .tool-item { font-size: 11px; padding: 3px 6px; }
+
+  /* --- Landing: command grid single column (confirm) --- */
+  #command-grid { grid-template-columns: 1fr; padding: 0 12px; gap: 12px; }
+  .cmd-category { padding: 12px; }
+  .cmd-category-name { font-size: 13px; }
+  .cmd-name { font-size: 11px; }
+  .cmd-desc { font-size: 10px; }
+  .cmd-search { font-size: 12px; }
+  .cmd-filter-bar { padding: 0 12px; }
+
+  /* --- Landing: hidden features grid single column --- */
+  #hidden-features-grid { grid-template-columns: 1fr; padding: 0 12px; gap: 12px; }
+  .hidden-feature-card { padding: 14px; }
+  .hf-name { font-size: 14px; }
+  .hf-desc { font-size: 12px; }
+  .hf-icon { font-size: 24px; }
+  .hf-meta { font-size: 10px; }
+
+  /* --- Landing: sections padding --- */
+  .landing-section { margin: 40px auto; padding: 24px 12px; }
+
+  /* --- Landing: detail panel full width --- */
+  #detail-panel { width: 100%; max-width: 100vw; padding: 16px; }
+  .panel-title { font-size: 18px; }
+  .panel-subtitle { font-size: 12px; }
+  .panel-description { font-size: 13px; }
+  .panel-stat-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .panel-stat-card { padding: 10px; }
+  .panel-stat-card .val { font-size: 18px; }
+
+  /* --- Landing: data flow visualizations --- */
+  .df-tabs { gap: 4px; }
+  .df-tab { padding: 6px 12px; font-size: 12px; }
+  .df-flow { flex-wrap: wrap; gap: 6px; }
+  .df-node { min-width: 100px; padding: 10px 12px; font-size: 12px; }
+  .df-detail-grid { grid-template-columns: 1fr; }
+  .df-bar-label { width: 60px; font-size: 10px; }
+  .df-bar-val { width: 45px; font-size: 10px; }
+  .df-sm-row { gap: 8px; }
+  .df-sm-state { padding: 10px 14px; font-size: 13px; }
+  .df-sm-branches { grid-template-columns: 1fr; }
+
+  /* --- Landing: architecture explorer --- */
+  .arch-treemap { min-height: 220px; padding: 4px; }
+  .arch-block-name { font-size: 11px; }
+  .arch-block-stats { font-size: 9px; }
+  .arch-info { font-size: 12px; padding: 8px 12px; flex-wrap: wrap; gap: 4px; }
+
+  /* --- Landing: CTA buttons --- */
+  .cta-buttons { flex-direction: column; gap: 10px; align-items: stretch; }
+  .btn-cta { width: 100%; text-align: center; }
+
+  /* --- Landing: terminal / code mocks --- */
+  .term-mock { font-size: 12px; }
+  .term-body { padding: 10px 12px; }
+  .code-mock { font-size: 11px; padding: 12px 14px; }
+  .api-flow { flex-wrap: wrap; gap: 8px; }
+  .api-box { padding: 6px 12px; font-size: 11px; }
+  .decision-mock { padding: 14px; }
+  .dec-q { font-size: 13px; padding: 6px 12px; }
+  .dec-branches { flex-direction: column; gap: 12px; }
+  .dec-yes, .dec-no { max-width: 100%; min-width: unset; }
+
+  /* --- Token chart mobile --- */
+  .token-label { width: 70px; font-size: 11px; }
+
+  /* --- Sandwich / Stack mocks --- */
+  .sw-layer { font-size: 12px; padding: 8px 12px; }
+  .sw-size { font-size: 10px; }
+
+  /* --- Pipeline stages --- */
+  .df-pipe-stage { padding: 12px; gap: 10px; }
+  .df-pipe-title { font-size: 13px; }
+  .df-pipe-desc { font-size: 11px; }
+
+  /* --- Shortcuts modal mobile --- */
+  .shortcuts-content { padding: 20px 16px; min-width: unset; max-width: calc(100vw - 32px); }
+  .shortcut-row { font-size: 13px; }
+
+  /* --- Engine SVG mobile --- */
+  #engine-svg { min-height: 300px; }
+  #engine-container { padding: 0 8px; }
 }

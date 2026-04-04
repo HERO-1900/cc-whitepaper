@@ -397,22 +397,182 @@
     if (posElB) posElB.textContent = posText;
   }
 
-  // ===== TOC SEARCH =====
+  // ===== FULL-TEXT SEARCH =====
   const tocSearch = document.getElementById('toc-search');
+  const searchResultsEl = document.getElementById('search-results');
+  let searchIndex = null;
+  let searchDebounceTimer = null;
+
+  // 加载搜索索引
+  fetch('js/search-index.json')
+    .then(r => r.ok ? r.json() : Promise.reject('索引加载失败'))
+    .then(data => { searchIndex = data; })
+    .catch(() => { console.warn('[Search] 搜索索引加载失败，仅支持标题搜索'); });
+
+  /**
+   * 在文本中高亮关键词，返回 HTML
+   */
+  function highlightKeyword(text, keyword) {
+    if (!keyword) return escapeHtml(text);
+    const escaped = escapeHtml(text);
+    const kw = escapeHtml(keyword);
+    // 用正则全局替换（忽略大小写）
+    const regex = new RegExp('(' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return escaped.replace(regex, '<mark class="search-highlight">$1</mark>');
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /**
+   * 从匹配文本中提取关键词附近的片段（前后各留一些上下文）
+   */
+  function extractSnippet(text, keyword, maxLen) {
+    maxLen = maxLen || 80;
+    const lower = text.toLowerCase();
+    const kwLower = keyword.toLowerCase();
+    const idx = lower.indexOf(kwLower);
+    if (idx < 0) return text.slice(0, maxLen);
+    const start = Math.max(0, idx - 30);
+    const end = Math.min(text.length, idx + keyword.length + 50);
+    let snippet = text.slice(start, end);
+    if (start > 0) snippet = '...' + snippet;
+    if (end < text.length) snippet = snippet + '...';
+    return snippet;
+  }
+
+  /**
+   * 执行全文搜索
+   */
+  function performSearch(query) {
+    const q = query.trim().toLowerCase();
+
+    // 如果搜索为空，恢复正常目录显示
+    if (!q) {
+      if (searchResultsEl) {
+        searchResultsEl.classList.add('hidden');
+        searchResultsEl.innerHTML = '';
+      }
+      toc.style.display = '';
+      // 恢复所有 TOC 条目的显示
+      toc.querySelectorAll('.toc-part').forEach(p => p.classList.remove('hidden-by-search'));
+      toc.querySelectorAll('.toc-chapter').forEach(c => c.classList.remove('hidden-by-search'));
+      return;
+    }
+
+    // 先进行标题搜索（TOC 过滤）
+    const titleMatches = new Set();
+    toc.querySelectorAll('.toc-part').forEach(partDiv => {
+      const chapters = partDiv.querySelectorAll('.toc-chapter');
+      let anyVisible = false;
+      chapters.forEach(ch => {
+        const match = ch.textContent.toLowerCase().includes(q);
+        ch.classList.toggle('hidden-by-search', !match);
+        if (match) {
+          anyVisible = true;
+          titleMatches.add(ch.dataset.chapterId);
+        }
+      });
+      partDiv.classList.toggle('hidden-by-search', !anyVisible);
+      if (q && anyVisible) partDiv.classList.add('expanded');
+    });
+
+    // 全文搜索（从索引中查找）
+    if (!searchIndex || !searchResultsEl) return;
+
+    const results = [];
+    const MAX_RESULTS = 30;
+
+    for (const entry of searchIndex) {
+      if (results.length >= MAX_RESULTS) break;
+
+      // 标题匹配（已在 TOC 中显示，但也加入全文结果以显示片段）
+      const titleMatch = entry.title.toLowerCase().includes(q);
+
+      // 搜索每个段落
+      for (const section of entry.sections) {
+        if (results.length >= MAX_RESULTS) break;
+        const headingMatch = section.heading.toLowerCase().includes(q);
+        const textMatch = section.text.toLowerCase().includes(q);
+
+        if (headingMatch || textMatch) {
+          results.push({
+            chapterId: entry.id,
+            chapterTitle: entry.title,
+            sectionHeading: section.heading,
+            text: section.text,
+            isTitleOnly: titleMatch && !textMatch && !headingMatch,
+          });
+        }
+      }
+
+      // 如果标题匹配但没有正文匹配，也至少添加一条
+      if (titleMatch && !results.some(r => r.chapterId === entry.id)) {
+        const firstSection = entry.sections[0];
+        results.push({
+          chapterId: entry.id,
+          chapterTitle: entry.title,
+          sectionHeading: firstSection ? firstSection.heading : '',
+          text: firstSection ? firstSection.text : '',
+          isTitleOnly: true,
+        });
+      }
+    }
+
+    // 渲染搜索结果
+    if (results.length === 0) {
+      toc.style.display = '';
+      searchResultsEl.classList.add('hidden');
+      searchResultsEl.innerHTML = '';
+      return;
+    }
+
+    // 隐藏 TOC，显示搜索结果
+    toc.style.display = 'none';
+    searchResultsEl.classList.remove('hidden');
+
+    let html = `<div class="search-results-header">找到 ${results.length} 条结果${results.length >= MAX_RESULTS ? '（仅显示前 ' + MAX_RESULTS + ' 条）' : ''}</div>`;
+
+    results.forEach(r => {
+      const snippet = extractSnippet(r.text, q);
+      const highlightedSnippet = highlightKeyword(snippet, q);
+      const highlightedHeading = highlightKeyword(r.sectionHeading, q);
+      const highlightedTitle = highlightKeyword(r.chapterTitle, q);
+
+      html += `<div class="search-result-item" data-chapter-id="${r.chapterId}">
+        <div class="search-result-title">${highlightedTitle}</div>
+        <div class="search-result-section">${highlightedHeading}</div>
+        <div class="search-result-snippet">${highlightedSnippet}</div>
+      </div>`;
+    });
+
+    searchResultsEl.innerHTML = html;
+
+    // 绑定点击事件
+    searchResultsEl.querySelectorAll('.search-result-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const chId = item.dataset.chapterId;
+        loadChapterById(chId);
+      });
+    });
+  }
+
   if (tocSearch) {
     tocSearch.addEventListener('input', () => {
-      const q = tocSearch.value.trim().toLowerCase();
-      toc.querySelectorAll('.toc-part').forEach(partDiv => {
-        const chapters = partDiv.querySelectorAll('.toc-chapter');
-        let anyVisible = false;
-        chapters.forEach(ch => {
-          const match = !q || ch.textContent.toLowerCase().includes(q);
-          ch.classList.toggle('hidden-by-search', !match);
-          if (match) anyVisible = true;
-        });
-        partDiv.classList.toggle('hidden-by-search', !anyVisible);
-        if (q && anyVisible) partDiv.classList.add('expanded');
-      });
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => {
+        performSearch(tocSearch.value);
+      }, 250); // 250ms 防抖
+    });
+
+    // Escape 清空搜索
+    tocSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        tocSearch.value = '';
+        performSearch('');
+        tocSearch.blur();
+      }
     });
   }
 
