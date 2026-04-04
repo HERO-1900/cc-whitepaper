@@ -46,8 +46,8 @@
       metaphorLabel.textContent = 'OS';
       if (subtitleText) subtitleText.textContent = 'Agent Operating System — 架构全景';
     }
-    // Update welcome buttons
-    document.querySelectorAll('.metaphor-btn').forEach(btn => {
+    // Update welcome buttons (supports both old .metaphor-btn and new .metaphor-btn-inline)
+    document.querySelectorAll('.metaphor-btn, .metaphor-btn-inline').forEach(btn => {
       btn.classList.toggle('selected', btn.dataset.metaphor === type);
     });
   }
@@ -57,13 +57,16 @@
       setMetaphor(currentMetaphor === 'city' ? 'os' : 'city');
     });
   }
-  // Welcome page metaphor buttons
-  document.querySelectorAll('.metaphor-btn').forEach(btn => {
+  // Welcome page metaphor buttons (supports both class names)
+  document.querySelectorAll('.metaphor-btn, .metaphor-btn-inline').forEach(btn => {
     btn.addEventListener('click', () => setMetaphor(btn.dataset.metaphor));
   });
-  // Enter map button
+  // Enter map / start reading button → goes to reader view
   const enterBtn = document.getElementById('enter-map');
-  if (enterBtn) enterBtn.addEventListener('click', () => showView('landing'));
+  if (enterBtn) enterBtn.addEventListener('click', () => showView('reader'));
+  // Panorama button → goes to landing (architecture overview)
+  const panoramaBtn = document.getElementById('enter-panorama');
+  if (panoramaBtn) panoramaBtn.addEventListener('click', () => showView('landing'));
 
   setMetaphor('city'); // default
 
@@ -358,6 +361,10 @@
         wrapper.appendChild(table);
       }
     });
+    // Embed interactive charts (replaces [图表预留 X.X-X] placeholders)
+    if (window.ChartEmbed) {
+      ChartEmbed.embed(chapterBody);
+    }
     // Scroll to top
     document.getElementById('chapter-content').scrollTop = 0;
   }
