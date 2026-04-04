@@ -1,0 +1,321 @@
+# Hooks 子系统完全解析
+
+Hooks 是 Claude Code 的生命周期注入点系统——用户可以在 27 个预定义事件上注册自定义逻辑，在不修改源码的情况下改变 Claude 的行为。从工具调用前的拦截、到权限决策的自动化、到子 Agent 的停止条件验证，Hooks 几乎覆盖了系统的每一个关键决策点。本章将完整枚举 27 个事件、4 种执行类型、以及退出码的双轨语义设计。
+
+> **源码位置**：`src/hooks/`（104 个文件）、`src/services/hooks/`
+
+> 💡 **通俗理解**：Hooks 就像快递通知设置——你可以设定"包裹到达时自动短信通知"（PostToolUse）、"签收前需要验证身份"（PreToolUse + exit 2 阻断）、"配送失败时自动转寄"（StopFailure），甚至可以自定义通知方式（command/prompt/agent/http 四种类型）。
+
+> 🌍 **行业背景**：生命周期钩子（Lifecycle Hooks）是软件工程中的成熟设计模式，在 AI 编码工具中的应用各有侧重。**Git** 本身就有 pre-commit、post-commit 等 hooks，Claude Code 的 Hooks 系统在命名和退出码语义上明显借鉴了 Git hooks 的设计。**Cursor** 通过 `.cursorrules` 文件提供项目级指令注入，但没有可编程的事件钩子系统。**Aider** 支持 `--lint-cmd` 和 `--test-cmd` 在编辑后自动运行检查，这相当于 Claude Code 的 `PostToolUse` + `Stop` 两个 hook 的特化版本。**LangChain** 的 Callbacks 系统提供了 `on_tool_start`、`on_tool_end` 等回调，概念最接近 Claude Code 的 Hooks，但它是库级 API 而非配置驱动。**GitHub Actions** 的 workflow 事件系统是另一个参照——但它是 CI/CD 级别的，不做实时阻断。Claude Code 的 27 个事件 + 4 种执行类型 + exit 2 阻断语义的组合，在 AI 编码工具中覆盖面最广，但也带来了最陡峭的学习曲线。
+
+---
+
+## 概述
+
+Hooks 是 Claude Code 的**生命周期注入点系统**——用户可以在系统的 27 个预定义事件上注册自定义逻辑（shell 命令、AI 提示词、HTTP 请求或多轮 Agent），在不修改 Claude Code 源码的情况下改变其行为。从工具调用前的拦截、到权限决策的自动化、到子 Agent 的停止条件验证，Hooks 几乎可以介入系统的每一个关键决策点。
+
+---
+
+> **[图表预留 3.4-A]**：生命周期图 — 27 个事件在 Session/Query/Tool/Agent 四层生命周期中的位置
+
+> **[图表预留 3.4-B]**：退出码决策表 — exit 0/2/其他 在不同事件类型中的不同语义
+
+---
+
+## 1. 27 个事件的完整分类
+
+### 1.1 工具生命周期（3 个）
+
+| 事件 | 触发时机 | 可阻断？ | stdout 用途 |
+|------|---------|---------|------------|
+| `PreToolUse` | 工具调用之前 | ✅ exit 2 阻断 | stderr 展示给模型 |
+| `PostToolUse` | 工具调用之后 | ❌ | stdout 注入给模型 |
+| `PostToolUseFailure` | 工具调用失败时 | ❌ | fire-and-forget |
+
+`PreToolUse` 是最强大的 hook——它可以在任何工具执行前拦截。典型用例：CI 环境中禁止 Claude 修改特定目录、或者在执行危险命令前发送通知。
+
+### 1.2 权限相关（2 个）
+
+| 事件 | 触发时机 | 特殊能力 |
+|------|---------|---------|
+| `PermissionDenied` | auto 分类器拒绝后 | exit 2 可要求模型重试 |
+| `PermissionRequest` | 权限弹窗显示时 | `hookSpecificOutput` 可替代用户决策 |
+
+`PermissionRequest` hook 可以**自动回答权限弹窗**——这意味着你可以编写一个脚本，根据自定义规则自动审批或拒绝 Claude 的工具调用请求，实现完全无人值守的自动化流水线。
+
+> ⚠️ **安全威胁模型**：`PermissionRequest` 本质上是**绕过权限系统的官方接口**，其安全含义需要严肃对待：
+>
+> **供应链攻击向量**：如果攻击者在一个开源仓库的 `.claude/settings.json` 中注入了一个 `PermissionRequest` hook（返回 `{ decision: "allow" }`），任何克隆该仓库并信任其工作区的用户都会自动批准所有危险操作——包括 `rm -rf`、任意网络请求、或修改系统文件。这与 npm malicious packages 的攻击模式类似，但影响更直接。
+>
+> **唯一防线**：当前系统依赖 `hasTrustDialogAccepted()` 的二元信任模型——用户在首次使用时确认信任工作区后，该工作区内的所有 hooks 都获得执行权限。没有更细粒度的"信任这个 hook 但不信任那个"的机制。这意味着信任决策是全有或全无的：一旦信任了工作区，就信任了其中所有 hooks。
+>
+> **缺失的防御层**：当前没有 hook 级别的签名验证、沙箱隔离、或操作审计日志。对于企业部署场景，建议：(1) 代码审查所有 `.claude/settings.json` 变更；(2) 使用 `localSettings`（不提交到版本控制）而非 `projectSettings` 配置敏感 hooks；(3) 考虑搭配 `PreToolUse` hook 做二次验证。
+
+### 1.3 Session 生命周期（2 个）
+
+| 事件 | 触发时机 | 子类型 |
+|------|---------|--------|
+| `SessionStart` | 新 session 开始时 | startup/resume/clear/compact |
+| `SessionEnd` | session 结束时 | clear/logout/prompt_input_exit/other |
+
+### 1.4 AI 轮次（2 个）
+
+| 事件 | 触发时机 | 可阻断？ |
+|------|---------|---------|
+| `Stop` | Claude 即将结束本轮回答 | ✅ exit 2 阻止结束，继续工作 |
+| `StopFailure` | 因 API 错误结束 | ❌ fire-and-forget |
+
+`Stop` hook 是实现"验证循环"的关键——你可以在 Claude 认为任务完成时运行测试，如果测试失败则 exit 2 让 Claude 继续修复。
+
+### 1.5 用户交互（2 个）
+
+| 事件 | 触发时机 | 能力 |
+|------|---------|------|
+| `UserPromptSubmit` | 用户提交 prompt | 可修改或阻断 prompt |
+| `Notification` | 发送通知 | 自定义通知通道 |
+
+`UserPromptSubmit` 可以**修改用户输入**——比如自动添加上下文、替换缩写、或在特定条件下拒绝提交。
+
+### 1.6 子 Agent（2 个）
+
+| 事件 | 触发时机 | 可阻断？ |
+|------|---------|---------|
+| `SubagentStart` | Agent 工具调用开始 | ❌（stdout 传给子 Agent） |
+| `SubagentStop` | 子 Agent 即将结束 | ✅ exit 2 阻止结束 |
+
+### 1.7 上下文压缩（2 个）
+
+| 事件 | 触发时机 | 能力 |
+|------|---------|------|
+| `PreCompact` | 压缩之前 | stdout 作为自定义压缩指令；exit 2 阻断 |
+| `PostCompact` | 压缩之后 | 观察 |
+
+### 1.8 配置与指令（3 个）
+
+| 事件 | 触发时机 | 能力 |
+|------|---------|------|
+| `Setup` | 初始化/维护 | init/maintenance 子类型 |
+| `ConfigChange` | 配置文件变化 | exit 2 阻断变化应用 |
+| `InstructionsLoaded` | CLAUDE.md 加载 | 仅观察 |
+
+### 1.9 团队协作（3 个）
+
+| 事件 | 触发时机 | 可阻断？ |
+|------|---------|---------|
+| `TeammateIdle` | Teammate 即将空闲 | ✅ exit 2 阻止 |
+| `TaskCreated` | 任务被创建 | ✅ exit 2 阻止 |
+| `TaskCompleted` | 任务标记完成 | ✅ exit 2 阻止 |
+
+### 1.10 MCP 交互（2 个）
+
+| 事件 | 触发时机 | 能力 |
+|------|---------|------|
+| `Elicitation` | MCP 请求用户输入 | 可自动响应 |
+| `ElicitationResult` | 用户响应后 | 可覆盖响应 |
+
+### 1.11 文件系统（4 个）
+
+| 事件 | 触发时机 | 特殊能力 |
+|------|---------|---------|
+| `WorktreeCreate` | 创建 worktree | stdout = worktree 路径 |
+| `WorktreeRemove` | 删除 worktree | — |
+| `CwdChanged` | 工作目录变化 | CLAUDE_ENV_FILE 修改环境变量 |
+| `FileChanged` | 文件变化 | 动态调整监视路径 |
+
+### 事件粒度的设计分析：为什么是 27 个？
+
+27 这个数字不是一次性设计的结果，而是随功能迭代逐步增长的产物。但观察事件分布可以发现设计者在粒度选择上的思考模式：
+
+**不对称的粒度选择**：工具层有 3 个事件（Pre/Post/PostFailure），但 Session 层只有 2 个（Start/End）。为什么没有 `PreSessionEnd`？因为工具调用是可阻断的（用户可能想在工具执行前拦截），但 Session 结束通常是用户主动发起，拦截的价值不大。这体现了一个设计原则：**事件粒度跟随阻断价值，而非机械对称**。
+
+**为什么 Stop 和 StopFailure 分开？** 这是 `fire-and-forget` 模式的体现。`StopFailure`（API 错误导致的停止）不支持阻断，因为此时 API 连接已经断开，阻断没有意义——你不能让一个已经失败的 API 调用"继续"。这与 `PostToolUseFailure` 的设计逻辑一致：失败事件是通知性质，不是决策点。
+
+**配置驱动 vs 代码驱动的根本选择**：Claude Code 通过 `settings.json` 配置 hooks，而非像 LangChain 那样通过代码 API（`handler.on_tool_start()`）注册。这个选择决定了整个系统的性格：(a) 非开发者也可以配置 hooks——只需编辑 JSON；(b) 复杂逻辑必须外化为 shell 脚本，调试链条变长（JSON -> shell -> 实际逻辑）；(c) hooks 无法在运行时动态注册或注销（LangChain 的 Callbacks 可以）。这是"可配置性"与"可编程性"之间的取舍——Claude Code 选择了前者，降低了入门门槛但牺牲了灵活性。
+
+**串行执行模型**：同一事件上注册的多个 hooks 按配置顺序串行执行。如果第一个 hook 返回 exit 2（阻断），后续 hooks 不再执行。这意味着 hook 的**配置顺序即优先级**——最先配置的 hook 有"一票否决权"。这是一个简单但有限的模型：如果需要"所有 hooks 都同意才放行"的语义，当前架构无法直接支持。
+
+---
+
+## 2. 四种执行类型
+
+### 2.1 Command（shell 命令）
+
+最基础的 hook 类型。spawn 一个子进程执行 shell 命令：
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [{
+      "type": "command",
+      "command": "echo 'Tool about to run: $TOOL_NAME'"
+    }]
+  }
+}
+```
+
+- 超时：`TOOL_HOOK_EXECUTION_TIMEOUT_MS = 600,000`（10 分钟）
+- 默认 shell：由 `DEFAULT_HOOK_SHELL` 决定
+- Windows 支持：PowerShell / Git Bash
+
+### 2.2 Prompt（AI 提示词）
+
+构建一个 AI 请求：
+
+```json
+{
+  "hooks": {
+    "Stop": [{
+      "type": "prompt",
+      "prompt": "Check if the task is truly complete. If not, explain what's missing."
+    }]
+  }
+}
+```
+
+### 2.3 Agent（多轮 AI 代理）
+
+创建一个完整的多轮 AI Agent 来验证条件：
+
+```json
+{
+  "hooks": {
+    "Stop": [{
+      "type": "agent",
+      "prompt": "Run the test suite and verify all tests pass."
+    }]
+  }
+}
+```
+
+- 使用 `dontAsk` 权限模式——源码中的精确语义是"Don't prompt for permissions, deny if not pre-approved"，即**不弹窗询问，未预授权的操作直接拒绝**。这不等于"不受权限约束"：Agent hook 仍然受到 `alwaysAllowRules` 白名单的约束，只是把需要用户交互确认的操作从"弹窗询问"降级为"直接拒绝"。但源码中还额外添加了对 transcript 文件的 `Read` 权限（`session: [...existingSessionRules, 'Read(/${transcriptPath})']`），这意味着 Agent hook 可以读取完整的对话记录
+- `MAX_AGENT_TURNS = 50`——如果 Agent hook 未在 50 轮内完成，系统 abort 并返回 `cancelled`，不会阻断主流程
+- 通过 `SyntheticOutputTool` 返回结构化输出：`{ ok: true/false, reason: string }`
+- `querySource: 'hook_agent'`
+- 默认使用 `getSmallFastModel()`（通常是 Haiku），可通过 `model` 字段覆盖
+
+> **成本警告**：一个配置不当的 Agent hook（比如挂在 `Stop` 事件上）可能在每轮对话结束时消耗数千 token。假设每次验证平均 10 轮、每轮 2000 token，一个小时高频交互可能产生数十万 token 的额外消耗。源码中没有成本预算或频率限制机制——这完全依赖用户自行控制。
+
+### 2.4 HTTP（远程端点）
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [{
+      "type": "http",
+      "url": "https://my-server.com/hook",
+      "method": "POST"
+    }]
+  }
+}
+```
+
+### 执行类型的设计空间分析
+
+四种类型的存在反映了一个有趣的设计问题：**hook 逻辑应该运行在哪里？**
+
+| 类型 | 逻辑位置 | 延迟 | 能力上限 | 适用场景 |
+|------|---------|------|---------|---------|
+| command | 本地进程 | 毫秒级 | 任意 shell 能做的事 | lint、测试、通知 |
+| prompt | 远程 API（单轮） | 秒级 | 自然语言推理 | 条件判断、内容审查 |
+| agent | 远程 API（多轮） | 十秒到分钟级 | 完整 Agent 能力 | 复杂验证、自动修复 |
+| http | 远程服务 | 取决于网络 | 由远程服务决定 | 企业审批系统、日志收集 |
+
+**为什么 prompt 和 agent 是两种不同类型？** 表面上看，prompt 可以视为"只运行 1 轮的 agent"。但源码中二者的实现完全不同：`execPromptHook` 构建单次 API 请求并解析 JSON 输出；`execAgentHook` 启动完整的 `query()` 循环，创建独立的 `hookAgentId`、注册工具集、管理多轮对话。分离这两种类型是成本-能力权衡的体现——prompt 类型调用 Haiku 模型做一次推理，成本几乎可以忽略；agent 类型可能消耗数千 token。用户需要根据验证复杂度选择合适的类型。
+
+**为什么没有 WebSocket（长连接）类型？** HTTP hook 是无状态的请求-响应模型，每次事件触发都是独立请求。如果需要维护状态（比如累计某个事件的发生次数），只能在远程服务端实现。这限制了 hook 系统在实时监控场景的表达能力，但也避免了长连接管理带来的复杂性（断线重连、心跳维护等）。
+
+**Agent hook 的递归问题**：Agent hook 内部使用完整的工具集（过滤掉了 `ALL_AGENT_DISALLOWED_TOOLS`），这些工具调用会触发 `PreToolUse`/`PostToolUse` hooks。但 Agent hook 本身不会递归触发 Agent hooks，因为它的工具集排除了会导致子 Agent 生成的工具。这是一种"有限递归"的设计——hook 可以触发其他 hooks，但不会产生无限递归。
+
+---
+
+## 3. 退出码语义——双轨制
+
+> 📚 **课程关联**：退出码的双轨制设计是**操作系统**课程中"进程间通信（IPC）"的实际应用。Unix 进程通过 `waitpid()` 获取子进程退出码，这是最简单的 IPC 机制之一——单个整数值传递语义信息。Claude Code 在这 256 个可能值（0-255）中定义了三个语义区间（0/2/其他），这类似于 HTTP 状态码的分区设计（2xx 成功/4xx 客户端错误/5xx 服务端错误）。值得注意的是，exit code 作为 IPC 机制有先天局限——8 bit 整数无法传递结构化信息。Claude Code 通过 exit code + stdout/stderr + `hookSpecificOutput`（JSON）的组合来弥补这个局限：exit code 传递"动作语义"（放行/阻断/忽略），stdout/stderr 传递"内容"，JSON 传递"结构化决策"。这是在原始 IPC 机制上构建高层协议的经典模式。
+
+这是 Hooks 系统最核心的设计决策：
+
+| 退出码 | 含义 |
+|--------|------|
+| **0** | 成功。stdout 可能传递给模型（取决于事件类型） |
+| **2** | **阻断**。stderr 展示给模型，操作被阻止 |
+| **其他非零** | 非阻断错误。stderr 只展示给用户（不影响模型） |
+
+**为什么是 2？** 需要澄清一个常见误解：这并非严格遵循某个 Unix 标准惯例。POSIX 标准中只规定了 `exit 0`（成功）和 `exit 1`（一般错误）；Bash 手册中 exit 2 表示"shell 命令用法错误"（misuse of shell builtins），而 BSD 的 `sysexits.h` 中 `EX_USAGE=64` 才是"用法错误"的标准值。Git hooks 也只区分"零=放行，非零=阻断"，并不区分 1 和 2。Claude Code 选择 exit 2 的真实原因更务实——需要一个不与 exit 1（通用错误）冲突的小整数值，使得 hook 脚本可以区分两种完全不同的语义：exit 1 表示"脚本自身出错了"（不应影响 Claude 行为，属于非阻断错误），而 exit 2 表示"我有意阻断这个操作"（错误信息传递给 AI 模型）。这是一种**实用主义的约定**，而非对某个 Unix 传统的继承。
+
+例外情况：
+- `StopFailure`、`PostToolUseFailure`：fire-and-forget，输出被忽略
+- `Notification`：仅通知性质，无阻断语义
+
+## 4. 环境变量注入
+
+每个 hook 执行时都可以访问丰富的环境变量：
+
+| 变量 | 值 |
+|------|---|
+| `CLAUDE_SESSION_ID` | 当前会话 ID |
+| `CLAUDE_CWD` | 当前工作目录 |
+| `TOOL_NAME` | 工具名称（工具类事件） |
+| `TOOL_INPUT` | 工具输入 JSON（工具类事件） |
+| `TOOL_OUTPUT` | 工具输出（PostToolUse） |
+| `HOOK_EVENT` | 事件名称 |
+| `HOOK_SUBTYPE` | 事件子类型 |
+
+## 5. 可观测性
+
+每个 hook 执行产生三个分析事件（这也是 Part 4 "可观测性是产品功能"一章的核心论据之一）：
+
+1. **hook_start**：执行开始
+2. **hook_end**：执行结束（含 exit code、duration）
+3. **hook_error**：执行失败（含错误类型、message）
+
+## 6. 设计取舍与评价
+
+### 为什么 10 分钟 vs 1.5 秒？
+
+工具 hook 的默认超时是 `TOOL_HOOK_EXECUTION_TIMEOUT_MS = 600,000`（10 分钟），而 `SessionEnd` hook 超时仅 1500ms——相差 400 倍。这不是随意设定：
+
+- **10 分钟**：工具 hook（特别是 `PreToolUse`、`Stop`）可能需要运行完整的测试套件。一个大型项目的 `npm test` 可能需要数分钟。10 分钟是"覆盖绝大多数 CI 操作"的上界。但如果 hook 卡了 9 分钟，用户体验会非常糟糕——Claude 在这段时间内完全无响应，且没有进度提示。
+- **1.5 秒**：`SessionEnd` 在用户关闭终端时触发。如果此时执行一个长时间 hook，用户会看到终端"卡住"无法退出。1500ms 是"用户能接受的最大退出延迟"的经验值，可通过 `CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS` 环境变量覆盖。
+
+**优秀**：
+1. 27 个事件覆盖了系统的每一个关键决策点
+2. exit 2 双轨制让错误和阻断有明确的语义区分
+3. Agent 类型 hook 可以用 AI 来验证 AI 的输出——形成自我校正循环
+4. 四种执行类型满足从简单脚本到复杂自动化的所有场景
+5. `PermissionRequest` hook 实现了完全无人值守的自动化
+
+**代价**：
+1. 27 个事件的命名和语义需要用户记忆——学习曲线陡峭
+2. Agent hook 使用 `dontAsk` 模式——准确说是"未预授权的操作直接拒绝"，不会弹窗但也不会自动批准一切。但 Agent hook 仍然拥有完整的工具集（排除子 Agent 生成类工具），可以读写文件、执行 Bash 命令等
+3. exit 2 的约定是"魔法数字"——如果用户不了解这个约定，可能意外阻断操作
+4. 10 分钟超时意味着一个有 bug 的 hook 脚本可以让 Claude 卡住很久，且源码中没有用户可触发的中途取消机制
+
+## 7. 错误传播与 Fail-Open 策略
+
+Hooks 系统的一个关键但容易被忽略的设计决策是其**错误传播模型**：
+
+| 退出码 | 语义 | 对主流程的影响 |
+|--------|------|--------------|
+| 0 | 成功 | 继续 |
+| 2 | 有意阻断 | 阻止操作 |
+| 1, 3, 4... | hook 自身出错 | **继续**（非阻断） |
+| hook 进程崩溃 | 意外错误 | **继续**（非阻断） |
+| Agent hook 超时 | 50 轮未完成 | **继续**（返回 cancelled） |
+
+这是一种 **fail-open** 策略——hook 自身的故障不会阻断主流程。这个选择在可用性和安全性之间做了明确的取舍：
+
+**有利的一面**：用户不必担心一个有 bug 的 hook 脚本导致 Claude 完全不可用。如果你的 lint hook 因为依赖未安装而报错（exit 1），Claude 仍然可以继续工作。
+
+**危险的一面**：如果你部署了一个安全审计 hook（比如阻止 Claude 访问 `/etc/passwd`），攻击者可以通过故意让这个 hook 崩溃（OOM、segfault）来绕过安全检查——因为崩溃的 hook 会被静默忽略。源码中对此有一个微妙的处理：`python3 <missing>.py` 会返回 exit 2（Python 找不到文件时的退出码），这会被误解为"有意阻断"，因此源码中对 plugin hooks 做了路径预检查（`if (!(await pathExists(pluginRoot)))`），但用户自定义的 command hooks 没有这种保护。
+
+**设计启示**：如果你的 hook 承担安全职责（而非便利功能），应该在 hook 脚本内部实现 fail-closed 逻辑——在任何异常情况下都 `exit 2`，而非依赖系统默认的 fail-open 行为。
+
+---
+
+*质量自检：*
+- [x] 覆盖：27 个事件完整枚举 + 4 种类型 + 退出码语义 + 错误传播模型
+- [x] 忠实：事件列表、退出码规则、`dontAsk` 语义均经过源码验证（`src/schemas/hooks.ts`、`src/utils/hooks.ts`、`src/utils/hooks/execAgentHook.ts`、`src/entrypoints/sdk/coreSchemas.ts`）
+- [x] 深度：退出码选择的务实原因（非 Unix 传统附会）、事件粒度设计原则、配置驱动 vs 代码驱动的取舍、fail-open 安全含义
+- [x] 批判：PermissionRequest 供应链攻击向量、Agent hook 成本失控、fail-open 策略的安全风险、二元信任模型的局限
+- [x] 可复用：生命周期 hook + 退出码语义区分 + 错误传播策略可应用于任何可扩展系统
+- [x] 跨章一致：四种执行类型名称（command/prompt/agent/http）与 Part 2 Q10 保持一致
