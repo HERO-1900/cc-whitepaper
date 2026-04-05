@@ -9,11 +9,15 @@
     welcome: document.getElementById('welcome'),
     landing: document.getElementById('landing'),
     reader: document.getElementById('reader'),
+    gallery: document.getElementById('gallery'),
+    inspiration: document.getElementById('inspiration'),
   };
   const navBtns = {
     guide: document.getElementById('nav-guide'),
     home: document.getElementById('nav-home'),
     reader: document.getElementById('nav-reader'),
+    gallery: document.getElementById('nav-gallery'),
+    inspiration: document.getElementById('nav-inspiration'),
   };
   const breadcrumb = document.getElementById('breadcrumb');
   const panel = document.getElementById('detail-panel');
@@ -85,6 +89,10 @@
       breadcrumb.textContent = 'Claude Code 2.1.88 · 架构全景';
     } else if (name === 'welcome') {
       breadcrumb.textContent = 'Claude Code 2.1.88 · 欢迎';
+    } else if (name === 'gallery') {
+      breadcrumb.textContent = 'Claude Code 2.1.88 · 图表画廊';
+    } else if (name === 'inspiration') {
+      breadcrumb.textContent = 'Claude Code 2.1.88 · 灵感实验室';
     }
   }
 
@@ -100,6 +108,38 @@
         </div>`;
     }
   });
+  // Gallery view
+  if (navBtns.gallery) {
+    let galleryInited = false;
+    navBtns.gallery.addEventListener('click', () => {
+      showView('gallery');
+      if (!galleryInited && window.Gallery) {
+        Gallery.init().then(() => {
+          Gallery.render(document.getElementById('gallery-container'));
+          galleryInited = true;
+        });
+      } else if (window.Gallery) {
+        Gallery.render(document.getElementById('gallery-container'));
+      }
+    });
+  }
+
+  // Inspiration Lab view
+  if (navBtns.inspiration) {
+    let inspInited = false;
+    navBtns.inspiration.addEventListener('click', () => {
+      showView('inspiration');
+      if (!inspInited && window.InspirationLab) {
+        InspirationLab.init().then(() => {
+          InspirationLab.render(document.getElementById('inspiration-container'));
+          inspInited = true;
+        });
+      } else if (window.InspirationLab) {
+        InspirationLab.render(document.getElementById('inspiration-container'));
+      }
+    });
+  }
+
   backToMap.addEventListener('click', () => showView('landing'));
 
   // ===== DETAIL PANEL =====
@@ -365,6 +405,10 @@
     if (window.ChartEmbed) {
       ChartEmbed.embed(chapterBody);
     }
+    // Annotate glossary terms, difficulty badge, and Q&A panel
+    if (window.GlossarySystem && currentChapter) {
+      GlossarySystem.annotate(chapterBody, currentChapter.file);
+    }
     // Scroll to top
     document.getElementById('chapter-content').scrollTop = 0;
   }
@@ -592,6 +636,14 @@
     // 1 = landing, 2 = reader
     if (e.key === '1' && !e.ctrlKey && !e.metaKey && !isInputFocused()) showView('landing');
     if (e.key === '2' && !e.ctrlKey && !e.metaKey && !isInputFocused()) showView('reader');
+    if (e.key === '3' && !e.ctrlKey && !e.metaKey && !isInputFocused()) {
+      showView('gallery');
+      if (window.Gallery) { Gallery.init().then(() => Gallery.render(document.getElementById('gallery-container'))); }
+    }
+    if (e.key === '4' && !e.ctrlKey && !e.metaKey && !isInputFocused()) {
+      showView('inspiration');
+      if (window.InspirationLab) { InspirationLab.init().then(() => InspirationLab.render(document.getElementById('inspiration-container'))); }
+    }
     // ? = shortcuts modal
     if (e.key === '?' && !isInputFocused() && shortcutsModal) {
       shortcutsModal.classList.toggle('hidden');

@@ -1,0 +1,3477 @@
+{
+  "summary": {
+    "totalChapters": 82,
+    "totalLines": 36042,
+    "totalCJKCharacters": 352481,
+    "avgCompletenessScore": 4.95,
+    "avgMetaphorBalance": 0.334,
+    "totalIssues": 4,
+    "issuesByType": {
+      "error": 0,
+      "warning": 2,
+      "info": 2
+    }
+  },
+  "chapters": [
+    {
+      "file": "part0_序章/00_序章.md",
+      "title": "序章：当你打开一个\"聊天助手\"的引擎盖",
+      "stats": {
+        "lineCount": 199,
+        "cjkCount": 3849,
+        "codeBlocks": 1,
+        "srcPathCount": 5
+      },
+      "metaphors": {
+        "osCount": 63,
+        "nonTechCount": 37,
+        "total": 100,
+        "balanceScore": 0.37,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/main.tsx",
+          "src/services/claude.ts",
+          "src/tools/",
+          "src/utils/permissions/",
+          "src/memdir/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part1_认识这个系统/01_这不是聊天机器人.md",
+      "title": "这不是聊天机器人",
+      "stats": {
+        "lineCount": 118,
+        "cjkCount": 1621,
+        "codeBlocks": 1,
+        "srcPathCount": 4
+      },
+      "metaphors": {
+        "osCount": 6,
+        "nonTechCount": 10,
+        "total": 16,
+        "balanceScore": 0.625,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/main.tsx",
+          "src/query.ts",
+          "src/services/claude.ts",
+          "src/Tool.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part1_认识这个系统/02_五分钟看懂系统架构.md",
+      "title": "五分钟看懂系统架构",
+      "stats": {
+        "lineCount": 202,
+        "cjkCount": 1841,
+        "codeBlocks": 5,
+        "srcPathCount": 4
+      },
+      "metaphors": {
+        "osCount": 13,
+        "nonTechCount": 5,
+        "total": 18,
+        "balanceScore": 0.278,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/main.tsx",
+          "src/services/claude.ts",
+          "src/tools/tools.ts",
+          "src/utils/permissions/permissions.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part1_认识这个系统/03_读懂本书需要的全部概念.md",
+      "title": "读懂本书需要的全部概念",
+      "stats": {
+        "lineCount": 526,
+        "cjkCount": 5603,
+        "codeBlocks": 4,
+        "srcPathCount": 5
+      },
+      "metaphors": {
+        "osCount": 70,
+        "nonTechCount": 45,
+        "total": 115,
+        "balanceScore": 0.391,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/main.tsx",
+          "src/Tool.ts",
+          "src/services/claude.ts",
+          "src/utils/permissions/permissions.ts",
+          "src/utils/settings/settings.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part1_认识这个系统/04_八个子系统的全景地图.md",
+      "title": "八个子系统的全景地图",
+      "stats": {
+        "lineCount": 298,
+        "cjkCount": 2713,
+        "codeBlocks": 6,
+        "srcPathCount": 8
+      },
+      "metaphors": {
+        "osCount": 17,
+        "nonTechCount": 9,
+        "total": 26,
+        "balanceScore": 0.346,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/main.tsx",
+          "src/tools/",
+          "src/utils/permissions/",
+          "src/services/claude.ts",
+          "src/state/",
+          "src/utils/forkedAgent.ts",
+          "src/hooks/",
+          "src/services/mcp/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/01_代码地图.md",
+      "title": "代码地图：1,884 个文件的完整拓扑",
+      "stats": {
+        "lineCount": 465,
+        "cjkCount": 4825,
+        "codeBlocks": 8,
+        "srcPathCount": 8
+      },
+      "metaphors": {
+        "osCount": 10,
+        "nonTechCount": 19,
+        "total": 29,
+        "balanceScore": 0.655,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/main.tsx",
+          "src/utils/",
+          "src/tools/",
+          "src/Tool.ts",
+          "src/tools.ts",
+          "src/state/AppStateStore.ts",
+          "src/Task.ts",
+          "src/context.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/02_启动序列.md",
+      "title": "启动序列：从敲下 `claude` 到系统就绪",
+      "stats": {
+        "lineCount": 333,
+        "cjkCount": 3578,
+        "codeBlocks": 7,
+        "srcPathCount": 2
+      },
+      "metaphors": {
+        "osCount": 27,
+        "nonTechCount": 8,
+        "total": 35,
+        "balanceScore": 0.229,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/main.tsx",
+          "src/entrypoints/init.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/03_提示词工厂.md",
+      "title": "提示词工厂：系统提示词的组装流水线",
+      "stats": {
+        "lineCount": 554,
+        "cjkCount": 6357,
+        "codeBlocks": 6,
+        "srcPathCount": 6
+      },
+      "metaphors": {
+        "osCount": 66,
+        "nonTechCount": 7,
+        "total": 73,
+        "balanceScore": 0.096,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/memdir/memoryTypes.ts",
+          "src/utils/queryContext.ts",
+          "src/constants/prompts.ts",
+          "src/constants/systemPromptSections.ts",
+          "src/utils/api.ts",
+          "src/context.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/04_查询循环.md",
+      "title": "心脏：查询循环与流式处理引擎",
+      "stats": {
+        "lineCount": 466,
+        "cjkCount": 6444,
+        "codeBlocks": 9,
+        "srcPathCount": 4
+      },
+      "metaphors": {
+        "osCount": 27,
+        "nonTechCount": 28,
+        "total": 55,
+        "balanceScore": 0.509,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/query.ts",
+          "src/services/claude.ts",
+          "src/tools/tools.ts",
+          "src/utils/messages.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/05_工具运行时.md",
+      "title": "手与工具：工具注册、调度与执行运行时",
+      "stats": {
+        "lineCount": 640,
+        "cjkCount": 6546,
+        "codeBlocks": 6,
+        "srcPathCount": 6
+      },
+      "metaphors": {
+        "osCount": 52,
+        "nonTechCount": 15,
+        "total": 67,
+        "balanceScore": 0.224,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/tools/",
+          "src/Tool.ts",
+          "src/tools/tools.ts",
+          "src/tools/BashTool/prompt.ts",
+          "src/tools/AgentTool/prompt.ts",
+          "src/tools/EnterPlanModeTool/prompt.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/06_Agent编排.md",
+      "title": "分身术：Agent 编排与多实例协调",
+      "stats": {
+        "lineCount": 381,
+        "cjkCount": 5132,
+        "codeBlocks": 5,
+        "srcPathCount": 5
+      },
+      "metaphors": {
+        "osCount": 43,
+        "nonTechCount": 13,
+        "total": 56,
+        "balanceScore": 0.232,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/Task.ts",
+          "src/utils/forkedAgent.ts",
+          "src/coordinator/coordinatorMode.ts",
+          "src/tools/AgentTool/built-in/verificationAgent.ts",
+          "src/tools/AgentTool/AgentTool.tsx"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/07_安全架构.md",
+      "title": "免疫系统：安全模型与信任边界",
+      "stats": {
+        "lineCount": 901,
+        "cjkCount": 8850,
+        "codeBlocks": 17,
+        "srcPathCount": 6
+      },
+      "metaphors": {
+        "osCount": 34,
+        "nonTechCount": 21,
+        "total": 55,
+        "balanceScore": 0.382,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/commands/security-review.ts",
+          "src/commands/init.ts",
+          "src/utils/permissions/permissions.ts",
+          "src/utils/sandbox/sandbox-adapter.ts",
+          "src/tools/BashTool/shouldUseSandbox.ts",
+          "src/Tool.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/08_状态与持久化.md",
+      "title": "记忆宫殿：状态管理与持久化架构",
+      "stats": {
+        "lineCount": 302,
+        "cjkCount": 4169,
+        "codeBlocks": 7,
+        "srcPathCount": 12
+      },
+      "metaphors": {
+        "osCount": 20,
+        "nonTechCount": 6,
+        "total": 26,
+        "balanceScore": 0.231,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/state/",
+          "src/utils/fileHistory.ts",
+          "src/memdir/",
+          "src/utils/sessionStorage.ts",
+          "src/state/AppStateStore.ts",
+          "src/state/store.ts",
+          "src/memdir/teamMemPaths.ts",
+          "src/services/teamMemorySync/",
+          "src/state/selectors.ts",
+          "src/utils/sessionStoragePortable.ts",
+          "src/memdir/memdir.ts",
+          "src/services/teamMemorySync/index.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/09_扩展生态.md",
+      "title": "外交网络：MCP、Hooks、插件与 Skills",
+      "stats": {
+        "lineCount": 283,
+        "cjkCount": 3443,
+        "codeBlocks": 3,
+        "srcPathCount": 11
+      },
+      "metaphors": {
+        "osCount": 24,
+        "nonTechCount": 7,
+        "total": 31,
+        "balanceScore": 0.226,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/services/mcp/",
+          "src/utils/hooks.ts",
+          "src/utils/hooks/",
+          "src/utils/plugins/",
+          "src/skills/",
+          "src/entrypoints/sdk/coreSchemas.ts",
+          "src/schemas/hooks.ts",
+          "src/services/mcp/MCPConnectionManager.tsx",
+          "src/services/mcp/types.ts",
+          "src/utils/plugins/schemas.ts",
+          "src/skills/loadSkillsDir.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/10_Token经济学.md",
+      "title": "Token 经济学：成本、缓存与性能工程",
+      "stats": {
+        "lineCount": 321,
+        "cjkCount": 4924,
+        "codeBlocks": 2,
+        "srcPathCount": 3
+      },
+      "metaphors": {
+        "osCount": 97,
+        "nonTechCount": 20,
+        "total": 117,
+        "balanceScore": 0.171,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/token.ts",
+          "src/utils/compact.ts",
+          "src/services/claude.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/11_配置治理.md",
+      "title": "九层宝塔：配置治理与策略执行",
+      "stats": {
+        "lineCount": 230,
+        "cjkCount": 2148,
+        "codeBlocks": 6,
+        "srcPathCount": 3
+      },
+      "metaphors": {
+        "osCount": 2,
+        "nonTechCount": 4,
+        "total": 6,
+        "balanceScore": 0.667,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/settings/",
+          "src/utils/settings/constants.ts",
+          "src/utils/settings/settings.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/12_终端UI.md",
+      "title": "终端里的 React：Ink Fork 深度解构",
+      "stats": {
+        "lineCount": 748,
+        "cjkCount": 8478,
+        "codeBlocks": 11,
+        "srcPathCount": 1
+      },
+      "metaphors": {
+        "osCount": 41,
+        "nonTechCount": 15,
+        "total": 56,
+        "balanceScore": 0.268,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/native-ts/yoga-layout/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/13_横切关注点.md",
+      "title": "横切关注点：贯穿整个系统的 12 个隐藏模式",
+      "stats": {
+        "lineCount": 616,
+        "cjkCount": 5715,
+        "codeBlocks": 16,
+        "srcPathCount": 18
+      },
+      "metaphors": {
+        "osCount": 13,
+        "nonTechCount": 31,
+        "total": 44,
+        "balanceScore": 0.705,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/services/api/withRetry.ts",
+          "src/services/extractMemories/extractMemories.ts",
+          "src/services/analytics/",
+          "src/services/analytics/index.ts",
+          "src/services/oauth/",
+          "src/services/oauth/client.ts",
+          "src/services/autoDream/autoDream.ts",
+          "src/tasks/DreamTask/DreamTask.ts",
+          "src/context/notifications.tsx",
+          "src/state/store.ts",
+          "src/state/AppStateStore.ts",
+          "src/services/lsp/",
+          "src/services/teamMemorySync/index.ts",
+          "src/services/analytics/growthbook.ts",
+          "src/services/autoDream/",
+          "src/tasks/DreamTask/",
+          "src/services/extractMemories/",
+          "src/services/teamMemorySync/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_代码架构完全解构/14_Prompt原文集.md",
+      "title": "Prompt 原文集：Claude Code 的完整提示词库",
+      "stats": {
+        "lineCount": 5663,
+        "cjkCount": 15868,
+        "codeBlocks": 146,
+        "srcPathCount": 84
+      },
+      "metaphors": {
+        "osCount": 19,
+        "nonTechCount": 11,
+        "total": 30,
+        "balanceScore": 0.367,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/constants/prompts.ts",
+          "src/constants/cyberRiskInstruction.ts",
+          "src/services/compact/prompt.ts",
+          "src/memdir/memoryTypes.ts",
+          "src/memdir/memdir.ts",
+          "src/services/SessionMemory/prompts.ts",
+          "src/memdir/teamMemPrompts.ts",
+          "src/memdir/findRelevantMemories.ts",
+          "src/services/extractMemories/prompts.ts",
+          "src/services/autoDream/consolidationPrompt.ts",
+          "src/tools/AgentTool/built-in/",
+          "src/components/agents/generateAgent.ts",
+          "src/coordinator/coordinatorMode.ts",
+          "src/auth/validate.ts",
+          "src/auth/types.ts",
+          "src/utils/swarm/teammatePromptAddendum.ts",
+          "src/cli/print.ts",
+          "src/tools/BashTool/prompt.ts",
+          "src/tools/AgentTool/prompt.ts",
+          "src/tools/WebSearchTool/prompt.ts",
+          "src/tools/ScheduleCronTool/prompt.ts",
+          "src/tools/FileEditTool/prompt.ts",
+          "src/tools/FileReadTool/prompt.ts",
+          "src/tools/FileWriteTool/prompt.ts",
+          "src/tools/GlobTool/prompt.ts",
+          "src/tools/GrepTool/prompt.ts",
+          "src/tools/AskUserQuestionTool/prompt.ts",
+          "src/tools/EnterPlanModeTool/prompt.ts",
+          "src/tools/ExitPlanModeTool/prompt.ts",
+          "src/tools/EnterWorktreeTool/prompt.ts",
+          "src/tools/ExitWorktreeTool/prompt.ts",
+          "src/tools/ListMcpResourcesTool/prompt.ts",
+          "src/tools/ReadMcpResourceTool/prompt.ts",
+          "src/tools/MCPTool/prompt.ts",
+          "src/tools/LSPTool/prompt.ts",
+          "src/tools/NotebookEditTool/prompt.ts",
+          "src/tools/PowerShellTool/prompt.ts",
+          "src/tools/RemoteTriggerTool/prompt.ts",
+          "src/tools/SendMessageTool/prompt.ts",
+          "src/tools/SkillTool/prompt.ts",
+          "src/tools/SleepTool/prompt.ts",
+          "src/tools/BriefTool/prompt.ts",
+          "src/tools/ConfigTool/prompt.ts",
+          "src/tools/Task",
+          "src/tools/TodoWriteTool/prompt.ts",
+          "src/tools/ToolSearchTool/prompt.ts",
+          "src/tools/TeamCreateTool/prompt.ts",
+          "src/tools/TeamDeleteTool/prompt.ts",
+          "src/tools/WebFetchTool/prompt.ts",
+          "src/tools/REPLTool/",
+          "src/tools/McpAuthTool/",
+          "src/tools/SyntheticOutputTool/",
+          "src/commands/init.ts",
+          "src/commands/commit.ts",
+          "src/commands/review.ts",
+          "src/commands/security-review.ts",
+          "src/commands/insights.ts",
+          "src/skills/bundled/",
+          "src/skills/bundled/simplify.ts",
+          "src/skills/bundled/loop.ts",
+          "src/skills/bundled/skillify.ts",
+          "src/skills/bundled/stuck.ts",
+          "src/skills/bundled/debug.ts",
+          "src/skills/bundled/remember.ts",
+          "src/skills/bundled/batch.ts",
+          "src/skills/bundled/claudeApi.ts",
+          "src/skills/bundled/claudeInChrome.ts",
+          "src/utils/claudeInChrome/prompt.ts",
+          "src/skills/bundled/loremIpsum.ts",
+          "src/skills/bundled/keybindings.ts",
+          "src/skills/bundled/updateConfig.ts",
+          "src/skills/bundled/scheduleRemoteAgents.ts",
+          "src/skills/bundled/verify.ts",
+          "src/services/PromptSuggestion/promptSuggestion.ts",
+          "src/services/awaySummary.ts",
+          "src/utils/sessionTitle.ts",
+          "src/tools/AgentTool/built-in/generalPurposeAgent.ts",
+          "src/services/MagicDocs/prompts.ts",
+          "src/services/toolUseSummary/toolUseSummaryGenerator.ts",
+          "src/utils/agenticSessionSearch.ts",
+          "src/buddy/prompt.ts",
+          "src/utils/permissions/permissionExplainer.ts",
+          "src/constants/outputStyles.ts",
+          "src/commands/rename/generateSessionName.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q01_那三行在import之前的代码是什么把戏.md",
+      "title": "那三行在 import 之前的代码，是什么把戏？",
+      "stats": {
+        "lineCount": 126,
+        "cjkCount": 1846,
+        "codeBlocks": 2,
+        "srcPathCount": 3
+      },
+      "metaphors": {
+        "osCount": 10,
+        "nonTechCount": 2,
+        "total": 12,
+        "balanceScore": 0.167,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/main.tsx",
+          "src/utils/settings/mdm/rawRead.ts",
+          "src/utils/secureStorage/keychainPrefetch.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q02_上下文压缩为什么需要六套机制.md",
+      "title": "上下文压缩为什么需要六套机制，而不是一套？",
+      "stats": {
+        "lineCount": 275,
+        "cjkCount": 3850,
+        "codeBlocks": 4,
+        "srcPathCount": 3
+      },
+      "metaphors": {
+        "osCount": 12,
+        "nonTechCount": 2,
+        "total": 14,
+        "balanceScore": 0.143,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/query.ts",
+          "src/services/compact/autoCompact.ts",
+          "src/services/compact/compact.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q03_子Agent是怎么被创建和管理的.md",
+      "title": "子 Agent 是怎么被创建和管理的？",
+      "stats": {
+        "lineCount": 182,
+        "cjkCount": 2941,
+        "codeBlocks": 1,
+        "srcPathCount": 4
+      },
+      "metaphors": {
+        "osCount": 25,
+        "nonTechCount": 2,
+        "total": 27,
+        "balanceScore": 0.074,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/tools/AgentTool/runAgent.ts",
+          "src/tools/AgentTool/AgentTool.tsx",
+          "src/coordinator/coordinatorMode.ts",
+          "src/Task.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q04_工具为什么能在模型还没停止说话时就开始执行.md",
+      "title": "工具为什么能在模型还没停止说话时就开始执行？",
+      "stats": {
+        "lineCount": 167,
+        "cjkCount": 2294,
+        "codeBlocks": 4,
+        "srcPathCount": 5
+      },
+      "metaphors": {
+        "osCount": 17,
+        "nonTechCount": 3,
+        "total": 20,
+        "balanceScore": 0.15,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/main.tsx",
+          "src/tools/StreamingToolExecutor.ts",
+          "src/utils/processToolCallGroup.ts",
+          "src/services/tools/toolOrchestration.ts",
+          "src/query.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q05_权限系统是怎么在灵活性和安全性之间走钢丝的.md",
+      "title": "权限系统是怎么在灵活性和安全性之间走钢丝的？",
+      "stats": {
+        "lineCount": 197,
+        "cjkCount": 2819,
+        "codeBlocks": 3,
+        "srcPathCount": 5
+      },
+      "metaphors": {
+        "osCount": 2,
+        "nonTechCount": 2,
+        "total": 4,
+        "balanceScore": 0.5,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/permissions/permissions.ts",
+          "src/utils/permissions/PermissionMode.ts",
+          "src/utils/permissions/denialTracking.ts",
+          "src/utils/permissions/yoloClassifier.ts",
+          "src/hooks/toolPermission/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q06_Claude在你打字的时候偷偷在做什么.md",
+      "title": "Claude 在你打字的时候偷偷在做什么？",
+      "stats": {
+        "lineCount": 220,
+        "cjkCount": 2561,
+        "codeBlocks": 5,
+        "srcPathCount": 6
+      },
+      "metaphors": {
+        "osCount": 38,
+        "nonTechCount": 4,
+        "total": 42,
+        "balanceScore": 0.095,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/services/promptSuggestion/",
+          "src/utils/speculation/",
+          "src/services/PromptSuggestion/speculation.ts",
+          "src/services/PromptSuggestion/promptSuggestion.ts",
+          "src/utils/forkedAgent.ts",
+          "src/state/AppStateStore.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q07_CLAUDE_md是怎么被找到和组装的.md",
+      "title": "CLAUDE.md 是怎么被找到和组装的？",
+      "stats": {
+        "lineCount": 211,
+        "cjkCount": 2103,
+        "codeBlocks": 7,
+        "srcPathCount": 2
+      },
+      "metaphors": {
+        "osCount": 2,
+        "nonTechCount": 1,
+        "total": 3,
+        "balanceScore": 0.333,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/claudemd.ts",
+          "src/context.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q08_设置系统为什么需要五层优先级.md",
+      "title": "设置系统为什么需要五层优先级？",
+      "stats": {
+        "lineCount": 159,
+        "cjkCount": 1649,
+        "codeBlocks": 6,
+        "srcPathCount": 4
+      },
+      "metaphors": {
+        "osCount": 0,
+        "nonTechCount": 2,
+        "total": 2,
+        "balanceScore": 1,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/settings/",
+          "src/services/settingsSync/",
+          "src/utils/settings/constants.ts",
+          "src/utils/settings/settings.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q09_Session里那个默默记笔记的AI是谁.md",
+      "title": "Session 里那个默默记笔记的 AI 是谁？",
+      "stats": {
+        "lineCount": 257,
+        "cjkCount": 2283,
+        "codeBlocks": 4,
+        "srcPathCount": 2
+      },
+      "metaphors": {
+        "osCount": 8,
+        "nonTechCount": 2,
+        "total": 10,
+        "balanceScore": 0.2,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/services/SessionMemory/sessionMemory.ts",
+          "src/services/SessionMemory/prompts.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q10_用户能在Claude的生命周期里插多少个钩子.md",
+      "title": "用户能在 Claude 的生命周期里插多少个钩子？",
+      "stats": {
+        "lineCount": 192,
+        "cjkCount": 1847,
+        "codeBlocks": 10,
+        "srcPathCount": 5
+      },
+      "metaphors": {
+        "osCount": 8,
+        "nonTechCount": 3,
+        "total": 11,
+        "balanceScore": 0.273,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/hooks/",
+          "src/services/hooks/",
+          "src/utils/hooks.ts",
+          "src/utils/hooks/hooksConfigManager.ts",
+          "src/utils/hooks/execAgentHook.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q11_对话也可以像代码一样分支和回滚吗.md",
+      "title": "对话也可以像代码一样分支和回滚吗？",
+      "stats": {
+        "lineCount": 163,
+        "cjkCount": 1609,
+        "codeBlocks": 7,
+        "srcPathCount": 6
+      },
+      "metaphors": {
+        "osCount": 4,
+        "nonTechCount": 1,
+        "total": 5,
+        "balanceScore": 0.2,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/sessionBranching.ts",
+          "src/components/BranchSelector.tsx",
+          "src/commands/branch/branch.ts",
+          "src/commands/rewind/rewind.ts",
+          "src/commands/btw/btw.tsx",
+          "src/utils/sessionStorage.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q12_插件系统是怎么防止你被恶意扩展攻击的.md",
+      "title": "插件系统是怎么防止你被恶意扩展攻击的？",
+      "stats": {
+        "lineCount": 180,
+        "cjkCount": 1880,
+        "codeBlocks": 7,
+        "srcPathCount": 7
+      },
+      "metaphors": {
+        "osCount": 8,
+        "nonTechCount": 8,
+        "total": 16,
+        "balanceScore": 0.5,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/plugins/",
+          "src/services/plugins/",
+          "src/commands/plugin/",
+          "src/utils/plugins/schemas.ts",
+          "src/utils/plugins/pluginBlocklist.ts",
+          "src/utils/hooks/hooksSettings.ts",
+          "src/utils/hooks/hooksConfigManager.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q13_Skills和斜杠命令有什么本质区别.md",
+      "title": "Skills 和斜杠命令有什么本质区别？",
+      "stats": {
+        "lineCount": 176,
+        "cjkCount": 1479,
+        "codeBlocks": 7,
+        "srcPathCount": 4
+      },
+      "metaphors": {
+        "osCount": 4,
+        "nonTechCount": 6,
+        "total": 10,
+        "balanceScore": 0.6,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/skills/",
+          "src/tools/SkillTool/",
+          "src/skills/loadSkillsDir.ts",
+          "src/skills/bundledSkills.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q14_多个Claude实例是怎么协同工作的.md",
+      "title": "多个 Claude 实例是怎么协同工作的？",
+      "stats": {
+        "lineCount": 819,
+        "cjkCount": 4997,
+        "codeBlocks": 36,
+        "srcPathCount": 18
+      },
+      "metaphors": {
+        "osCount": 32,
+        "nonTechCount": 6,
+        "total": 38,
+        "balanceScore": 0.158,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/swarm/inProcessRunner.ts",
+          "src/utils/swarm/spawnInProcess.ts",
+          "src/utils/swarm/leaderPermissionBridge.ts",
+          "src/utils/swarm/permissionSync.ts",
+          "src/utils/swarm/teammateLayoutManager.ts",
+          "src/utils/swarm/backends/types.ts",
+          "src/utils/swarm/backends/InProcessBackend.ts",
+          "src/utils/swarm/backends/TmuxBackend.ts",
+          "src/utils/swarm/backends/registry.ts",
+          "src/utils/swarm/backends/detection.ts",
+          "src/utils/swarm/reconnection.ts",
+          "src/utils/swarm/teammateInit.ts",
+          "src/utils/swarm/teammateModel.ts",
+          "src/utils/swarm/teammatePromptAddendum.ts",
+          "src/utils/swarm/spawnUtils.ts",
+          "src/utils/swarm/constants.ts",
+          "src/utils/swarm/teamHelpers.ts",
+          "src/tasks/InProcessTeammateTask/types.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q15_终端里那只小动物是怎么活起来的.md",
+      "title": "终端里那只小动物是怎么\"活\"起来的？",
+      "stats": {
+        "lineCount": 292,
+        "cjkCount": 2981,
+        "codeBlocks": 9,
+        "srcPathCount": 9
+      },
+      "metaphors": {
+        "osCount": 1,
+        "nonTechCount": 2,
+        "total": 3,
+        "balanceScore": 0.667,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/buddy/types.ts",
+          "src/buddy/companion.ts",
+          "src/buddy/CompanionSprite.tsx",
+          "src/screens/REPL.tsx",
+          "src/buddy/useBuddyNotification.tsx",
+          "src/buddy/sprites.ts",
+          "src/buddy/prompt.ts",
+          "src/state/AppStateStore.ts",
+          "src/utils/config.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q16_如何从浏览器远程驾驶你的终端AI.md",
+      "title": "如何从浏览器远程\"驾驶\"你的终端 AI？",
+      "stats": {
+        "lineCount": 230,
+        "cjkCount": 2347,
+        "codeBlocks": 6,
+        "srcPathCount": 11
+      },
+      "metaphors": {
+        "osCount": 8,
+        "nonTechCount": 4,
+        "total": 12,
+        "balanceScore": 0.333,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/bridge/bridgeMain.ts",
+          "src/bridge/types.ts",
+          "src/bridge/workSecret.ts",
+          "src/bridge/bridgeEnabled.ts",
+          "src/bridge/bridgeConfig.ts",
+          "src/bridge/remoteBridgeCore.ts",
+          "src/bridge/replBridgeTransport.ts",
+          "src/bridge/sessionRunner.ts",
+          "src/bridge/bridgeMessaging.ts",
+          "src/bridge/initReplBridge.ts",
+          "src/remote/RemoteSessionManager.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q17_你的声音是怎么变成代码指令的.md",
+      "title": "你的声音是怎么变成代码指令的？",
+      "stats": {
+        "lineCount": 223,
+        "cjkCount": 3147,
+        "codeBlocks": 8,
+        "srcPathCount": 3
+      },
+      "metaphors": {
+        "osCount": 6,
+        "nonTechCount": 2,
+        "total": 8,
+        "balanceScore": 0.25,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/commands/voice/voice.ts",
+          "src/hooks/useVoice.ts",
+          "src/voice/voiceModeEnabled.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q18_AI的记忆是怎么跨越对话存活的.md",
+      "title": "AI 的记忆是怎么跨越对话存活的？",
+      "stats": {
+        "lineCount": 258,
+        "cjkCount": 3450,
+        "codeBlocks": 6,
+        "srcPathCount": 3
+      },
+      "metaphors": {
+        "osCount": 11,
+        "nonTechCount": 4,
+        "total": 15,
+        "balanceScore": 0.267,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/memdir/memdir.ts",
+          "src/memdir/paths.ts",
+          "src/memdir/memoryTypes.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q19_Claude是怎么决定该想多深的.md",
+      "title": "Claude 是怎么决定该\"想多深\"的？",
+      "stats": {
+        "lineCount": 251,
+        "cjkCount": 2856,
+        "codeBlocks": 8,
+        "srcPathCount": 7
+      },
+      "metaphors": {
+        "osCount": 8,
+        "nonTechCount": 7,
+        "total": 15,
+        "balanceScore": 0.467,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/effort.ts",
+          "src/utils/thinking.ts",
+          "src/utils/advisor.ts",
+          "src/utils/thinkingBudget.ts",
+          "src/services/api/",
+          "src/utils/modelCost.ts",
+          "src/cost-tracker.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q20_这个工具到底藏了多少命令.md",
+      "title": "这个工具到底藏了多少命令？",
+      "stats": {
+        "lineCount": 214,
+        "cjkCount": 2589,
+        "codeBlocks": 4,
+        "srcPathCount": 6
+      },
+      "metaphors": {
+        "osCount": 3,
+        "nonTechCount": 4,
+        "total": 7,
+        "balanceScore": 0.571,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/commands/",
+          "src/commands.ts",
+          "src/commands/advisor.ts",
+          "src/commands/voice/voice.ts",
+          "src/commands/output-style/output-style.tsx",
+          "src/commands/effort/effort.tsx"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q21_MagicDocs是怎么自动维护文档的.md",
+      "title": "MagicDocs 是怎么自动维护文档的？",
+      "stats": {
+        "lineCount": 234,
+        "cjkCount": 3517,
+        "codeBlocks": 8,
+        "srcPathCount": 2
+      },
+      "metaphors": {
+        "osCount": 7,
+        "nonTechCount": 8,
+        "total": 15,
+        "balanceScore": 0.533,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/services/MagicDocs/magicDocs.ts",
+          "src/services/MagicDocs/prompts.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q22_Computer_Use是怎么让AI操控你的屏幕的.md",
+      "title": "Computer Use 是怎么让 AI 操控你的屏幕的？",
+      "stats": {
+        "lineCount": 233,
+        "cjkCount": 4428,
+        "codeBlocks": 2,
+        "srcPathCount": 7
+      },
+      "metaphors": {
+        "osCount": 18,
+        "nonTechCount": 9,
+        "total": 27,
+        "balanceScore": 0.333,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/computerUse/executor.ts",
+          "src/utils/computerUse/drainRunLoop.ts",
+          "src/utils/computerUse/escHotkey.ts",
+          "src/utils/computerUse/hostAdapter.ts",
+          "src/utils/computerUse/gates.ts",
+          "src/tools/ComputerUseTool/mcpServer.ts",
+          "src/tools/ComputerUseTool/wrapper.tsx"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q23_Deep_Link和Teleport是怎么跨设备连接的.md",
+      "title": "Deep Link 和 Teleport 是怎么跨设备连接的？",
+      "stats": {
+        "lineCount": 224,
+        "cjkCount": 3943,
+        "codeBlocks": 3,
+        "srcPathCount": 9
+      },
+      "metaphors": {
+        "osCount": 11,
+        "nonTechCount": 9,
+        "total": 20,
+        "balanceScore": 0.45,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/deepLink/parseDeepLink.ts",
+          "src/utils/deepLink/registerProtocol.ts",
+          "src/utils/deepLink/protocolHandler.ts",
+          "src/utils/deepLink/terminalLauncher.ts",
+          "src/utils/deepLink/banner.ts",
+          "src/utils/claudeInChrome/",
+          "src/utils/teleport/gitBundle.ts",
+          "src/utils/teleport/api.ts",
+          "src/utils/teleport/environments.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q24_用户输入是怎么一步步变成AI请求的.md",
+      "title": "用户输入是怎么一步步变成 AI 请求的？",
+      "stats": {
+        "lineCount": 241,
+        "cjkCount": 3850,
+        "codeBlocks": 5,
+        "srcPathCount": 4
+      },
+      "metaphors": {
+        "osCount": 31,
+        "nonTechCount": 5,
+        "total": 36,
+        "balanceScore": 0.139,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/processUserInput/processUserInput.ts",
+          "src/utils/processUserInput/processTextPrompt.ts",
+          "src/utils/processUserInput/processBashCommand.tsx",
+          "src/components/TextInput.tsx"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part2_好奇心驱动的深度问答/Q25_BashTool的安全防线是怎么工作的.md",
+      "title": "BashTool 的八层安全防线是怎么工作的？",
+      "stats": {
+        "lineCount": 464,
+        "cjkCount": 6490,
+        "codeBlocks": 7,
+        "srcPathCount": 2
+      },
+      "metaphors": {
+        "osCount": 25,
+        "nonTechCount": 4,
+        "total": 29,
+        "balanceScore": 0.138,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/tools/BashTool/",
+          "src/utils/bash/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/01_权限系统完全解析.md",
+      "title": "权限系统完全解析",
+      "stats": {
+        "lineCount": 309,
+        "cjkCount": 4193,
+        "codeBlocks": 7,
+        "srcPathCount": 11
+      },
+      "metaphors": {
+        "osCount": 5,
+        "nonTechCount": 8,
+        "total": 13,
+        "balanceScore": 0.615,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/permissions/",
+          "src/hooks/toolPermission/",
+          "src/tools/tools.ts",
+          "src/utils/permissions/permissions.ts",
+          "src/utils/permissions/PermissionMode.ts",
+          "src/utils/permissions/denialTracking.ts",
+          "src/utils/permissions/PermissionResult.ts",
+          "src/utils/permissions/PermissionUpdate.ts",
+          "src/utils/permissions/permissionRuleParser.ts",
+          "src/utils/permissions/permissionSetup.ts",
+          "src/utils/permissions/bypassPermissionsKillswitch.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/02_投机执行子系统完全解析.md",
+      "title": "投机执行子系统完全解析",
+      "stats": {
+        "lineCount": 454,
+        "cjkCount": 5373,
+        "codeBlocks": 11,
+        "srcPathCount": 4
+      },
+      "metaphors": {
+        "osCount": 65,
+        "nonTechCount": 3,
+        "total": 68,
+        "balanceScore": 0.044,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/services/promptSuggestion/",
+          "src/utils/speculation/",
+          "src/services/speculative/",
+          "src/services/PromptSuggestion/promptSuggestion.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/03_MCP平台完全解析.md",
+      "title": "MCP 平台完全解析",
+      "stats": {
+        "lineCount": 380,
+        "cjkCount": 5595,
+        "codeBlocks": 8,
+        "srcPathCount": 2
+      },
+      "metaphors": {
+        "osCount": 17,
+        "nonTechCount": 11,
+        "total": 28,
+        "balanceScore": 0.393,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/services/mcp/",
+          "src/tools/MCPTool/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/04_Hooks子系统完全解析.md",
+      "title": "Hooks 子系统完全解析",
+      "stats": {
+        "lineCount": 353,
+        "cjkCount": 5188,
+        "codeBlocks": 4,
+        "srcPathCount": 6
+      },
+      "metaphors": {
+        "osCount": 16,
+        "nonTechCount": 9,
+        "total": 25,
+        "balanceScore": 0.36,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/hooks/",
+          "src/services/hooks/",
+          "src/schemas/hooks.ts",
+          "src/utils/hooks.ts",
+          "src/utils/hooks/execAgentHook.ts",
+          "src/entrypoints/sdk/coreSchemas.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/05_插件系统完全解析.md",
+      "title": "插件系统完全解析",
+      "stats": {
+        "lineCount": 463,
+        "cjkCount": 5710,
+        "codeBlocks": 13,
+        "srcPathCount": 3
+      },
+      "metaphors": {
+        "osCount": 20,
+        "nonTechCount": 7,
+        "total": 27,
+        "balanceScore": 0.259,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/plugins/",
+          "src/services/plugins/",
+          "src/commands/plugin/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/06_CLAUDE_md加载系统完全解析.md",
+      "title": "CLAUDE.md 加载系统完全解析",
+      "stats": {
+        "lineCount": 490,
+        "cjkCount": 4698,
+        "codeBlocks": 20,
+        "srcPathCount": 7
+      },
+      "metaphors": {
+        "osCount": 26,
+        "nonTechCount": 8,
+        "total": 34,
+        "balanceScore": 0.235,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/claudemd.ts",
+          "src/context.ts",
+          "src/utils/memory/types.ts",
+          "src/utils/frontmatterParser.ts",
+          "src/utils/config.ts",
+          "src/utils/settings/managedPath.ts",
+          "src/components/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/07_Sandbox沙箱系统完全解析.md",
+      "title": "Sandbox 沙箱系统完全解析",
+      "stats": {
+        "lineCount": 329,
+        "cjkCount": 4832,
+        "codeBlocks": 7,
+        "srcPathCount": 2
+      },
+      "metaphors": {
+        "osCount": 30,
+        "nonTechCount": 6,
+        "total": 36,
+        "balanceScore": 0.167,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/sandbox/",
+          "src/entrypoints/sandbox/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/08_遥测与可观测性完全解析.md",
+      "title": "遥测与可观测性完全解析",
+      "stats": {
+        "lineCount": 432,
+        "cjkCount": 5186,
+        "codeBlocks": 7,
+        "srcPathCount": 2
+      },
+      "metaphors": {
+        "osCount": 32,
+        "nonTechCount": 3,
+        "total": 35,
+        "balanceScore": 0.086,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/telemetry/",
+          "src/services/analytics/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/09_设置系统完全解析.md",
+      "title": "设置系统完全解析",
+      "stats": {
+        "lineCount": 307,
+        "cjkCount": 4551,
+        "codeBlocks": 4,
+        "srcPathCount": 2
+      },
+      "metaphors": {
+        "osCount": 14,
+        "nonTechCount": 2,
+        "total": 16,
+        "balanceScore": 0.125,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/settings/",
+          "src/services/settingsSync/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/10_Agent与任务系统完全解析.md",
+      "title": "Agent 与任务系统完全解析",
+      "stats": {
+        "lineCount": 369,
+        "cjkCount": 5090,
+        "codeBlocks": 6,
+        "srcPathCount": 5
+      },
+      "metaphors": {
+        "osCount": 24,
+        "nonTechCount": 10,
+        "total": 34,
+        "balanceScore": 0.294,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/tasks/",
+          "src/tools/AgentTool/",
+          "src/buddy/",
+          "src/tasks/DreamTask/DreamTask.ts",
+          "src/services/autoDream/autoDream.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/11_文件历史系统完全解析.md",
+      "title": "文件历史系统完全解析",
+      "stats": {
+        "lineCount": 270,
+        "cjkCount": 4396,
+        "codeBlocks": 5,
+        "srcPathCount": 2
+      },
+      "metaphors": {
+        "osCount": 11,
+        "nonTechCount": 5,
+        "total": 16,
+        "balanceScore": 0.313,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/fileHistory/",
+          "src/utils/fsOperations/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/12_Bridge远程架构完全解析.md",
+      "title": "Bridge 远程架构完全解析",
+      "stats": {
+        "lineCount": 492,
+        "cjkCount": 5091,
+        "codeBlocks": 16,
+        "srcPathCount": 1
+      },
+      "metaphors": {
+        "osCount": 24,
+        "nonTechCount": 8,
+        "total": 32,
+        "balanceScore": 0.25,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/bridge/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/13_Buddy伴侣系统完全解析.md",
+      "title": "Buddy 伴侣系统完全解析",
+      "stats": {
+        "lineCount": 524,
+        "cjkCount": 4542,
+        "codeBlocks": 24,
+        "srcPathCount": 7
+      },
+      "metaphors": {
+        "osCount": 4,
+        "nonTechCount": 7,
+        "total": 11,
+        "balanceScore": 0.636,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/buddy/",
+          "src/buddy/companion.ts",
+          "src/buddy/types.ts",
+          "src/buddy/sprites.ts",
+          "src/buddy/prompt.ts",
+          "src/buddy/useBuddyNotification.tsx",
+          "src/buddy/CompanionSprite.tsx"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/14_语音系统完全解析.md",
+      "title": "语音系统完全解析",
+      "stats": {
+        "lineCount": 394,
+        "cjkCount": 3846,
+        "codeBlocks": 16,
+        "srcPathCount": 8
+      },
+      "metaphors": {
+        "osCount": 4,
+        "nonTechCount": 3,
+        "total": 7,
+        "balanceScore": 0.429,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/voice/",
+          "src/commands/voice/",
+          "src/context/",
+          "src/hooks/",
+          "src/services/",
+          "src/components/",
+          "src/commands/voice/voice.ts",
+          "src/context/voice.tsx"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/15_Skill加载基础设施完全解析.md",
+      "title": "Skill 加载基础设施完全解析",
+      "stats": {
+        "lineCount": 867,
+        "cjkCount": 5062,
+        "codeBlocks": 27,
+        "srcPathCount": 5
+      },
+      "metaphors": {
+        "osCount": 9,
+        "nonTechCount": 6,
+        "total": 15,
+        "balanceScore": 0.4,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/components/",
+          "src/app.ts",
+          "src/skills/bundled/simplify.ts",
+          "src/skills/bundled/skillify.ts",
+          "src/skills/bundled/loop.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/16_输出样式系统完全解析.md",
+      "title": "输出样式系统完全解析",
+      "stats": {
+        "lineCount": 516,
+        "cjkCount": 4956,
+        "codeBlocks": 18,
+        "srcPathCount": 6
+      },
+      "metaphors": {
+        "osCount": 23,
+        "nonTechCount": 5,
+        "total": 28,
+        "balanceScore": 0.179,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/outputStyles/",
+          "src/constants/",
+          "src/commands/",
+          "src/components/",
+          "src/utils/plugins/",
+          "src/constants/prompts.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/17_遥测与分析系统完全解析.md",
+      "title": "遥测与分析系统完全解析",
+      "stats": {
+        "lineCount": 655,
+        "cjkCount": 6117,
+        "codeBlocks": 28,
+        "srcPathCount": 1
+      },
+      "metaphors": {
+        "osCount": 29,
+        "nonTechCount": 2,
+        "total": 31,
+        "balanceScore": 0.065,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/services/analytics/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/18_Bash_AST解析器完全解析.md",
+      "title": "Bash AST 解析器完全解析",
+      "stats": {
+        "lineCount": 663,
+        "cjkCount": 5193,
+        "codeBlocks": 24,
+        "srcPathCount": 3
+      },
+      "metaphors": {
+        "osCount": 13,
+        "nonTechCount": 6,
+        "total": 19,
+        "balanceScore": 0.316,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/bash/",
+          "src/tools/BashTool/",
+          "src/utils/permissions/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/19_Cron调度系统完全解析.md",
+      "title": "Cron 调度系统完全解析",
+      "stats": {
+        "lineCount": 351,
+        "cjkCount": 2294,
+        "codeBlocks": 13,
+        "srcPathCount": 5
+      },
+      "metaphors": {
+        "osCount": 27,
+        "nonTechCount": 4,
+        "total": 31,
+        "balanceScore": 0.129,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/cronScheduler.ts",
+          "src/utils/cronTasks.ts",
+          "src/utils/cron.ts",
+          "src/utils/cronTasksLock.ts",
+          "src/utils/cronJitterConfig.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/20_团队记忆同步完全解析.md",
+      "title": "团队记忆同步完全解析",
+      "stats": {
+        "lineCount": 349,
+        "cjkCount": 2199,
+        "codeBlocks": 13,
+        "srcPathCount": 4
+      },
+      "metaphors": {
+        "osCount": 2,
+        "nonTechCount": 3,
+        "total": 5,
+        "balanceScore": 0.6,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/services/teamMemorySync/index.ts",
+          "src/services/teamMemorySync/watcher.ts",
+          "src/services/teamMemorySync/secretScanner.ts",
+          "src/services/teamMemorySync/types.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/21_FastMode与UltraPlan完全解析.md",
+      "title": "Fast Mode 与 UltraPlan 完全解析",
+      "stats": {
+        "lineCount": 298,
+        "cjkCount": 1955,
+        "codeBlocks": 10,
+        "srcPathCount": 4
+      },
+      "metaphors": {
+        "osCount": 2,
+        "nonTechCount": 3,
+        "total": 5,
+        "balanceScore": 0.6,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/fastMode.ts",
+          "src/commands/fast/",
+          "src/commands/ultraplan.tsx",
+          "src/utils/ultraplan/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/22_PromptCache可观测性完全解析.md",
+      "title": "Prompt Cache 可观测性完全解析",
+      "stats": {
+        "lineCount": 503,
+        "cjkCount": 4441,
+        "codeBlocks": 16,
+        "srcPathCount": 12
+      },
+      "metaphors": {
+        "osCount": 38,
+        "nonTechCount": 10,
+        "total": 48,
+        "balanceScore": 0.208,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/services/api/promptCacheBreakDetection.ts",
+          "src/utils/tokenBudget.ts",
+          "src/components/permissions/ComputerUseApproval/ComputerUseApproval.tsx",
+          "src/skills/bundled/claudeInChrome.ts",
+          "src/utils/claudeInChrome/setup.ts",
+          "src/utils/claudeInChrome/prompt.ts",
+          "src/services/rateLimitMessages.ts",
+          "src/services/rateLimitMocking.ts",
+          "src/services/mockRateLimits.ts",
+          "src/commands/rate-limit-options/",
+          "src/remote/SessionsWebSocket.ts",
+          "src/bridge/remoteBridgeCore.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/Vim模式完全解析.md",
+      "title": "Vim 模式完全解析",
+      "stats": {
+        "lineCount": 576,
+        "cjkCount": 3862,
+        "codeBlocks": 24,
+        "srcPathCount": 5
+      },
+      "metaphors": {
+        "osCount": 13,
+        "nonTechCount": 3,
+        "total": 16,
+        "balanceScore": 0.188,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/vim/types.ts",
+          "src/vim/motions.ts",
+          "src/vim/operators.ts",
+          "src/vim/textObjects.ts",
+          "src/vim/transitions.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/任务执行管道完全解析.md",
+      "title": "任务执行管道完全解析",
+      "stats": {
+        "lineCount": 674,
+        "cjkCount": 4018,
+        "codeBlocks": 25,
+        "srcPathCount": 10
+      },
+      "metaphors": {
+        "osCount": 32,
+        "nonTechCount": 7,
+        "total": 39,
+        "balanceScore": 0.179,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/tasks/types.ts",
+          "src/tasks/LocalShellTask/guards.ts",
+          "src/tasks/LocalAgentTask/LocalAgentTask.tsx",
+          "src/foo.ts",
+          "src/tasks/RemoteAgentTask/RemoteAgentTask.tsx",
+          "src/tasks/pillLabel.ts",
+          "src/tasks/InProcessTeammateTask/types.ts",
+          "src/tasks/DreamTask/DreamTask.ts",
+          "src/tasks/LocalMainSessionTask.ts",
+          "src/tasks/stopTask.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/协调器模式完全解析.md",
+      "title": "协调器模式完全解析",
+      "stats": {
+        "lineCount": 790,
+        "cjkCount": 6083,
+        "codeBlocks": 25,
+        "srcPathCount": 4
+      },
+      "metaphors": {
+        "osCount": 19,
+        "nonTechCount": 5,
+        "total": 24,
+        "balanceScore": 0.208,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/coordinator/coordinatorMode.ts",
+          "src/auth/validate.ts",
+          "src/auth/types.ts",
+          "src/auth/."
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/记忆系统完全解析.md",
+      "title": "记忆系统完全解析",
+      "stats": {
+        "lineCount": 793,
+        "cjkCount": 7183,
+        "codeBlocks": 19,
+        "srcPathCount": 25
+      },
+      "metaphors": {
+        "osCount": 15,
+        "nonTechCount": 11,
+        "total": 26,
+        "balanceScore": 0.423,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/memdir/",
+          "src/services/",
+          "src/utils/",
+          "src/components/memory/",
+          "src/memdir/memdir.ts",
+          "src/utils/claudemd.ts",
+          "src/services/SessionMemory/",
+          "src/tools/AgentTool/agentMemory.ts",
+          "src/memdir/teamMemPaths.ts",
+          "src/memdir/paths.ts",
+          "src/memdir/memoryTypes.ts",
+          "src/memdir/memoryScan.ts",
+          "src/memdir/findRelevantMemories.ts",
+          "src/memdir/memoryAge.ts",
+          "src/utils/forkedAgent.ts",
+          "src/services/extractMemories/extractMemories.ts",
+          "src/services/extractMemories/prompts.ts",
+          "src/services/SessionMemory/sessionMemoryUtils.ts",
+          "src/utils/memoryFileDetection.ts",
+          "src/services/SessionMemory/sessionMemory.ts",
+          "src/services/compact/sessionMemoryCompact.ts",
+          "src/services/autoDream/autoDream.ts",
+          "src/tools/AgentTool/agentMemorySnapshot.ts",
+          "src/commands/memory/memory.tsx",
+          "src/components/memory/MemoryUpdateNotification.tsx"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/远程Agent管理完全解析.md",
+      "title": "远程 Agent 管理完全解析",
+      "stats": {
+        "lineCount": 638,
+        "cjkCount": 5831,
+        "codeBlocks": 15,
+        "srcPathCount": 14
+      },
+      "metaphors": {
+        "osCount": 4,
+        "nonTechCount": 18,
+        "total": 22,
+        "balanceScore": 0.818,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/tasks/RemoteAgentTask/RemoteAgentTask.tsx",
+          "src/utils/teleport.tsx",
+          "src/utils/teleport/api.ts",
+          "src/utils/ultraplan/ccrSession.ts",
+          "src/utils/teleport/gitBundle.ts",
+          "src/utils/teleport/environments.ts",
+          "src/utils/sessionStorage.ts",
+          "src/utils/background/remote/remoteSession.ts",
+          "src/tasks/pillLabel.ts",
+          "src/utils/background/remote/preconditions.ts",
+          "src/utils/teleport/environmentSelection.ts",
+          "src/utils/ultraplan/keyword.ts",
+          "src/tasks/types.ts",
+          "src/Task.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part3_子系统完全解析/键绑定系统完全解析.md",
+      "title": "键绑定系统完全解析",
+      "stats": {
+        "lineCount": 672,
+        "cjkCount": 3590,
+        "codeBlocks": 27,
+        "srcPathCount": 8
+      },
+      "metaphors": {
+        "osCount": 7,
+        "nonTechCount": 6,
+        "total": 13,
+        "balanceScore": 0.462,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/keybindings/schema.ts",
+          "src/keybindings/parser.ts",
+          "src/keybindings/match.ts",
+          "src/keybindings/resolver.ts",
+          "src/keybindings/defaultBindings.ts",
+          "src/keybindings/loadUserBindings.ts",
+          "src/keybindings/reservedShortcuts.ts",
+          "src/keybindings/validate.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part4_工程哲学/01_在等待时间里藏工作.md",
+      "title": "在等待时间里藏工作",
+      "stats": {
+        "lineCount": 161,
+        "cjkCount": 3697,
+        "codeBlocks": 3,
+        "srcPathCount": 7
+      },
+      "metaphors": {
+        "osCount": 34,
+        "nonTechCount": 1,
+        "total": 35,
+        "balanceScore": 0.029,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/main.tsx",
+          "src/utils/settings/mdm/rawRead.ts",
+          "src/utils/secureStorage/keychainPrefetch.ts",
+          "src/utils/apiPreconnect.ts",
+          "src/services/tools/StreamingToolExecutor.ts",
+          "src/services/PromptSuggestion/speculation.ts",
+          "src/utils/forkedAgent.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part4_工程哲学/02_token是一等公民.md",
+      "title": "Token 是一等公民",
+      "stats": {
+        "lineCount": 207,
+        "cjkCount": 4028,
+        "codeBlocks": 6,
+        "srcPathCount": 7
+      },
+      "metaphors": {
+        "osCount": 51,
+        "nonTechCount": 10,
+        "total": 61,
+        "balanceScore": 0.164,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/forkedAgent.ts",
+          "src/services/api/promptCacheBreakDetection.ts",
+          "src/services/PromptSuggestion/promptSuggestion.ts",
+          "src/services/SessionMemory/sessionMemoryUtils.ts",
+          "src/services/mcp/client.ts",
+          "src/services/compact/autoCompact.ts",
+          "src/tools/AgentTool/loadAgentsDir.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part4_工程哲学/03_把AI当乐高积木.md",
+      "title": "把 AI 当乐高积木",
+      "stats": {
+        "lineCount": 211,
+        "cjkCount": 3999,
+        "codeBlocks": 4,
+        "srcPathCount": 5
+      },
+      "metaphors": {
+        "osCount": 17,
+        "nonTechCount": 18,
+        "total": 35,
+        "balanceScore": 0.514,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/tools/AgentTool/prompt.ts",
+          "src/components/agents/generateAgent.ts",
+          "src/services/claude.ts",
+          "src/tools/AgentTool.ts",
+          "src/services/sideQuery.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part4_工程哲学/04_多层防线不是偏执是必要.md",
+      "title": "多层防线不是偏执，是必要",
+      "stats": {
+        "lineCount": 260,
+        "cjkCount": 4396,
+        "codeBlocks": 4,
+        "srcPathCount": 6
+      },
+      "metaphors": {
+        "osCount": 5,
+        "nonTechCount": 1,
+        "total": 6,
+        "balanceScore": 0.167,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/utils/permissions/permissions.ts",
+          "src/utils/permissions/denialTracking.ts",
+          "src/utils/permissions/yoloClassifier.ts",
+          "src/utils/permissions/filesystem.ts",
+          "src/utils/permissions/permissionSetup.ts",
+          "src/hooks/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part4_工程哲学/05_可观测性是产品功能不是运维工具.md",
+      "title": "可观测性是产品功能，不是运维工具",
+      "stats": {
+        "lineCount": 278,
+        "cjkCount": 5085,
+        "codeBlocks": 8,
+        "srcPathCount": 9
+      },
+      "metaphors": {
+        "osCount": 10,
+        "nonTechCount": 6,
+        "total": 16,
+        "balanceScore": 0.375,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/services/analytics/index.ts",
+          "src/utils/telemetry/instrumentation.ts",
+          "src/utils/telemetry/sessionTracing.ts",
+          "src/services/PromptSuggestion/promptSuggestion.ts",
+          "src/tasks/InProcessTeammateTask/types.ts",
+          "src/tools/AgentTool/runAgent.ts",
+          "src/utils/hooks/hookEvents.ts",
+          "src/utils/telemetry/",
+          "src/services/analytics/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part4_工程哲学/06_Prompt的八大设计智慧.md",
+      "title": "Prompt 的八大设计智慧：从 124 个提示词模板中提炼的工程哲学",
+      "stats": {
+        "lineCount": 538,
+        "cjkCount": 5347,
+        "codeBlocks": 19,
+        "srcPathCount": 10
+      },
+      "metaphors": {
+        "osCount": 14,
+        "nonTechCount": 6,
+        "total": 20,
+        "balanceScore": 0.3,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/tools/AgentTool/built-in/verificationAgent.ts",
+          "src/constants/prompts.ts",
+          "src/commands/security-review.ts",
+          "src/commands/init.ts",
+          "src/memdir/memoryTypes.ts",
+          "src/utils/forkedAgent.ts",
+          "src/skills/bundled/loop.ts",
+          "src/tools/AgentTool/prompt.ts",
+          "src/components/agents/generateAgent.ts",
+          "src/services/autoDream/consolidationPrompt.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 4,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": false
+        }
+      },
+      "issues": [
+        {
+          "severity": "info",
+          "type": "no_critical",
+          "message": "缺少批判/局限性分析"
+        }
+      ]
+    },
+    {
+      "file": "part5_批判与超越/01_这个系统的代价.md",
+      "title": "这个系统的代价",
+      "stats": {
+        "lineCount": 289,
+        "cjkCount": 6864,
+        "codeBlocks": 2,
+        "srcPathCount": 6
+      },
+      "metaphors": {
+        "osCount": 39,
+        "nonTechCount": 7,
+        "total": 46,
+        "balanceScore": 0.152,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/services/analytics/",
+          "src/main.tsx",
+          "src/commands/",
+          "src/services/api/promptCacheBreakDetection.ts",
+          "src/services/api/claude.ts",
+          "src/hooks/"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part5_批判与超越/02_如果我来重新设计.md",
+      "title": "如果我来重新设计",
+      "stats": {
+        "lineCount": 268,
+        "cjkCount": 5286,
+        "codeBlocks": 4,
+        "srcPathCount": 6
+      },
+      "metaphors": {
+        "osCount": 8,
+        "nonTechCount": 16,
+        "total": 24,
+        "balanceScore": 0.667,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/services/claude.ts",
+          "src/utils/claudemd.ts",
+          "src/utils/forkedAgent.ts",
+          "src/hooks/",
+          "src/Tool.ts",
+          "src/memdir/memoryTypes.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "part5_批判与超越/03_把这些思想用在你的项目里.md",
+      "title": "把这些思想用在你的项目里",
+      "stats": {
+        "lineCount": 268,
+        "cjkCount": 4226,
+        "codeBlocks": 5,
+        "srcPathCount": 3
+      },
+      "metaphors": {
+        "osCount": 14,
+        "nonTechCount": 8,
+        "total": 22,
+        "balanceScore": 0.364,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [
+          "src/main.tsx",
+          "src/services/claude.ts",
+          "src/utils/permissions/permissions.ts"
+        ],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 5,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": true,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": []
+    },
+    {
+      "file": "references.md",
+      "title": "引用与致谢",
+      "stats": {
+        "lineCount": 217,
+        "cjkCount": 2618,
+        "codeBlocks": 0,
+        "srcPathCount": 0
+      },
+      "metaphors": {
+        "osCount": 9,
+        "nonTechCount": 2,
+        "total": 11,
+        "balanceScore": 0.182,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 2,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": false,
+          "hasSrcRefs": false,
+          "hasAnalogies": true,
+          "hasCritical": false
+        }
+      },
+      "issues": [
+        {
+          "severity": "warning",
+          "type": "no_code",
+          "message": "没有代码块（``` 标记）"
+        },
+        {
+          "severity": "warning",
+          "type": "no_src_ref",
+          "message": "没有源文件引用（src/ 路径）"
+        },
+        {
+          "severity": "info",
+          "type": "no_critical",
+          "message": "缺少批判/局限性分析"
+        }
+      ]
+    }
+  ],
+  "allIssues": [
+    {
+      "severity": "warning",
+      "type": "no_code",
+      "message": "没有代码块（``` 标记）",
+      "chapter": "references.md",
+      "title": "引用与致谢"
+    },
+    {
+      "severity": "warning",
+      "type": "no_src_ref",
+      "message": "没有源文件引用（src/ 路径）",
+      "chapter": "references.md",
+      "title": "引用与致谢"
+    },
+    {
+      "severity": "info",
+      "type": "no_critical",
+      "message": "缺少批判/局限性分析",
+      "chapter": "part4_工程哲学/06_Prompt的八大设计智慧.md",
+      "title": "Prompt 的八大设计智慧：从 124 个提示词模板中提炼的工程哲学"
+    },
+    {
+      "severity": "info",
+      "type": "no_critical",
+      "message": "缺少批判/局限性分析",
+      "chapter": "references.md",
+      "title": "引用与致谢"
+    }
+  ],
+  "needsWork": [
+    {
+      "file": "references.md",
+      "title": "引用与致谢",
+      "completeness": 2,
+      "issueCount": 3
+    },
+    {
+      "file": "part4_工程哲学/06_Prompt的八大设计智慧.md",
+      "title": "Prompt 的八大设计智慧：从 124 个提示词模板中提炼的工程哲学",
+      "completeness": 4,
+      "issueCount": 1
+    },
+    {
+      "file": "part0_序章/00_序章.md",
+      "title": "序章：当你打开一个\"聊天助手\"的引擎盖",
+      "completeness": 5,
+      "issueCount": 0
+    },
+    {
+      "file": "part1_认识这个系统/01_这不是聊天机器人.md",
+      "title": "这不是聊天机器人",
+      "completeness": 5,
+      "issueCount": 0
+    },
+    {
+      "file": "part1_认识这个系统/02_五分钟看懂系统架构.md",
+      "title": "五分钟看懂系统架构",
+      "completeness": 5,
+      "issueCount": 0
+    },
+    {
+      "file": "part1_认识这个系统/03_读懂本书需要的全部概念.md",
+      "title": "读懂本书需要的全部概念",
+      "completeness": 5,
+      "issueCount": 0
+    },
+    {
+      "file": "part1_认识这个系统/04_八个子系统的全景地图.md",
+      "title": "八个子系统的全景地图",
+      "completeness": 5,
+      "issueCount": 0
+    },
+    {
+      "file": "part2_代码架构完全解构/01_代码地图.md",
+      "title": "代码地图：1,884 个文件的完整拓扑",
+      "completeness": 5,
+      "issueCount": 0
+    },
+    {
+      "file": "part2_代码架构完全解构/02_启动序列.md",
+      "title": "启动序列：从敲下 `claude` 到系统就绪",
+      "completeness": 5,
+      "issueCount": 0
+    },
+    {
+      "file": "part2_代码架构完全解构/03_提示词工厂.md",
+      "title": "提示词工厂：系统提示词的组装流水线",
+      "completeness": 5,
+      "issueCount": 0
+    }
+  ]
+}

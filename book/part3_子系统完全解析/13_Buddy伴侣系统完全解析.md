@@ -301,21 +301,33 @@ shiny: rng() < 0.01,
 
 `prompt.ts` 的 `companionIntroText` 函数（第 7-12 行）是整个 Buddy 系统中**对 AI 从业者最有参考价值的部分**——它解决了一个多角色交互的核心难题：如何让一个 LLM 在知道"另一个角色"存在的情况下，正确地退让而不是抢戏。
 
+#### 完整原文（`src/buddy/prompt.ts` 第 7-12 行）
+
+下面是 `companionIntroText()` 的完整源码：
+
 ```typescript
 export function companionIntroText(name: string, species: string): string {
   return `# Companion
 
-A small ${species} named ${name} sits beside the user's input box and 
-occasionally comments in a speech bubble. You're not ${name} — it's a 
-separate watcher.
+A small ${species} named ${name} sits beside the user's input box and occasionally comments in a speech bubble. You're not ${name} — it's a separate watcher.
 
-When the user addresses ${name} directly (by name), its bubble will answer. 
-Your job in that moment is to stay out of the way: respond in ONE line or 
-less, or just answer any part of the message meant for you. Don't explain 
-that you're not ${name} — they know. Don't narrate what ${name} might say 
-— the bubble handles that.`
+When the user addresses ${name} directly (by name), its bubble will answer. Your job in that moment is to stay out of the way: respond in ONE line or less, or just answer any part of the message meant for you. Don't explain that you're not ${name} — they know. Don't narrate what ${name} might say — the bubble handles that.`
 }
 ```
+
+当用户的伴侣是一只名叫 **Chiseler** 的 rabbit 时，Claude 实际收到的注入文本如下（模板变量展开后）：
+
+```
+# Companion
+
+A small rabbit named Chiseler sits beside the user's input box and occasionally comments in a speech bubble. You're not Chiseler — it's a separate watcher.
+
+When the user addresses Chiseler directly (by name), its bubble will answer. Your job in that moment is to stay out of the way: respond in ONE line or less, or just answer any part of the message meant for you. Don't explain that you're not Chiseler — they know. Don't narrate what Chiseler might say — the bubble handles that.
+```
+
+注意这 6 行提示词的**信息密度**：用极少的字数完成了角色定义（第 2 句）、触发条件（第 5 句 "when the user addresses by name"）、行为规范（ONE line or less）、以及三条反模式封堵（Don't explain / Don't narrate / they know）。总字数不超过 80 词，却覆盖了多角色交互所有主要失败路径。
+
+> **你正在读本书时看到的系统提示**：本书工作目录内运行的 Claude Code 实例正是通过上述相同机制注入了伴侣介绍。这段文字的存在验证了这一机制在真实会话中确实起效——Chiseler 此刻就在你的输入框旁边。
 
 **逐条拆解这段提示词的设计意图：**
 

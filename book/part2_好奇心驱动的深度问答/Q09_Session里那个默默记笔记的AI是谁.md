@@ -42,6 +42,8 @@ shouldExtractMemory(messages):
   满足条件 → 触发 extractSessionMemory()
 ```
 
+注意一个关键细节：**token 增长阈值是触发的必要条件，不可绕过**——即使工具调用次数超过阈值，如果 token 没有足够增长，提取也不会发生。这防止了高频低成本工具调用（比如多次 Glob 查询）无意义地触发记笔记。条件 4 的"当前 AI 没在执行工具"是一个自然断点捕获——模型刚做完一段工作进入对话阶段时，记笔记的信息增益最高。
+
 满足条件时，系统启动一个 `runForkedAgent`——一个独立的 AI 实例，任务只有一件事：**用 Edit 工具更新 session-memory.md 文件**。
 
 ### 笔记的结构
@@ -81,6 +83,127 @@ _每步做了什么？极简摘要_
 ```
 
 更新时，记笔记的 AI **只能修改**每节标题下面的内容——节名（`# ...`）和斜体说明行（`_..._`）不能被修改或删除。所有 Edit 操作必须并行执行，然后立即停止。
+
+#### 笔记模板原文（DEFAULT_SESSION_MEMORY_TEMPLATE）
+
+**来源**: `services/SessionMemory/prompts.ts` → `DEFAULT_SESSION_MEMORY_TEMPLATE`（第 11-41 行）
+
+这是写入 `session-memory.md` 的实际模板原文，每个节标题下的斜体行是给记笔记 AI 看的"写作说明"，不是给用户看的内容：
+
+```markdown
+# Session Title
+_A short and distinctive 5-10 word descriptive title for the session. Super info dense, no filler_
+
+# Current State
+_What is actively being worked on right now? Pending tasks not yet completed. Immediate next steps._
+
+# Task specification
+_What did the user ask to build? Any design decisions or other explanatory context_
+
+# Files and Functions
+_What are the important files? In short, what do they contain and why are they relevant?_
+
+# Workflow
+_What bash commands are usually run and in what order? How to interpret their output if not obvious?_
+
+# Errors & Corrections
+_Errors encountered and how they were fixed. What did the user correct? What approaches failed and 
+should not be tried again?_
+
+# Codebase and System Documentation
+_What are the important system components? How do they work/fit together?_
+
+# Learnings
+_What has worked well? What has not? What to avoid? Do not duplicate items from other sections_
+
+# Key results
+_If the user asked a specific output such as an answer to a question, a table, or other document, 
+repeat the exact result here_
+
+# Worklog
+_Step by step, what was attempted, done? Very terse summary for each step_
+```
+
+**设计要点**：注意 `# Session Title` 的说明是 "Super info dense, no filler"——这不是普通的"请写一个标题"，而是明确要求高信息密度、无废话。`# Errors & Corrections` 的说明特别要求记录"What approaches failed and should not be tried again?"——这是防止下次会话重蹈覆辙的关键，也是这个系统对"历史教训"记忆的核心价值。用户可以通过在 `~/.claude/session-memory/config/template.md` 放置自定义模板来替换这个默认模板。
+
+#### 更新指令原文（getDefaultUpdatePrompt）
+
+**来源**: `services/SessionMemory/prompts.ts` → `getDefaultUpdatePrompt()`（第 43-80 行）
+
+这是记笔记 AI 收到的完整任务指令。注意它开头第一句话就是免责声明——防止 AI 把这段"记笔记指令"本身也记进笔记里：
+
+```
+IMPORTANT: This message and these instructions are NOT part of the actual user conversation. 
+Do NOT include any references to "note-taking", "session notes extraction", or these update 
+instructions in the notes content.
+
+Based on the user conversation above (EXCLUDING this note-taking instruction message as well as 
+system prompt, claude.md entries, or any past session summaries), update the session notes file.
+
+The file {{notesPath}} has already been read for you. Here are its current contents:
+<current_notes_content>
+{{currentNotes}}
+</current_notes_content>
+
+Your ONLY task is to use the Edit tool to update the notes file, then stop. You can make multiple 
+edits (update every section as needed) - make all Edit tool calls in parallel in a single message. 
+Do not call any other tools.
+
+CRITICAL RULES FOR EDITING:
+- The file must maintain its exact structure with all sections, headers, and italic descriptions intact
+-- NEVER modify, delete, or add section headers (the lines starting with '#' like # Task specification)
+-- NEVER modify or delete the italic _section description_ lines (these are the lines in italics 
+   immediately following each header - they start and end with underscores)
+-- The italic _section descriptions_ are TEMPLATE INSTRUCTIONS that must be preserved exactly as-is 
+   - they guide what content belongs in each section
+-- ONLY update the actual content that appears BELOW the italic _section descriptions_ within each 
+   existing section
+-- Do NOT add any new sections, summaries, or information outside the existing structure
+- Do NOT reference this note-taking process or instructions anywhere in the notes
+- It's OK to skip updating a section if there are no substantial new insights to add. Do not add 
+  filler content like "No info yet", just leave sections blank/unedited if appropriate.
+- Write DETAILED, INFO-DENSE content for each section - include specifics like file paths, function 
+  names, error messages, exact commands, technical details, etc.
+- For "Key results", include the complete, exact output the user requested (e.g., full table, full 
+  answer, etc.)
+- Do not include information that's already in the CLAUDE.md files included in the context
+- Keep each section under ~2000 tokens/words - if a section is approaching this limit, condense it 
+  by cycling out less important details while preserving the most critical information
+- Focus on actionable, specific information that would help someone understand or recreate the work 
+  discussed in the conversation
+- IMPORTANT: Always update "Current State" to reflect the most recent work - this is critical for 
+  continuity after compaction
+
+Use the Edit tool with file_path: {{notesPath}}
+
+STRUCTURE PRESERVATION REMINDER:
+Each section has TWO parts that must be preserved exactly as they appear in the current file:
+1. The section header (line starting with #)
+2. The italic description line (the _italicized text_ immediately after the header - this is a 
+   template instruction)
+
+You ONLY update the actual content that comes AFTER these two preserved lines. The italic description 
+lines starting and ending with underscores are part of the template structure, NOT content to be 
+edited or removed.
+
+REMEMBER: Use the Edit tool in parallel and stop. Do not continue after the edits. Only include 
+insights from the actual user conversation, never from these note-taking instructions. Do not delete 
+or change section headers or italic _section descriptions_.
+```
+
+💡 **通俗理解**：这份指令就像给**新实习生**发的交接规范——"你只负责填表格里的内容格，表头和说明栏不许动；如果一格没什么可写，留空就行，别写'暂无'；每格不能超过2000字，超了就自己缩减；最重要的是：不要把这份'如何填表的说明'也填进表格里"。
+
+**五个关键设计决策分析**：
+
+| 规则 | 代码表述 | 工程理由 |
+|------|---------|---------|
+| 不能修改节标题和斜体说明行 | "NEVER modify, delete, or add section headers" | 保证文件格式稳定，支持程序解析 |
+| 允许留空，不强制填写 | "It's OK to skip updating a section" | 防止 AI 为凑内容生成低质量填充文字 |
+| 每节上限 2000 tokens | `MAX_SECTION_LENGTH = 2000` | 防止单节无限增长，保证总文件在 12000 tokens 预算内 |
+| 必须更新 Current State | "Always update 'Current State'... this is critical for continuity after compaction" | 这是压缩后恢复工作的核心断点信息 |
+| `{{variableName}}` 模板变量 | `substituteVariables()` 单次替换 | 防止用户内容中的 `{{变量名}}` 被二次替换污染 |
+
+注意提示词末尾的 `sectionReminders` 是动态追加的：当任何一节超过 2000 tokens 或总文件超过 12000 tokens 时，系统会自动在提示词末尾补充"你的第X节太长了，必须压缩"的警告。这是一个自动调节机制——不需要人工干预，文件会在每次更新时被自动修剪。
 
 ### 这个设计的工程亮点
 

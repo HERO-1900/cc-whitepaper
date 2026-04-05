@@ -436,6 +436,307 @@ async function safeWriteFile(p: string, content: string): Promise<void> {
 
 注意：`bundled/` 目录中还有 `index.ts`（注册入口）、`claudeApiContent.ts`、`verifyContent.ts` 等辅助文件，它们不是独立技能，而是为对应技能提供内容数据。feature flag 控制的技能使用动态 `require()` 延迟加载，避免在该功能未启用时加载不必要的代码。
 
+## 4.5 三个关键内置技能的提示词原文
+
+内置技能（bundled skills）的精髓不只在注册框架，而在于它们的 `SIMPLIFY_PROMPT`、`SKILLIFY_PROMPT`、`buildPrompt()` 等具体提示词——这些是 Claude Code 如何通过提示词工程实现"自我反思"、"捕获工作流"和"定时循环"的原文证据。
+
+---
+
+### 4.5.1 SIMPLIFY_PROMPT：三并行审查 Agent 的代码质检流程
+
+**源码位置**：`src/skills/bundled/simplify.ts`，第 4–53 行
+
+`/simplify` 技能是 Claude Code 自我代码审查机制的核心。它的提示词展示了如何通过一个 Skill 驱动三个并行 Agent 进行独立维度的代码审查：
+
+```
+# Simplify: Code Review and Cleanup
+
+Review all changed files for reuse, quality, and efficiency. Fix any issues found.
+
+## Phase 1: Identify Changes
+
+Run `git diff` (or `git diff HEAD` if there are staged changes) to see what changed. If there are no git changes, review the most recently modified files that the user mentioned or that you edited earlier in this conversation.
+
+## Phase 2: Launch Three Review Agents in Parallel
+
+Use the Agent tool to launch all three agents concurrently in a single message. Pass each agent the full diff so it has the complete context.
+
+### Agent 1: Code Reuse Review
+
+For each change:
+
+1. **Search for existing utilities and helpers** that could replace newly written code. Look for similar patterns elsewhere in the codebase — common locations are utility directories, shared modules, and files adjacent to the changed ones.
+2. **Flag any new function that duplicates existing functionality.** Suggest the existing function to use instead.
+3. **Flag any inline logic that could use an existing utility** — hand-rolled string manipulation, manual path handling, custom environment checks, ad-hoc type guards, and similar patterns are common candidates.
+
+### Agent 2: Code Quality Review
+
+Review the same changes for hacky patterns:
+
+1. **Redundant state**: state that duplicates existing state, cached values that could be derived, observers/effects that could be direct calls
+2. **Parameter sprawl**: adding new parameters to a function instead of generalizing or restructuring existing ones
+3. **Copy-paste with slight variation**: near-duplicate code blocks that should be unified with a shared abstraction
+4. **Leaky abstractions**: exposing internal details that should be encapsulated, or breaking existing abstraction boundaries
+5. **Stringly-typed code**: using raw strings where constants, enums (string unions), or branded types already exist in the codebase
+6. **Unnecessary JSX nesting**: wrapper Boxes/elements that add no layout value — check if inner component props (flexShrink, alignItems, etc.) already provide the needed behavior
+7. **Unnecessary comments**: comments explaining WHAT the code does (well-named identifiers already do that), narrating the change, or referencing the task/caller — delete; keep only non-obvious WHY (hidden constraints, subtle invariants, workarounds)
+
+### Agent 3: Efficiency Review
+
+Review the same changes for efficiency:
+
+1. **Unnecessary work**: redundant computations, repeated file reads, duplicate network/API calls, N+1 patterns
+2. **Missed concurrency**: independent operations run sequentially when they could run in parallel
+3. **Hot-path bloat**: new blocking work added to startup or per-request/per-render hot paths
+4. **Recurring no-op updates**: state/store updates inside polling loops, intervals, or event handlers that fire unconditionally — add a change-detection guard so downstream consumers aren't notified when nothing changed. Also: if a wrapper function takes an updater/reducer callback, verify it honors same-reference returns (or whatever the "no change" signal is) — otherwise callers' early-return no-ops are silently defeated
+5. **Unnecessary existence checks**: pre-checking file/resource existence before operating (TOCTOU anti-pattern) — operate directly and handle the error
+6. **Memory**: unbounded data structures, missing cleanup, event listener leaks
+7. **Overly broad operations**: reading entire files when only a portion is needed, loading all items when filtering for one
+
+## Phase 3: Fix Issues
+
+Wait for all three agents to complete. Aggregate their findings and fix each issue directly. If a finding is a false positive or not worth addressing, note it and move on — do not argue with the finding, just skip it.
+
+When done, briefly summarize what was fixed (or confirm the code was already clean).
+```
+
+**中文分析**：`SIMPLIFY_PROMPT` 的设计揭示了 Claude Code 用提示词驱动 Agent 协作的精确机制：
+
+1. **三 Agent 并行的分工设计**：三个审查 Agent 被明确划分了独立、不重叠的审查维度——代码复用（是否重造轮子）、代码质量（是否有糟糕模式）、效率（是否有性能问题）。这种分工不是随意的：每个维度都是人类 code reviewer 实际关注的独立视角，而且三个维度之间几乎没有信息依赖，天然适合并行执行。
+2. **"Pass each agent the full diff"**：提示词要求把完整 diff 传给每个 Agent，而不是让它们自己去读文件。这确保了三个 Agent 基于相同的信息做审查，避免了因读取时序不同导致的信息不一致。
+3. **Phase 3 的聚合策略**：`If a finding is a false positive or not worth addressing, note it and move on — do not argue with the finding, just skip it.` 这句话的设计意图是：**不要让 Claude 陷入反驳子 Agent 发现的陷阱**。如果三个审查 Agent 有一个发现可能是误报，Claude 应该直接跳过，而不是花时间解释为什么它不算问题——这样效率更高。
+4. **代码质量禁令的精确性**：Agent 2 的审查清单中，每一条都是精准的反模式描述（如"Stringly-typed code: using raw strings where constants, enums already exist"），而不是泛泛的"写好代码"。这说明这些规则来自于真实的代码审查经验积累，而不是理论推导。
+
+---
+
+### 4.5.2 SKILLIFY_PROMPT：将会话转化为可复用技能的元提示词
+
+**源码位置**：`src/skills/bundled/skillify.ts`，第 22–156 行
+
+`/skillify` 是 Claude Code 最具"元认知"特色的内置技能——它让 Claude 回顾当前会话，提炼出可复用的工作流，并将其写成一个新的 Skill 文件。只有 Anthropic 内部用户可用（`process.env.USER_TYPE !== 'ant'` 时跳过注册）。
+
+```
+# Skillify {{userDescriptionBlock}}
+
+You are capturing this session's repeatable process as a reusable skill.
+
+## Your Session Context
+
+Here is the session memory summary:
+<session_memory>
+{{sessionMemory}}
+</session_memory>
+
+Here are the user's messages during this session. Pay attention to how they steered the process, to help capture their detailed preferences in the skill:
+<user_messages>
+{{userMessages}}
+</user_messages>
+
+## Your Task
+
+### Step 1: Analyze the Session
+
+Before asking any questions, analyze the session to identify:
+- What repeatable process was performed
+- What the inputs/parameters were
+- The distinct steps (in order)
+- The success artifacts/criteria (e.g. not just "writing code," but "an open PR with CI fully passing") for each step
+- Where the user corrected or steered you
+- What tools and permissions were needed
+- What agents were used
+- What the goals and success artifacts were
+
+### Step 2: Interview the User
+
+You will use the AskUserQuestion to understand what the user wants to automate. Important notes:
+- Use AskUserQuestion for ALL questions! Never ask questions via plain text.
+- For each round, iterate as much as needed until the user is happy.
+- The user always has a freeform "Other" option to type edits or feedback -- do NOT add your own "Needs tweaking" or "I'll provide edits" option. Just offer the substantive choices.
+
+**Round 1: High level confirmation**
+- Suggest a name and description for the skill based on your analysis. Ask the user to confirm or rename.
+- Suggest high-level goal(s) and specific success criteria for the skill.
+
+**Round 2: More details**
+- Present the high-level steps you identified as a numbered list. Tell the user you will dig into the detail in the next round.
+- If you think the skill will require arguments, suggest arguments based on what you observed. Make sure you understand what someone would need to provide.
+- If it's not clear, ask if this skill should run inline (in the current conversation) or forked (as a sub-agent with its own context). Forked is better for self-contained tasks that don't need mid-process user input; inline is better when the user wants to steer mid-process.
+- Ask where the skill should be saved. Suggest a default based on context (repo-specific workflows → repo, cross-repo personal workflows → user). Options:
+  - **This repo** (`.claude/skills/<name>/SKILL.md`) — for workflows specific to this project
+  - **Personal** (`~/.claude/skills/<name>/SKILL.md`) — follows you across all repos
+
+**Round 3: Breaking down each step**
+For each major step, if it's not glaringly obvious, ask:
+- What does this step produce that later steps need? (data, artifacts, IDs)
+- What proves that this step succeeded, and that we can move on?
+- Should the user be asked to confirm before proceeding? (especially for irreversible actions like merging, sending messages, or destructive operations)
+- Are any steps independent and could run in parallel? (e.g., posting to Slack and monitoring CI at the same time)
+- How should the skill be executed? (e.g. always use a Task agent to conduct code review, or invoke an agent team for a set of concurrent steps)
+- What are the hard constraints or hard preferences? Things that must or must not happen?
+
+You may do multiple rounds of AskUserQuestion here, one round per step, especially if there are more than 3 steps or many clarification questions. Iterate as much as needed.
+
+IMPORTANT: Pay special attention to places where the user corrected you during the session, to help inform your design.
+
+**Round 4: Final questions**
+- Confirm when this skill should be invoked, and suggest/confirm trigger phrases too. (e.g. For a cherrypick workflow you could say: Use when the user wants to cherry-pick a PR to a release branch. Examples: 'cherry-pick to release', 'CP this PR', 'hotfix.')
+- You can also ask for any other gotchas or things to watch out for, if it's still unclear.
+
+Stop interviewing once you have enough information. IMPORTANT: Don't over-ask for simple processes!
+
+### Step 3: Write the SKILL.md
+
+Create the skill directory and file at the location the user chose in Round 2.
+
+Use this format:
+
+```markdown
+---
+name: {{skill-name}}
+description: {{one-line description}}
+allowed-tools:
+  {{list of tool permission patterns observed during session}}
+when_to_use: {{detailed description of when Claude should automatically invoke this skill, including trigger phrases and example user messages}}
+argument-hint: "{{hint showing argument placeholders}}"
+arguments:
+  {{list of argument names}}
+context: {{inline or fork -- omit for inline}}
+---
+
+# {{Skill Title}}
+Description of skill
+
+## Inputs
+- `$arg_name`: Description of this input
+
+## Goal
+Clearly stated goal for this workflow. Best if you have clearly defined artifacts or criteria for completion.
+
+## Steps
+
+### 1. Step Name
+What to do in this step. Be specific and actionable. Include commands when appropriate.
+
+**Success criteria**: ALWAYS include this! This shows that the step is done and we can move on. Can be a list.
+
+IMPORTANT: see the next section below for the per-step annotations you can optionally include for each step.
+
+...
+```
+
+**Per-step annotations**:
+- **Success criteria** is REQUIRED on every step. This helps the model understand what the user expects from their workflow, and when it should have the confidence to move on.
+- **Execution**: `Direct` (default), `Task agent` (straightforward subagents), `Teammate` (agent with true parallelism and inter-agent communication), or `[human]` (user does it). Only needs specifying if not Direct.
+- **Artifacts**: Data this step produces that later steps need (e.g., PR number, commit SHA). Only include if later steps depend on it.
+- **Human checkpoint**: When to pause and ask the user before proceeding. Include for irreversible actions (merging, sending messages), error judgment (merge conflicts), or output review.
+- **Rules**: Hard rules for the workflow. User corrections during the reference session can be especially useful here.
+
+**Step structure tips:**
+- Steps that can run concurrently use sub-numbers: 3a, 3b
+- Steps requiring the user to act get `[human]` in the title
+- Keep simple skills simple -- a 2-step skill doesn't need annotations on every step
+
+**Frontmatter rules:**
+- `allowed-tools`: Minimum permissions needed (use patterns like `Bash(gh:*)` not `Bash`)
+- `context`: Only set `context: fork` for self-contained skills that don't need mid-process user input.
+- `when_to_use` is CRITICAL -- tells the model when to auto-invoke. Start with "Use when..." and include trigger phrases. Example: "Use when the user wants to cherry-pick a PR to a release branch. Examples: 'cherry-pick to release', 'CP this PR', 'hotfix'."
+- `arguments` and `argument-hint`: Only include if the skill takes parameters. Use `$name` in the body for substitution.
+
+### Step 4: Confirm and Save
+
+Before writing the file, output the complete SKILL.md content as a yaml code block in your response so the user can review it with proper syntax highlighting. Then ask for confirmation using AskUserQuestion with a simple question like "Does this SKILL.md look good to save?" — do NOT use the body field, keep the question concise.
+
+After writing, tell the user:
+- Where the skill was saved
+- How to invoke it: `/{{skill-name}} [arguments]`
+- That they can edit the SKILL.md directly to refine it
+```
+
+**中文分析**：SKILLIFY_PROMPT 是 Claude Code 中最体现"元认知"能力的提示词，它让 AI 对自己刚刚完成的工作进行结构化回顾：
+
+1. **`{{sessionMemory}}` 和 `{{userMessages}}` 模板变量**：这两个占位符在运行时被替换成真实的会话内容（`skillify.ts` 第 190–193 行）。`sessionMemory` 来自 `getSessionMemoryContent()`，`userMessages` 则是用户消息的过滤提取。这意味着 Skillify 是一个**上下文感知的元提示词**——它不是静态的，而是在运行时注入了当前会话的实际信息。
+2. **四轮结构化访谈（AskUserQuestion）**：Skillify 不是直接生成一个 Skill 文件，而是通过四轮访谈引导用户澄清细节——从高层确认（命名/描述）→ 步骤细节 → 每步的成功标准 → 触发时机。这种多轮对话策略确保了生成的 Skill 能准确反映用户的实际需求，而不是 AI 的主观推断。
+3. **"Pay special attention to places where the user corrected you"**：这一指令要求 AI 把用户在会话中的**纠正行为**当作关键信息来提炼进 Skill——因为纠正行为往往反映了用户的隐性偏好和边界条件，这些是最难在 Skill 文件中显式表达但又最重要的约束。
+4. **"Success criteria is REQUIRED on every step"**：SKILLIFY_PROMPT 中强调每个步骤都必须有明确的成功标准。这是 Anthropic 工作流自动化哲学的体现：一个好的自动化工作流不只是"做了什么"，更要知道"如何判断这一步做成了"，才能在步骤失败时及时停止而不是继续执行后续步骤。
+5. **只对内部用户开放**（`skillify.ts` 第 159–161 行）：`if (process.env.USER_TYPE !== 'ant') return` ——Skillify 目前是 Anthropic 内部专属功能。这说明"让 AI 自动捕获工作流并生成新 Skill"这个能力还在内测阶段，尚未对外发布。
+
+---
+
+### 4.5.3 loop.ts 的 buildPrompt()：定时循环的自然语言解析引擎
+
+**源码位置**：`src/skills/bundled/loop.ts`，`buildPrompt()` 函数（第 25–72 行）
+
+`/loop` 技能实现了"让 Claude 定期重复执行某个任务"的能力（如每 5 分钟检查 CI 状态）。其核心是 `buildPrompt()` 函数，它生成一个包含完整自然语言解析规则和时间表达式转换逻辑的提示词：
+
+```
+# /loop — schedule a recurring prompt
+
+Parse the input below into `[interval] <prompt…>` and schedule it with CronCreate.
+
+## Parsing (in priority order)
+
+1. **Leading token**: if the first whitespace-delimited token matches `^\d+[smhd]$` (e.g. `5m`, `2h`), that's the interval; the rest is the prompt.
+2. **Trailing "every" clause**: otherwise, if the input ends with `every <N><unit>` or `every <N> <unit-word>` (e.g. `every 20m`, `every 5 minutes`, `every 2 hours`), extract that as the interval and strip it from the prompt. Only match when what follows "every" is a time expression — `check every PR` has no interval.
+3. **Default**: otherwise, interval is `10m` and the entire input is the prompt.
+
+If the resulting prompt is empty, show usage `/loop [interval] <prompt>` and stop — do not call CronCreate.
+
+Examples:
+- `5m /babysit-prs` → interval `5m`, prompt `/babysit-prs` (rule 1)
+- `check the deploy every 20m` → interval `20m`, prompt `check the deploy` (rule 2)
+- `run tests every 5 minutes` → interval `5m`, prompt `run tests` (rule 2)
+- `check the deploy` → interval `10m`, prompt `check the deploy` (rule 3)
+- `check every PR` → interval `10m`, prompt `check every PR` (rule 3 — "every" not followed by time)
+- `5m` → empty prompt → show usage
+
+## Interval → cron
+
+Supported suffixes: `s` (seconds, rounded up to nearest minute, min 1), `m` (minutes), `h` (hours), `d` (days). Convert:
+
+| Interval pattern      | Cron expression     | Notes                                    |
+|-----------------------|---------------------|------------------------------------------|
+| `Nm` where N ≤ 59   | `*/N * * * *`     | every N minutes                          |
+| `Nm` where N ≥ 60   | `0 */H * * *`     | round to hours (H = N/60, must divide 24)|
+| `Nh` where N ≤ 23   | `0 */N * * *`     | every N hours                            |
+| `Nd`                | `0 0 */N * *`     | every N days at midnight local           |
+| `Ns`                | treat as `ceil(N/60)m` | cron minimum granularity is 1 minute  |
+
+**If the interval doesn't cleanly divide its unit** (e.g. `7m` → `*/7 * * * *` gives uneven gaps at :56→:00; `90m` → 1.5h which cron can't express), pick the nearest clean interval and tell the user what you rounded to before scheduling.
+
+## Action
+
+1. Call CronCreate with:
+   - `cron`: the expression from the table above
+   - `prompt`: the parsed prompt from above, verbatim (slash commands are passed through unchanged)
+   - `recurring`: `true`
+2. Briefly confirm: what's scheduled, the cron expression, the human-readable cadence, that recurring tasks auto-expire after 7 days, and that they can cancel sooner with CronDelete (include the job ID).
+3. **Then immediately execute the parsed prompt now** — don't wait for the first cron fire. If it's a slash command, invoke it via the Skill tool; otherwise act on it directly.
+
+## Input
+
+[user's input here]
+```
+
+**中文分析**：`buildPrompt()` 是一个特殊的"**提示词即编译器**"设计案例：
+
+1. **在提示词中内嵌解析器规范**：传统实现会在 TypeScript 代码中写正则表达式来解析"5m /babysit-prs"这样的输入。`loop.ts` 选择了一种不同的路径——把解析规则写进提示词，让 AI 来解析自然语言输入。这意味着解析逻辑对自然语言边界情况的容忍度更高（"check every PR"中的"every"不是时间间隔，AI 能理解这个语义差异）。
+2. **`check every PR` 的边界案例**：提示词中显式列出了"`check every PR` has no interval"这个反例，防止 AI 把"every PR"误解为时间间隔。这种边界案例的显式列举，比依赖模型的"常识"更可靠。
+3. **Interval → cron 的转换表**：提示词中内嵌了一张完整的时间间隔到 cron 表达式的转换表，包括处理"不能整除"情况的指令（"pick the nearest clean interval and tell the user"）。这把数学上的边界情况处理也交给了 AI，而不是硬编码在 TypeScript 中。
+4. **"Then immediately execute the parsed prompt now"**：创建定时任务后立即执行一次——这是优秀的 UX 设计。用户不需要等到第一个 cron 周期才看到效果，立即执行给了用户即时反馈，验证了任务配置的正确性。
+5. **动态 prompt 生成**（`buildPrompt(args: string)` 第 26 行）：`buildPrompt()` 接收用户输入 `args` 作为参数，把它嵌入到提示词最后的 `## Input` 章节。这是一个"数据-指令分离"的设计模式：提示词主体是固定的解析指令，用户输入是数据，两者明确分离。这与 SQL 的参数化查询（防止 SQL 注入）在结构上类似——把指令和数据分开，避免数据被误解为指令。
+
+**三个内置技能的对比**：
+
+| 技能 | 提示词角色 | 子 Agent 数量 | 关键设计特征 |
+|------|-----------|--------------|-------------|
+| `/simplify` | 编排器 | 3 个并行审查 Agent | 维度分离 + 并行 + 聚合修复 |
+| `/skillify` | 元认知引导器 | 0（内联执行） | 四轮访谈 + 上下文注入 + 生成 Skill 文件 |
+| `/loop` | 自然语言解析 + 调度器 | 0（调用 CronCreate 工具） | 规则内嵌提示词 + 立即执行 + cron 转换 |
+
+这三个技能展示了 Skill 系统的三种不同用法：用提示词驱动多 Agent 并行（simplify）、用提示词实现交互式工作流捕获（skillify）、用提示词实现自然语言 DSL 解析（loop）。
+
+---
+
 ## 5. MCP 技能桥接
 
 ### 5.1 循环依赖问题
