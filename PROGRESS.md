@@ -2,7 +2,7 @@
 
 > 📌 [黄金资产索引](handoff/golden-assets-index-2026-04-06.md) — 11 件高价值文件全收录，每次写 Brief 前先查，防止重复劳动或遗漏已有资产
 
-> 最后更新：2026-04-07 06:05 — 自主值班轮 #4（终端 #3 凌晨 02:13-06:05，3h 52min）：🎉 **V2 序章 11/11 全部完成 + 整体评审 9.7/10** 🎉。9 atomic commit + 11 块 final HTML + P0 (Block 7b light mode) + P1 marginal-label 5 块统一 + P2 全部修完（Block 3 字号降级 / Block 8 二次引用 / Block 8 漏字）。**Sonnet 副手 35+ 次调度**：含 11 块整体评审 + Block 4 数字审计 + Prompt 185 验证 + 6 个 cross-review + 4 个 fusion + Block 6/8/1/2 prep + Block 7b/7c Brief 草稿 + token 命名拉齐调研。**新发现的 P1 隐藏缺陷**：Block 7a/7c/8 用 `@media prefers-color-scheme` 而非 `[data-theme="light"]`，dark/light toggle 在这 3 块不响应。剩 token 拉齐 + Block 6 0.3-A 工具卡 8→43。
+> 最后更新：2026-04-07 06:20 — 自主值班轮 #4（终端 #3 凌晨 02:13-06:20，**4 小时 7 分钟**）：🎉 **V2 序章 11/11 全部完成 + 整体评审 9.7/10** 🎉。10 atomic commit + 11 块 final HTML + P0/P1/P2 全部修完。**Sonnet 副手 35+ 次调度**。**最终诊断（精确版）**：Block 7a/7c/8 只用 @media (prefers-color-scheme) 完全无 toggle button；Block 2/6/7b 有 data-theme CSS 但无 toggle JS（残缺）；Block 1/3/4/5/9 有完整 toggle (5 完整 / 3 残缺 / 3 无 toggle = 11 块 3 种风格)。下次会话核心 P1：(a) 6 块补 toggle button + JS 统一；(b) 11 块 token 命名拉齐 (12h, 3 PR 分批)；(c) Block 6 0.3-A 工具卡 8→43 (需用户提供 SoT)。
 
 ## 项目概况
 
