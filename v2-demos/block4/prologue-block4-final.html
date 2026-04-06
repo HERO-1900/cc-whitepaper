@@ -118,14 +118,30 @@
             padding: var(--cc-space-16) var(--cc-space-6);
         }
 
-        .section-label {
+        /* Marginal Label */
+        .prologue-marginal-label {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-3);
+            margin-bottom: var(--cc-space-8);
             font-family: var(--cc-font-mono);
-            font-size: var(--cc-font-size-xs);
-            font-weight: var(--cc-font-weight-medium);
-            color: var(--cc-color-brand);
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-muted);
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            margin-bottom: var(--cc-space-4);
+        }
+
+        .prologue-marginal-label::before {
+            content: "";
+            display: block;
+            width: 40px;
+            height: 1px;
+            background-color: var(--cc-color-border);
+        }
+
+        .prologue-marginal-label .block-number {
+            color: var(--cc-color-brand);
+            font-weight: 600;
         }
 
         .block-title {
@@ -649,7 +665,12 @@
     <button class="theme-toggle" onclick="toggleTheme()">◐ 切换主题</button>
 
     <div class="block-container">
-        <div class="section-label">Block 4 · 数字震撼</div>
+        <!-- Marginal Label -->
+        <div class="prologue-marginal-label">
+            <span>序章</span>
+            <span class="block-number">Block 04</span>
+            <span>数字震撼</span>
+        </div>
         <h1 class="block-title">打开引擎盖</h1>
 
         <div class="q-pre fade-in">

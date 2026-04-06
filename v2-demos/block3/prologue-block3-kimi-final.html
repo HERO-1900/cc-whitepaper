@@ -578,12 +578,45 @@ body {
     font-size: var(--cc-font-size-xl);
   }
 }
+
+/* Marginal Label */
+.prologue-marginal-label {
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-3);
+  margin-bottom: var(--cc-space-8);
+  font-family: var(--cc-font-mono);
+  font-size: var(--cc-font-size-sm);
+  color: var(--cc-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.prologue-marginal-label::before {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 1px;
+  background-color: var(--cc-color-border);
+}
+
+.prologue-marginal-label .block-number {
+  color: var(--cc-color-brand);
+  font-weight: 600;
+}
 </style>
 </head>
 <body>
 <button class="theme-toggle" onclick="toggleTheme()" aria-label="切换主题">🌙</button>
 
 <div class="container">
+  <!-- Marginal Label -->
+  <div class="prologue-marginal-label">
+    <span>序章</span>
+    <span class="block-number">Block 03</span>
+    <span>生态切片</span>
+  </div>
+
   <header class="section-header">
     <div class="section-number">Block 03</div>
     <h1 class="section-title">泄露催化的生态爆发</h1>

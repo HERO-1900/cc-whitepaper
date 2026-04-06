@@ -112,30 +112,30 @@
             padding: var(--cc-space-24) var(--cc-space-6);
         }
         
-        /* Prologue Marginal Label */
-        .prologue-marginal {
+        /* Marginal Label */
+        .prologue-marginal-label {
             display: flex;
             align-items: center;
             gap: var(--cc-space-3);
-            margin-bottom: var(--cc-space-6);
-            flex-wrap: wrap;
-        }
-        
-        .prologue-chip {
+            margin-bottom: var(--cc-space-8);
             font-family: var(--cc-font-mono);
-            font-size: var(--cc-font-size-xs);
-            color: var(--cc-text-muted);
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-text-tertiary);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.1em;
         }
-        
-        .prologue-chip.brand {
+
+        .prologue-marginal-label::before {
+            content: "";
+            display: block;
+            width: 40px;
+            height: 1px;
+            background-color: var(--cc-border-primary);
+        }
+
+        .prologue-marginal-label .block-number {
             color: var(--cc-brand-primary);
             font-weight: 600;
-        }
-        
-        .prologue-divider {
-            color: var(--cc-border-primary);
         }
         
         /* Block Title */
@@ -589,15 +589,11 @@
 </head>
 <body>
     <div class="block-container">
-        <!-- Prologue Marginal Label -->
-        <div class="prologue-marginal">
-            <span class="prologue-chip">序章</span>
-            <span class="prologue-divider">·</span>
-            <span class="prologue-chip brand">Block 02</span>
-            <span class="prologue-divider">·</span>
-            <span class="prologue-chip">反差引入</span>
-            <span class="prologue-divider">|</span>
-            <span class="prologue-chip">全书第 2 拍 · 宏观坐标系</span>
+        <!-- Marginal Label -->
+        <div class="prologue-marginal-label">
+            <span>序章</span>
+            <span class="block-number">Block 02</span>
+            <span>反差引入</span>
         </div>
         
         <!-- Block Header -->

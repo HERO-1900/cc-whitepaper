@@ -521,10 +521,43 @@
       margin-left: var(--cc-space-2);
     }
     .pinned .pin-btn { background: var(--cc-color-accent); color: #fff; }
+
+    /* Marginal Label */
+    .prologue-marginal-label {
+      display: flex;
+      align-items: center;
+      gap: var(--cc-space-3);
+      margin-bottom: var(--cc-space-8);
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .prologue-marginal-label::before {
+      content: "";
+      display: block;
+      width: 40px;
+      height: 1px;
+      background-color: var(--cc-color-border);
+    }
+
+    .prologue-marginal-label .block-number {
+      color: var(--cc-color-accent);
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
   <button class="theme-toggle" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">切换主题</button>
+
+  <!-- Marginal Label -->
+  <div class="prologue-marginal-label">
+    <span>序章</span>
+    <span class="block-number">Block 05</span>
+    <span>使命陈述</span>
+  </div>
 
   <!-- Section 1: Methodological Badges + Q1 Pull Quote -->
   <section class="section">
