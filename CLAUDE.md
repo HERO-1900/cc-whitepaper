@@ -11,7 +11,7 @@
 - **项目名**：Claude Code 2.1.88 源码白皮书（中文）
 - **仓库**：https://github.com/HERO-1900/cc-whitepaper
 - **线上**：GitHub Pages — https://hero-1900.github.io/cc-whitepaper/
-- **规模**：82 章 / 约 35.4 万 CJK 字符 / 114 张图表 / 185 个 Prompt 全收录
+- **规模**：83 章 / 约 36.0 万 CJK 字符 / 122 张图表 / 185 个 Prompt 全收录
 - **SoT 源代码**：`~/Desktop/Claude Code源代码合集 copy/Claude Code源代码1号/cc-recovered-main/`
 - **母工作区（项目根）**：`~/Desktop/CC-Research-byClaude/` ← **所有相关文件、子项目、调研、笔记的总目录**
 - **当前 git repo（白皮书 web 版）**：`~/Desktop/CC-Research-byClaude/web/` ← 仅是母工作区下的一个子目录
