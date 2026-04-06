@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>序章：当你打开一个"聊天助手"的引擎盖</title>
+  <style>
+    :root {
+      --cc-font-sans: "Inter", "Noto Sans SC", system-ui, sans-serif;
+      --cc-font-mono: "JetBrains Mono", "Fira Code", monospace;
+      --cc-font-size-6xl: clamp(3.5rem, 10vw, 9rem);
+      --cc-font-size-5xl: clamp(2.5rem, 6vw, 5rem);
+      --cc-font-size-4xl: clamp(2rem, 4vw, 3.5rem);
+      --cc-font-size-3xl: clamp(1.5rem, 3vw, 2.5rem);
+      --cc-font-size-2xl: clamp(1.25rem, 2vw, 2rem);
+      --cc-font-size-xl: clamp(1.1rem, 1.5vw, 1.5rem);
+      --cc-font-size-lg: clamp(1rem, 1.2vw, 1.25rem);
+      --cc-font-size-base: 1rem;
+      --cc-font-size-sm: 0.875rem;
+      --cc-font-weight-bold: 700;
+      --cc-color-bg: #0d1117;
+      --cc-color-surface: #161b22;
+      --cc-color-surface-secondary: #21262d;
+      --cc-color-surface-tertiary: #30363d;
+      --cc-color-text-primary: #e6edf3;
+      --cc-color-text-secondary: #8b949e;
+      --cc-color-text-muted: #6e7681;
+      --cc-color-brand: #f78166;
+      --cc-color-accent: #58a6ff;
+      --cc-color-border: #30363d;
+      --cc-color-reveal-bg: #1c2128;
+      --cc-leading-relaxed: 1.75;
+      --cc-space-4: 1rem;
+      --cc-space-6: 1.5rem;
+      --cc-space-8: 2rem;
+      --cc-space-12: 3rem;
+      --cc-space-16: 4rem;
+      --cc-space-20: 5rem;
+      --cc-measure-prose: 65ch;
+    }
+    [data-theme="light"] {
+      --cc-color-bg: #ffffff;
+      --cc-color-surface: #f6f8fa;
+      --cc-color-surface-secondary: #eaeef2;
+      --cc-color-surface-tertiary: #d0d7de;
+      --cc-color-text-primary: #1f2328;
+      --cc-color-text-secondary: #656d76;
+      --cc-color-text-muted: #8c959f;
+      --cc-color-brand: #cf222e;
+      --cc-color-accent: #0969da;
+      --cc-color-border: #d0d7de;
+      --cc-color-reveal-bg: #eaeef2;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+    body {
+      font-family: var(--cc-font-sans);
+      background-color: var(--cc-color-bg);
+      color: var(--cc-color-text-primary);
+      line-height: var(--cc-leading-relaxed);
+      min-height: 100vh;
+      padding: var(--cc-space-6);
+      overflow-x: hidden;
+    }
+    ::selection {
+      background-color: var(--cc-color-accent);
+      color: var(--cc-color-bg);
+    }
+    .theme-toggle {
+      position: fixed;
+      top: var(--cc-space-4);
+      right: var(--cc-space-4);
+      background: var(--cc-color-surface-secondary);
+      border: 1px solid var(--cc-color-border);
+      color: var(--cc-color-text-secondary);
+      padding: 0.4em 0.8em;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: var(--cc-font-sans);
+      font-size: var(--cc-font-size-sm);
+      z-index: 100;
+      transition: all 0.2s ease;
+    }
+    .theme-toggle:hover {
+      background: var(--cc-color-surface-tertiary);
+      color: var(--cc-color-text-primary);
+    }
+
+    /* ===== LAYOUT ===== */
+    .page-wrapper {
+      max-width: var(--cc-measure-prose);
+      margin: 0 auto;
+      padding: var(--cc-space-20) 0;
+    }
+
+    /* ===== MARGINAL LABEL ===== */
+    .marginal-label {
+      font-family: var(--cc-font-sans);
+      font-size: var(--cc-font-size-sm);
+      font-weight: 600;
+      color: var(--cc-color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: var(--cc-space-8);
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+    }
+    .marginal-label::before {
+      content: "";
+      display: inline-block;
+      width: 2em;
+      height: 1px;
+      background: var(--cc-color-text-muted);
+      vertical-align: middle;
+    }
+
+    /* ===== HERO FOOTER ===== */
+    .hero-footer {
+      display: flex;
+      align-items: center;
+      gap: var(--cc-space-4);
+      margin-bottom: var(--cc-space-12);
+      padding: var(--cc-space-6);
+      background: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 12px;
+      flex-wrap: wrap;
+    }
+    .block-chip {
+      font-size: var(--cc-font-size-sm);
+      font-weight: 600;
+      background: var(--cc-color-surface-secondary);
+      color: var(--cc-color-text-secondary);
+      padding: 0.25em 0.75em;
+      border-radius: 999px;
+      border: 1px solid var(--cc-color-border);
+      white-space: nowrap;
+    }
+    .block-name {
+      font-size: var(--cc-font-size-2xl);
+      font-weight: var(--cc-font-weight-bold);
+      color: var(--cc-color-text-primary);
+      flex: 1;
+      text-align: center;
+    }
+    .block-subtitle {
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-secondary);
+      width: 100%;
+      text-align: center;
+      margin-top: 0.25em;
+    }
+
+    /* ===== Q1 HERO TITLE ===== */
+    .hero-section {
+      margin-bottom: var(--cc-space-20);
+      position: relative;
+    }
+    .hero-title {
+      font-size: var(--cc-font-size-6xl);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      word-break: break-word;
+      position: relative;
+    }
+    .hero-title .engine-hood {
+      display: inline-block;
+      color: var(--cc-color-brand);
+      outline: 0.08em solid var(--cc-color-brand);
+      outline-offset: 0.05em;
+      transform: skew(-6deg);
+      position: relative;
+      left: -0.04em;
+      text-shadow:
+        0.04em 0.04em 0 var(--cc-color-bg),
+        -0.02em -0.02em 0 var(--cc-color-bg);
+    }
+    .hero-title .quote-left,
+    .hero-title .quote-right {
+      color: var(--cc-color-text-muted);
+      font-weight: 400;
+    }
+    .inline-calc {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.15em;
+      font-family: var(--cc-font-mono);
+      font-size: 0.45em;
+      color: var(--cc-color-text-secondary);
+      vertical-align: middle;
+      margin-left: 0.3em;
+      background: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 6px;
+      padding: 0.2em 0.5em;
+      letter-spacing: 0.05em;
+      position: relative;
+      top: -0.1em;
+    }
+    .inline-calc .sym { color: var(--cc-color-accent); }
+    .inline-calc .result { color: var(--cc-color-brand); font-weight: 700; }
+
+    /* ===== SECTION SPACING ===== */
+    .section-gap {
+      height: var(--cc-space-16);
+    }
+    .section-gap-sm {
+      height: var(--cc-space-8);
+    }
+
+    /* ===== L5 CALCULATOR PARAGRAPH ===== */
+    .calculator-setup {
+      font-size: var(--cc-font-size-xl);
+      color: var(--cc-color-text-secondary);
+      max-width: var(--cc-measure-prose);
+      margin-bottom: var(--cc-space-4);
+    }
+    .calculator-setup .mono {
+      font-family: var(--cc-font-mono);
+      color: var(--cc-color-accent);
+      background: var(--cc-color-surface);
+      padding: 0.1em 0.35em;
+      border-radius: 4px;
+      border: 1px solid var(--cc-color-border);
+      font-size: 1.05em;
+    }
+    .calculator-setup .result-num {
+      font-family: var(--cc-font-mono);
+      color: var(--cc-color-brand);
+      font-weight: 700;
+      font-size: 1.1em;
+    }
+
+    /* ===== L7 REVEAL SECTION ===== */
+    .reveal-intro {
+      font-size: var(--cc-font-size-lg);
+      color: var(--cc-color-text-secondary);
+      margin-bottom: var(--cc-space-6);
+    }
+    .reveal-intro .question {
+      color: var(--cc-color-text-primary);
+      font-weight: 600;
+    }
+    .reveal-intro .source-link {
+      color: var(--cc-color-accent);
+      font-family: var(--cc-font-mono);
+      font-size: 0.95em;
+      background: var(--cc-color-surface);
+      padding: 0.05em 0.3em;
+      border-radius: 3px;
+    }
+
+    .reveal-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: var(--cc-space-3);
+      margin-bottom: var(--cc-space-6);
+    }
+    .reveal-item {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-lg);
+      color: var(--cc-color-text-primary);
+      background: var(--cc-color-reveal-bg);
+      border-left: 3px solid var(--cc-color-brand);
+      padding: var(--cc-space-3) var(--cc-space-4);
+      border-radius: 0 8px 8px 0;
+      display: flex;
+      align-items: center;
+      gap: var(--cc-space-3);
+      opacity: 0;
+      transform: translateX(-12px);
+      animation: reveal-in 0.5s ease forwards;
+    }
+    .reveal-item:nth-child(1) { animation-delay: 0.1s; }
+    .reveal-item:nth-child(2) { animation-delay: 0.25s; }
+    .reveal-item:nth-child(3) { animation-delay: 0.4s; }
+    .reveal-item:nth-child(4) { animation-delay: 0.55s; }
+    .reveal-item:nth-child(5) { animation-delay: 0.7s; }
+    .reveal-item::before {
+      content: "→";
+      color: var(--cc-color-brand);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .reveal-item .item-num {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-muted);
+      min-width: 1.5em;
+    }
+    @keyframes reveal-in {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    .reveal-outro {
+      font-size: var(--cc-font-size-lg);
+      color: var(--cc-color-text-secondary);
+      font-style: italic;
+    }
+    .reveal-outro .emphasis {
+      color: var(--cc-color-text-primary);
+      font-weight: 600;
+      font-style: normal;
+    }
+
+    /* ===== Q3 TRANSITION ===== */
+    .transition-hinge {
+      font-size: var(--cc-font-size-3xl);
+      font-weight: 700;
+      color: var(--cc-color-text-primary);
+      text-align: center;
+      padding: var(--cc-space-8) 0;
+      position: relative;
+    }
+    .transition-hinge::before,
+    .transition-hinge::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--cc-color-border), transparent);
+    }
+    .transition-hinge::before { top: 0; }
+    .transition-hinge::after { bottom: 0; }
+
+    /* ===== L11 SCENE ===== */
+    .scene-section {
+      margin-bottom: var(--cc-space-8);
+    }
+    .scene-paragraph {
+      font-size: var(--cc-font-size-lg);
+      color: var(--cc-color-text-secondary);
+      margin-bottom: var(--cc-space-4);
+      max-width: var(--cc-measure-prose);
+    }
+    .scene-paragraph .cli-cmd {
+      font-family: var(--cc-font-mono);
+      color: var(--cc-color-accent);
+      background: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 4px;
+      padding: 0.1em 0.4em;
+      font-size: 1.05em;
+      position: relative;
+    }
+    .cursor-blink {
+      display: inline-block;
+      width: 0.6em;
+      height: 1.1em;
+      background: var(--cc-color-accent);
+      vertical-align: text-bottom;
+      margin-left: 1px;
+      border-radius: 1px;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    .scene-description {
+      font-size: var(--cc-font-size-lg);
+      color: var(--cc-color-text-secondary);
+      margin-bottom: var(--cc-space-6);
+    }
+    .chat-bubble {
+      display: inline-block;
+      font-size: var(--cc-font-size-xl);
+      color: var(--cc-color-text-primary);
+      background: var(--cc-color-surface-tertiary);
+      border-radius: 16px 16px 16px 4px;
+      padding: var(--cc-space-4) var(--cc-space-6);
+      position: relative;
+      max-width: 100%;
+      margin-bottom: var(--cc-space-4);
+      font-style: italic;
+    }
+    .chat-bubble::before {
+      content: """;
+      font-family: Georgia, serif;
+      font-size: 3em;
+      color: var(--cc-color-surface-tertiary);
+      position: absolute;
+      top: -0.15em;
+      left: 0.2em;
+      line-height: 1;
+    }
+    .chat-bubble .inner-quote {
+      font-style: normal;
+    }
+
+    /* ===== Q2 FINALE ===== */
+    .finale-section {
+      margin-top: var(--cc-space-12);
+      padding-top: var(--cc-space-8);
+      border-top: 1px solid var(--cc-color-border);
+    }
+    .finale-text {
+      font-size: var(--cc-font-size-5xl);
+      font-weight: 900;
+      color: var(--cc-color-brand);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+    .finale-text .rejection {
+      display: block;
+    }
+    .finale-text .rejection-line-1 {
+      color: var(--cc-color-text-primary);
+    }
+    .finale-text .rejection-line-2 {
+      color: var(--cc-color-brand);
+      text-shadow: 0.02em 0.02em 0 var(--cc-color-bg);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 600px) {
+      body { padding: var(--cc-space-4); }
+      .page-wrapper { padding: var(--cc-space-12) 0; }
+      .hero-footer { gap: var(--cc-space-3); }
+      .block-name { font-size: var(--cc-font-size-xl); }
+      .chat-bubble { font-size: var(--cc-font-size-lg); padding: var(--cc-space-3) var(--cc-space-4); }
+      .finale-text { font-size: var(--cc-font-size-4xl); }
+      .reveal-item { font-size: var(--cc-font-size-base); }
+    }
+  </style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="
+  const html = document.documentElement;
+  html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+" aria-label="切换主题">🌓 主题</button>
+
+<div class="page-wrapper">
+
+  <!-- MARGINAL LABEL -->
+  <div class="marginal-label">序章 · Prologue</div>
+
+  <!-- HERO FOOTER -->
+  <div class="hero-footer">
+    <span class="block-chip">序章 · 01</span>
+    <span class="block-name">Hero 一击 · 引擎盖悖论</span>
+    <span class="block-subtitle">全书第 0 拍 · 5 秒钩子</span>
+  </div>
+
+  <!-- Q1 HERO TITLE -->
+  <div class="hero-section">
+    <h1 class="hero-title">
+      当你打开一个<span class="quote-left">"</span>聊天助手<span class="quote-right">"</span>的<span class="engine-hood">引擎盖</span>
+      <span class="inline-calc">
+        <span class="sym">1 + 1 =</span>
+        <span class="result">2</span>
+      </span>
+    </h1>
+  </div>
+
+  <div class="section-gap"></div>
+
+  <!-- L5 CALCULATOR SETUP -->
+  <p class="calculator-setup">
+    想象你在手机上打开计算器，按下 <span class="mono">1 + 1 =</span>，屏幕显示 <span class="result-num">2</span>。
+  </p>
+
+  <div class="section-gap-sm"></div>
+
+  <!-- L7 REVEAL -->
+  <p class="reveal-intro">
+    <span class="question">简单吧？</span> 但如果你拆开计算器 App 的源代码，你会发现里面有<span class="source-link">……</span>
+  </p>
+
+  <ol class="reveal-list" role="list">
+    <li class="reveal-item">
+      <span class="item-num">01</span>浮点精度处理
+    </li>
+    <li class="reveal-item">
+      <span class="item-num">02</span>本地化数字格式
+    </li>
+    <li class="reveal-item">
+      <span class="item-num">03</span>无障碍语音播报
+    </li>
+    <li class="reveal-item">
+      <span class="item-num">04</span>撤销历史栈
+    </li>
+    <li class="reveal-item">
+      <span class="item-num">05</span>单元测试框架
+    </li>
+  </ol>
+
+  <p class="reveal-outro">
+    ——远比<span class="emphasis">"做加法"</span>复杂得多。
+  </p>
+
+  <div class="section-gap"></div>
+
+  <!-- Q3 TRANSITION -->
+  <p class="transition-hinge">Claude Code 也是这样。</p>
+
+  <div class="section-gap"></div>
+
+  <!-- L11 SCENE -->
+  <div class="scene-section">
+    <p class="scene-paragraph">
+      当你在终端输入 <span class="cli-cmd">claude</span><span class="cursor-blink" aria-hidden="true"></span>，看到的是一个友善的对话界面。你说一句话，它回一句话，偶尔帮你改改代码。
+    </p>
+    <p class="scene-description">
+      <span class="chat-bubble"><span class="inner-quote">"不就是个终端里的 ChatGPT 吗？"</span></span>
+    </p>
+  </div>
+
+  <!-- Q2 FINALE -->
+  <div class="finale-section">
+    <p class="finale-text">
+      <span class="rejection rejection-line-1">不是。</span>
+      <span class="rejection rejection-line-2">差远了。</span>
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>

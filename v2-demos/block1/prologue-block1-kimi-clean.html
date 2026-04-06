@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>序章 · 当你打开一个"聊天助手"的引擎盖</title>
+    <style>
+        /* ========================================
+           Design Tokens (var(--cc-*))
+           ======================================== */
+        :root {
+            /* Colors - Dark theme (baseline) */
+            --cc-color-bg: #0a0a0b;
+            --cc-color-surface: #111113;
+            --cc-color-surface-secondary: #1a1a1e;
+            --cc-color-surface-tertiary: #25252a;
+            --cc-color-text-primary: #fafafa;
+            --cc-color-text-secondary: #a1a1aa;
+            --cc-color-text-tertiary: #71717a;
+            --cc-color-brand: #d97706;
+            --cc-color-brand-subtle: rgba(217, 119, 6, 0.15);
+            --cc-color-accent: #f59e0b;
+            
+            /* Typography */
+            --cc-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            --cc-font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, monospace;
+            
+            /* Font Sizes */
+            --cc-font-size-xs: 0.75rem;
+            --cc-font-size-sm: 0.875rem;
+            --cc-font-size-base: 1rem;
+            --cc-font-size-lg: 1.125rem;
+            --cc-font-size-xl: 1.25rem;
+            --cc-font-size-2xl: 1.5rem;
+            --cc-font-size-3xl: 1.875rem;
+            --cc-font-size-4xl: 2.25rem;
+            --cc-font-size-5xl: 3rem;
+            --cc-font-size-6xl: 3.75rem;
+            
+            /* Font Weights */
+            --cc-font-weight-normal: 400;
+            --cc-font-weight-medium: 500;
+            --cc-font-weight-bold: 700;
+            --cc-font-weight-black: 900;
+            
+            /* Line Heights */
+            --cc-leading-tight: 1.25;
+            --cc-leading-normal: 1.5;
+            --cc-leading-relaxed: 1.75;
+            
+            /* Spacing */
+            --cc-space-1: 0.25rem;
+            --cc-space-2: 0.5rem;
+            --cc-space-3: 0.75rem;
+            --cc-space-4: 1rem;
+            --cc-space-5: 1.25rem;
+            --cc-space-6: 1.5rem;
+            --cc-space-8: 2rem;
+            --cc-space-10: 2.5rem;
+            --cc-space-12: 3rem;
+            --cc-space-16: 4rem;
+            --cc-space-20: 5rem;
+            --cc-space-24: 6rem;
+            --cc-space-32: 8rem;
+            
+            /* Measurements */
+            --cc-measure-prose: 65ch;
+        }
+        
+        /* Light theme override */
+        [data-theme="light"] {
+            --cc-color-bg: #fafafa;
+            --cc-color-surface: #ffffff;
+            --cc-color-surface-secondary: #f4f4f5;
+            --cc-color-surface-tertiary: #e4e4e7;
+            --cc-color-text-primary: #18181b;
+            --cc-color-text-secondary: #52525b;
+            --cc-color-text-tertiary: #a1a1aa;
+            --cc-color-brand: #d97706;
+            --cc-color-brand-subtle: rgba(217, 119, 6, 0.1);
+            --cc-color-accent: #b45309;
+        }
+        
+        /* ========================================
+           Base Styles
+           ======================================== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: var(--cc-font-sans);
+            font-size: var(--cc-font-size-lg);
+            line-height: var(--cc-leading-relaxed);
+            color: var(--cc-color-text-primary);
+            background-color: var(--cc-color-bg);
+            min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        /* ========================================
+           Theme Toggle
+           ======================================== */
+        .theme-toggle {
+            position: fixed;
+            top: var(--cc-space-4);
+            right: var(--cc-space-4);
+            z-index: 100;
+            padding: var(--cc-space-2) var(--cc-space-3);
+            border: 1px solid var(--cc-color-surface-tertiary);
+            background: var(--cc-color-surface);
+            color: var(--cc-color-text-secondary);
+            border-radius: var(--cc-space-2);
+            cursor: pointer;
+            font-size: var(--cc-font-size-sm);
+            font-family: var(--cc-font-mono);
+            transition: all 0.2s ease;
+        }
+        
+        .theme-toggle:hover {
+            color: var(--cc-color-brand);
+            border-color: var(--cc-color-brand);
+        }
+        
+        /* ========================================
+           Block Container
+           ======================================== */
+        .block {
+            min-height: 100vh;
+            padding: var(--cc-space-20) var(--cc-space-6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .block__inner {
+            width: 100%;
+            max-width: calc(var(--cc-measure-prose) * 1.5);
+        }
+        
+        /* ========================================
+           Marginal Label (序章 · Prologue)
+           ======================================== */
+        .marginal-label {
+            text-align: center;
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-tertiary);
+            font-family: var(--cc-font-mono);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-bottom: var(--cc-space-6);
+        }
+        
+        /* ========================================
+           Hero Footer Component
+           ======================================== */
+        .hero-footer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--cc-space-3);
+            margin-bottom: var(--cc-space-16);
+            padding: var(--cc-space-8) 0;
+        }
+        
+        .hero-footer__chip {
+            font-size: var(--cc-font-size-sm);
+            font-family: var(--cc-font-mono);
+            color: var(--cc-color-text-tertiary);
+            background: var(--cc-color-surface-secondary);
+            padding: var(--cc-space-1) var(--cc-space-3);
+            border-radius: 9999px;
+        }
+        
+        .hero-footer__title {
+            font-size: var(--cc-font-size-2xl);
+            font-weight: var(--cc-font-weight-bold);
+            color: var(--cc-color-text-primary);
+        }
+        
+        .hero-footer__subtitle {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-secondary);
+            font-family: var(--cc-font-mono);
+        }
+        
+        /* ========================================
+           Hero Title (Q1)
+           ======================================== */
+        .hero-title {
+            text-align: center;
+            margin-bottom: var(--cc-space-24);
+        }
+        
+        .hero-title__main {
+            font-size: clamp(4rem, 12vw, 11rem);
+            font-weight: var(--cc-font-weight-black);
+            line-height: var(--cc-leading-tight);
+            letter-spacing: -0.03em;
+            margin-bottom: var(--cc-space-8);
+        }
+        
+        /* 引擎盖 - break-the-grid 撞色处理 */
+        .engine-hood {
+            position: relative;
+            display: inline-block;
+            color: var(--cc-color-bg);
+            background: var(--cc-color-brand);
+            padding: 0 0.15em;
+            margin: 0 -0.05em;
+            transform: skew(-3deg);
+            outline: 0.02em solid var(--cc-color-accent);
+            outline-offset: 0.05em;
+        }
+        
+        [data-theme="light"] .engine-hood {
+            color: var(--cc-color-text-primary);
+            background: var(--cc-color-brand-subtle);
+            outline-color: var(--cc-color-brand);
+        }
+        
+        .hero-title__subtitle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--cc-space-6);
+            font-size: var(--cc-font-size-xl);
+            color: var(--cc-color-text-secondary);
+            flex-wrap: wrap;
+        }
+        
+        /* ========================================
+           Inline Calculator Diagram
+           ======================================== */
+        .calculator-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--cc-space-1);
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-tertiary);
+            background: var(--cc-color-surface-secondary);
+            padding: var(--cc-space-1) var(--cc-space-3);
+            border-radius: var(--cc-space-1);
+            border: 1px solid var(--cc-color-surface-tertiary);
+        }
+        
+        .calculator-inline__key {
+            display: inline-block;
+            min-width: 1.5em;
+            text-align: center;
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-surface-tertiary);
+            border-radius: 2px;
+            padding: 0.1em 0.3em;
+        }
+        
+        /* ========================================
+           Content Sections
+           ======================================== */
+        .content-section {
+            max-width: var(--cc-measure-prose);
+            margin: 0 auto var(--cc-space-16);
+        }
+        
+        .content-section p {
+            margin-bottom: var(--cc-space-6);
+        }
+        
+        .content-section code {
+            font-family: var(--cc-font-mono);
+            font-size: 0.9em;
+            background: var(--cc-color-surface-secondary);
+            padding: 0.1em 0.4em;
+            border-radius: 3px;
+            color: var(--cc-color-brand);
+        }
+        
+        /* ========================================
+           5-Item Reveal List (Q4)
+           ======================================== */
+        .reveal-section {
+            margin-bottom: var(--cc-space-24);
+        }
+        
+        .reveal-section__prompt {
+            font-size: var(--cc-font-size-xl);
+            color: var(--cc-color-text-secondary);
+            margin-bottom: var(--cc-space-6);
+        }
+        
+        .reveal-list {
+            list-style: none;
+            padding: 0;
+            margin: var(--cc-space-8) 0;
+        }
+        
+        .reveal-list__item {
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-lg);
+            color: var(--cc-color-text-primary);
+            padding: var(--cc-space-3) 0;
+            padding-left: var(--cc-space-6);
+            border-left: 2px solid var(--cc-color-brand);
+            margin-bottom: var(--cc-space-3);
+            opacity: 0;
+            transform: translateX(-10px);
+            animation: revealSlide 0.6s ease forwards;
+        }
+        
+        .reveal-list__item:nth-child(1) { animation-delay: 0.1s; }
+        .reveal-list__item:nth-child(2) { animation-delay: 0.2s; }
+        .reveal-list__item:nth-child(3) { animation-delay: 0.3s; }
+        .reveal-list__item:nth-child(4) { animation-delay: 0.4s; }
+        .reveal-list__item:nth-child(5) { animation-delay: 0.5s; }
+        
+        @keyframes revealSlide {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .reveal-section__conclusion {
+            font-size: var(--cc-font-size-lg);
+            color: var(--cc-color-text-secondary);
+            margin-top: var(--cc-space-6);
+        }
+        
+        /* ========================================
+           Bridge (Q3)
+           ======================================== */
+        .bridge {
+            text-align: center;
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: var(--cc-font-weight-bold);
+            color: var(--cc-color-text-primary);
+            margin: var(--cc-space-20) 0;
+            padding: var(--cc-space-8) 0;
+        }
+        
+        /* ========================================
+           Terminal Section
+           ======================================== */
+        .terminal-section {
+            margin-bottom: var(--cc-space-16);
+        }
+        
+        .terminal-section p {
+            margin-bottom: var(--cc-space-4);
+        }
+        
+        /* Claude cursor blink */
+        .claude-cursor {
+            display: inline-block;
+            width: 0.6em;
+            height: 1.2em;
+            background: var(--cc-color-brand);
+            margin-left: 0.1em;
+            vertical-align: text-bottom;
+            animation: blink 1s step-end infinite;
+        }
+        
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+        
+        /* ========================================
+           ChatGPT Bubble (Q6)
+           ======================================== */
+        .misunderstanding-bubble {
+            margin: var(--cc-space-12) 0;
+            display: flex;
+            justify-content: flex-start;
+        }
+        
+        .chat-bubble {
+            background: var(--cc-color-surface-secondary);
+            border: 1px solid var(--cc-color-surface-tertiary);
+            border-radius: var(--cc-space-4);
+            padding: var(--cc-space-5) var(--cc-space-6);
+            position: relative;
+            max-width: 90%;
+        }
+        
+        .chat-bubble::before {
+            content: """;
+            position: absolute;
+            top: -0.3em;
+            left: var(--cc-space-4);
+            font-size: var(--cc-font-size-5xl);
+            color: var(--cc-color-brand);
+            font-family: Georgia, serif;
+            line-height: 1;
+        }
+        
+        .chat-bubble__text {
+            font-size: var(--cc-font-size-2xl);
+            color: var(--cc-color-text-secondary);
+            font-style: italic;
+            padding-left: var(--cc-space-4);
+        }
+        
+        /* ========================================
+           Finale (Q2)
+           ======================================== */
+        .finale {
+            text-align: center;
+            margin-top: var(--cc-space-16);
+            margin-bottom: var(--cc-space-20);
+        }
+        
+        .finale__text {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: var(--cc-font-weight-black);
+            color: var(--cc-color-text-primary);
+            line-height: var(--cc-leading-tight);
+            letter-spacing: -0.02em;
+        }
+        
+        /* ========================================
+           Responsive Adjustments
+           ======================================== */
+        @media (max-width: 768px) {
+            .block {
+                padding: var(--cc-space-12) var(--cc-space-4);
+            }
+            
+            .hero-title__subtitle {
+                font-size: var(--cc-font-size-base);
+            }
+            
+            .reveal-list__item {
+                font-size: var(--cc-font-size-base);
+            }
+            
+            .chat-bubble__text {
+                font-size: var(--cc-font-size-xl);
+            }
+            
+            .bridge {
+                font-size: var(--cc-font-size-2xl);
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="切换主题">
+        <span id="theme-icon">◐</span>
+    </button>
+    
+    <section class="block" id="block1">
+        <div class="block__inner">
+            <!-- Marginal Label -->
+            <div class="marginal-label">序章 · Prologue</div>
+            
+            <!-- Hero Footer Component -->
+            <div class="hero-footer">
+                <span class="hero-footer__chip">0 / 序章 · 01</span>
+                <h2 class="hero-footer__title">Hero 一击 · 引擎盖悖论</h2>
+                <span class="hero-footer__subtitle">全书第 0 拍 · 5 秒钩子</span>
+            </div>
+            
+            <!-- Hero Title (Q1) -->
+            <div class="hero-title">
+                <h1 class="hero-title__main">
+                    当你打开一个"聊天助手"的<span class="engine-hood">引擎盖</span>
+                </h1>
+                <div class="hero-title__subtitle">
+                    <span>想象你在手机上打开计算器，按下</span>
+                    <span class="calculator-inline">
+                        <span class="calculator-inline__key">1</span>
+                        <span>+</span>
+                        <span class="calculator-inline__key">1</span>
+                        <span>=</span>
+                        <span class="calculator-inline__key">2</span>
+                    </span>
+                </div>
+            </div>
+            
+            <!-- 5-Item Reveal (Q4) -->
+            <div class="reveal-section">
+                <p class="reveal-section__prompt">简单吧？但如果你拆开计算器 App 的源代码，你会发现里面有：</p>
+                
+                <ul class="reveal-list">
+                    <li class="reveal-list__item">浮点精度处理</li>
+                    <li class="reveal-list__item">本地化数字格式</li>
+                    <li class="reveal-list__item">无障碍语音播报</li>
+                    <li class="reveal-list__item">撤销历史栈</li>
+                    <li class="reveal-list__item">单元测试框架</li>
+                </ul>
+                
+                <p class="reveal-section__conclusion">——远比"做加法"复杂得多。</p>
+            </div>
+            
+            <!-- Bridge (Q3) -->
+            <div class="bridge">
+                Claude Code 也是这样。
+            </div>
+            
+            <!-- Terminal Section -->
+            <div class="terminal-section content-section">
+                <p>当你在终端输入 <code>claude</code><span class="claude-cursor"></span>，看到的是一个友善的对话界面。</p>
+                <p>你说一句话，它回一句话，偶尔帮你改改代码。</p>
+            </div>
+            
+            <!-- Misunderstanding Bubble (Q6) -->
+            <div class="misunderstanding-bubble">
+                <div class="chat-bubble">
+                    <p class="chat-bubble__text">不就是个终端里的 ChatGPT 吗？</p>
+                </div>
+            </div>
+            
+            <!-- Finale (Q2) -->
+            <div class="finale">
+                <p class="finale__text">不是。差远了。</p>
+            </div>
+        </div>
+    </section>
+    
+    <script>
+        // Theme toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            const next = current === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+        
+        // Initialize theme
+        (function initTheme() {
+            const saved = localStorage.getItem('theme');
+            const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+            const theme = saved || (prefersLight ? 'light' : 'dark');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</body>
+</html>

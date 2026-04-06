@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>序章 · Block 02 · 反差引入</title>
+  <style>
+    :root {
+      --cc-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --cc-font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+      --cc-font-size-xs: 0.75rem;
+      --cc-font-size-sm: 0.875rem;
+      --cc-font-size-base: 1rem;
+      --cc-font-size-lg: 1.125rem;
+      --cc-font-size-xl: 1.25rem;
+      --cc-font-size-2xl: 1.5rem;
+      --cc-font-size-3xl: 1.875rem;
+      --cc-font-size-4xl: 2.25rem;
+      --cc-font-size-5xl: 3rem;
+      --cc-space-1: 0.25rem;
+      --cc-space-2: 0.5rem;
+      --cc-space-3: 0.75rem;
+      --cc-space-4: 1rem;
+      --cc-space-6: 1.5rem;
+      --cc-space-8: 2rem;
+      --cc-space-10: 2.5rem;
+      --cc-space-12: 3rem;
+      --cc-space-16: 4rem;
+      --cc-measure-prose: 65ch;
+      --cc-color-bg: #0a0a0f;
+      --cc-color-surface: #13131a;
+      --cc-color-surface-secondary: #1a1a24;
+      --cc-color-border: #2a2a3a;
+      --cc-color-text: #e8e8f0;
+      --cc-color-text-muted: #8888a0;
+      --cc-color-brand: #6366f1;
+      --cc-color-brand-bright: #818cf8;
+      --cc-color-accent: #f472b6;
+      --cc-color-success: #34d399;
+      --cc-color-competitor-1: #fef3c7;
+      --cc-color-competitor-2: #dbeafe;
+      --cc-color-competitor-3: #fce7f3;
+      --cc-color-competitor-4: #e0e7ff;
+      --cc-color-competitor-5: #f3e8ff;
+      --cc-color-competitor-6: #ccfbf1;
+      --cc-color-competitor-7: #fee2e2;
+      --cc-color-competitor-8: #fef9c3;
+    }
+
+    [data-theme="light"] {
+      --cc-color-bg: #fafafa;
+      --cc-color-surface: #ffffff;
+      --cc-color-surface-secondary: #f5f5f7;
+      --cc-color-border: #e0e0e8;
+      --cc-color-text: #1a1a2e;
+      --cc-color-text-muted: #6b6b80;
+      --cc-color-brand: #4f46e5;
+      --cc-color-brand-bright: #6366f1;
+      --cc-color-accent: #db2777;
+      --cc-color-success: #059669;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--cc-font-sans);
+      font-size: var(--cc-font-size-lg);
+      line-height: 1.7;
+      color: var(--cc-color-text);
+      background: var(--cc-color-bg);
+      max-width: 900px;
+      margin: 0 auto;
+      padding: var(--cc-space-6);
+    }
+
+    /* Marginal Label */
+    .marginal-label {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--cc-space-2);
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-xs);
+      color: var(--cc-color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: var(--cc-space-4);
+    }
+    .marginal-label .emoji {
+      font-size: var(--cc-font-size-base);
+    }
+
+    /* Block Title */
+    .block-title {
+      font-size: var(--cc-font-size-4xl);
+      font-weight: 700;
+      color: var(--cc-color-text);
+      margin-bottom: var(--cc-space-8);
+      line-height: 1.2;
+    }
+
+    /* Section Header */
+    .section-header {
+      font-size: var(--cc-font-size-sm);
+      font-family: var(--cc-font-mono);
+      color: var(--cc-color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: var(--cc-space-3);
+    }
+
+    /* Q2 - Block Opening Time Anchor */
+    .q2-anchor {
+      font-size: var(--cc-font-size-2xl);
+      font-weight: 600;
+      color: var(--cc-color-text);
+      line-height: 1.4;
+      margin-bottom: var(--cc-space-3);
+    }
+
+    .q3-subtitle {
+      font-size: var(--cc-font-size-xl);
+      color: var(--cc-color-text-muted);
+      margin-bottom: var(--cc-space-8);
+      font-style: italic;
+    }
+
+    /* Prose Paragraph */
+    .prose {
+      max-width: var(--cc-measure-prose);
+      margin-bottom: var(--cc-space-6);
+      color: var(--cc-color-text);
+    }
+
+    .prose strong {
+      color: var(--cc-color-brand-bright);
+      font-weight: 600;
+    }
+
+    /* Transition sentence */
+    .transition-sentence {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-brand-bright);
+      margin-bottom: var(--cc-space-6);
+      padding: var(--cc-space-3) var(--cc-space-4);
+      background: var(--cc-color-surface);
+      border-left: 3px solid var(--cc-color-brand);
+      border-radius: 0 4px 4px 0;
+    }
+
+    /* 8 Competitor Grid */
+    .competitor-section {
+      margin-bottom: var(--cc-space-12);
+    }
+
+    .competitor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: var(--cc-space-3);
+    }
+
+    .competitor-card {
+      padding: var(--cc-space-4);
+      border-radius: 8px;
+      font-size: var(--cc-font-size-sm);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .competitor-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .competitor-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+    }
+
+    .competitor-card:nth-child(1) { background: var(--cc-color-competitor-1); color: #1a1a2e; }
+    .competitor-card:nth-child(1)::before { background: #f59e0b; }
+    .competitor-card:nth-child(2) { background: var(--cc-color-competitor-2); color: #1a1a2e; }
+    .competitor-card:nth-child(2)::before { background: #3b82f6; }
+    .competitor-card:nth-child(3) { background: var(--cc-color-competitor-3); color: #1a1a2e; }
+    .competitor-card:nth-child(3)::before { background: #ec4899; }
+    .competitor-card:nth-child(4) { background: var(--cc-color-competitor-4); color: #1a1a2e; }
+    .competitor-card:nth-child(4)::before { background: #6366f1; }
+    .competitor-card:nth-child(5) { background: var(--cc-color-competitor-5); color: #1a1a2e; }
+    .competitor-card:nth-child(5)::before { background: #a855f7; }
+    .competitor-card:nth-child(6) { background: var(--cc-color-competitor-6); color: #1a1a2e; }
+    .competitor-card:nth-child(6)::before { background: #10b981; }
+    .competitor-card:nth-child(7) { background: var(--cc-color-competitor-7); color: #1a1a2e; }
+    .competitor-card:nth-child(7)::before { background: #ef4444; }
+    .competitor-card:nth-child(8) { background: var(--cc-color-competitor-8); color: #1a1a2e; }
+    .competitor-card:nth-child(8)::before { background: #eab308; }
+
+    .competitor-card .product-name {
+      font-family: var(--cc-font-mono);
+      font-weight: 700;
+      font-size: var(--cc-font-size-base);
+      margin-bottom: var(--cc-space-1);
+    }
+
+    .competitor-card .company {
+      font-size: var(--cc-font-size-xs);
+      opacity: 0.75;
+      margin-bottom: var(--cc-space-2);
+    }
+
+    .competitor-card .feature {
+      font-size: var(--cc-font-size-sm);
+      line-height: 1.5;
+    }
+
+    /* Q4 Contrast Strip */
+    .q4-section {
+      margin-bottom: var(--cc-space-10);
+      padding: var(--cc-space-6);
+      background: var(--cc-color-surface);
+      border-radius: 12px;
+      border: 1px solid var(--cc-color-border);
+    }
+
+    .q4-header {
+      font-size: var(--cc-font-size-xl);
+      color: var(--cc-color-text-muted);
+      margin-bottom: var(--cc-space-4);
+    }
+
+    .q4-contrast {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--cc-space-3);
+      margin-bottom: var(--cc-space-4);
+      font-size: var(--cc-font-size-xl);
+      font-weight: 600;
+    }
+
+    .q4-contrast .strike {
+      text-decoration: line-through;
+      color: var(--cc-color-text-muted);
+      opacity: 0.6;
+    }
+
+    .q4-contrast .pivot {
+      color: var(--cc-color-brand-bright);
+      font-weight: 700;
+    }
+
+    .q5-unique {
+      font-size: var(--cc-font-size-lg);
+      color: var(--cc-color-text);
+      margin-bottom: var(--cc-space-4);
+      padding: var(--cc-space-3) var(--cc-space-4);
+      background: var(--cc-color-surface-secondary);
+      border-radius: 6px;
+      border-left: 3px solid var(--cc-color-accent);
+    }
+
+    .q5-unique strong {
+      color: var(--cc-color-accent);
+    }
+
+    .inline-explanation {
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-muted);
+      margin-bottom: var(--cc-space-2);
+    }
+
+    .inline-explanation em {
+      color: var(--cc-color-text);
+      font-style: normal;
+    }
+
+    /* Three Stage Timeline */
+    .timeline-section {
+      margin-bottom: var(--cc-space-12);
+    }
+
+    .timeline {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: var(--cc-space-6) 0;
+      position: relative;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 10%;
+      right: 10%;
+      height: 2px;
+      background: var(--cc-color-border);
+      transform: translateY(-50%);
+      z-index: 0;
+    }
+
+    .timeline-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 1;
+      padding: 0 var(--cc-space-4);
+    }
+
+    .timeline-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--cc-color-border);
+      margin-bottom: var(--cc-space-2);
+    }
+
+    .timeline-stage.active .timeline-dot {
+      background: var(--cc-color-brand);
+      box-shadow: 0 0 12px var(--cc-color-brand);
+      width: 20px;
+      height: 20px;
+    }
+
+    .timeline-label {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-sm);
+      font-weight: 600;
+      margin-bottom: var(--cc-space-1);
+      white-space: nowrap;
+    }
+
+    .timeline-stage.active .timeline-label {
+      color: var(--cc-color-brand-bright);
+      font-size: var(--cc-font-size-base);
+    }
+
+    .timeline-year {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-xs);
+      color: var(--cc-color-text-muted);
+    }
+
+    .timeline-arrow {
+      font-size: var(--cc-font-size-xl);
+      color: var(--cc-color-text-muted);
+      z-index: 1;
+    }
+
+    /* Trio Architecture */
+    .trio-section {
+      margin-bottom: var(--cc-space-12);
+      text-align: center;
+    }
+
+    .trio-container {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 2px;
+      border-radius: 12px;
+      overflow: hidden;
+      margin: var(--cc-space-6) auto;
+    }
+
+    .trio-layer {
+      padding: var(--cc-space-4) var(--cc-space-8);
+      font-family: var(--cc-font-mono);
+      font-weight: 700;
+      font-size: var(--cc-font-size-lg);
+      position: relative;
+    }
+
+    .trio-layer.layer-model {
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      color: white;
+    }
+
+    .trio-layer.layer-runtime {
+      background: linear-gradient(135deg, #f472b6 0%, #db2777 100%);
+      color: white;
+    }
+
+    .trio-layer.layer-harness {
+      background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+      color: white;
+    }
+
+    .trio-label {
+      display: block;
+      font-size: var(--cc-font-size-xs);
+      font-weight: 400;
+      opacity: 0.85;
+      margin-top: var(--cc-space-1);
+    }
+
+    .trio-caption {
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-muted);
+      margin-top: var(--cc-space-4);
+    }
+
+    /* Q6 Academic + 💡 Card */
+    .q6-section {
+      margin-bottom: var(--cc-space-10);
+    }
+
+    .q6-academic {
+      font-size: var(--cc-font-size-2xl);
+      font-weight: 600;
+      color: var(--cc-color-text);
+      margin-bottom: var(--cc-space-4);
+      line-height: 1.4;
+    }
+
+    .q6-academic .harness-term {
+      color: var(--cc-color-brand-bright);
+      font-family: var(--cc-font-mono);
+    }
+
+    .harness-card {
+      background: var(--cc-color-surface-secondary);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 8px;
+      padding: var(--cc-space-4);
+      margin-top: var(--cc-space-4);
+    }
+
+    .harness-card .card-header {
+      display: flex;
+      align-items: center;
+      gap: var(--cc-space-2);
+      font-weight: 700;
+      margin-bottom: var(--cc-space-2);
+      color: var(--cc-color-brand-bright);
+    }
+
+    .harness-card .card-body {
+      font-size: var(--cc-font-size-base);
+      color: var(--cc-color-text);
+      line-height: 1.6;
+    }
+
+    .harness-card .card-body .analogy {
+      color: var(--cc-color-accent);
+      font-weight: 600;
+    }
+
+    /* Q1 Block End Anchor */
+    .q1-anchor {
+      font-size: var(--cc-font-size-3xl);
+      font-weight: 700;
+      color: var(--cc-color-text);
+      text-align: center;
+      padding: var(--cc-space-10) var(--cc-space-6);
+      margin: var(--cc-space-12) 0;
+      background: linear-gradient(135deg, var(--cc-color-surface) 0%, var(--cc-color-surface-secondary) 100%);
+      border-radius: 16px;
+      border: 1px solid var(--cc-color-border);
+      line-height: 1.4;
+    }
+
+    .q1-anchor .highlight {
+      color: var(--cc-color-brand-bright);
+      font-family: var(--cc-font-mono);
+    }
+
+    /* Mirror Hook */
+    .mirror-hook {
+      font-size: var(--cc-font-size-lg);
+      color: var(--cc-color-text-muted);
+      text-align: center;
+      padding: var(--cc-space-6);
+      margin-bottom: var(--cc-space-8);
+      border-top: 1px solid var(--cc-color-border);
+    }
+
+    .mirror-hook strong {
+      color: var(--cc-color-accent);
+      font-weight: 600;
+    }
+
+    /* Footer */
+    .block-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: var(--cc-space-6);
+      border-top: 1px solid var(--cc-color-border);
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-xs);
+      color: var(--cc-color-text-muted);
+    }
+
+    .block-footer .block-name {
+      color: var(--cc-color-brand-bright);
+    }
+
+    /* Cost paragraph */
+    .cost-paragraph {
+      font-size: var(--cc-font-size-base);
+      color: var(--cc-color-text-muted);
+      margin-top: var(--cc-space-4);
+      padding: var(--cc-space-4);
+      background: var(--cc-color-surface);
+      border-radius: 6px;
+    }
+
+    .cost-paragraph strong {
+      color: var(--cc-color-text);
+    }
+
+    .cost-paragraph em {
+      color: var(--cc-color-accent);
+      font-style: normal;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      body { padding: var(--cc-space-4); }
+      .block-title { font-size: var(--cc-font-size-3xl); }
+      .q2-anchor { font-size: var(--cc-font-size-xl); }
+      .competitor-grid { grid-template-columns: 1fr; }
+      .q4-contrast { flex-direction: column; gap: var(--cc-space-2); }
+      .timeline { flex-direction: column; gap: var(--cc-space-3); }
+      .timeline::before { display: none; }
+      .timeline-arrow { transform: rotate(90deg); }
+      .q1-anchor { font-size: var(--cc-font-size-2xl); padding: var(--cc-space-6); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Marginal Label -->
+  <div class="marginal-label">
+    <span class="emoji">🌍</span>
+    <span>序章 · Block 02 · 反差引入</span>
+  </div>
+
+  <!-- Block Title -->
+  <h1 class="block-title">群雄并起 · 2026 年 AI 编程助手版图</h1>
+
+  <!-- Section: 行业背景 -->
+  <div class="section-header">行业背景</div>
+
+  <!-- Q2: 块首时间锚 -->
+  <p class="q2-anchor">
+    2026 年，AI 编程助手已完成从"帮你补全一行代码"向"自己动手完成整个任务"的根本转变。
+  </p>
+
+  <!-- Q3: 副标 -->
+  <p class="q3-subtitle">竞争激烈程度堪比智能手机大战。</p>
+
+  <!-- L15 Prose with 6 competitors -->
+  <p class="prose">
+    简单列几个名字你就能感受到：<strong>GitHub Copilot</strong>、<strong>Cursor</strong>、<strong>Kimi Code</strong>、<strong>OpenAI CodeX</strong>、<strong>Devin</strong>、<strong>Google Antigravity</strong>……每家都在做自己的 AI 编程助手。
+  </p>
+
+  <!-- Transition sentence (OQ1) -->
+  <div class="transition-sentence">
+    完整名单见下表 →
+  </div>
+
+  <!-- 8 Competitor Grid (P0 - Must fully display, no折叠) -->
+  <div class="competitor-section">
+    <div class="competitor-grid">
+      <!-- 1. GitHub Copilot Agent Mode -->
+      <div class="competitor-card">
+        <div class="product-name">GitHub Copilot Agent Mode</div>
+        <div class="company">微软/GitHub</div>
+        <div class="feature">全面正式发布（GA），内置多个专职AI智能体</div>
+      </div>
+      <!-- 2. Cursor Background Agents -->
+      <div class="competitor-card">
+        <div class="product-name">Cursor Background Agents</div>
+        <div class="company">Anysphere</div>
+        <div class="feature">在云端虚拟机中并行执行代码重构</div>
+      </div>
+      <!-- 3. Kimi Code -->
+      <div class="competitor-card">
+        <div class="product-name">Kimi Code</div>
+        <div class="company">月之暗面</div>
+        <div class="feature">基于万亿参数模型，最多100个并发子智能体</div>
+      </div>
+      <!-- 4. OpenAI CodeX -->
+      <div class="competitor-card">
+        <div class="product-name">OpenAI CodeX</div>
+        <div class="company">OpenAI</div>
+        <div class="feature">Rust重写底层，引入并行Agent工作流</div>
+      </div>
+      <!-- 5. OpenCode -->
+      <div class="competitor-card">
+        <div class="product-name">OpenCode</div>
+        <div class="company">开源社区</div>
+        <div class="feature">11万+ GitHub Star，支持75+模型提供商</div>
+      </div>
+      <!-- 6. Devin -->
+      <div class="competitor-card">
+        <div class="product-name">Devin</div>
+        <div class="company">Cognition</div>
+        <div class="feature">从"全自主"转向人机协作管控模式</div>
+      </div>
+      <!-- 7. Z Code (GLM) -->
+      <div class="competitor-card">
+        <div class="product-name">Z Code (GLM)</div>
+        <div class="company">智谱AI</div>
+        <div class="feature">7440亿参数，专注国产芯片和私有化部署</div>
+      </div>
+      <!-- 8. Google Antigravity -->
+      <div class="competitor-card">
+        <div class="product-name">Google Antigravity</div>
+        <div class="company">Google</div>
+        <div class="feature">Mission Control架构，重新定义工程协作</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q4 Contrast Strip -->
+  <div class="q4-section">
+    <p class="q4-header">在这个群雄并起的格局中，Claude Code 选择了一条独特的道路：</p>
+    <div class="q4-contrast">
+      <span class="strike">不做 IDE 插件</span>
+      <span class="strike">不做 Web 应用</span>
+      <span class="pivot">而是终端</span>
+    </div>
+    <p class="inline-explanation">
+      <em>IDE</em> 是程序员写代码的专用编辑器，类似于设计师的 Photoshop
+    </p>
+    <p class="inline-explanation">
+      （那个黑底白字的命令行窗口）
+    </p>
+
+    <!-- Q5: 唯一一个 -->
+    <p class="q5-unique">
+      <strong>唯一一个</strong>可以在纯远程服务器上工作、可以完全通过键盘操作、可以与任何编辑器无缝集成的 AI 编程助手。
+    </p>
+
+    <!-- Cost paragraph -->
+    <p class="cost-paragraph">
+      代价是：它必须自己解决<em>界面渲染</em>、<em>文件管理</em>、<em>进程隔离</em>等一系列在 IDE 环境中本来"免费"的问题。这本书要解剖的，正是这个雄心勃勃的工程选择背后的全部技术细节。
+    </p>
+  </div>
+
+  <!-- Three Stage Timeline -->
+  <div class="timeline-section">
+    <div class="section-header">行业认知三阶段演进</div>
+    <div class="timeline">
+      <div class="timeline-stage">
+        <div class="timeline-dot"></div>
+        <div class="timeline-label">提示工程</div>
+        <div class="timeline-year">2023-24</div>
+      </div>
+      <div class="timeline-arrow">→</div>
+      <div class="timeline-stage">
+        <div class="timeline-dot"></div>
+        <div class="timeline-label">上下文工程</div>
+        <div class="timeline-year">2025</div>
+      </div>
+      <div class="timeline-arrow">→</div>
+      <div class="timeline-stage active">
+        <div class="timeline-dot"></div>
+        <div class="timeline-label">套控工程</div>
+        <div class="timeline-year">2026</div>
+      </div>
+    </div>
+    <p class="trio-caption">LangChain 创始人 Harrison Chase 将其归纳为 Model + Runtime + Harness 三层架构</p>
+  </div>
+
+  <!-- Trio Architecture -->
+  <div class="trio-section">
+    <div class="trio-container">
+      <div class="trio-layer layer-model">
+        Model
+        <span class="trio-label">基础大模型 · Claude / GPT-4 / Gemini</span>
+      </div>
+      <div class="trio-layer layer-runtime">
+        Runtime
+        <span class="trio-label">运行时编排 · LangChain / AutoGPT</span>
+      </div>
+      <div class="trio-layer layer-harness">
+        Harness
+        <span class="trio-label">套控工程 · 工具能力 + 安全边界</span>
+      </div>
+    </div>
+    <p class="trio-caption">Harrison Chase 提出 · 三层架构</p>
+  </div>
+
+  <!-- Q6 Academic + 💡 Card -->
+  <div class="q6-section">
+    <p class="q6-academic">
+      <span class="harness-term">harness</span>（套控层）的设计差异决定了产品表现的差异。
+    </p>
+
+    <!-- 💡 通俗理解 Card (OQ7 - Must appear) -->
+    <div class="harness-card">
+      <div class="card-header">
+        💡 通俗理解
+      </div>
+      <div class="card-body">
+        "套控"就是给 AI 戴上"马具"——既要让它能拉车干活（<span class="analogy">工具能力</span>），又要套上缰绳保证它不会乱跑（<span class="analogy">安全边界</span>）。
+      </div>
+    </div>
+  </div>
+
+  <!-- Q1: Block End Anchor (≥3xl, 独立成段) -->
+  <div class="q1-anchor">
+    本书解剖的 <span class="highlight">Claude Code</span>，正是一个 <span class="highlight">harness</span> 设计的完整案例。
+  </div>
+
+  <!-- Mirror Hook (OQ5) -->
+  <div class="mirror-hook">
+    "群雄并起"不只在公司之间发生——它已经发生在 Claude Code 内部。一个 CLI 工具里就有 <strong>12 个内置 Subagent</strong>。
+  </div>
+
+  <!-- Footer -->
+  <footer class="block-footer">
+    <span class="block-name">序章 · Block 02</span>
+    <span>全书第 2 拍 · 宏观坐标系</span>
+    <span>2026</span>
+  </footer>
+
+</body>
+</html>
