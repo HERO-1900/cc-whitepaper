@@ -1,25 +1,27 @@
 /* ===== RESET & BASE ===== */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* Stage 2：旧变量全部转发到 tokens.css 的 --cc-* token，跟随主题自动切换。
+   保留旧变量名是为了不批量改 600+ 处 var(--bg-primary) 引用。 */
 :root {
-  --bg-primary: #0a0e17;
-  --bg-secondary: #0d1520;
-  --bg-card: #111827;
-  --bg-hover: #1a2332;
-  --accent-cyan: #00d4ff;
-  --accent-purple: #7b61ff;
-  --accent-red: #ff6b6b;
-  --accent-teal: #4ecdc4;
-  --accent-gold: #ffd93d;
-  --accent-green: #48bb78;
-  --accent-pink: #e88dff;
-  --accent-blue: #63b3ed;
-  --text-primary: #e0e6ed;
-  --text-secondary: #8a9bb5;
-  --text-muted: #4a5568;
-  --border: #1e2d42;
-  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --bg-primary:    var(--cc-bg-primary);
+  --bg-secondary:  var(--cc-bg-secondary);
+  --bg-card:       var(--cc-bg-elevated);
+  --bg-hover:      var(--cc-bg-hover);
+  --accent-cyan:   var(--cc-accent-primary);
+  --accent-purple: var(--cc-accent-secondary);
+  --accent-red:    var(--cc-color-red);
+  --accent-teal:   var(--cc-color-teal);
+  --accent-gold:   var(--cc-color-gold);
+  --accent-green:  var(--cc-color-green);
+  --accent-pink:   var(--cc-color-pink);
+  --accent-blue:   var(--cc-color-blue);
+  --text-primary:  var(--cc-text-primary);
+  --text-secondary:var(--cc-text-secondary);
+  --text-muted:    var(--cc-text-muted);
+  --border:        var(--cc-border-default);
+  --font-mono:     var(--cc-font-mono);
+  --font-sans:     var(--cc-font-sans);
 }
 
 html, body {
