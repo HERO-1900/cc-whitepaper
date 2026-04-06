@@ -226,7 +226,10 @@
       </div>
       <div id="gallery-grid" class="gallery-grid"></div>
     `;
-    document.body.insertBefore(gallery, document.querySelector('nav'));
+    // 修复：原代码 insertBefore(gallery, querySelector('nav')) 会抛错，
+    // 因为 <nav> 元素不是 <body> 的直接子节点（嵌套在 #viewer / #reader 内）。
+    // 改为直接 appendChild，gallery 由 CSS 控制可见性（默认 hidden，激活时全屏覆盖）。
+    document.body.appendChild(gallery);
 
     // Load chart listing
     loadAllCharts().then(() => {

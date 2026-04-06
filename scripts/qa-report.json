@@ -2,7 +2,7 @@
   "summary": {
     "totalChapters": 83,
     "totalLines": 36528,
-    "totalCJKCharacters": 360580,
+    "totalCJKCharacters": 360583,
     "avgCompletenessScore": 4.95,
     "avgMetaphorBalance": 0.337,
     "totalIssues": 4,
@@ -3213,10 +3213,10 @@
     },
     {
       "file": "part5_supplementary/83_Harness_Engineering.md",
-      "title": "第 83 章 Harness Engineering：从 Claude Code 看 Agent 工程化范式",
+      "title": "Harness Engineering：从 Claude Code 看 Agent 工程化范式",
       "stats": {
         "lineCount": 404,
-        "cjkCount": 6336,
+        "cjkCount": 6339,
         "codeBlocks": 1,
         "srcPathCount": 0
       },
@@ -3423,7 +3423,7 @@
       "type": "no_src_ref",
       "message": "没有源文件引用（src/ 路径）",
       "chapter": "part5_supplementary/83_Harness_Engineering.md",
-      "title": "第 83 章 Harness Engineering：从 Claude Code 看 Agent 工程化范式"
+      "title": "Harness Engineering：从 Claude Code 看 Agent 工程化范式"
     },
     {
       "severity": "warning",
@@ -3456,7 +3456,7 @@
     },
     {
       "file": "part5_supplementary/83_Harness_Engineering.md",
-      "title": "第 83 章 Harness Engineering：从 Claude Code 看 Agent 工程化范式",
+      "title": "Harness Engineering：从 Claude Code 看 Agent 工程化范式",
       "completeness": 4,
       "issueCount": 1
     },

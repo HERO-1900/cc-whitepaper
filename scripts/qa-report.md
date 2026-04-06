@@ -1,6 +1,6 @@
 # QA 质量报告 — Claude Code 源码白皮书
 
-> 生成时间: 2026-04-06T12:14:58.301Z
+> 生成时间: 2026-04-06T12:24:12.527Z
 
 ## 总体统计
 
@@ -8,7 +8,7 @@
 |------|----|
 | 章节总数 | 83 |
 | 总行数 | 36,528 |
-| 总中文字数（CJK 字符） | 360,580 |
+| 总中文字数（CJK 字符） | 360,583 |
 | 平均完整性评分 | 4.95 / 5 |
 | 平均比喻平衡度 | 0.337 |
 | 总问题数 | 4（0 错误 / 3 警告 / 1 提示） |
@@ -17,7 +17,7 @@
 
 | 严重度 | 章节 | 类型 | 说明 |
 |--------|------|------|------|
-| WARN | 第 83 章 Harness Engineering：从 Claude Code 看 Agent 工程化范式 | no_src_ref | 没有源文件引用（src/ 路径） |
+| WARN | Harness Engineering：从 Claude Code 看 Agent 工程化范式 | no_src_ref | 没有源文件引用（src/ 路径） |
 | WARN | 引用与致谢 | no_code | 没有代码块（``` 标记） |
 | WARN | 引用与致谢 | no_src_ref | 没有源文件引用（src/ 路径） |
 | INFO | 引用与致谢 | no_critical | 缺少批判/局限性分析 |
@@ -27,7 +27,7 @@
 | 章节 | 完整性 | 问题数 | 文件 |
 |------|--------|--------|------|
 | 引用与致谢 | 2/5 | 3 | `references.md` |
-| 第 83 章 Harness Engineering：从 Claude Code 看 Agent 工程化范式 | 4/5 | 1 | `part5_supplementary/83_Harness_Engineering.md` |
+| Harness Engineering：从 Claude Code 看 Agent 工程化范式 | 4/5 | 1 | `part5_supplementary/83_Harness_Engineering.md` |
 | 序章：当你打开一个"聊天助手"的引擎盖 | 5/5 | 0 | `part0_序章/00_序章.md` |
 | 这不是聊天机器人 | 5/5 | 0 | `part1_认识这个系统/01_这不是聊天机器人.md` |
 | 五分钟看懂系统架构 | 5/5 | 0 | `part1_认识这个系统/02_五分钟看懂系统架构.md` |
@@ -1677,14 +1677,14 @@
 
 ---
 
-### 第 83 章 Harness Engineering：从 Claude Code 看 Agent 工程化范式
+### Harness Engineering：从 Claude Code 看 Agent 工程化范式
 
 **文件**: `part5_supplementary/83_Harness_Engineering.md`
 
 | 指标 | 值 |
 |------|----|
 | 行数 | 404 |
-| CJK 字数 | 6,336 |
+| CJK 字数 | 6,339 |
 | 代码块数 | 1 |
 | 源码引用数 | 0 |
 | OS 隐喻 | 7 |

@@ -522,7 +522,7 @@ const BOOK_STRUCTURE = [
     id: 'part7',
     title: 'Part 7 · 补遗与延伸',
     chapters: [
-      { id: 'p7-01', file: 'part5_supplementary/83_Harness_Engineering.md', title: '83 Harness Engineering：从 Claude Code 看 Agent 工程化范式' },
+      { id: 'p7-01', file: 'part5_supplementary/83_Harness_Engineering.md', title: '01 Harness Engineering：从 Claude Code 看 Agent 工程化范式' },
       { id: 'p7-99', file: 'references.md', title: '引用与致谢' },
     ],
   },
