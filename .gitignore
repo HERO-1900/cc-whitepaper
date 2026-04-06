@@ -29,3 +29,6 @@ scripts/reviews/
 
 # ===== 历史遗留：本地审计文件，含敏感 prompt =====
 prompt-audit-full.md
+
+# ===== 内部审计报告，不公开 =====
+coverage_audit_report.md
