@@ -8,6 +8,9 @@ node_modules/
 .env.local
 .env.*.local
 
+# ===== Claude Code 个人级配置（settings.json 共享，.local.json 个人） =====
+.claude/settings.local.json
+
 # ===== test-viz：默认忽略，仅公开 production HTML + 嵌入索引 =====
 # 用 test-viz/* 而不是 test-viz/，是为了允许子目录 re-include
 test-viz/*
@@ -32,3 +35,9 @@ prompt-audit-full.md
 
 # ===== 内部审计报告，不公开 =====
 coverage_audit_report.md
+
+# ===== 🚨 archive/：历史归档目录，含旧版硬编码 API key 的 .sh 脚本 =====
+# QA sub-agent 2026-04-07 发现 archive/test-viz-_archive/run_batch{,2}.sh 有 4 处真实 KIMI/MINIMAX key
+# 整个 archive/ 默认禁入库，如要分享归档清单只能公开 _archive-log-*.md
+archive/
+!archive/_archive-log-*.md
