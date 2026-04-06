@@ -1,0 +1,46 @@
+总分: 12/20
+
+**布局: 2/5** — 四个分类纵向堆叠占用大量垂直空间，工具卡片网格在行高不一时易错位
+
+**信息: 2/5** — 标题称"43个工具"但实际仅32个，分类层级缺乏视觉权重，筛选逻辑存在bug
+
+**美学: 4/5** — 配色体系和谐，四色区分度高，字体搭配合理，脉冲动画略显喧宾夺主
+
+**完整: 4/5** — 可直接运行，语法无误，但筛选功能失效
+
+---
+
+**缺陷:**
+
+1. **工具数量不符** — 标题写"43个工具"，实际数据只有 6+2+9+15=32 个，相差11个
+
+2. **筛选逻辑bug (约第155-160行)**
+   ```js
+   let blockMatch=(filter==='all'||filter===cat||((filter==='readonly'||filter==='safe')));
+   ```
+   当 filter 为 'readonly' 或 'safe' 时，条件永远为 true，导致所有分类块都不会被 dimmed
+
+3. **分类布局浪费空间** — 使用 `grid-template-columns:1fr` 导致四类纵向排列，大屏下应采用2×2网格以提升信息密度
+
+4. **Agent分类缺少TaskCreate badge** — 代码注释说有9个工具但 `TeamCreate` 后漏掉了其 special:'fork' 的 badge 样式传递
+
+5. **高危工具仅有Bash** — Bash/PowerShell 均 safe:false，但 PowerShell 未被标记 high-risk，视觉处理不一致
+
+6. **工具计数缺失** — 页面无"43"或"32"的醒目数字提示，不利于快速确认
+
+7. **header响应式断点过早** — flex-wrap 在 640px 时触发，但 filter 按钮排不下时未做 dropdown 化
+
+---
+
+**修改建议:**
+
+1. 将 `categories` 数据补足至43个工具，或将标题改为实际数量32
+2. 修复筛选逻辑：
+   ```js
+   const filterMap = {readonly: 'true', safe: 'true'};
+   let blockMatch = filter==='all' || filter===cat || (filterMap[filter] !== undefined);
+   ```
+3. 将 dashboard 改为 `grid-template-columns: repeat(2, 1fr)` 并设 max-width 限制
+4. PowerShell 同样标记为 `special:'high-risk'` 保持一致性
+5. 在 header 区域添加一个醒目的大数字徽章显示工具总数
+6. 筛选按钮在小屏下可折叠为 `<details>` 或下拉菜单

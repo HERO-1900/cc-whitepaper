@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>投机执行时间轴对比 - Speculation Timeline</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-panel: #0f1420;
+  --track-trad: #4a5568;
+  --track-spec: #00d4ff;
+  --accent-green: #00ff88;
+  --accent-purple: #7b61ff;
+  --accent-red: #ff4757;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --grid-line: rgba(148, 163, 184, 0.08);
+  --glow-green: rgba(0, 255, 136, 0.5);
+  --glow-blue: rgba(0, 212, 255, 0.4);
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg-deep);
+  font-family: 'Space Grotesk', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  overflow-x: auto;
+}
+
+.container {
+  width: 100%;
+  max-width: 1400px;
+}
+
+.diagram-title {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.diagram-title h1 {
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.diagram-title h1 span {
+  color: var(--accent-green);
+  text-shadow: 0 0 20px var(--glow-green);
+}
+
+.diagram-title p {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.grid-bg {
+  fill: none;
+  stroke: var(--grid-line);
+  stroke-width: 1;
+}
+
+.timeline-track {
+  fill: var(--bg-panel);
+  stroke: rgba(148, 163, 184, 0.15);
+  stroke-width: 1;
+  rx: 8;
+}
+
+.track-label {
+  font-size: 14px;
+  font-weight: 600;
+  fill: var(--text-primary);
+}
+
+.track-label-en {
+  font-size: 11px;
+  fill: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.phase-box {
+  rx: 4;
+  ry: 4;
+}
+
+.phase-box.traditional {
+  fill: rgba(74, 85, 104, 0.25);
+  stroke: var(--track-trad);
+  stroke-width: 1.5;
+}
+
+.phase-box.speculation {
+  fill: rgba(0, 212, 255, 0.08);
+  stroke: var(--track-spec);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 3;
+  animation: pulse-border 2s ease-in-out infinite;
+}
+
+.phase-box.speculation.active {
+  fill: rgba(0, 255, 136, 0.15);
+  stroke: var(--accent-green);
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 12px var(--glow-green));
+}
+
+.phase-text {
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--text-primary);
+  text-anchor: middle;
+}
+
+.phase-text-en {
+  font-size: 10px;
+  fill: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  text-anchor: middle;
+}
+
+.time-arrow {
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+  marker-end: url(#arrowhead);
+}
+
+.time-label {
+  font-size: 11px;
+  fill: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.cow-container {
+  fill: var(--bg-panel);
+  stroke: var(--accent-purple);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 2;
+  rx: 6;
+}
+
+.cow-layer {
+  rx: 3;
+}
+
+.cow-main {
+  fill: rgba(123, 97, 255, 0.15);
+  stroke: var(--accent-purple);
+  stroke-width: 1;
+}
+
+.cow-overlay {
+  fill: rgba(0, 212, 255, 0.2);
+  stroke: var(--track-spec);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+
+.cow-label {
+  font-size: 10px;
+  fill: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.cow-arrow {
+  fill: none;
+  stroke: var(--accent-purple);
+  stroke-width: 1.5;
+  marker-end: url(#arrowhead-purple);
+}
+
+.decision-fork {
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 1.5;
+}
+
+.decision-accept {
+  fill: none;
+  stroke: var(--accent-green);
+  stroke-width: 2;
+  marker-end: url(#arrowhead-green);
+}
+
+.decision-reject {
+  fill: none;
+  stroke: var(--accent-red);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 2;
+  marker-end: url(#arrowhead-red);
+}
+
+.highlight-text {
+  font-size: 18px;
+  font-weight: 700;
+  fill: var(--accent-green);
+  filter: drop-shadow(0 0 8px var(--glow-green));
+}
+
+.highlight-sub {
+  font-size: 10px;
+  fill: var(--accent-green);
+  opacity: 0.8;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.limit-badge {
+  fill: rgba(255, 193, 7, 0.1);
+  stroke: #ffc107;
+  stroke-width: 1;
+  rx: 4;
+}
+
+.limit-text {
+  font-size: 9px;
+  fill: #ffc107;
+  font-family: 'JetBrains Mono', monospace;
+  text-anchor: middle;
+}
+
+.cross-mark {
+  fill: none;
+  stroke: var(--accent-red);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+@keyframes pulse-border {
+  0%, 100% { stroke-opacity: 0.6; }
+  50% { stroke-opacity: 1; }
+}
+
+.running-indicator {
+  animation: running-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes running-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.save-indicator {
+  fill: var(--accent-green);
+  filter: drop-shadow(0 0 10px var(--glow-green));
+}
+
+.save-arrow {
+  fill: none;
+  stroke: var(--accent-green);
+  stroke-width: 2;
+  marker-end: url(#arrowhead-green);
+}
+
+.overlay-merge {
+  fill: rgba(0, 255, 136, 0.08);
+  stroke: var(--accent-green);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+  rx: 4;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="diagram-title">
+    <h1>投机执行时间轴对比 <span>≈0ms</span></h1>
+    <p>Speculative Execution Timeline Comparison</p>
+  </div>
+  
+  <svg viewBox="0 0 1200 520" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+      </marker>
+      <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#00ff88"/>
+      </marker>
+      <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#ff4757"/>
+      </marker>
+      <marker id="arrowhead-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#7b61ff"/>
+      </marker>
+      <linearGradient id="glow-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="rgba(0, 255, 136, 0)"/>
+        <stop offset="50%" stop-color="rgba(0, 255, 136, 0.3)"/>
+        <stop offset="100%" stop-color="rgba(0, 255, 136, 0)"/>
+      </linearGradient>
+    </defs>
+    
+    <!-- Background Grid -->
+    <g class="grid">
+      <line class="grid-bg" x1="60" y1="1" x2="60" y2="519"/>
+      <line class="grid-bg" x1="60" y1="100" x2="1140" y2="100"/>
+      <line class="grid-bg" x1="60" y1="260" x2="1140" y2="260"/>
+      <line class="grid-bg" x1="60" y1="420" x2="1140" y2="420"/>
+      <line class="grid-bg" x1="300" y1="100" x2="300" y2="420" stroke-dasharray="4 4"/>
+      <line class="grid-bg" x1="540" y1="100" x2="540" y2="420" stroke-dasharray="4 4"/>
+      <line class="grid-bg" x1="780" y1="100" x2="780" y2="420" stroke-dasharray="4 4"/>
+      <line class="grid-bg" x1="1020" y1="100" x2="1020" y2="420" stroke-dasharray="4 4"/>
+    </g>
+    
+    <!-- Time Axis -->
+    <line class="time-arrow" x1="80" y1="480" x2="1120" y2="480"/>
+    <text class="time-label" x="1130" y="484">时间 Time →</text>
+    
+    <!-- ========== UPPER TRACK: TRADITIONAL ========== -->
+    <rect class="timeline-track" x="40" y="40" width="1120" height="120"/>
+    <text class="track-label" x="60" y="68">传统方式</text>
+    <text class="track-label-en" x="60" y="85">Traditional Approach</text>
+    
+    <!-- Traditional phases -->
+    <!-- Phase 1: User Thinking -->
+    <rect class="phase-box traditional" x="160" y="55" width="120" height="90"/>
+    <text class="phase-text" x="220" y="95">用户思考</text>
+    <text class="phase-text-en" x="220" y="112">User Thinking</text>
+    
+    <!-- Phase 2: User Input -->
+    <rect class="phase-box traditional" x="300" y="55" width="100" height="90"/>
+    <text class="phase-text" x="350" y="95">用户输入</text>
+    <text class="phase-text-en" x="350" y="112">Typing</text>
+    
+    <!-- Phase 3: API Delay (THE PAIN) -->
+    <rect class="phase-box traditional" x="420" y="55" width="180" height="90" fill="rgba(255, 71, 87, 0.1)" stroke="#ff4757"/>
+    <text class="phase-text" x="510" y="90" fill="#ff4757">API 调用</text>
+    <text class="phase-text" x="510" y="107" fill="#ff6b7a">延迟...</text>
+    <text class="phase-text-en" x="510" y="124" fill="#ff6b7a">Latency</text>
+    
+    <!-- Phase 4: Response -->
+    <rect class="phase-box traditional" x="620" y="55" width="120" height="90"/>
+    <text class="phase-text" x="680" y="95">回复生成</text>
+    <text class="phase-text-en" x="680" y="112">Response</text>
+    
+    <!-- Total time indicator -->
+    <line x1="160" y1="160" x2="740" y2="160" stroke="#4a5568" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <text x="450" y="178" text-anchor="middle" fill="#94a3b8" font-size="11" font-family="JetBrains Mono">Total Wait: API Latency + Processing</text>
+    
+    <!-- ========== LOWER TRACK: SPECULATION ========== -->
+    <rect class="timeline-track" x="40" y="200" width="1120" height="200"/>
+    <text class="track-label" x="60" y="228" fill="#00d4ff">投机执行</text>
+    <text class="track-label-en" x="60" y="245">Speculative Execution</text>
+    
+    <!-- Prediction Agent (starts immediately) -->
+    <rect class="phase-box speculation" x="160" y="215" width="140" height="70"/>
+    <text class="phase-text" x="230" y="245" fill="#00d4ff">预测 Agent</text>
+    <text class="phase-text-en" x="230" y="262" fill="#5ee7ff">Predictor</text>
+    <circle cx="290" cy="230" r="3" fill="#00d4ff" class="running-indicator"/>
+    
+    <!-- Suggestion Generated -->
+    <rect class="phase-box speculation" x="320" y="215" width="140" height="70"/>
+    <text class="phase-text" x="390" y="240">生成建议</text>
+    <text class="phase-text-en" x="390" y="257" font-size="9">2-12 tokens</text>
+    <text x="390" y="272" text-anchor="middle" fill="#00ff88" font-size="10" font-family="JetBrains Mono">"run tests"</text>
+    
+    <!-- Speculative Execution (runs in parallel) -->
+    <rect class="phase-box speculation" x="480" y="215" width="200" height="70"/>
+    <text class="phase-text" x="580" y="240" fill="#00d4ff">投机执行中</text>
+    <text class="phase-text-en" x="580" y="257">AI推理 (隔离运行)</text>
+    <g class="running-indicator">
+      <rect x="500" y="265" width="40" height="4" rx="2" fill="#00d4ff" opacity="0.6"/>
+      <rect x="550" y="265" width="30" height="4" rx="2" fill="#00d4ff" opacity="0.4"/>
+      <rect x="590" y="265" width="50" height="4" rx="2" fill="#00d4ff" opacity="0.3"/>
+    </g>
+    
+    <!-- Limit Badge -->
+    <rect class="limit-badge" x="690" y="210" width="80" height="20"/>
+    <text class="limit-text" x="730" y="223">≤20轮 / 100条</text>
+    
+    <!-- Copy-on-Write Inset -->
+    <rect class="cow-container" x="720" y="255" width="180" height="130"/>
+    <text x="810" y="275" text-anchor="middle" fill="#7b61ff" font-size="12" font-weight="600">Copy-on-Write 隔离</text>
+    <text x="810" y="290" text-anchor="middle" fill="#a78bfa" font-size="9" font-family="JetBrains Mono">Filesystem Overlay</text>
+    
+    <!-- COW Layers -->
+    <rect class="cow-layer cow-main" x="740" y="305" width="140" height="28"/>
+    <text class="cow-label" x="810" y="323" text-anchor="middle">主目录 (只读) Main FS</text>
+    
+    <rect class="cow-layer cow-overlay" x="755" y="340" width="110" height="28"/>
+    <text class="cow-label" x="810" y="358" text-anchor="middle" fill="#00d4ff">覆盖层 (写入) Overlay</text>
+    
+    <!-- COW Arrows -->
+    <path class="cow-arrow" d="M 810 333 L 810 340"/>
+    <text x="820" y="338" fill="#7b61ff" font-size="8">写</text>
+    
+    <!-- Safety Boundary Note -->
+    <text x="920" y="275" fill="#ffc107" font-size="9" font-family="JetBrains Mono">安全边界:</text>
+    <text x="920" y="290" fill="#00ff88" font-size="8">✓ Read/Glob/Grep</text>
+    <text x="920" y="303" fill="#ff4757" font-size="8">✗ Bash/Confirm编辑</text>
+    
+    <!-- Decision Fork -->
+    <circle cx="740" cy="250" r="4" fill="#fff"/>
+    <path class="decision-fork" d="M 740 250 L 780 250"/>
+    <path class="decision-fork" d="M 780 250 L 780 200 L 900 200"/>
+    <path class="decision-fork" d="M 780 250 L 780 300 L 900 300"/>
+    
+    <!-- ACCEPT Path -->
+    <rect class="phase-box speculation active" x="900" y="170" width="160" height="60"/>
+    <text class="phase-text" x="980" y="200" fill="#00ff88">用户接受</text>
+    <text class="phase-text-en" x="980" y="217" fill="#00ff88">ACCEPT</text>
+    
+    <!-- Merge overlay -->
+    <rect class="overlay-merge" x="920" y="125" width="120" height="35"/>
+    <text x="980" y="140" text-anchor="middle" fill="#00ff88" font-size="10">覆盖层合并</text>
+    <text x="980" y="153" text-anchor="middle" fill="#00ff88" font-size="8" font-family="JetBrains Mono">Merge Overlay</text>
+    
+    <!-- Instant response indicator -->
+    <text class="highlight-text" x="980" y="85" text-anchor="middle">延迟 ≈ 0</text>
+    <text class="highlight-sub" x="980" y="105" text-anchor="middle">Zero Latency</text>
+    
+    <!-- Green glow effect -->
+    <rect x="900" y="55" width="160" height="90" fill="url(#glow-grad)" opacity="0.5"/>
+    
+    <!-- REJECT Path -->
+    <rect class="phase-box traditional" x="900" y="270" width="160" height="60" stroke="#ff4757" stroke-dasharray="4 2"/>
+    <text class="phase-text" x="980" y="295" fill="#ff6b7a">用户拒绝 / 其他输入</text>
+    <text class="phase-text-en" x="980" y="315" fill="#ff6b7a">REJECT / Other</text>
+    
+    <!-- Cross mark -->
+    <g transform="translate(1040, 300)">
+      <line class="cross-mark" x1="-8" y1="-8" x2="8" y2="8"/>
+      <line class="cross-mark" x1="8" y1="-8" x2="-8" y2="8"/>
+    </g>
+    
+    <!-- Discard indicator -->
+    <text x="980" y="350" text-anchor="middle" fill="#ff4757" font-size="10" font-family="JetBrains Mono">静默删除 discard</text>
+    
+    <!-- Connection lines for accept/reject -->
+    <path class="decision-accept" d="M 1060 200 L 1100 200 L 1100 120 L 1120 120"/>
+    <path class="decision-reject" d="M 1060 300 L 1080 300 L 1080 380 L 1120 380"/>
+    
+    <!-- Legend -->
+    <g transform="translate(60, 450)">
+      <rect x="0" y="0" width="16" height="16" fill="rgba(74, 85, 104, 0.25)" stroke="#4a5568" stroke-width="1.5" rx="2"/>
+      <text x="24" y="12" fill="#94a3b8" font-size="11">传统 Traditional</text>
+      
+      <rect x="140" y="0" width="16" height="16" fill="rgba(0, 212, 255, 0.08)" stroke="#00d4ff" stroke-width="1.5" stroke-dasharray="4 2" rx="2"/>
+      <text x="164" y="12" fill="#5ee7ff" font-size="11">投机中 Speculating</text>
+      
+      <rect x="300" y="0" width="16" height="16" fill="rgba(0, 255, 136, 0.15)" stroke="#00ff88" stroke-width="2" rx="2"/>
+      <text x="324" y="12" fill="#00ff88" font-size="11">命中 Hit (Instant)</text>
+      
+      <rect x="460" y="0" width="16" height="16" fill="rgba(255, 71, 87, 0.1)" stroke="#ff4757" stroke-width="1.5" stroke-dasharray="3 2" rx="2"/>
+      <text x="484" y="12" fill="#ff6b7a" font-size="11">丢弃 Discard</text>
+      
+      <rect x="580" y="0" width="16" height="16" fill="rgba(123, 97, 255, 0.15)" stroke="#7b61ff" stroke-width="1.5" rx="2"/>
+      <text x="604" y="12" fill="#a78bfa" font-size="11">COW 隔离</text>
+    </g>
+  </svg>
+</div>
+</body>
+</html>

@@ -1,0 +1,30 @@
+总分: 15/20
+
+布局: 3/5 — 层叠顺序清晰，但侧边栏括号高度计算有误，与实际层级总高度不匹配
+
+信息: 4/5 — 核心架构一目了然，Token范围与缓存机制说明完整，tooltip 补充细节
+
+美学: 4/5 — 配色渐变协调、字体搭配专业，噪声纹理与光晕提升质感，但层间色彩跳跃稍显突兀
+
+完整: 4/5 — 语法正确可运行，外部字体 CDN 依赖可接受，tooltip 交互完整
+
+---
+
+**缺陷:**
+
+1. **CSS 行 247-250** — `.change-indicator` 定义重复，后者覆盖前者（opacity 0.8 被重置）
+2. **CSS 行 333-335** — `.cacheable-bracket { height: 324px; }` 未包含 cache-boundary 的垂直 margin(16px×2)，实际应为 356px
+3. **CSS 行 336-338** — `.uncacheable-bracket { height: 200px; }` 与 layers 4-6 总高(200px)齐平，但未考虑层间潜在间距
+4. **CSS 行 145-170** — 固定 `height` 值（如 layer-1 140px）未使用 `min-height`，长文本内容可能溢出
+5. **CSS 行 2** — Google Fonts CDN 在网络隔离环境中无法加载，应标注备用方案
+
+---
+
+**修改建议:**
+
+1. 合并重复的 `.change-indicator` 定义，保留统一的样式
+2. 修正缓存括号高度计算：
+   - `.cacheable-bracket` → `height: 356px`（含 cache-boundary margin）
+   - 或将 cache-boundary 纳入 layers-container 内部统一计算
+3. 将所有固定 `height` 改为 `min-height`，保留 140px/100px 等为最小值
+4. 字体加载添加 `font-display: swap;` 并提供本地 fallback 字体栈

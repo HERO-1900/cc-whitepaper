@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bridge 时序图</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+:root {
+  --browser-color: #00d4ff;
+  --bridge-color: #7b61ff;
+  --claude-color: #00ff88;
+  --permission-color: #ff6b6b;
+  --bg-color: #0a0a1a;
+  --grid-color: rgba(255,255,255,0.03);
+  --text-primary: #e8e8f0;
+  --text-secondary: #8a8aa3;
+  --v1-bg: rgba(0, 212, 255, 0.08);
+  --v2-bg: rgba(123, 97, 255, 0.08);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--bg-color);
+  color: var(--text-primary);
+  min-height: 100vh;
+  padding: 40px 20px;
+  overflow-x: auto;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--browser-color), var(--bridge-color), var(--claude-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 40px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.diagram-wrapper {
+  background: linear-gradient(180deg, rgba(20,20,40,0.8) 0%, rgba(10,10,26,0.95) 100%);
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.diagram-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+}
+
+svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.lifeline-browser { stroke: var(--browser-color); }
+.lifeline-bridge { stroke: var(--bridge-color); }
+.lifeline-claude { stroke: var(--claude-color); }
+
+.actor-box {
+  rx: 8;
+  ry: 8;
+  stroke-width: 2;
+}
+
+.actor-browser { fill: rgba(0, 212, 255, 0.15); stroke: var(--browser-color); }
+.actor-bridge { fill: rgba(123, 97, 255, 0.15); stroke: var(--bridge-color); }
+.actor-claude { fill: rgba(0, 255, 136, 0.15); stroke: var(--claude-color); }
+
+.message-line {
+  stroke-width: 2;
+  fill: none;
+}
+
+.msg-browser { stroke: var(--browser-color); marker-end: url(#arrow-browser); }
+.msg-bridge { stroke: var(--bridge-color); marker-end: url(#arrow-bridge); }
+.msg-claude { stroke: var(--claude-color); marker-end: url(#arrow-claude); }
+.msg-permission { stroke: var(--permission-color); stroke-dasharray: 5,3; marker-end: url(#arrow-permission); }
+.msg-return { stroke: var(--text-secondary); stroke-dasharray: 4,2; marker-end: url(#arrow-return); }
+
+.msg-label {
+  font-size: 11px;
+  fill: var(--text-primary);
+  font-weight: 500;
+}
+
+.msg-label-cn {
+  font-size: 10px;
+  fill: var(--text-secondary);
+}
+
+.alt-box {
+  stroke-width: 1;
+  stroke-dasharray: 8,3;
+  rx: 4;
+  ry: 4;
+}
+
+.alt-v1 { fill: var(--v1-bg); stroke: var(--browser-color); }
+.alt-v2 { fill: var(--v2-bg); stroke: var(--bridge-color); }
+
+.alt-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--text-primary);
+}
+
+.alt-label-cn {
+  font-size: 9px;
+  fill: var(--text-secondary);
+}
+
+.activation {
+  stroke: none;
+  rx: 2;
+  ry: 2;
+}
+
+.act-browser { fill: rgba(0, 212, 255, 0.3); }
+.act-bridge { fill: rgba(123, 97, 255, 0.3); }
+.act-claude { fill: rgba(0, 255, 136, 0.3); }
+
+.worktree-box {
+  fill: rgba(0, 212, 255, 0.1);
+  stroke: var(--browser-color);
+  stroke-width: 1;
+  stroke-dasharray: 4,2;
+  rx: 4;
+  ry: 4;
+}
+
+.worktree-text {
+  font-size: 9px;
+  fill: var(--browser-color);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.separator {
+  stroke: rgba(255,255,255,0.08);
+  stroke-width: 1;
+}
+
+.note-box {
+  fill: rgba(255, 107, 107, 0.1);
+  stroke: var(--permission-color);
+  stroke-width: 1;
+  rx: 4;
+  ry: 4;
+}
+
+.note-text {
+  font-size: 9px;
+  fill: var(--permission-color);
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 30px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 2px solid;
+}
+
+.legend-browser { background: rgba(0, 212, 255, 0.2); border-color: var(--browser-color); }
+.legend-bridge { background: rgba(123, 97, 255, 0.2); border-color: var(--bridge-color); }
+.legend-claude { background: rgba(0, 255, 136, 0.2); border-color: var(--claude-color); }
+.legend-permission { background: rgba(255, 107, 107, 0.2); border-color: var(--permission-color); }
+
+.phase-label {
+  font-size: 10px;
+  font-weight: 600;
+  fill: var(--text-primary);
+  opacity: 0.6;
+}
+
+.phase-line {
+  stroke: rgba(255,255,255,0.1);
+  stroke-width: 1;
+  stroke-dasharray: 10,5;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1 class="title">Bridge 通信时序图</h1>
+  <p class="subtitle">IDE/Browser ↔ Bridge ↔ Claude Core Communication Sequence</p>
+  
+  <div class="diagram-wrapper">
+    <svg viewBox="0 0 1000 1300" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <marker id="arrow-browser" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="#00d4ff"/>
+        </marker>
+        <marker id="arrow-bridge" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="#7b61ff"/>
+        </marker>
+        <marker id="arrow-claude" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="#00ff88"/>
+        </marker>
+        <marker id="arrow-permission" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="#ff6b6b"/>
+        </marker>
+        <marker id="arrow-return" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="#8a8aa3"/>
+        </marker>
+      </defs>
+
+      <!-- 参与方标题 -->
+      <g transform="translate(0, 20)">
+        <rect class="actor-box actor-browser" x="60" y="0" width="140" height="50"/>
+        <text x="130" y="22" text-anchor="middle" fill="#00d4ff" font-size="14" font-weight="600">浏览器 / claude.ai</text>
+        <text x="130" y="38" text-anchor="middle" fill="#8a8aa3" font-size="10" font-family="JetBrains Mono">Browser</text>
+
+        <rect class="actor-box actor-bridge" x="430" y="0" width="140" height="50"/>
+        <text x="500" y="22" text-anchor="middle" fill="#7b61ff" font-size="14" font-weight="600">Bridge</text>
+        <text x="500" y="38" text-anchor="middle" fill="#8a8aa3" font-size="10" font-family="JetBrains Mono">Local Terminal</text>
+
+        <rect class="actor-box actor-claude" x="800" y="0" width="140" height="50"/>
+        <text x="870" y="22" text-anchor="middle" fill="#00ff88" font-size="14" font-weight="600">Claude 子进程</text>
+        <text x="870" y="38" text-anchor="middle" fill="#8a8aa3" font-size="10" font-family="JetBrains Mono">AI Engine</text>
+      </g>
+
+      <!-- 生命线 -->
+      <line class="lifeline-browser" x1="130" y1="70" x2="130" y2="1240" stroke-dasharray="5,5" opacity="0.6"/>
+      <line class="lifeline-bridge" x1="500" y1="70" x2="500" y2="1240" stroke-dasharray="5,5" opacity="0.6"/>
+      <line class="lifeline-claude" x1="870" y1="70" x2="870" y2="1240" stroke-dasharray="5,5" opacity="0.6"/>
+
+      <!-- 阶段分隔线：Bridge注册 -->
+      <line class="phase-line" x1="40" y1="85" x2="960" y2="85"/>
+      <text class="phase-label" x="50" y="100">阶段1: 注册上线</text>
+
+      <!-- Bridge注册流程 -->
+      <line class="message-line msg-bridge" x1="500" y1="110" x2="130" y2="110"/>
+      <text class="msg-label" x="315" y="105" text-anchor="middle">register_environment</text>
+      <text class="msg-label-cn" x="315" y="118" text-anchor="middle">注册环境信息</text>
+
+      <rect class="activation act-browser" x="125" y="110" width="10" height="30"/>
+      
+      <line class="message-line msg-return" x1="130" y1="140" x2="500" y2="140"/>
+      <text class="msg-label" x="315" y="135" text-anchor="middle">environment_id + secret</text>
+      <text class="msg-label-cn" x="315" y="148" text-anchor="middle">返回环境凭证</text>
+
+      <rect class="activation act-bridge" x="495" y="140" width="10" height="40"/>
+
+      <!-- 阶段分隔线：轮询Work -->
+      <line class="phase-line" x1="40" y1="175" x2="960" y2="175"/>
+      <text class="phase-label" x="50" y="190">阶段2: 工作轮询</text>
+
+      <!-- 轮询Work -->
+      <line class="message-line msg-bridge" x1="500" y1="200" x2="130" y2="200"/>
+      <text class="msg-label" x="315" y="195" text-anchor="middle">POST /poll</text>
+      <text class="msg-label-cn" x="315" y="208" text-anchor="middle">轮询工作任务</text>
+
+      <rect class="activation act-browser" x="125" y="200" width="10" height="30"/>
+
+      <line class="message-line msg-browser" x1="130" y1="230" x2="500" y2="230"/>
+      <text class="msg-label" x="315" y="225" text-anchor="middle">WorkAvailable (WorkSecret/JWT)</text>
+      <text class="msg-label-cn" x="315" y="238" text-anchor="middle">分派工作凭证</text>
+
+      <!-- alt框: v1 vs v2 协议 -->
+      <rect class="alt-box alt-v1" x="40" y="260" width="920" height="280"/>
+      <text class="alt-label" x="55" y="280">[v1 Protocol] Environments API</text>
+      <text class="alt-label-cn" x="55" y="292">传统协议：基于环境注册</text>
+
+      <!-- v1路径 -->
+      <line class="message-line msg-bridge" x1="500" y1="320" x2="130" y2="320"/>
+      <text class="msg-label" x="315" y="315" text-anchor="middle">WebSocket Connect + auth</text>
+      <text class="msg-label-cn" x="315" y="328" text-anchor="middle">建立WebSocket连接并认证</text>
+
+      <rect class="activation act-browser" x="125" y="320" width="10" height="40"/>
+      <rect class="activation act-bridge" x="495" y="320" width="10" height="150"/>
+
+      <line class="message-line msg-browser" x1="130" y1="350" x2="500" y2="350"/>
+      <text class="msg-label" x="315" y="345" text-anchor="middle">确认 work_accepted</text>
+
+      <!-- Hybrid Transport说明 -->
+      <rect class="worktree-box" x="540" y="370" width="200" height="40"/>
+      <text class="worktree-text" x="550" y="385">HybridTransport:</text>
+      <text class="worktree-text" x="550" y="398">WS读 ←  HTTP POST写</text>
+
+      <line class="message-line msg-browser" x1="130" y1="420" x2="500" y2="420"/>
+      <text class="msg-label" x="315" y="415" text-anchor="middle">SSE data stream (read)</text>
+      <text class="msg-label-cn" x="315" y="428" text-anchor="middle">服务器推送数据流</text>
+
+      <line class="message-line msg-bridge" x1="500" y1="450" x2="130" y2="450"/>
+      <text class="msg-label" x="315" y="445" text-anchor="middle">POST /v1/... (write)</text>
+      <text class="msg-label-cn" x="315" y="458" text-anchor="middle">HTTP POST发送数据</text>
+
+      <!-- v2路径 alt框 -->
+      <rect class="alt-box alt-v2" x="40" y="560" width="920" height="200"/>
+      <text class="alt-label" x="55" y="580">[v2 Protocol] Env-less Direct</text>
+      <text class="alt-label-cn" x="55" y="592">直连协议：无环境注册</text>
+
+      <line class="message-line msg-bridge" x1="500" y1="610" x2="130" y2="610"/>
+      <text class="msg-label" x="315" y="605" text-anchor="middle">POST /v1/code/sessions</text>
+      <text class="msg-label-cn" x="315" y="618" text-anchor="middle">创建会话</text>
+
+      <line class="message-line msg-bridge" x1="500" y1="640" x2="130" y2="640"/>
+      <text class="msg-label" x="315" y="635" text-anchor="middle">POST /sessions/{id}/bridge</text>
+      <text class="msg-label-cn" x="315" y="648" text-anchor="middle">Bridge接入会话</text>
+
+      <rect class="activation act-browser" x="125" y="640" width="10" height="30"/>
+
+      <line class="message-line msg-browser" x1="130" y1="670" x2="500" y2="670"/>
+      <text class="msg-label" x="315" y="665" text-anchor="middle">worker_jwt + epoch</text>
+      <text class="msg-label-cn" x="315" y="678" text-anchor="middle">返回工作者凭证</text>
+
+      <rect class="worktree-box" x="540" y="690" width="200" height="40"/>
+      <text class="worktree-text" x="550" y="705">v2 Transport:</text>
+      <text class="worktree-text" x="550" y="718">SSE读 ← CCRClient写</text>
+
+      <!-- 阶段分隔线：Spawn Session -->
+      <line class="phase-line" x1="40" y1="780" x2="960" y2="780"/>
+      <text class="phase-label" x="50" y="795">阶段3: 会话创建</text>
+
+      <!-- Spawn Session -->
+      <line class="message-line msg-bridge" x1="500" y1="820" x2="870" y2="820"/>
+      <text class="msg-label" x="685" y="815" text-anchor="middle">spawn_session(SpawnMode)</text>
+      <text class="msg-label-cn" x="685" y="828" text-anchor="middle">根据模式创建会话</text>
+
+      <rect class="activation act-claude" x="865" y="820" width="10" height="80"/>
+
+      <!-- SpawnMode分支 -->
+      <rect class="worktree-box" x="540" y="850" width="240" height="60"/>
+      <text class="worktree-text" x="550" y="868">SpawnMode:</text>
+      <text class="worktree-text" x="550" y="883">• single-session: 单一会话</text>
+      <text class="worktree-text" x="550" y="898">• worktree: 隔离工作目录</text>
+      <text class="worktree-text" x="550" y="913">• same-dir: 当前目录</text>
+
+      <!-- Worktree创建 (仅worktree模式) -->
+      <line class="message-line msg-bridge" x1="500" y1="940" x2="500" y2="940"/>
+      <rect class="activation act-bridge" x="495" y="940" width="10" height="40"/>
+      
+      <rect class="worktree-box" x="200" y="935" width="260" height="50" style="stroke: var(--browser-color);"/>
+      <text class="worktree-text" x="210" y="953" style="fill: var(--browser-color);">git worktree createAgentWorktree()</text>
+      <text class="worktree-text" x="210" y="968" style="fill: var(--browser-color);">创建隔离分支和工作目录</text>
+
+      <line class="message-line msg-claude" x1="870" y1="900" x2="500" y2="900"/>
+      <text class="msg-label" x="685" y="895" text-anchor="middle">session_ready</text>
+      <text class="msg-label-cn" x="685" y="908" text-anchor="middle">会话就绪</text>
+
+      <!-- 阶段分隔线：双向通信 -->
+      <line class="phase-line" x1="40" y1="1000" x2="960" y2="1000"/>
+      <text class="phase-label" x="50" y="1015">阶段4: 双向通信</text>
+
+      <!-- 双向通信 -->
+      <line class="message-line msg-browser" x1="130" y1="1040" x2="500" y2="1040"/>
+      <text class="msg-label" x="315" y="1035" text-anchor="middle">用户指令 / prompt</text>
+
+      <line class="message-line msg-bridge" x1="500" y1="1060" x2="870" y2="1060"/>
+      <text class="msg-label" x="685" y="1055" text-anchor="middle">forward to Claude</text>
+      <text class="msg-label-cn" x="685" y="1068" text-anchor="middle">转发给Claude</text>
+
+      <line class="message-line msg-claude" x1="870" y1="1080" x2="500" y2="1080"/>
+      <text class="msg-label" x="685" y="1075" text-anchor="middle">AI response chunks</text>
+      <text class="msg-label-cn" x="685" y="1088" text-anchor="middle">AI响应流</text>
+
+      <line class="message-line msg-bridge" x1="500" y1="1100" x2="130" y2="1100"/>
+      <text class="msg-label" x="315" y="1095" text-anchor="middle">stream to browser</text>
+      <text class="msg-label-cn" x="315" y="1108" text-anchor="middle">流式传输到浏览器</text>
+
+      <!-- 阶段分隔线：权限请求 -->
+      <line class="phase-line" x1="40" y1="1130" x2="960" y2="1130"/>
+      <text class="phase-label" x="50" y="1145">阶段5: 权限桥接 (当需要用户确认时)</text>
+
+      <!-- 权限请求链 -->
+      <line class="message-line msg-permission" x1="870" y1="1170" x2="500" y2="1170"/>
+      <text class="msg-label" x="685" y="1165" text-anchor="middle" fill="#ff6b6b">control_request</text>
+      <text class="msg-label-cn" x="685" y="1178" fill="#ff6b6b">权限请求</text>
+
+      <rect class="activation act-bridge" x="495" y="1170" width="10" height="50"/>
+
+      <line class="message-line msg-permission" x1="500" y1="1190" x2="130" y2="1190"/>
+      <text class="msg-label" x="315" y="1185" text-anchor="middle" fill="#ff6b6b">forward control_request</text>
+      <text class="msg-label-cn" x="315" y="1198" fill="#ff6b6b">转发权限请求</text>
+
+      <rect class="activation act-browser" x="125" y="1190" width="10" height="40"/>
+
+      <line class="message-line msg-permission" x1="130" y1="1220" x2="500" y2="1220"/>
+      <text class="msg-label" x="315" y="1215" text-anchor="middle" fill="#ff6b6b">control_response</text>
+      <text class="msg-label-cn" x="315" y="1228" fill="#ff6b6b">用户审批响应</text>
+
+      <line class="message-line msg-permission" x1="500" y1="1240" x2="870" y2="1240"/>
+      <text class="msg-label" x="685" y="1235" text-anchor="middle" fill="#ff6b6b">forward control_response</text>
+      <text class="msg-label-cn" x="685" y="1248" fill="#ff6b6b">转发审批结果</text>
+
+      <!-- 断线重连注释 -->
+      <rect class="note-box" x="750" y="200" width="190" height="50" opacity="0.8"/>
+      <text class="note-text" x="760" y="218">BackoffConfig</text>
+      <text class="note-text" x="760" y="233">断线自动重连</text>
+      <text class="note-text" x="760" y="248">默认指数退避</text>
+    </svg>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-color legend-browser"></div>
+      <span>浏览器 / Browser</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color legend-bridge"></div>
+      <span>Bridge 本地终端</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color legend-claude"></div>
+      <span>Claude 子进程</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color legend-permission"></div>
+      <span>权限请求链 (红色虚线)</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

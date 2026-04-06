@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code 可复用设计模式清单</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700;900&family=Playfair+Display:wght@700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #e8e8f0;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(90deg, #fff 0%, #a0a0c0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+        
+        .subtitle {
+            color: #8888a0;
+            font-size: 0.95rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .pattern-card {
+            position: relative;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 24px;
+            border-left: 4px solid;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .pattern-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        .pattern-card.featured {
+            transform: scale(1.02);
+        }
+        
+        .pattern-card.featured:hover {
+            transform: scale(1.02) translateY(-4px);
+        }
+        
+        .number-badge {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #1a1a2e;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .pattern-name {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .pattern-name-en {
+            font-size: 0.75rem;
+            opacity: 0.6;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        
+        .formula {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin: 12px 0;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        
+        .cc-impl {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: #8888a0;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .cc-impl::before {
+            content: "📁";
+            font-size: 0.8rem;
+        }
+        
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .tag {
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+        
+        .warning-box {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        /* Card 1 - Blue (投机执行) */
+        .card-1 { border-left-color: #3b82f6; }
+        .card-1 .number-badge { background: #3b82f6; }
+        .card-1 .pattern-name { color: #60a5fa; }
+        .card-1 .formula { color: #93c5fd; border-left: 2px solid #3b82f6; }
+        .card-1 .tag { background: rgba(59, 130, 246, 0.15); color: #93c5fd; }
+        
+        /* Card 2 - Green (Token) */
+        .card-2 { border-left-color: #22c55e; }
+        .card-2 .number-badge { background: #22c55e; }
+        .card-2 .pattern-name { color: #4ade80; }
+        .card-2 .formula { color: #86efac; border-left: 2px solid #22c55e; }
+        .card-2 .tag { background: rgba(34, 197, 94, 0.15); color: #86efac; }
+        .card-2 .warning-box { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        
+        /* Card 3 - Purple (可组合) */
+        .card-3 { border-left-color: #a855f7; }
+        .card-3 .number-badge { background: #a855f7; }
+        .card-3 .pattern-name { color: #c084fc; }
+        .card-3 .formula { color: #d8b4fe; border-left: 2px solid #a855f7; }
+        .card-3 .tag { background: rgba(168, 85, 247, 0.15); color: #d8b4fe; }
+        
+        /* Card 4 - Red (多层防线) - Featured */
+        .card-4 { border-left-color: #ef4444; }
+        .card-4 .number-badge { background: #ef4444; }
+        .card-4 .pattern-name { color: #f87171; }
+        .card-4 .formula { color: #fca5a5; border-left: 2px solid #ef4444; }
+        .card-4 .tag { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+        
+        /* Card 5 - Orange (可观测性) */
+        .card-5 { border-left-color: #f97316; }
+        .card-5 .number-badge { background: #f97316; }
+        .card-5 .pattern-name { color: #fb923c; }
+        .card-5 .formula { color: #fdba74; border-left: 2px solid #f97316; }
+        .card-5 .tag { background: rgba(249, 115, 22, 0.15); color: #fdba74; }
+        
+        /* Card 6 - Gold (Hooks) - Featured */
+        .card-6 { border-left-color: #eab308; }
+        .card-6 .number-badge { background: #eab308; }
+        .card-6 .pattern-name { color: #facc15; }
+        .card-6 .formula { color: #fde047; border-left: 2px solid #eab308; }
+        .card-6 .tag { background: rgba(234, 179, 8, 0.15); color: #fde047; }
+        
+        /* Card 7 - Cyan (stat-before) */
+        .card-7 { border-left-color: #06b6d4; }
+        .card-7 .number-badge { background: #06b6d4; }
+        .card-7 .pattern-name { color: #22d3ee; }
+        .card-7 .formula { color: #67e8f9; border-left: 2px solid #06b6d4; }
+        .card-7 .tag { background: rgba(6, 182, 212, 0.15); color: #67e8f9; }
+        
+        /* Card 8 - Pink (三级降级) */
+        .card-8 { border-left-color: #ec4899; }
+        .card-8 .number-badge { background: #ec4899; }
+        .card-8 .pattern-name { color: #f472b6; }
+        .card-8 .formula { color: #f9a8d4; border-left: 2px solid #ec4899; }
+        .card-8 .tag { background: rgba(236, 72, 153, 0.15); color: #f9a8d4; }
+        
+        /* Card 9 - Indigo (路径哈希) */
+        .card-9 { border-left-color: #6366f1; }
+        .card-9 .number-badge { background: #6366f1; }
+        .card-9 .pattern-name { color: #818cf8; }
+        .card-9 .formula { color: #a5b4fc; border-left: 2px solid #6366f1; }
+        .card-9 .tag { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; }
+        
+        /* Card 10 - Gray (拒绝非截断) */
+        .card-10 { border-left-color: #6b7280; }
+        .card-10 .number-badge { background: #6b7280; }
+        .card-10 .pattern-name { color: #9ca3af; }
+        .card-10 .formula { color: #d1d5db; border-left: 2px solid #6b7280; }
+        .card-10 .tag { background: rgba(107, 114, 128, 0.15); color: #d1d5db; }
+        
+        @media (max-width: 768px) {
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+            h1 { font-size: 1.8rem; }
+            .pattern-card.featured { transform: none; }
+            .pattern-card.featured:hover { transform: translateY(-4px); }
+        }
+        
+        .bg-noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-noise"></div>
+    <div class="container">
+        <header>
+            <h1>可复用设计模式清单</h1>
+            <p class="subtitle">Reusable Design Patterns from Claude Code</p>
+        </header>
+        
+        <div class="card-grid">
+            <!-- Card 1: 投机执行 -->
+            <div class="pattern-card card-1 featured">
+                <div class="number-badge">①</div>
+                <div class="pattern-name">
+                    在等待时间里藏工作
+                    <span class="pattern-name-en">Speculative Execution</span>
+                </div>
+                <div class="formula">找到"必须等待X"的地方 → 等待期间做不依赖X的工作</div>
+                <div class="cc-impl">src/main.tsx 启动序列 (API等待期间加载模块)</div>
+                <div class="tags">
+                    <span class="tag">Promise.all 并行化</span>
+                    <span class="tag">可回滚</span>
+                </div>
+            </div>
+            
+            <!-- Card 2: Token是一等公民 -->
+            <div class="pattern-card card-2">
+                <div class="number-badge">②</div>
+                <div class="pattern-name">
+                    Token是一等公民
+                    <span class="pattern-name-en">Tokens as First-Class Citizens</span>
+                </div>
+                <div class="formula">识别消耗 → 测量 → 优化 → 监控</div>
+                <div class="cc-impl">omitClaudeMd / CacheSafeParams / 6层压缩</div>
+                <div class="tags">
+                    <span class="tag">Prompt精简</span>
+                    <span class="tag">模型分级</span>
+                    <span class="tag">Cache对齐</span>
+                </div>
+                <div class="warning-box">
+                    ⚠️ 多AI实例共享cache时参数必须完全相同，否则成本暴涨45倍
+                </div>
+            </div>
+            
+            <!-- Card 3: AI可组合模块 -->
+            <div class="pattern-card card-3">
+                <div class="number-badge">③</div>
+                <div class="pattern-name">
+                    AI设计成可组合模块
+                    <span class="pattern-name-en">Composable AI Modules</span>
+                </div>
+                <div class="formula">统一执行引擎 + 不同参数配置</div>
+                <div class="cc-impl">query() @ src/services/claude.ts (7种querySource)</div>
+                <div class="tags">
+                    <span class="tag">独立AbortController</span>
+                    <span class="tag">限制工具集</span>
+                </div>
+            </div>
+            
+            <!-- Card 4: 多层防线 -->
+            <div class="pattern-card card-4 featured">
+                <div class="number-badge">④</div>
+                <div class="pattern-name">
+                    多层防线
+                    <span class="pattern-name-en">Defense in Depth</span>
+                </div>
+                <div class="formula">硬编码禁止 → 配置拒绝 → 操作自检 → 配置允许 → 默认保守</div>
+                <div class="cc-impl">9步权限状态机 (permissions.ts) / bypass-immune / iron gate</div>
+                <div class="tags">
+                    <span class="tag">fail-closed</span>
+                    <span class="tag">bypass-immune</span>
+                    <span class="tag">退出码语义</span>
+                </div>
+            </div>
+            
+            <!-- Card 5: 可观测性内置 -->
+            <div class="pattern-card card-5">
+                <div class="number-badge">⑤</div>
+                <div class="pattern-name">
+                    可观测性是产品的一部分
+                    <span class="pattern-name-en">Observability by Design</span>
+                </div>
+                <div class="formula">设计功能时同时设计其可观测性</div>
+                <div class="cc-impl">27个事件生命周期 / Span层级 / Perfetto trace</div>
+                <div class="tags">
+                    <span class="tag">日志即代码</span>
+                    <span class="tag">同等优先级</span>
+                </div>
+            </div>
+            
+            <!-- Card 6: Hooks扩展点 -->
+            <div class="pattern-card card-6 featured">
+                <div class="number-badge">⑥</div>
+                <div class="pattern-name">
+                    Hooks扩展点系统
+                    <span class="pattern-name-en">Hooks Extension Points</span>
+                </div>
+                <div class="formula">事件节点 + 退出码语义 + 安全默认 + 来源标记 + 异步支持</div>
+                <div class="cc-impl">PreToolUse / PostToolUse / UserPromptSubmit 等8个事件</div>
+                <div class="tags">
+                    <span class="tag">退出码: 0=允许</span>
+                    <span class="tag">2=给AI看</span>
+                </div>
+            </div>
+            
+            <!-- Card 7: stat-before-content -->
+            <div class="pattern-card card-7">
+                <div class="number-badge">⑦</div>
+                <div class="pattern-name">
+                    stat-before-content优化
+                    <span class="pattern-name-en">Metadata-First Optimization</span>
+                </div>
+                <div class="formula">先用廉价操作判断是否需要昂贵操作</div>
+                <div class="cc-impl">fileHistory的stat()先查再读 / mtime去重</div>
+                <div class="tags">
+                    <span class="tag">O(1)元数据检查</span>
+                    <span class="tag">避免重复IO</span>
+                </div>
+            </div>
+            
+            <!-- Card 8: 三级降级 -->
+            <div class="pattern-card card-8">
+                <div class="number-badge">⑧</div>
+                <div class="pattern-name">
+                    三级降级策略
+                    <span class="pattern-name-en">Three-Tier Degradation</span>
+                </div>
+                <div class="formula">完整方案 → 精简方案 → 最小可用方案</div>
+                <div class="cc-impl">Git bundle --all → HEAD → squashed-root</div>
+                <div class="tags">
+                    <span class="tag">Graceful Degradation</span>
+                    <span class="tag">可用性保障</span>
+                </div>
+            </div>
+            
+            <!-- Card 9: 路径哈希命名 -->
+            <div class="pattern-card card-9">
+                <div class="number-badge">⑨</div>
+                <div class="pattern-name">
+                    路径哈希命名
+                    <span class="pattern-name-en">Path-Based Hash Naming</span>
+                </div>
+                <div class="formula">用路径哈希(非内容哈希)作为缓存/备份键</div>
+                <div class="cc-impl">SHA256(filePath).slice(0,16)@vN</div>
+                <div class="tags">
+                    <span class="tag">O(1)查找</span>
+                    <span class="tag">空间换时间</span>
+                </div>
+            </div>
+            
+            <!-- Card 10: 拒绝非截断 -->
+            <div class="pattern-card card-10">
+                <div class="number-badge">⑩</div>
+                <div class="pattern-name">
+                    拒绝而非截断
+                    <span class="pattern-name-en">Reject, Don't Truncate</span>
+                </div>
+                <div class="formula">超限时抛错而不是静默截断</div>
+                <div class="cc-impl">parseDeepLink的q参数超5000字符直接拒绝</div>
+                <div class="tags">
+                    <span class="tag">语义完整性</span>
+                    <span class="tag">安全优先</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

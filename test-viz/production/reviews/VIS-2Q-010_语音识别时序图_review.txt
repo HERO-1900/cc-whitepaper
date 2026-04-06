@@ -1,0 +1,44 @@
+我来严格审查这份语音识别时序图的代码。
+
+总分: 13/20
+
+**布局: 2/5** — 时间轴与WebSocket双管道存在严重定位错误，导致视觉错位
+
+**信息: 4/5** — 层次清晰，五道门+流程管道+时间轴三层架构合理，但门与管道的关系表达不明确
+
+**美学: 4/5** — 配色优雅(深空蓝+青色+荧光绿)，动画精致，字体选择专业；WebSocket管道路径视觉割裂
+
+**完整: 3/5** — 语法正确可运行，但关键视觉元素实现有误
+
+---
+
+**缺陷:**
+
+1. **[Timeline 标记定位错误 - .timeline-marker]**  
+   `.timeline-marker` 使用 `position: absolute` 但父级 `.timeline` 未设 `position: relative`，导致标记的百分比定位以 `.timeline-section`（最近的有position祖先）为参考，与 `.timeline-bar` 的 `left:0; right:0` 基于不同参考系，标记与色条必然错位。
+
+2. **[WebSocket 隧道线溢出 - .tunnel-line]**  
+   `.tunnel-line` 使用 `position: absolute; left: 0; right: 0;` 扩展到整个 `.node-websocket` 宽度，但图标/文字内容在 flex 居中布局下，与隧道线左端对齐而非视觉中心对齐，造成"隧道穿出节点"的不正确视觉感。
+
+3. **[Timeline 无定位上下文 - .timeline]**  
+   `.timeline` 包含绝对定位子元素但自身无 `position: relative`，`.timeline-bar` 和 `.timeline-marker` 的定位计算基准不一致。
+
+4. **[WebSocket节点与其他节点视觉重量不均]**  
+   其他节点 `padding: 20px`，WebSocket 节点被 `.websocket-tunnel` 覆盖为 `padding: 15px 25px`（上下15px，左右25px），且隧道线占据额外垂直空间但内容只有一行，视觉上显得矮宽而不对称。
+
+---
+
+**修改建议:**
+
+1. **修复时间轴定位**  
+   在 `.timeline` 添加 `position: relative;`，或在 `.timeline-section` 上设置 `position: relative` 并将时间轴子元素定位统一到该上下文。
+
+2. **修正隧道线布局**  
+   方案A: 隧道线改为 `left: 25px; right: 25px;`（匹配左右padding），使左右端点与内容区对齐；  
+   方案B: 移除隧道线，改用伪元素在节点上下边缘绘制水平进出场效果。
+
+3. **统一节点尺寸**  
+   WebSocket 节点可增加 `min-height` 或调整 padding 使其视觉高度与其他节点一致，或在 `.websocket-tunnel` 中将 `padding: 15px 25px` 改为 `padding: 20px 25px` 以保持垂直对称。
+
+4. **澄清五道门与主管道的关系**  
+   当前五道安全检查门与主流程管道视觉上完全分离，建议在两者之间添加虚线箭头或标注"权限验证 → 主流程"的连接关系，帮助读者理解这是两个串联阶段。

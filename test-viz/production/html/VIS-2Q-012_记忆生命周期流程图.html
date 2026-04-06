@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>记忆生命周期流程图</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Source+Sans+Pro:wght@400;600&display=swap');
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-panel: #111827;
+  --create: #00d4ff;
+  --store: #7b61ff;
+  --retrieve: #00ff88;
+  --validate: #ffcc00;
+  --expire: #ff6b6b;
+  --text-primary: #f0f4f8;
+  --text-secondary: #94a3b8;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg-deep);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Source Sans Pro', sans-serif;
+  padding: 20px;
+  overflow-x: hidden;
+}
+.bg-gradient {
+  position: fixed;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 15% 50%, rgba(0,212,255,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 40% 60%, rgba(123,97,255,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 65% 40%, rgba(0,255,136,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 55%, rgba(255,204,0,0.08) 0%, transparent 50%);
+  pointer-events: none;
+}
+.noise {
+  position: fixed;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+.title {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.2rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-bottom: 30px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.lifecycle-container {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  justify-content: center;
+  position: relative;
+}
+.phase {
+  flex: 1;
+  min-width: 200px;
+  max-width: 220px;
+  position: relative;
+  margin: 0 -10px;
+  transition: all 0.3s ease;
+}
+.phase:hover {
+  transform: translateY(-5px);
+  z-index: 10;
+}
+.phase-header {
+  padding: 16px 20px;
+  border-radius: 12px 12px 0 0;
+  position: relative;
+  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 0 100%, 15px 50%);
+}
+.phase-header.create { background: linear-gradient(135deg, rgba(0,212,255,0.25), rgba(0,212,255,0.1)); border: 1px solid var(--create); border-right: none; }
+.phase-header.store { background: linear-gradient(135deg, rgba(123,97,255,0.25), rgba(123,97,255,0.1)); border: 1px solid var(--store); border-right: none; }
+.phase-header.retrieve { background: linear-gradient(135deg, rgba(0,255,136,0.25), rgba(0,255,136,0.1)); border: 1px solid var(--retrieve); border-right: none; }
+.phase-header.validate { background: linear-gradient(135deg, rgba(255,204,0,0.25), rgba(255,204,0,0.1)); border: 1px solid var(--validate); border-right: none; }
+.phase-header.apply { background: linear-gradient(135deg, rgba(0,255,136,0.15), rgba(255,107,107,0.15)); border: 1px solid rgba(255,255,255,0.2); border-right: none; }
+.phase:first-child .phase-header { clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 0 100%); }
+.phase:last-child .phase-header { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 15px 50%); border-right: 1px solid rgba(255,255,255,0.2); }
+.phase-num {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.phase-num.create { color: var(--create); }
+.phase-num.store { color: var(--store); }
+.phase-num.retrieve { color: var(--retrieve); }
+.phase-num.validate { color: var(--validate); }
+.phase-num.apply { color: var(--text-secondary); }
+.phase-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+.phase-title-en {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.phase-body {
+  background: var(--bg-panel);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  padding: 16px;
+  min-height: 280px;
+  position: relative;
+}
+.phase:first-child .phase-body { border-radius: 0 0 12px 12px; }
+.phase:last-child .phase-body { border-radius: 0 0 12px 12px; }
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  border-left: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+.step:hover { background: rgba(255,255,255,0.06); }
+.step.create { border-left-color: var(--create); }
+.step.store { border-left-color: var(--store); }
+.step.retrieve { border-left-color: var(--retrieve); }
+.step.validate { border-left-color: var(--validate); }
+.step-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.step-icon.create { background: rgba(0,212,255,0.2); color: var(--create); }
+.step-icon.store { background: rgba(123,97,255,0.2); color: var(--store); }
+.step-icon.retrieve { background: rgba(0,255,136,0.2); color: var(--retrieve); }
+.step-icon.validate { background: rgba(255,204,0,0.2); color: var(--validate); }
+.step-content { flex: 1; }
+.step-title {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.step-desc {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.diamond-node {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, rgba(255,107,107,0.3), rgba(255,107,107,0.1));
+  border: 2px solid var(--expire);
+  transform: rotate(45deg);
+  margin: 15px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.diamond-node.validate {
+  background: linear-gradient(135deg, rgba(255,204,0,0.3), rgba(255,204,0,0.1));
+  border-color: var(--validate);
+}
+.diamond-inner {
+  transform: rotate(-45deg);
+  text-align: center;
+  font-size: 0.65rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.diamond-label {
+  position: absolute;
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+.diamond-label.yes { top: -20px; left: 50%; transform: translateX(-50%); color: var(--retrieve); }
+.diamond-label.no { bottom: -20px; left: 50%; transform: translateX(-50%); color: var(--expire); }
+.diamond-label.pass { top: 50%; right: -35px; transform: translateY(-50%); color: var(--retrieve); }
+.diamond-label.fail { top: 50%; left: -35px; transform: translateY(-50%); color: var(--expire); }
+.branch {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.branch-item {
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.75rem;
+}
+.branch-item.pass { background: rgba(0,255,136,0.15); color: var(--retrieve); border: 1px solid var(--retrieve); }
+.branch-item.fail { background: rgba(255,107,107,0.15); color: var(--expire); border: 1px solid var(--expire); }
+.warning-box {
+  position: absolute;
+  top: 50%;
+  right: -80px;
+  transform: translateY(-50%);
+  background: rgba(255,204,0,0.1);
+  border: 1px solid var(--validate);
+  border-radius: 8px;
+  padding: 10px;
+  width: 70px;
+  text-align: center;
+}
+.warning-icon {
+  font-size: 1.5rem;
+  color: var(--validate);
+  margin-bottom: 4px;
+}
+.warning-text {
+  font-size: 0.6rem;
+  color: var(--validate);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.water-level {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  height: 60px;
+  background: rgba(0,212,255,0.05);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(0,212,255,0.2);
+}
+.water-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70%;
+  background: linear-gradient(180deg, rgba(0,212,255,0.3), rgba(0,212,255,0.1));
+  animation: wave 3s ease-in-out infinite;
+}
+@keyframes wave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.water-line {
+  position: absolute;
+  top: 30%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--create);
+  box-shadow: 0 0 10px var(--create);
+}
+.water-label {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  color: var(--create);
+  font-weight: 600;
+}
+.rejection-note {
+  position: absolute;
+  bottom: 80px;
+  left: 10px;
+  right: 10px;
+  padding: 8px;
+  background: rgba(255,107,107,0.1);
+  border: 1px dashed var(--expire);
+  border-radius: 6px;
+  font-size: 0.65rem;
+  color: var(--expire);
+  text-align: center;
+  line-height: 1.4;
+}
+.arrow-connector {
+  position: absolute;
+  top: 50%;
+  right: -20px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.3), rgba(255,255,255,0.1));
+  z-index: 5;
+}
+.arrow-connector::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -4px;
+  border: 5px solid transparent;
+  border-left: 8px solid rgba(255,255,255,0.3);
+}
+.phase:last-child .arrow-connector { display: none; }
+.metadata-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  background: rgba(123,97,255,0.2);
+  border-radius: 4px;
+  font-size: 0.6rem;
+  color: var(--store);
+  margin-top: 4px;
+}
+@media (max-width: 1100px) {
+  .lifecycle-container { flex-direction: column; align-items: center; }
+  .phase { max-width: 400px; width: 100%; margin: 0 0 20px 0; }
+  .phase-header { clip-path: none; border-radius: 12px 12px 0 0; border-right: 1px solid; }
+  .phase:first-child .phase-header, .phase:last-child .phase-header { clip-path: none; }
+  .arrow-connector { display: none; }
+  .warning-box { position: static; transform: none; margin: 10px auto; width: auto; }
+}
+</style>
+</head>
+<body>
+<div class="bg-gradient"></div>
+<div class="noise"></div>
+<h1 class="title">记忆生命周期</h1>
+<p class="subtitle">Memory Lifecycle Flow</p>
+<div class="lifecycle-container">
+  <div class="phase">
+    <div class="phase-header create">
+      <div class="phase-num create">Phase 01</div>
+      <div class="phase-title">创建</div>
+      <div class="phase-title-en">Create</div>
+    </div>
+    <div class="phase-body">
+      <div class="step create">
+        <div class="step-icon create">1</div>
+        <div class="step-content">
+          <div class="step-title">触发保存</div>
+          <div class="step-desc">用户请求 / AI判断</div>
+        </div>
+      </div>
+      <div class="step create">
+        <div class="step-icon create">2</div>
+        <div class="step-content">
+          <div class="step-title">类型分类</div>
+          <div class="step-desc">user / feedback / project / reference</div>
+        </div>
+      </div>
+      <div class="diamond-node">
+        <div class="diamond-inner">排除<br>规则</div>
+        <div class="diamond-label yes">拒绝</div>
+        <div class="diamond-label no">通过</div>
+      </div>
+      <div class="rejection-note">
+        即使用户明确要求<br>也可能被拒绝保存
+      </div>
+    </div>
+    <div class="arrow-connector"></div>
+  </div>
+  <div class="phase">
+    <div class="phase-header store">
+      <div class="phase-num store">Phase 02</div>
+      <div class="phase-title">存储</div>
+      <div class="phase-title-en">Store</div>
+    </div>
+    <div class="phase-body">
+      <div class="step store">
+        <div class="step-icon store">1</div>
+        <div class="step-content">
+          <div class="step-title">创建元数据</div>
+          <div class="step-desc">frontmatter 头部信息</div>
+          <span class="metadata-tag">name / type / description</span>
+        </div>
+      </div>
+      <div class="step store">
+        <div class="step-icon store">2</div>
+        <div class="step-content">
+          <div class="step-title">内容格式化</div>
+          <div class="step-desc">feedback/project 强制要求</div>
+          <span class="metadata-tag">Why: / How to apply:</span>
+        </div>
+      </div>
+      <div class="step store">
+        <div class="step-icon store">3</div>
+        <div class="step-content">
+          <div class="step-title">写入文件</div>
+          <div class="step-desc">独立 .md 文件存储</div>
+        </div>
+      </div>
+      <div class="step store">
+        <div class="step-icon store">4</div>
+        <div class="step-content">
+          <div class="step-title">更新索引</div>
+          <div class="step-desc">MEMORY.md 新增指针</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-connector"></div>
+  </div>
+  <div class="phase">
+    <div class="phase-header retrieve">
+      <div class="phase-num retrieve">Phase 03</div>
+      <div class="phase-title">检索</div>
+      <div class="phase-title-en">Retrieve</div>
+    </div>
+    <div class="phase-body">
+      <div class="step retrieve">
+        <div class="step-icon retrieve">1</div>
+        <div class="step-content">
+          <div class="step-title">会话启动</div>
+          <div class="step-desc">新对话开始</div>
+        </div>
+      </div>
+      <div class="step retrieve">
+        <div class="step-icon retrieve">2</div>
+        <div class="step-content">
+          <div class="step-title">加载索引</div>
+          <div class="step-desc">MEMORY.md 截断检查</div>
+          <span class="metadata-tag">双重截断机制</span>
+        </div>
+      </div>
+      <div class="step retrieve">
+        <div class="step-icon retrieve">3</div>
+        <div class="step-content">
+          <div class="step-title">按需读取</div>
+          <div class="step-desc">独立文件动态加载</div>
+        </div>
+      </div>
+      <div class="water-level">
+        <div class="water-label">200行天花板</div>
+        <div class="water-fill"></div>
+        <div class="water-line"></div>
+      </div>
+    </div>
+    <div class="arrow-connector"></div>
+  </div>
+  <div class="phase">
+    <div class="phase-header validate">
+      <div class="phase-num validate">Phase 04</div>
+      <div class="phase-title">验证</div>
+      <div class="phase-title-en">Validate</div>
+    </div>
+    <div class="phase-body">
+      <div class="step validate">
+        <div class="step-icon validate">⚠</div>
+        <div class="step-content">
+          <div class="step-title">TRUSTING_RECALL</div>
+          <div class="step-desc">引用前验证机制</div>
+        </div>
+      </div>
+      <div class="diamond-node validate">
+        <div class="diamond-inner">存在<br>检查</div>
+        <div class="diamond-label pass">通过</div>
+        <div class="diamond-label fail">失败</div>
+      </div>
+      <div class="step validate">
+        <div class="step-icon validate">✓</div>
+        <div class="step-content">
+          <div class="step-title">验证项目</div>
+          <div class="step-desc">文件路径存在？函数名正确？API有效？</div>
+        </div>
+      </div>
+      <div class="warning-box">
+        <div class="warning-icon">▲</div>
+        <div class="warning-text">记忆<br>会撒谎</div>
+      </div>
+    </div>
+    <div class="arrow-connector"></div>
+  </div>
+  <div class="phase">
+    <div class="phase-header apply">
+      <div class="phase-num apply">Phase 05</div>
+      <div class="phase-title">应用/过期</div>
+      <div class="phase-title-en">Apply / Expire</div>
+    </div>
+    <div class="phase-body">
+      <div class="branch">
+        <div class="branch-item pass">
+          <div style="font-size:0.9rem;margin-bottom:4px;">✓ 通过</div>
+          <div>应用记忆</div>
+          <div style="font-size:0.65rem;margin-top:4px;opacity:0.8;">指导AI行为</div>
+        </div>
+        <div class="branch-item fail">
+          <div style="font-size:0.9rem;margin-bottom:4px;">✗ 失败</div>
+          <div>丢弃过期</div>
+          <div style="font-size:0.65rem;margin-top:4px;opacity:0.8;">不盲目引用</div>
+        </div>
+      </div>
+      <div class="step" style="margin-top:15px;border-left-color:rgba(255,255,255,0.2);">
+        <div class="step-content">
+          <div class="step-title">WAL日志模式</div>
+          <div class="step-desc">借鉴 Write-Ahead Log 思想<br>文件保留，索引截断</div>
+        </div>
+      </div>
+      <div class="step" style="border-left-color:rgba(255,255,255,0.2);">
+        <div class="step-content">
+          <div class="step-title">时间衰减</div>
+          <div class="step-desc">约6-7个月后碰到上限<br>旧索引不可见（文件仍在）</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

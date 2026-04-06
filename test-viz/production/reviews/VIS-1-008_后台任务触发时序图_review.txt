@@ -1,0 +1,36 @@
+总分: 11/20
+
+**布局: 2/5** — 各任务矩形与车道中心存在5px系统性偏移，且Prefetch图块贴近下边框易被裁切
+
+**信息: 3/5** — 核心时序关系可辨认，但主标题英文与副标题中英混杂造成层次混乱，Session End和token限制线等关键信息无对应图例
+
+**美学: 3/5** — 配色体系丰富且有科技感，但Speculative/Compaction/Memory均落入蓝橙紫相邻色相，视觉区分度不足；部分细节（如blocking线）缺少legend映射
+
+**完整: 3/5** — 语法正确可运行，但图例缺失blocking线/触发箭头/idle高亮三类的说明
+
+---
+
+**缺陷:**
+
+1. **布局偏移** — `task-speculative`矩形y=145高30，中心=160，但lane label在y=165；其他所有车道（Compaction/Memory/MagicDocs/Prefetch）均有相同5px偏移量，属系统性对齐错误
+2. **MagicDocs文字溢出** — 矩形宽60px，文字"MagicDocs"(9字符×9px≈81px)超出容器
+3. **Prefetch图块越界** — rect.y=385+height=30=415，接近SVG底部边界y=440，存在被裁切风险
+4. **图例不完整** — blocking线（红色虚线）、触发箭头（trigger-arrow）、idle高亮区域均无对应图例项
+5. **标题语种混用** — h1为英文"Background Task Timing Sequence"，p混用"后台任务触发时序图·并行执行与主循环协调机制"，建议统一
+6. **配色区分度** — Speculative(#48bb78绿)、Compaction(#ffa500橙)、Memory(#7b61ff紫)三者虽色相不同但饱和度均较高且明度接近，视觉权重相近而重要性不同，建议拉开层次
+7. **token限制标注位置不当** — "token > softLimit"位于t2时段Compaction任务上方，但实际触发点在t1→t2边界（x≈490），标注位置与实际触发点存在错位
+
+**修改建议:**
+
+1. 将所有`task-xxx`矩形的y坐标统一上移2-3px，使矩形中心严格对齐对应车道label的y坐标
+2. MagicDocs矩形宽度从60增至80，或字体改为8px
+3. Prefetch矩形y从385改为375，为下边距留出至少20px缓冲
+4. 在legend中添加三类缺失项：
+   ```css
+   .legend-box.blocking { background: repeating-linear-gradient(90deg, #ef4444 0, #ef4444 4px, transparent 4px, transparent 6px); }
+   .legend-box.idle { background: rgba(255,255,255,0.06); border: 1px solid #64748b; }
+   .legend-box.trigger { background: linear-gradient(90deg, #94a3b8 50%, transparent 50%); }
+   ```
+5. 标题统一为中文，或副标题补充英文
+6. Memory类型改为蓝色系（如#3b82f6）以区别于紫色系的Compaction
+7. 将"token > softLimit"标注线起点从x=550移至x=490，或在tooltip中补充说明触发边界位于t1/t2之间

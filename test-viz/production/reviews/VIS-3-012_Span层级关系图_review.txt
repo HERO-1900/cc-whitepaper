@@ -1,0 +1,72 @@
+我来仔细审查这份图表代码。
+
+总分: 11/20
+
+**布局: 2/5** — 连接线与子Span位置错位，父子关系表达混乱
+
+**信息: 3/5** — Span层级结构清晰，但辅助信息面板遮挡主内容
+
+**美学: 3/5** — 配色体系专业，渐变使用得当，但BETA徽章为手绘元素
+
+**完整: 3/5** — 可直接运行，但SVG transform动画与CSS存在兼容性问题
+
+---
+
+**缺陷:**
+
+1. **连接线错位** (SVG 260-280行)
+   - blocked连接线端点y=250，而blocked span顶部y=242 —— 端点落在子元素内部
+   - execution连接线端点y=300，而execution span顶部y=292 —— 同上
+   - 树形层级关系表达错误
+
+2. **expand-icon旋转原点** (CSS 75-80行)
+   ```css
+   .expand-icon.collapsed { transform-origin: center; }
+   ```
+   SVG元素不遵循CSS `transform-origin`，需使用SVG `transform="rotate(-90, 54, 129)"` 语法
+
+3. **隐私规则面板遮挡** (SVG 320行)
+   - 面板位于translate(550, 230)，高度140px
+   - hook span在y=360，仅距面板底部30px
+   - blocked/execution区域与面板视觉重叠
+
+4. **blocked span缺少expand-icon** (SVG 295行)
+   - interaction/llm_request/tool都有折叠图标
+   - blocked_on_user作为子节点，缺少expand-icon，视觉不一致
+
+5. **hook边框样式冗余** (SVG 313行)
+   ```xml
+   <rect ... fill="url(#grad-hook)" style="stroke: #e056a0; stroke-width: 1; stroke-dasharray: 4,3;"/>
+   ```
+   stroke-dasharray在SVG属性和CSS中重复定义，应统一
+
+6. **hook的BETA徽章为硬编码** (SVG 315-316行)
+   - 手动绘制矩形+文字，可复用defs中的symbol/pattern
+
+7. **时间刻度不一致** (HTML 145行)
+   - time-ruler显示7个刻度(0ms, 5s...30s)
+   - 实际timeline marker仅6个(x=200,350,500,650,800,950)
+   - 5s间隔对应150px，但0ms刻度对应x<200（超出可见区域）
+
+---
+
+**修改建议:**
+
+1. **修正连接线坐标** — 确保子span顶部(y=242, y=292)位于连接线水平段之下
+   ```
+   blocked连接: d="M 85 218 L 85 280 L 100 280" (改为280)
+   execution连接: d="M 85 218 L 85 320 L 100 320" (改为320)
+   ```
+
+2. **SVG旋转动画** — 用SVG native transform替代CSS
+   ```xml
+   <polygon class="expand-icon collapsed" 
+            points="..." 
+            transform="rotate(-90, 54, 129)"/>
+   ```
+
+3. **隐私规则面板定位** — 移至右侧空白区域(x>900)或调整z-order
+
+4. **补全blocked expand-icon** — 在blocked span group 中添加展开图标
+
+5. **统一时间刻度** — 增加首个marker到x=50(0ms)，或调整ruler标签

@@ -1,0 +1,53 @@
+
+总分: 15/20
+
+布局: 3/5 — 元素定位正确，但 minimp 视口计算在窗口缩放时可能偏移，clusterCenters 使用固定初始宽高值未随窗口更新。
+
+信息: 4/5 — 信息层次清晰，搜索/路径筛选/详情面板联动良好，但 tooltip 定位未考虑页面滚动。
+
+美学: 4/5 — 配色体系和谐（GitHub 暗色风格），字体搭配合理，glow 效果精致；性能隐患在于高入度节点（>10）每个额外渲染 2 个 glow 圆，74 节点场景下 DOM 基数较大。
+
+完整: 4/5 — 语法正确，可直接运行；部分细节逻辑可优化。
+
+---
+
+缺陷:
+
+1. **[第 290 行]** `clusterCenters` 在文件顶部用初始 `width/height` 计算，窗口 `resize` 时未同步更新，导致 cluster label 漂移。
+2. **[第 182 行]** `hubLabels` 数据每次 simulation tick 都重新过滤 `filter(d=>d.inDegree>10)`，应在初始化时缓存。
+3. **[第 181-183 行]** 高入度节点添加两个 glow 圆（glow + 本身），对 74 节点图性能影响可接受，但 5 个 cluster 各有 2 个额外圆，合计 DOM 节点偏多。
+4. **[第 142 行]** `tooltip` 使用 `event.pageX/Y` 定位，未考虑 `window.scrollX/Y`，长页面或缩放后 tooltip 偏移。
+5. **[第 77 行]** minimap 的 `rx/ry/rw/rh` 计算使用 `-x/k`，当缩放级别 k>1 时视口框会反向放大而非缩小，逻辑反了。
+
+---
+
+修改建议:
+
+1. 将 `clusterCenters` 改为函数形式，每次 tick 或 resize 时用当前 `width/height` 重新计算：
+   ```js
+   const getClusterCenters = (w, h) => [
+     {x: w*0.35, y: h*0.25},
+     {x: w*0.70, y: h*0.35},
+     ...
+   ];
+   ```
+
+2. 预计算 hub 节点列表并维护引用，而非每帧过滤：
+   ```js
+   const hubNodes = chapters.filter(d => d.inDegree > 10);
+   ```
+
+3. glow 圆可合并为单一 ring 或改用 SVG filter（`feGaussianBlur`）实现，显著减少 DOM 节点。
+
+4. tooltip 定位改用 `event.clientX/Y` 加上页面偏移：
+   ```js
+   const rect = document.documentElement.getBoundingClientRect();
+   tooltip.style("left", (event.clientX - rect.left + 12) + "px")
+         .style("top", (event.clientY - rect.top + 12) + "px");
+   ```
+
+5. minimap 视口框修正：`k>1` 时应该缩小（`1/k`）而非当前逻辑：
+   ```js
+   const rz = k >= 1 ? 1/k : k;
+   const rx = -x*rz, ry = -y*rz, rw = width*rz, rh = height*rz;
+   ```

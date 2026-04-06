@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>四层防御纵深嵌套图 - Claude Code 安全架构</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --layer-1: #8B1538;
+            --layer-2: #B45309;
+            --layer-3: #D97706;
+            --layer-4: #10B981;
+            --core: #F8FAFC;
+            --bg-dark: #0a0a0f;
+            --bg-mid: #111118;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --glow-1: rgba(139, 21, 56, 0.6);
+            --glow-2: rgba(180, 83, 9, 0.5);
+            --glow-3: rgba(217, 119, 6, 0.4);
+            --glow-4: rgba(16, 185, 129, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', 'Noto Serif SC', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 30%, rgba(139, 21, 56, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 20px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        header {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 40px 20px 20px;
+            max-width: 1200px;
+        }
+
+        h1 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .principle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-style: italic;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .diagram-container {
+            position: relative;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            min-height: 700px;
+        }
+
+        .defense-diagram {
+            position: relative;
+            width: 800px;
+            height: 800px;
+        }
+
+        .layer {
+            position: absolute;
+            border-radius: 24px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .layer:hover {
+            transform: scale(1.02);
+            filter: brightness(1.1);
+        }
+
+        .layer-1 {
+            width: 700px;
+            height: 700px;
+            top: 50px;
+            left: 50px;
+            background: linear-gradient(135deg, rgba(139, 21, 56, 0.15) 0%, rgba(139, 21, 56, 0.05) 100%);
+            border: 3px double var(--layer-1);
+            box-shadow: 0 0 60px var(--glow-1), inset 0 0 40px rgba(139, 21, 56, 0.1);
+        }
+
+        .layer-2 {
+            width: 540px;
+            height: 540px;
+            top: 130px;
+            left: 130px;
+            background: linear-gradient(135deg, rgba(180, 83, 9, 0.15) 0%, rgba(180, 83, 9, 0.05) 100%);
+            border: 4px solid var(--layer-2);
+            box-shadow: 0 0 50px var(--glow-2), inset 0 0 30px rgba(180, 83, 9, 0.1);
+        }
+
+        .layer-3 {
+            width: 400px;
+            height: 400px;
+            top: 200px;
+            left: 200px;
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%);
+            border: 2px solid var(--layer-3);
+            box-shadow: 0 0 40px var(--glow-3), inset 0 0 20px rgba(217, 119, 6, 0.1);
+        }
+
+        .layer-4 {
+            width: 280px;
+            height: 280px;
+            top: 260px;
+            left: 260px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
+            border: 2px dashed var(--layer-4);
+            box-shadow: 0 0 30px var(--glow-4), inset 0 0 20px rgba(16, 185, 129, 0.1);
+        }
+
+        .core {
+            position: absolute;
+            width: 160px;
+            height: 160px;
+            top: 320px;
+            left: 320px;
+            background: radial-gradient(circle, var(--core) 0%, #e2e8f0 100%);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 80px rgba(248, 250, 252, 0.6), 0 0 120px rgba(248, 250, 252, 0.3);
+            animation: corePulse 3s ease-in-out infinite;
+            z-index: 20;
+        }
+
+        @keyframes corePulse {
+            0%, 100% { box-shadow: 0 0 80px rgba(248, 250, 252, 0.6), 0 0 120px rgba(248, 250, 252, 0.3); }
+            50% { box-shadow: 0 0 100px rgba(248, 250, 252, 0.8), 0 0 160px rgba(248, 250, 252, 0.4); }
+        }
+
+        .core-icon {
+            font-size: 2.5rem;
+            margin-bottom: 4px;
+        }
+
+        .core-text {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--bg-dark);
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .layer-label {
+            position: absolute;
+            font-family: 'Noto Serif SC', serif;
+            font-weight: 700;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .layer-label-1 {
+            top: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--layer-1);
+            font-size: 1.3rem;
+        }
+
+        .layer-label-2 {
+            top: 155px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #F59E0B;
+            font-size: 1.2rem;
+        }
+
+        .layer-label-3 {
+            top: 225px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #FBBF24;
+            font-size: 1.1rem;
+        }
+
+        .layer-label-4 {
+            top: 285px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #34D399;
+            font-size: 1rem;
+        }
+
+        .layer-en {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 500;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            opacity: 0.8;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .attack-arrow {
+            position: absolute;
+            top: -20px;
+            left: -20px;
+            z-index: 30;
+            pointer-events: none;
+        }
+
+        .attack-line {
+            stroke: #ef4444;
+            stroke-width: 3;
+            fill: none;
+            stroke-dasharray: 10, 5;
+            animation: attackFlow 2s linear infinite;
+        }
+
+        @keyframes attackFlow {
+            to { stroke-dashoffset: -30; }
+        }
+
+        .attack-label {
+            fill: #ef4444;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .block-x {
+            fill: #ef4444;
+            font-size: 24px;
+            font-weight: 900;
+            opacity: 0;
+            animation: showX 0.5s ease forwards;
+        }
+
+        .block-x:nth-of-type(1) { animation-delay: 0.5s; }
+        .block-x:nth-of-type(2) { animation-delay: 1s; }
+        .block-x:nth-of-type(3) { animation-delay: 1.5s; }
+        .block-x:nth-of-type(4) { animation-delay: 2s; }
+
+        @keyframes showX {
+            to { opacity: 1; }
+        }
+
+        .ripple {
+            position: absolute;
+            border-radius: 24px;
+            border: 1px solid;
+            pointer-events: none;
+            animation: rippleExpand 3s ease-out infinite;
+        }
+
+        .ripple-1 {
+            width: 700px;
+            height: 700px;
+            top: 50px;
+            left: 50px;
+            border-color: var(--layer-1);
+            animation-delay: 0s;
+        }
+
+        .ripple-2 {
+            width: 540px;
+            height: 540px;
+            top: 130px;
+            left: 130px;
+            border-color: var(--layer-2);
+            animation-delay: 0.5s;
+        }
+
+        .ripple-3 {
+            width: 400px;
+            height: 400px;
+            top: 200px;
+            left: 200px;
+            border-color: var(--layer-3);
+            animation-delay: 1s;
+        }
+
+        @keyframes rippleExpand {
+            0% { transform: scale(1); opacity: 0.5; }
+            100% { transform: scale(1.1); opacity: 0; }
+        }
+
+        .info-panel {
+            position: fixed;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 320px;
+            background: rgba(17, 17, 24, 0.95);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 24px;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .info-header {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .info-content {
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+
+        .info-content ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .info-content li {
+            padding: 6px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .info-content li::before {
+            content: '›';
+            position: absolute;
+            left: 0;
+            color: var(--layer-4);
+            font-weight: 700;
+        }
+
+        .layer-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        .legend {
+            position: fixed;
+            left: 30px;
+            bottom: 30px;
+            background: rgba(17, 17, 24, 0.9);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .legend-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-line {
+            width: 30px;
+            height: 3px;
+        }
+
+        .legend-line.double {
+            height: 6px;
+            border-top: 2px solid;
+            border-bottom: 2px solid;
+        }
+
+        .legend-line.solid-thick {
+            background: currentColor;
+            height: 4px;
+        }
+
+        .legend-line.solid {
+            background: currentColor;
+            height: 2px;
+        }
+
+        .legend-line.dashed {
+            height: 2px;
+            background: repeating-linear-gradient(90deg, currentColor 0px, currentColor 5px, transparent 5px, transparent 10px);
+        }
+
+        .defense-note {
+            position: absolute;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+            max-width: 200px;
+            font-style: italic;
+        }
+
+        .note-1 { top: 370px; left: 20px; }
+        .note-2 { top: 300px; left: 90px; }
+        .note-3 { top: 245px; left: 155px; }
+
+        .capabilities {
+            position: absolute;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            max-width: 120px;
+            line-height: 1.4;
+        }
+
+        .cap-1 { 
+            top: 180px; 
+            right: 60px; 
+            text-align: left;
+        }
+        .cap-2 { 
+            top: 240px; 
+            right: 120px; 
+            text-align: left;
+        }
+        .cap-3 { 
+            top: 290px; 
+            right: 180px; 
+            text-align: left;
+        }
+
+        .cap-title {
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .hidden { display: none; }
+
+        @media (max-width: 1400px) {
+            .info-panel { right: 15px; width: 280px; }
+            .legend { left: 15px; }
+        }
+
+        @media (max-width: 1200px) {
+            .info-panel, .legend { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="subtitle">Defense in Depth Architecture</div>
+        <h1>四层防御纵深嵌套图</h1>
+        <p class="principle">每层独立运作，互不依赖。攻击者需同时突破四层防线，任一层的突破不会导致整体防御失效。</p>
+    </header>
+
+    <div class="diagram-container">
+        <div class="defense-diagram">
+            <!-- Ripples -->
+            <div class="ripple ripple-1"></div>
+            <div class="ripple ripple-2"></div>
+            <div class="ripple ripple-3"></div>
+
+            <!-- Layers -->
+            <div class="layer layer-1" data-layer="1">
+                <span class="layer-label layer-label-1">
+                    企业策略
+                    <span class="layer-en">Enterprise Policy</span>
+                </span>
+            </div>
+            
+            <div class="layer layer-2" data-layer="2">
+                <span class="layer-label layer-label-2">
+                    沙箱隔离
+                    <span class="layer-en">Sandbox Isolation</span>
+                </span>
+            </div>
+            
+            <div class="layer layer-3" data-layer="3">
+                <span class="layer-label layer-label-3">
+                    权限状态机
+                    <span class="layer-en">Permission State Machine</span>
+                </span>
+            </div>
+            
+            <div class="layer layer-4" data-layer="4">
+                <span class="layer-label layer-label-4">
+                    代码级安全
+                    <span class="layer-en">Code-level Security</span>
+                </span>
+            </div>
+
+            <!-- Core -->
+            <div class="core">
+                <div class="core-icon">🛡️</div>
+                <div class="core-text">被保护的<br>系统核心</div>
+            </div>
+
+            <!-- Attack Arrow SVG -->
+            <svg class="attack-arrow" width="400" height="400" viewBox="0 0 400 400">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#ef4444"/>
+                    </marker>
+                </defs>
+                <path class="attack-line" d="M 20 20 L 100 100 L 180 180 L 260 260 L 340 340" marker-end="url(#arrowhead)"/>
+                <text class="attack-label" x="10" y="15">ATTACKER →</text>
+                <text class="block-x" x="95" y="95">✕</text>
+                <text class="block-x" x="175" y="175">✕</text>
+                <text class="block-x" x="255" y="255">✕</text>
+                <text class="block-x" x="335" y="335">✕</text>
+            </svg>
+
+            <!-- Defense Notes -->
+            <div class="defense-note note-1">即使内层被突破<br>外层仍保护</div>
+            <div class="defense-note note-2">即使内层被突破<br>外层仍保护</div>
+            <div class="defense-note note-3">即使内层被突破<br>外层仍保护</div>
+
+            <!-- Capabilities -->
+            <div class="capabilities cap-1">
+                <div class="cap-title">策略能力</div>
+                MDM下发 · 不可覆盖<br>
+                禁用工具 · 限制网络<br>
+                强制沙箱 · 控制MCP
+            </div>
+            <div class="capabilities cap-2">
+                <div class="cap-title">隔离能力</div>
+                OS级进程隔离<br>
+                文件/网络/系统调用限制<br>
+                Unix Socket过滤
+            </div>
+            <div class="capabilities cap-3">
+                <div class="cap-title">审核能力</div>
+                九步检查链<br>
+                六种权限模式<br>
+                Iron Gate安全阀
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Panel -->
+    <div class="info-panel" id="infoPanel">
+        <div class="info-header">
+            <span class="layer-indicator" id="indicator"></span>
+            <span id="infoTitle">悬停查看详情</span>
+        </div>
+        <div class="info-content" id="infoContent">
+            将鼠标悬停在任意防御层上，查看该层的详细安全机制和防护能力。
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-title">边界线型说明</div>
+        <div class="legend-item">
+            <div class="legend-line double" style="color: var(--layer-1); border-color: var(--layer-1);"></div>
+            <span>双线 = 第一层（企业策略）</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-line solid-thick" style="background: var(--layer-2);"></div>
+            <span>粗实线 = 第二层（沙箱隔离）</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-line solid" style="background: var(--layer-3);"></div>
+            <span>实线 = 第三层（权限状态机）</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-line dashed" style="color: var(--layer-4);"></div>
+            <span>虚线 = 第四层（代码级安全）</span>
+        </div>
+    </div>
+
+    <script>
+        const layerData = {
+            1: {
+                title: '第一层：企业策略',
+                color: 'var(--layer-1)',
+                content: `
+                    <p><strong>最高优先级，本地不可覆盖</strong></p>
+                    <ul>
+                        <li>MDM/管理服务器远程下发策略</li>
+                        <li>本地用户无法修改或禁用</li>
+                        <li>Four-layer merge: Flag → Policy → Managed → Enterprise</li>
+                        <li>first-source-wins 合并策略</li>
+                    </ul>
+                    <p style="margin-top:12px;"><strong>关键控制能力：</strong></p>
+                    <ul>
+                        <li>禁用特定工具执行</li>
+                        <li>限制网络访问范围</li>
+                        <li>强制启用沙箱隔离</li>
+                        <li>锁定应用设置</li>
+                        <li>控制MCP服务器访问</li>
+                        <li>限制文件系统访问路径</li>
+                    </ul>
+                `
+            },
+            2: {
+                title: '第二层：沙箱隔离',
+                color: 'var(--layer-2)',
+                content: `
+                    <p><strong>OS级物理屏障，不依赖应用逻辑</strong></p>
+                    <ul>
+                        <li>macOS: Seatbelt profile 强制隔离</li>
+                        <li>Linux: Bubblewrap + seccomp 双保险</li>
+                        <li>限制文件系统访问范围</li>
+                        <li>限制网络连接能力</li>
+                        <li>限制进程创建和系统调用</li>
+                    </ul>
+                    <p style="margin-top:12px;"><strong>平台差异：</strong></p>
+                    <ul>
+                        <li>macOS支持Unix Socket路径级过滤</li>
+                        <li>Linux采用更严格的系统调用过滤</li>
+                        <li>Bare git repo特殊防护机制</li>
+                    </ul>
+                `
+            },
+            3: {
+                title: '第三层：权限状态机',
+                color: 'var(--layer-3)',
+                content: `
+                    <p><strong>逐操作审核，精细粒度控制</strong></p>
+                    <p style="margin-top:8px;"><strong>九步检查链：</strong></p>
+                    <ul>
+                        <li>bypass-immune checks</li>
+                        <li>Hooks 前置处理</li>
+                        <li>权限缓存检查</li>
+                        <li>自动批准规则</li>
+                        <li>沙箱能力验证</li>
+                        <li>权限模式匹配</li>
+                        <li>用户确认对话框</li>
+                        <li>结果缓存更新</li>
+                    </ul>
+                    <p style="margin-top:12px;"><strong>六种权限模式：</strong></p>
+                    <ul>
+                        <li>default / plan / auto-approve</li>
+                        <li>bypassPermissions / apiServerMode / headless</li>
+                        <li>Iron Gate安全阀最终把关</li>
+                    </ul>
+                `
+            },
+            4: {
+                title: '第四层：代码级安全',
+                color: 'var(--layer-4)',
+                content: `
+                    <p><strong>最后防线，输入验证与注入防护</strong></p>
+                    <ul>
+                        <li>Zod Schema 严格输入验证</li>
+                        <li>路径遍历攻击防护</li>
+                        <li>命令注入防护</li>
+                        <li>沙箱内二次验证</li>
+                    </ul>
+                    <p style="margin-top:12px;"><strong>验证机制：</strong></p>
+                    <ul>
+                        <li>所有用户输入经过类型校验</li>
+                        <li>文件路径规范化处理</li>
+                        <li>命令参数白名单过滤</li>
+                        <li>敏感操作双重确认</li>
+                    </ul>
+                    <p style="margin-top:12px;color:var(--layer-4);"><em>即使前三层全部被绕过，代码级防护仍是最后屏障</em></p>
+                `
+            }
+        };
+
+        const layers = document.querySelectorAll('.layer');
+        const infoPanel = document.getElementById('infoPanel');
+        const infoTitle = document.getElementById('infoTitle');
+        const infoContent = document.getElementById('infoContent');
+        const indicator = document.getElementById('indicator');
+
+        layers.forEach(layer => {
+            layer.addEventListener('mouseenter', () => {
+                const layerNum = layer.dataset.layer;
+                const data = layerData[layerNum];
+                infoTitle.textContent = data.title;
+                infoContent.innerHTML = data.content;
+                indicator.style.background = data.color;
+                indicator.style.boxShadow = `0 0 10px ${data.color}`;
+            });
+        });
+    </script>
+</body>
+</html>

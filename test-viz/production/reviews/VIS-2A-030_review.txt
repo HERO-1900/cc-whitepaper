@@ -1,0 +1,80 @@
+我来详细审查这份代码。
+
+**总分: 14/20**
+
+---
+
+**布局: 2/5 —** 阶段方块间距一致(40px)，但末端阶段右边界紧贴视口边缘，悬停的 `transform:scale(1.02)` 在 SVG 内会产生坐标偏移副作用。
+
+**信息: 4/5 —** 八阶段流程清晰，色彩编码系统完整，点击展开详情机制完善；箭头标签文字与方块上缘过近(-10px)，文字排版略显拥挤。
+
+**美学: 4/5 —** 深色主题配色考究，JetBrains Mono + Space Grotesk 字体组合专业；渐变与 glow 滤镜营造出专业科技感；但 pulse circles 使用 `offset-path` 兼容性有限。
+
+**完整: 4/5 —** HTML5 语义完整，SVG 结构规范，无语法错误，可直接运行。
+
+---
+
+**缺陷:**
+
+1. **行265-271** — 箭头标签文字 Y 坐标 `y="150"` 与上方 stage 方块下缘(`y=220`)间距仅 20px，与下方箭头(`y=160`)间距仅 10px，视觉拥挤：
+   ```html
+   <text x="165" y="150" ...>JSX → Fiber</text>  <!-- 应为 y="145" 或更大 -->
+   ```
+
+2. **行56** — 悬停 transform 在 SVG 中会产生副作用：
+   ```css
+   .stage-rect:hover{
+     transform:scale(1.02);  /* SVG transform 叠加可能导致坐标偏移 */
+   }
+   ```
+
+3. **行310** — Terminal 阶段 X=1140 + 宽度125 = 1265，而 viewBox 宽度 1280，仅剩 15px 右侧留白，不如左侧(20px起)均衡：
+   ```html
+   transform="translate(1140,100)"  <!-- 左侧 start=20, 右侧 end=1265 -->
+   ```
+
+4. **行198** — `pulse-circle` 使用 `offset-path: path(...)`，Safari/Firefox 支持有限：
+   ```css
+   .pulse-circle{
+     offset-path:path('M145,160 L185,160');  /* 兼容性风险 */
+   }
+   ```
+
+5. **行281-287** — `detail-card` 使用 `position:fixed`，但容器 `.container` 有 `max-width:1400px`，在宽屏上弹出层会偏向视口中央而非内容区中央。
+
+---
+
+**修改建议:**
+
+1. **布局间距** — 将所有箭头标签 Y 从 `150` 改为 `143`，箭头本身 Y 保持 `160`：
+   ```html
+   <text x="165" y="143" ...>  <!-- 增加标签与箭头间距 -->
+   ```
+
+2. **悬停效果** — 移除 `transform:scale`，改用 `filter:brightness(1.2)` 或 stroke-width 增加：
+   ```css
+   .stage-rect:hover{
+     filter:brightness(1.2);
+   }
+   ```
+
+3. **Terminal 位置** — 将 transform X 从 `1140` 改为 `1135` 或 `1130`，使右侧留白接近左侧的 20px：
+   ```html
+   transform="translate(1130,100)"  <!-- 1130+125=1255, 右侧留白 25px -->
+   ```
+
+4. **offset-path 降级** — 保留动画但添加 `@keyframes` 位置关键帧的冗余方案，或考虑用 CSS animation 结合 SVG 路径模拟：
+   ```css
+   /* 保留 offset-path 作为增强，降级方案可选 */
+   @media (prefers-reduced-motion: no-preference) {
+     .pulse-circle { animation: pulseFallback 4s ease-in-out infinite; }
+   }
+   ```
+
+5. **弹窗定位** — 在 `openDetail()` JS 函数中计算 `.container` 的偏移量并应用为 transform，而非依赖固定定位：
+   ```javascript
+   function openDetail(idx){
+     const containerRect = document.querySelector('.container').getBoundingClientRect();
+     // 基于容器位置计算弹出层偏移
+   }
+   ```

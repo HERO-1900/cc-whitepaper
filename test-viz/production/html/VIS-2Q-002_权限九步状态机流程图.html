@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>权限九步状态机流程图 | Permission State Machine</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-deep: #0a0f1c;
+  --bg-panel: #111827;
+  --c-allow: #00ff88;
+  --c-deny: #ff6b6b;
+  --c-ask: #ffcc00;
+  --c-immune: #7b61ff;
+  --c-bypass: #3b82f6;
+  --c-text: #e2e8f0;
+  --c-text-dim: #94a3b8;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg-deep);
+  color: var(--c-text);
+  font-family: 'Noto Sans SC', 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(123,97,255,0.15), transparent),
+    linear-gradient(rgba(10,15,28,0.97), rgba(10,15,28,0.97)),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill='none' stroke='%231e293b' stroke-width='0.5'/%3E%3C/svg%3E");
+  background-size: cover, cover, 60px 52px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 30px;
+  max-width: 720px;
+}
+
+header h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, #fff 0%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 6px;
+}
+
+header .subtitle {
+  font-size: 0.9rem;
+  color: var(--c-text-dim);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.container {
+  width: 100%;
+  max-width: 760px;
+  background: rgba(17,24,39,0.6);
+  border: 1px solid rgba(148,163,184,0.1);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+}
+
+svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.node {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.node-shape {
+  transition: all 0.3s ease;
+}
+
+.node:hover .node-shape {
+  filter: drop-shadow(0 0 12px rgba(255,255,255,0.25));
+  transform: scale(1.02);
+}
+
+.diamond { transform-origin: center; }
+.rounded { transform-origin: center; }
+
+text {
+  font-family: 'Noto Sans SC', 'Space Grotesk', sans-serif;
+  pointer-events: none;
+}
+
+.label-zh { font-size: 11px; font-weight: 500; }
+.label-en { font-size: 8px; font-weight: 400; fill: var(--c-text-dim); }
+.label-small { font-size: 9px; }
+.arrow-label { font-size: 9px; font-weight: 600; }
+
+.path-allow { stroke: var(--c-allow); }
+.path-deny { stroke: var(--c-deny); }
+.path-ask { stroke: var(--c-ask); }
+.path-neutral { stroke: #64748b; }
+
+.arrow-head-allow { fill: var(--c-allow); }
+.arrow-head-deny { fill: var(--c-deny); }
+.arrow-head-ask { fill: var(--c-ask); }
+.arrow-head-neutral { fill: #64748b; }
+
+.immune-bg {
+  fill: rgba(123,97,255,0.08);
+  stroke: var(--c-immune);
+  stroke-width: 1.5;
+  stroke-dasharray: 6,4;
+}
+
+.bypass-bg {
+  fill: rgba(59,130,246,0.08);
+  stroke: var(--c-bypass);
+  stroke-width: 1.5;
+  stroke-dasharray: 6,4;
+}
+
+.zone-label {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Hover path highlighting */
+g[data-step]:hover ~ .connectors path[data-to],
+g[data-step]:hover ~ .connectors path[data-from] {
+  opacity: 1;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.connectors path {
+  transition: all 0.25s ease;
+  opacity: 0.85;
+}
+
+.terminal-allow { fill: rgba(0,255,136,0.12); stroke: var(--c-allow); stroke-width: 2; }
+.terminal-deny { fill: rgba(255,107,107,0.12); stroke: var(--c-deny); stroke-width: 2; }
+.terminal-ask { fill: rgba(255,204,0,0.12); stroke: var(--c-ask); stroke-width: 2; }
+
+.node-start { fill: rgba(30,41,59,0.8); stroke: #94a3b8; stroke-width: 1.5; }
+.node-diamond { fill: rgba(30,41,59,0.85); stroke: #cbd5e1; stroke-width: 1.5; }
+.node-action { fill: rgba(30,41,59,0.8); stroke: #64748b; stroke-width: 1.2; }
+
+.panel {
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: rgba(15,23,42,0.7);
+  border-radius: 12px;
+  border-left: 3px solid var(--c-immune);
+  min-height: 64px;
+}
+
+.panel h3 {
+  font-size: 0.85rem;
+  color: var(--c-immune);
+  margin-bottom: 6px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+}
+
+.panel p {
+  font-size: 0.8rem;
+  color: var(--c-text-dim);
+  line-height: 1.5;
+}
+
+.fade-in { animation: fadeIn 0.6s ease both; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<header class="fade-in">
+  <h1>VIS-2Q-002 权限九步状态机</h1>
+  <div class="subtitle">Permission State Machine — hasPermissionsToUseToolInner</div>
+</header>
+
+<div class="container fade-in">
+<svg viewBox="0 0 700 1080" preserveAspectRatio="xMidYMin meet">
+
+<defs>
+  <marker id="arr-allow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8 z" class="arrow-head-allow"/>
+  </marker>
+  <marker id="arr-deny" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8 z" class="arrow-head-deny"/>
+  </marker>
+  <marker id="arr-ask" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8 z" class="arrow-head-ask"/>
+  </marker>
+  <marker id="arr-neutral" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+    <path d="M0,0 L8,4 L0,8 z" class="arrow-head-neutral"/>
+  </marker>
+  <filter id="glow-allow"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#00ff88" flood-opacity="0.4"/></filter>
+  <filter id="glow-deny"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#ff6b6b" flood-opacity="0.4"/></filter>
+  <filter id="glow-ask"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#ffcc00" flood-opacity="0.4"/></filter>
+</defs>
+
+<!-- bypass-immune zone background -->
+<rect x="80" y="390" width="420" height="300" rx="12" class="immune-bg"/>
+<text x="100" y="415" fill="#7b61ff" class="zone-label">⚠ Bypass-Immune Zone</text>
+
+<!-- bypass-effective zone background -->
+<rect x="80" y="710" width="420" height="100" rx="12" class="bypass-bg"/>
+<text x="100" y="735" fill="#3b82f6" class="zone-label">Bypass-Effective Zone</text>
+
+<!-- Connectors -->
+<g class="connectors">
+  <!-- start -> 1a -->
+  <path d="M350,75 L350,110" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arr-neutral)" data-to="1a"/>
+
+  <!-- 1a yes -> Deny -->
+  <path d="M290,150 L220,150 L220,980" stroke="#ff6b6b" stroke-width="2" fill="none" marker-end="url(#arr-deny)" data-from="1a" data-to="deny"/>
+  <text x="230" y="145" fill="#ff6b6b" class="arrow-label">Yes</text>
+
+  <!-- 1a no -> 1b -->
+  <path d="M350,190 L350,230" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arr-neutral)" data-from="1a" data-to="1b"/>
+  <text x="358" y="215" fill="#94a3b8" class="arrow-label">No</text>
+
+  <!-- 1b yes -> Ask (sandbox例外直接Allow) -->
+  <path d="M290,270 L240,270 L240,980 L241,980" stroke="#ffcc00" stroke-width="2" fill="none" marker-end="url(#arr-ask)" data-from="1b" data-to="ask"/>
+  <text x="250" y="265" fill="#ffcc00" class="arrow-label">Yes</text>
+
+  <!-- 1b no -> 1c -->
+  <path d="M350,310 L350,340" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arr-neutral)" data-from="1b" data-to="1c"/>
+  <text x="358" y="330" fill="#94a3b8" class="arrow-label">No</text>
+
+  <!-- 1c -> 1d -->
+  <path d="M350,380 L350,410" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arr-neutral)" data-from="1c" data-to="1d"/>
+
+  <!-- 1d yes -> Deny -->
+  <path d="M290,450 L260,450 L260,980" stroke="#ff6b6b" stroke-width="2" fill="none" marker-end="url(#arr-deny)" data-from="1d" data-to="deny"/>
+  <text x="270" y="445" fill="#ff6b6b" class="arrow-label">Yes</text>
+
+  <!-- 1d no -> 1e -->
+  <path d="M350,490 L350,520" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arr-neutral)" data-from="1d" data-to="1e"/>
+  <text x="358" y="510" fill="#94a3b8" class="arrow-label">No</text>
+
+  <!-- 1e yes -> Ask -->
+  <path d="M290,560 L280,560 L280,980" stroke="#ffcc00" stroke-width="2" fill="none" marker-end="url(#arr-ask)" data-from="1e" data-to="ask"/>
+  <text x="295" y="555" fill="#ffcc00" class="arrow-label">Yes</text>
+
+  <!-- 1e no -> 1f -->
+  <path d="M350,600 L350,630" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arr-neutral)" data-from="1e" data-to="1f"/>
+  <text x="358" y="620" fill="#94a3b8" class="arrow-label">No</text>
+
+  <!-- 1f yes -> Ask -->
+  <path d="M290,670 L300,670 L300,980" stroke="#ffcc00" stroke-width="2" fill="none" marker-end="url(#arr-ask)" data-from="1f" data-to="ask"/>
+  <text x="295" y="665" fill="#ffcc00" class="arrow-label">Yes</text>
+
+  <!-- 1f no -> 1g -->
+  <path d="M350,710 L350,740" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arr-neutral)" data-from="1f" data-to="1g"/>
+  <text x="358" y="730" fill="#94a3b8" class="arrow-label">No</text>
+
+  <!-- 1g yes -> Ask -->
+  <path d="M290,780 L320,780 L320,980" stroke="#ffcc00" stroke-width="2" fill="none" marker-end="url(#arr-ask)" data-from="1g" data-to="ask"/>
+  <text x="295" y="775" fill="#ffcc00" class="arrow-label">Yes</text>
+
+  <!-- 1g no -> 2a -->
+  <path d="M350,820 L350,850" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arr-neutral)" data-from="1g" data-to="2a"/>
+  <text x="358" y="840" fill="#94a3b8" class="arrow-label">No</text>
+
+  <!-- 2a bypass -> Allow -->
+  <path d="M410,890 L460,890 L460,980" stroke="#00ff88" stroke-width="2" fill="none" marker-end="url(#arr-allow)" data-from="2a" data-to="allow"/>
+  <text x="420" y="885" fill="#00ff88" class="arrow-label">Bypass</text>
+
+  <!-- 2a no -> 2b -->
+  <path d="M350,930 L350,960" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#arr-neutral)" data-from="2a" data-to="2b"/>
+  <text x="358" y="950" fill="#94a3b8" class="arrow-label">No</text>
+
+  <!-- 2b yes -> Allow -->
+  <path d="M410,980 L440,980" stroke="#00ff88" stroke-width="2" fill="none" marker-end="url(#arr-allow)" data-from="2b" data-to="allow"/>
+  <text x="415" y="975" fill="#00ff88" class="arrow-label">Yes</text>
+
+  <!-- 2b no -> Ask -->
+  <path d="M350,1020 L350,1040 L340,1040" stroke="#ffcc00" stroke-width="2" fill="none" marker-end="url(#arr-ask)" data-from="2b" data-to="ask"/>
+  <text x="358" y="1035" fill="#94a3b8" class="arrow-label">No</text>
+</g>
+
+<!-- Node: Start -->
+<g class="node" data-step="start">
+  <rect x="250" y="30" width="200" height="45" rx="22" class="node-start"/>
+  <text x="350" y="52" text-anchor="middle" fill="#e2e8f0" class="label-zh">工具调用请求</text>
+  <text x="350" y="66" text-anchor="middle" fill="#94a3b8" class="label-en">Tool Call Request (tool_use block)</text>
+</g>
+
+<!-- Node: 1a -->
+<g class="node" data-step="1a">
+  <polygon points="350,110 430,150 350,190 270,150" class="diamond node-shape node-diamond"/>
+  <text x="350" y="146" text-anchor="middle" fill="#e2e8f0" class="label-zh">全局 deny 规则?</text>
+  <text x="350" y="158" text-anchor="middle" fill="#94a3b8" class="label-en">Global deny rule?</text>
+</g>
+
+<!-- Node: 1b -->
+<g class="node" data-step="1b">
+  <polygon points="350,230 430,270 350,310 270,270" class="diamond node-shape node-diamond"/>
+  <text x="350" y="266" text-anchor="middle" fill="#e2e8f0" class="label-zh">全局 ask 规则?</text>
+  <text x="350" y="278" text-anchor="middle" fill="#94a3b8" class="label-en">Global ask rule?</text>
+</g>
+
+<!-- Node: 1c -->
+<g class="node" data-step="1c">
+  <rect x="245" y="340" width="210" height="40" rx="8" class="node-action node-shape"/>
+  <text x="350" y="358" text-anchor="middle" fill="#e2e8f0" class="label-zh">调用 checkPermissions()</text>
+  <text x="350" y="372" text-anchor="middle" fill="#94a3b8" class="label-en">Tool-level permission check</text>
+</g>
+
+<!-- Node: 1d -->
+<g class="node" data-step="1d">
+  <polygon points="350,410 430,450 350,490 270,450" class="diamond node-shape node-diamond"/>
+  <text x="350" y="446" text-anchor="middle" fill="#e2e8f0" class="label-zh">工具返回 deny?</text>
+  <text x="350" y="458" text-anchor="middle" fill="#94a3b8" class="label-en">Tool says deny?</text>
+</g>
+
+<!-- Node: 1e -->
+<g class="node" data-step="1e">
+  <polygon points="350,520 430,560 350,600 270,560" class="diamond node-shape node-diamond"/>
+  <text x="350" y="556" text-anchor="middle" fill="#e2e8f0" class="label-zh">需要用户交互?</text>
+  <text x="350" y="568" text-anchor="middle" fill="#94a3b8" class="label-en">Requires user interaction?</text>
+</g>
+
+<!-- Node: 1f -->
+<g class="node" data-step="1f">
+  <polygon points="350,630 430,670 350,710 270,670" class="diamond node-shape node-diamond"/>
+  <text x="350" y="662" text-anchor="middle" fill="#e2e8f0" class="label-zh">内容级 ask 规则?</text>
+  <text x="350" y="674" text-anchor="middle" fill="#94a3b8" class="label-en">Content-level ask rule?</text>
+  <text x="350" y="686" text-anchor="middle" fill="#7b61ff" class="label-small">e.g. Bash(npm publish:*)</text>
+</g>
+
+<!-- Node: 1g -->
+<g class="node" data-step="1g">
+  <polygon points="350,740 430,780 350,820 270,780" class="diamond node-shape node-diamond"/>
+  <text x="350" y="776" text-anchor="middle" fill="#e2e8f0" class="label-zh">敏感路径?</text>
+  <text x="350" y="788" text-anchor="middle" fill="#94a3b8" class="label-en">Sensitive path?</text>
+  <text x="350" y="800" text-anchor="middle" fill="#7b61ff" class="label-small">.git/  .claude/  ~/.bashrc  etc.</text>
+</g>
+
+<!-- Node: 2a -->
+<g class="node" data-step="2a">
+  <polygon points="350,850 430,890 350,930 270,890" class="diamond node-shape node-diamond"/>
+  <text x="350" y="886" text-anchor="middle" fill="#e2e8f0" class="label-zh">bypassPermissions 模式?</text>
+  <text x="350" y="898" text-anchor="middle" fill="#94a3b8" class="label-en">Bypass mode active?</text>
+</g>
+
+<!-- Node: 2b -->
+<g class="node" data-step="2b">
+  <polygon points="350,960 430,980 350,1000 270,980" class="diamond node-shape node-diamond"/>
+  <text x="350" y="976" text-anchor="middle" fill="#e2e8f0" class="label-zh">匹配全局 allow 规则?</text>
+  <text x="350" y="988" text-anchor="middle" fill="#94a3b8" class="label-en">Global allow rule matched?</text>
+</g>
+
+<!-- Terminal: Deny -->
+<g class="node" data-step="deny">
+  <rect x="160" y="980" width="120" height="56" rx="16" class="terminal-deny node-shape"/>
+  <text x="220" y="1006" text-anchor="middle" fill="#ff6b6b" font-size="16" font-weight="700" font-family="Space Grotesk">Deny</text>
+  <text x="220" y="1024" text-anchor="middle" fill="#ff6b6b" font-size="10">拒绝</text>
+</g>
+
+<!-- Terminal: Ask -->
+<g class="node" data-step="ask">
+  <rect x="290" y="980" width="120" height="56" rx="16" class="terminal-ask node-shape"/>
+  <text x="350" y="1006" text-anchor="middle" fill="#ffcc00" font-size="16" font-weight="700" font-family="Space Grotesk">Ask</text>
+  <text x="350" y="1024" text-anchor="middle" fill="#ffcc00" font-size="10">询问</text>
+</g>
+
+<!-- Terminal: Allow -->
+<g class="node" data-step="allow">
+  <rect x="440" y="980" width="120" height="56" rx="16" class="terminal-allow node-shape"/>
+  <text x="500" y="1006" text-anchor="middle" fill="#00ff88" font-size="16" font-weight="700" font-family="Space Grotesk">Allow</text>
+  <text x="500" y="1024" text-anchor="middle" fill="#00ff88" font-size="10">允许</text>
+</g>
+
+<!-- Side annotations -->
+<text x="540" y="155" fill="#94a3b8" font-size="9">立即拒绝</text>
+<text x="540" y="275" fill="#94a3b8" font-size="9">sandbox例外→Allow</text>
+<text x="540" y="455" fill="#94a3b8" font-size="9">工具级拒绝</text>
+<text x="540" y="565" fill="#7b61ff" font-size="9">bypass无效,强制Ask</text>
+<text x="540" y="675" fill="#7b61ff" font-size="9">bypass无效,强制Ask</text>
+<text x="540" y="785" fill="#7b61ff" font-size="9">bypass无效,强制Ask</text>
+<text x="540" y="895" fill="#3b82f6" font-size="9">bypass生效,直接Allow</text>
+<text x="540" y="985" fill="#94a3b8" font-size="9">规则匹配则Allow</text>
+
+</svg>
+
+<div class="panel" id="detailPanel">
+  <h3>Core Insight</h3>
+  <p>步骤 1e/1f/1g（bypass-immune 检查）在步骤 2a（bypassPermissions 模式）之前执行，这就是"有些路径永远无法绕过"的实现机制。权限系统在安全与灵活之间走钢丝：bypass 能跳过常规检查，但触及核心安全边界时仍然被强制拦截。</p>
+</div>
+</div>
+
+<script>
+const details = {
+  start: { title: '工具调用请求', body: '入口节点。每个 tool_use block 都会进入此权限状态机。' },
+  '1a': { title: '步骤 1a — 全局 deny 规则', body: '首先检查是否存在适用于此工具/参数的全局 deny 规则。若存在，立即拒绝，不给后续任何机会。' },
+  '1b': { title: '步骤 1b — 全局 ask 规则', body: '检查全局 ask 规则。若命中，通常进入 Ask 状态；sandbox 环境下存在例外可直接 Allow。' },
+  '1c': { title: '步骤 1c — 工具级权限检查', body: '调用工具自身的 checkPermissions()，获取工具对当前参数的判断结果。' },
+  '1d': { title: '步骤 1d — 工具返回 deny', body: '若工具级检查返回 deny，直接拒绝。这说明工具自己最清楚哪些操作是危险的。' },
+  '1e': { title: '步骤 1e — 用户交互检查 [bypass-immune]', body: '若操作需要用户交互，强制 Ask。bypassPermissions 对此步骤无效。' },
+  '1f': { title: '步骤 1f — 内容级 ask 规则 [bypass-immune]', body: '如 Bash(npm publish:*) 这类细粒度规则。命中即强制 Ask，bypass 无法跳过。' },
+  '1g': { title: '步骤 1g — 敏感路径检查 [bypass-immune]', body: '触及 .git/、.claude/、.vscode/、~/.bashrc 等敏感路径时强制 Ask，属于不可绕过的安全底线。' },
+  '2a': { title: '步骤 2a — bypassPermissions 模式 [bypass-effective]', body: '如果用户启用了 bypass 模式，此前所有检查已通过，此处直接 Allow。bypass 终于生效。' },
+  '2b': { title: '步骤 2b — 全局 allow 规则', body: '未开启 bypass 时，检查是否命中全局 allow 规则。命中则 Allow，否则进入默认 Ask。' },
+  deny: { title: '终态: Deny', body: '拒绝执行工具调用。' },
+  ask: { title: '终态: Ask', body: '向用户询问是否允许执行。' },
+  allow: { title: '终态: Allow', body: '允许执行工具调用。' }
+};
+
+const panel = document.getElementById('detailPanel');
+document.querySelectorAll('.node').forEach(node => {
+  node.addEventListener('mouseenter', () => {
+    const step = node.dataset.step;
+    const info = details[step];
+    if (info) {
+      panel.querySelector('h3').textContent = info.title;
+      panel.querySelector('p').textContent = info.body;
+      panel.style.borderColor = step.includes('immune') || step === '1e' || step === '1f' || step === '1g' ? '#7b61ff' : step === '2a' ? '#3b82f6' : '#7b61ff';
+      panel.querySelector('h3').style.color = step.includes('immune') || step === '1e' || step === '1f' || step === '1g' ? '#7b61ff' : step === '2a' ? '#3b82f6' : '#7b61ff';
+    }
+  });
+});
+</script>
+
+</body>
+</html>

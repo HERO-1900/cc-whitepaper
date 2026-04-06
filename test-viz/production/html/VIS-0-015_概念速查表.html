@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code 概念速查表 | Key Concepts Quick Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --text-primary: #c9d1d9;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --border-color: #30363d;
+  --accent-blue: #58a6ff;
+  --accent-purple: #bc8cff;
+  --accent-red: #f85149;
+  --accent-green: #3fb950;
+  --accent-orange: #d29922;
+  --glow-blue: rgba(88, 166, 255, 0.3);
+  --glow-purple: rgba(188, 140, 255, 0.3);
+  --glow-red: rgba(248, 81, 73, 0.3);
+  --glow-green: rgba(63, 185, 80, 0.3);
+  --glow-orange: rgba(210, 153, 34, 0.3);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Background texture */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    radial-gradient(circle at 20% 80%, rgba(88, 166, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(188, 140, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(63, 185, 80, 0.02) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px 32px 48px;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.title-block h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.title-block .subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.5px;
+}
+
+.search-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-box {
+  position: relative;
+}
+
+.search-box input {
+  width: 280px;
+  padding: 10px 14px 10px 36px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: 'Noto Sans SC', sans-serif;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.search-box input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+}
+
+.search-box::before {
+  content: '⌕';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+.search-box .shortcut {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.view-toggle {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+
+.view-toggle button {
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-toggle button:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+.view-toggle button.active {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.view-toggle button:first-child {
+  border-right: 1px solid var(--border-color);
+}
+
+.stats-bar {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-secondary);
+}
+
+.stats-bar span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stats-bar .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Grid View */
+.grid-view {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  animation: fadeIn 0.3s ease;
+}
+
+.group-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border-bottom: 2px solid;
+  margin-bottom: 4px;
+}
+
+.group-header .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.group-header .en {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  margin-left: auto;
+}
+
+/* List View */
+.list-view {
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+
+.list-view.active {
+  display: block;
+}
+
+.list-group {
+  margin-bottom: 24px;
+}
+
+.list-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--bg-secondary);
+  border-left: 3px solid;
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 8px;
+}
+
+.list-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.list-table tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.15s ease;
+}
+
+.list-table tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.list-table td {
+  padding: 12px 16px;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+.list-table td:first-child {
+  width: 200px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+}
+
+.list-table td:nth-child(2) {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.list-table td:last-child {
+  width: 120px;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+/* Concept Cards */
+.concept-card {
+  background: var(--bg-secondary);
+  border-left: 3px solid;
+  border-radius: 0 8px 8px 0;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.concept-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, var(--glow-color, transparent) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.concept-card:hover {
+  transform: translateX(4px);
+  background: var(--bg-tertiary);
+}
+
+.concept-card:hover::before {
+  opacity: 0.08;
+}
+
+.concept-card.hidden {
+  display: none;
+}
+
+.concept-card.related {
+  box-shadow: 0 0 0 1px var(--glow-color), 0 0 20px var(--glow-color);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.concept-card.dimmed {
+  opacity: 0.35;
+}
+
+.concept-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.concept-name .cn {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.concept-def {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.concept-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.concept-chapter {
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.concept-card:hover .concept-chapter {
+  color: var(--accent-color);
+}
+
+.concept-related-count {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+/* Group Colors */
+.group-execution { --accent-color: var(--accent-blue); --glow-color: var(--glow-blue); }
+.group-tools { --accent-color: var(--accent-purple); --glow-color: var(--glow-purple); }
+.group-security { --accent-color: var(--accent-red); --glow-color: var(--glow-red); }
+.group-context { --accent-color: var(--accent-green); --glow-color: var(--glow-green); }
+.group-extension { --accent-color: var(--accent-orange); --glow-color: var(--glow-orange); }
+
+/* Responsive */
+@media (max-width: 1400px) {
+  .grid-view { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 992px) {
+  .grid-view { grid-template-columns: repeat(2, 1fr); }
+  .search-box input { width: 220px; }
+}
+
+@media (max-width: 640px) {
+  .container { padding: 16px; }
+  header { flex-direction: column; align-items: stretch; }
+  .search-controls { width: 100%; }
+  .search-box { flex: 1; }
+  .search-box input { width: 100%; }
+  .grid-view { grid-template-columns: 1fr; }
+  .stats-bar { flex-wrap: wrap; gap: 12px; }
+  .list-table td:first-child { width: auto; }
+  .list-table td:last-child { width: auto; text-align: left; }
+  .list-table tr { display: block; padding: 12px 0; }
+  .list-table td { display: block; padding: 4px 0; border: none; }
+}
+
+@media print {
+  body { background: white; color: black; }
+  .concept-card { background: #f8f9fa; border: 1px solid #ddd; break-inside: avoid; }
+  .search-controls, .view-toggle, .stats-bar { display: none; }
+  .grid-view { grid-template-columns: repeat(5, 1fr); }
+  .concept-card:hover { transform: none; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Keyboard focus */
+.concept-card:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.no-results {
+  text-align: center;
+  padding: 48px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  grid-column: 1 / -1;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="title-block">
+      <h1>Claude Code 概念速查表</h1>
+      <div class="subtitle">KEY CONCEPTS QUICK REFERENCE · VIS-0-015</div>
+    </div>
+    <div class="search-controls">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="搜索概念或定义..." autocomplete="off">
+        <span class="shortcut">/</span>
+      </div>
+      <div class="view-toggle">
+        <button class="active" data-view="grid">分组视图</button>
+        <button data-view="list">列表视图</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="stats-bar">
+    <span><span class="dot" style="background:#58a6ff"></span>循环与执行 (5)</span>
+    <span><span class="dot" style="background:#bc8cff"></span>工具与Agent (6)</span>
+    <span><span class="dot" style="background:#f85149"></span>安全与权限 (3)</span>
+    <span><span class="dot" style="background:#3fb950"></span>上下文与Token (6)</span>
+    <span><span class="dot" style="background:#d29922"></span>扩展与配置 (5)</span>
+    <span style="margin-left:auto" id="resultCount">显示 25 / 25 个概念</span>
+  </div>
+
+  <!-- Grid View -->
+  <div class="grid-view" id="gridView"></div>
+
+  <!-- List View -->
+  <div class="list-view" id="listView"></div>
+</div>
+
+<script>
+const concepts = [
+  { id: 'agent-loop', name: 'Agent Loop', nameCN: '查询循环', def: 'Claude Code的核心运行机制——发送消息→接收响应→执行工具→循环，直到任务完成。', group: 'execution', groupCN: '循环与执行', groupEN: 'Execution', chapter: '第2部分', related: ['api-client','sse','asyncgenerator','streamingtoolexecutor','tool-use','agent'] },
+  { id: 'api-client', name: 'API Client', nameCN: 'API客户端', def: '封装与Anthropic Messages API通信的模块，处理认证、重试、流式传输。', group: 'execution', groupCN: '循环与执行', groupEN: 'Execution', chapter: '第2部分', related: ['agent-loop','sse','asyncgenerator','system-prompt'] },
+  { id: 'sse', name: 'SSE', nameCN: 'Server-Sent Events', def: 'API流式响应使用的HTTP协议，支持实时推送content块。', group: 'execution', groupCN: '循环与执行', groupEN: 'Execution', chapter: '第2部分', related: ['agent-loop','api-client','asyncgenerator'] },
+  { id: 'asyncgenerator', name: 'AsyncGenerator', nameCN: '异步生成器', def: 'queryLoop的实现模式，流式产出事件，驱动整个循环。', group: 'execution', groupCN: '循环与执行', groupEN: 'Execution', chapter: '第2部分', related: ['agent-loop','sse','streamingtoolexecutor'] },
+  { id: 'streamingtoolexecutor', name: 'StreamingToolExecutor', nameCN: '流式执行器', def: '流式并行工具执行器，边解析响应边调度工具。', group: 'execution', groupCN: '循环与执行', groupEN: 'Execution', chapter: '第2部分', related: ['agent-loop','asyncgenerator','tool-use'] },
+
+  { id: 'tool', name: 'Tool', nameCN: '工具', def: 'Claude Code赋予Claude的能力单元，每个工具有名称、描述、参数Schema和执行逻辑。', group: 'tools', groupCN: '工具与Agent', groupEN: 'Tools & Agents', chapter: '第3部分', related: ['tool-use','bash-tool','edit-tool','agent','mcp-tool'] },
+  { id: 'tool-use', name: 'Tool Use', nameCN: '工具调用', def: 'Claude模型在响应中请求执行某个工具的机制，API返回tool_use内容块。', group: 'tools', groupCN: '工具与Agent', groupEN: 'Tools & Agents', chapter: '第3部分', related: ['tool','agent-loop','streamingtoolexecutor','bash-tool','edit-tool'] },
+  { id: 'bash-tool', name: 'Bash Tool', nameCN: 'Bash工具', def: '执行Shell命令的工具，权限要求最高、功能最强大的工具。', group: 'tools', groupCN: '工具与Agent', groupEN: 'Tools & Agents', chapter: '第3部分', related: ['tool','tool-use','edit-tool','sandbox','permission-mode'] },
+  { id: 'edit-tool', name: 'Edit Tool', nameCN: '编辑工具', def: '基于字符串匹配的精确文件编辑工具，比Write更安全更精确。', group: 'tools', groupCN: '工具与Agent', groupEN: 'Tools & Agents', chapter: '第3部分', related: ['tool','tool-use','bash-tool'] },
+  { id: 'agent', name: 'Agent', nameCN: '子Agent', def: '独立运行的AI实例，可递归创建，继承父权限，有最大深度限制。', group: 'tools', groupCN: '工具与Agent', groupEN: 'Tools & Agents', chapter: '第3部分', related: ['tool','agent-loop','permission-mode','trust-boundary'] },
+  { id: 'mcp-tool', name: 'MCP Tool', nameCN: 'MCP工具', def: '通过MCP协议接入的外部工具，与内置工具统一管理。', group: 'tools', groupCN: '工具与Agent', groupEN: 'Tools & Agents', chapter: '第4部分', related: ['tool','mcp','hooks'] },
+
+  { id: 'permission-mode', name: 'Permission Mode', nameCN: '权限模式', def: '控制自动化程度的6种模式，从plan(只读)到bypass(全自动)。', group: 'security', groupCN: '安全与权限', groupEN: 'Security', chapter: '第4部分', related: ['sandbox','trust-boundary','bash-tool','agent'] },
+  { id: 'sandbox', name: 'Sandbox', nameCN: '沙箱', def: '操作系统级别的命令执行隔离，macOS用Seatbelt，Linux用namespace。', group: 'security', groupCN: '安全与权限', groupEN: 'Security', chapter: '第4部分', related: ['permission-mode','trust-boundary','bash-tool'] },
+  { id: 'trust-boundary', name: 'Trust Boundary', nameCN: '信任边界', def: '区分可信与不可信输入的安全边界，六级信任等级。', group: 'security', groupCN: '安全与权限', groupEN: 'Security', chapter: '第4部分', related: ['permission-mode','sandbox','agent'] },
+
+  { id: 'system-prompt', name: 'System Prompt', nameCN: '系统提示', def: '发送给Claude模型的全局指令文本，定义角色、规则、工具说明。15K-34K token。', group: 'context', groupCN: '上下文与Token', groupEN: 'Context & Tokens', chapter: '第2部分', related: ['prompt-cache','context-window','context-compression','token','claude-md','api-client'] },
+  { id: 'prompt-cache', name: 'Prompt Cache', nameCN: '提示缓存', def: '缓存System Prompt和历史消息前缀，90%命中率，节省90%成本。', group: 'context', groupCN: '上下文与Token', groupEN: 'Context & Tokens', chapter: '第5部分', related: ['system-prompt','context-window','context-compression','token'] },
+  { id: 'context-window', name: 'Context Window', nameCN: '上下文窗口', def: 'Claude模型的输入token上限(200K)，需精确管理使用效率。', group: 'context', groupCN: '上下文与Token', groupEN: 'Context & Tokens', chapter: '第5部分', related: ['system-prompt','prompt-cache','context-compression','token'] },
+  { id: 'context-compression', name: 'Context Compression', nameCN: '上下文压缩', def: '五层策略智能裁剪消息历史，保持有效信息密度。', group: 'context', groupCN: '上下文与Token', groupEN: 'Context & Tokens', chapter: '第5部分', related: ['system-prompt','prompt-cache','context-window','token'] },
+  { id: 'token', name: 'Token', nameCN: 'Token', def: '模型处理文本的基本单位，Claude Code需精确计数以管理上下文窗口。', group: 'context', groupCN: '上下文与Token', groupEN: 'Context & Tokens', chapter: '第5部分', related: ['system-prompt','prompt-cache','context-window','context-compression'] },
+  { id: 'claude-md', name: 'CLAUDE.md', nameCN: 'CLAUDE.md', def: '用自然语言定义Claude行为的配置文件，注入System Prompt，支持项目/用户/目录三级。', group: 'context', groupCN: '上下文与Token', groupEN: 'Context & Tokens', chapter: '第4部分', related: ['system-prompt','hooks','skills'] },
+
+  { id: 'mcp', name: 'MCP', nameCN: 'Model Context Protocol', def: 'Anthropic提出的标准化协议，让AI应用与外部工具/数据源通信。', group: 'extension', groupCN: '扩展与配置', groupEN: 'Extensions', chapter: '第4部分', related: ['mcp-tool','hooks','skills','cli'] },
+  { id: 'hooks', name: 'Hooks', nameCN: '钩子系统', def: '在生命周期关键节点注入自定义逻辑的机制，27个事件点。', group: 'extension', groupCN: '扩展与配置', groupEN: 'Extensions', chapter: '第4部分', related: ['mcp','skills','claude-md','mcp-tool'] },
+  { id: 'skills', name: 'Skills', nameCN: '能力模块', def: '预定义的可复用能力，如代码审查、git提交等，通过斜杠命令触发。', group: 'extension', groupCN: '扩展与配置', groupEN: 'Extensions', chapter: '第4部分', related: ['mcp','hooks','claude-md','cli'] },
+  { id: 'cli', name: 'CLI', nameCN: '命令行接口', def: 'Claude Code的用户入口，基于Commander.js解析命令和参数。', group: 'extension', groupCN: '扩展与配置', groupEN: 'Extensions', chapter: '第1部分', related: ['mcp','skills','ink'] },
+  { id: 'ink', name: 'Ink', nameCN: '终端UI框架', def: '基于React的终端UI渲染框架，让Claude Code用React组件构建终端界面。', group: 'extension', groupCN: '扩展与配置', groupEN: 'Extensions', chapter: '第1部分', related: ['cli'] }
+];
+
+const groups = [
+  { id: 'execution', name: '循环与执行', en: 'Execution', color: '#58a6ff' },
+  { id: 'tools', name: '工具与Agent', en: 'Tools & Agents', color: '#bc8cff' },
+  { id: 'security', name: '安全与权限', en: 'Security', color: '#f85149' },
+  { id: 'context', name: '上下文与Token', en: 'Context & Tokens', color: '#3fb950' },
+  { id: 'extension', name: '扩展与配置', en: 'Extensions', color: '#d29922' }
+];
+
+let currentView = 'grid';
+let focusedIndex = -1;
+let visibleIds = [];
+
+function renderGrid() {
+  const grid = document.getElementById('gridView');
+  grid.innerHTML = '';
+  groups.forEach(g => {
+    const col = document.createElement('div');
+    col.className = 'group-column';
+    const items = concepts.filter(c => c.group === g.id);
+    col.innerHTML = `
+      <div class="group-header group-${g.id}" style="border-color:${g.color}">
+        <span class="dot" style="background:${g.color}"></span>
+        ${g.name}
+        <span class="en">${g.en}</span>
+      </div>
+      <div class="group-cards" data-group="${g.id}"></div>
+    `;
+    const cardsContainer = col.querySelector('.group-cards');
+    items.forEach(c => {
+      cardsContainer.appendChild(createCard(c));
+    });
+    grid.appendChild(col);
+  });
+}
+
+function renderList() {
+  const list = document.getElementById('listView');
+  list.innerHTML = '';
+  groups.forEach(g => {
+    const items = concepts.filter(c => c.group === g.id);
+    const section = document.createElement('div');
+    section.className = 'list-group';
+    section.innerHTML = `
+      <div class="list-group-header group-${g.id}" style="border-color:${g.color}; color:${g.color}">
+        <span class="dot" style="background:${g.color}"></span>
+        ${g.name} <span style="color:var(--text-muted); font-weight:400;">· ${g.en}</span>
+      </div>
+      <table class="list-table">
+        <tbody>
+          ${items.map(c => `
+            <tr class="list-row group-${g.id}" data-id="${c.id}">
+              <td>
+                ${c.name}
+                <span style="color:var(--text-muted); font-size:11px; display:block; margin-top:2px;">${c.nameCN}</span>
+              </td>
+              <td>${c.def}</td>
+              <td style="color:${g.color}">${c.chapter}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+    list.appendChild(section);
+  });
+  bindListHover();
+}
+
+function createCard(c) {
+  const div = document.createElement('div');
+  div.className = `concept-card group-${c.group}`;
+  div.id = `concept-${c.id}`;
+  div.dataset.id = c.id;
+  div.tabIndex = 0;
+  const groupColor = groups.find(g => g.id === c.group).color;
+  div.style.setProperty('--accent-color', groupColor);
+  div.innerHTML = `
+    <div class="concept-name" style="color:${groupColor}">
+      ${c.name}
+      <span class="cn">${c.nameCN}</span>
+    </div>
+    <div class="concept-def">${c.def}</div>
+    <div class="concept-meta">
+      <span class="concept-chapter">${c.chapter}</span>
+      <span class="concept-related-count">↔ ${c.related.length}</span>
+    </div>
+  `;
+  div.addEventListener('mouseenter', () => highlightRelated(c.id));
+  div.addEventListener('mouseleave', clearHighlight);
+  div.addEventListener('focus', () => { focusedIndex = visibleIds.indexOf(c.id); });
+  return div;
+}
+
+function bindListHover() {
+  document.querySelectorAll('.list-row').forEach(row => {
+    row.addEventListener('mouseenter', () => {
+      const id = row.dataset.id;
+      highlightRelated(id);
+    });
+    row.addEventListener('mouseleave', clearHighlight);
+  });
+}
+
+function highlightRelated(id) {
+  const c = concepts.find(x => x.id === id);
+  if (!c) return;
+  document.querySelectorAll('.concept-card, .list-row').forEach(el => {
+    const eid = el.dataset.id;
+    if (eid === id || c.related.includes(eid)) {
+      el.classList.add('related');
+      el.classList.remove('dimmed');
+    } else {
+      el.classList.remove('related');
+      el.classList.add('dimmed');
+    }
+  });
+}
+
+function clearHighlight() {
+  document.querySelectorAll('.concept-card, .list-row').forEach(el => {
+    el.classList.remove('related', 'dimmed');
+  });
+}
+
+function doFilter() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  let count = 0;
+  concepts.forEach(c => {
+    const match = !q || c.name.toLowerCase().includes(q) || c.nameCN.toLowerCase().includes(q) || c.def.toLowerCase().includes(q) || c.groupCN.includes(q);
+    document.querySelectorAll(`[data-id="${c.id}"]`).forEach(el => {
+      if (match) {
+        el.classList.remove('hidden');
+        count++;
+      } else {
+        el.classList.add('hidden');
+      }
+    });
+  });
+  visibleIds = concepts.filter(c => !q || c.name.toLowerCase().includes(q) || c.nameCN.toLowerCase().includes(q) || c.def.toLowerCase().includes(q) || c.groupCN.includes(q)).map(c => c.id);
+  document.getElementById('resultCount').textContent = `显示 ${count} / ${concepts.length} 个概念`;
+
+  // hide empty groups in list view
+  document.querySelectorAll('.list-group').forEach(g => {
+    const visible = g.querySelectorAll('.list-row:not(.hidden)').length;
+    g.style.display = visible ? 'block' : 'none';
+  });
+}
+
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.view-toggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+  document.getElementById('gridView').style.display = view === 'grid' ? 'grid' : 'none';
+  document.getElementById('listView').classList.toggle('active', view === 'list');
+  doFilter();
+}
+
+// Search keyboard shortcut
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+    return;
+  }
+  if (e.key === 'Escape' && document.activeElement === document.getElementById('searchInput')) {
+    document.getElementById('searchInput').value = '';
+    doFilter();
+    document.getElementById('searchInput').blur();
+    return;
+  }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    const cards = currentView === 'grid'
+      ? Array.from(document.querySelectorAll('.concept-card:not(.hidden)'))
+      : Array.from(document.querySelectorAll('.list-row:not(.hidden)'));
+    if (!cards.length) return;
+    if (e.key === 'ArrowDown') focusedIndex = (focusedIndex + 1) % cards.length;
+    else focusedIndex = (focusedIndex - 1 + cards.length) % cards.length;
+    cards[focusedIndex].focus();
+    e.preventDefault();
+  }
+});
+
+document.getElementById('searchInput').addEventListener('input', doFilter);
+document.querySelectorAll('.view-toggle button').forEach(b => {
+  b.addEventListener('click', () => switchView(b.dataset.view));
+});
+
+// Init
+renderGrid();
+renderList();
+visibleIds = concepts.map(c => c.id);
+
+// Handle URL hash
+if (location.hash) {
+  const el = document.querySelector(location.hash);
+  if (el) {
+    setTimeout(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('related');
+      setTimeout(() => el.classList.remove('related'), 1500);
+    }, 100);
+  }
+}
+</script>
+</body>
+</html>

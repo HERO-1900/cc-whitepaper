@@ -1,0 +1,42 @@
+总分: 14/20
+
+**布局: 3/5** — 表格结构基本规整，但固定高度(86px)与内容可能冲突，且sticky元素的层叠上下文关系混乱
+
+**信息: 4/5** — 中英双语层次清晰，★/●/▲ 徽章系统语义明确，但核心优势(Claude Code高亮列)视觉引导过强可能喧宾夺主
+
+**美学: 4/5** — 配色体系精致(深蓝+青色+紫色梯级)，字体搭配考究(Playfair Display标题 + Space Grotesk正文)，渐变氛围营造到位
+
+**完整: 3/5** — 代码可运行，但存在逻辑缺陷导致渲染异常风险
+
+---
+
+**缺陷:**
+
+1. **行109 `height:86px`** — 固定行高与内容的中英双语文本量不匹配，中文稍长即溢出，且`vertical-align:top`无法解决空间不足问题
+
+2. **行82-83 `z-index`冲突** — `thead th:first-child`设置了`z-index:30`，但`thead th`(非首列)未设置任何z-index，导致表头非首列单元格可能被首列覆盖
+
+3. **行144-150 `::after`伪元素越界** — sticky单元格使用`::after`绘制右边框，但未限制`top:0;bottom:0`的实际渲染边界，在表头区域该伪元素会延伸到th上方并被截断
+
+4. **行169 `.cc-highlight` hover冲突** — 行hover时`tbody tr:hover td`设置`background:rgba(255,255,255,0.04)`，但`.cc-highlight`的hover规则`rgba(0,212,255,0.14)`层级不明，可能被前者覆盖导致高亮消失
+
+5. **行75-78 `border-bottom`未继承sticky特性** — 表头th的底部边框在sticky定位下可能因滚动容器外边距折叠而渲染异常
+
+---
+
+**修改建议:**
+
+1. **行109** — 移除固定`height:86px`，改用`min-height:86px`允许自适应
+
+2. **行82-83** — 为所有`thead th`设置`z-index:20`，首列保持`z-index:30`
+
+3. **行144-150** — 在`::after`规则中加入`overflow:hidden`的父级容器约束，或改用`box-shadow:inset -1px 0 0 var(--border)`替代伪元素方案
+
+4. **行169** — 调整hover优先级：
+```css
+tbody tr:hover td.cc-highlight {
+  background: linear-gradient(180deg,rgba(0,212,255,0.14) 0%,rgba(0,212,255,0.05) 100%) !important;
+}
+```
+
+5. **行78** — 表头底部边框改用`box-shadow:0 1px 0 var(--border)`避免sticky定位下的渲染问题

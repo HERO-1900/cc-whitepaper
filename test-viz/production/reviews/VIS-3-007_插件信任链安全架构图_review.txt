@@ -1,0 +1,33 @@
+## 评分报告
+
+总分: 10/20
+
+**布局: 2/5** — 盾牌链水平排列尚可，但 homoglyph-demo 与 defense-desc 垂直重叠，enterprise-lock 定位冲突导致未能完整包裹所有盾牌
+
+**信息: 3/5** — 信任链六层核心逻辑清晰，同形字演示有效，但攻击路径 SVG 坐标与盾牌实际位置严重错位，部分防御描述被遮挡
+
+**美学: 3/5** — 配色体系完整、字体搭配得当、呼吸动画有质感，但 SVG 箭头坐标错误导致攻击路径视觉失真，blocked-x 标记跳动位置与标签不对齐
+
+**完整: 2/5** — 存在多处布局重叠、坐标错位、语法/逻辑错误，需大量修复才能正常运行
+
+---
+
+### 缺陷
+
+1. **homoglyph-demo 遮挡** — `left:430px; top:280px` 与 defense-desc (`bottom:180px` 在 750px 容器中 = top:570px) 在水平方向重叠，且与盾牌链底部 y≈260px 处产生干扰
+2. **enterprise-lock 定位冲突** — `left:40px; right:280px` 在 1400px 容器中等价于 `width:1080px`，但盾牌链右端达 1190px（1050+140），锁边框未能完整包裹
+3. **攻击箭头 SVG 坐标错误** — `M 170 60 Q 170 30 170 80` 仅画一条短曲线，位置在 y:30~80，而盾牌顶部 y:100，箭头与盾牌完全脱节
+4. **blocked-x 位置不一致** — 标签 left:85/158/465/538/655/728px 与对应 blocked-x left:158/348/538/728/918/1108px，每次增量不一致（73/90/73/73/190/190），攻击者视角凌乱
+5. **connection-line top:80px** 与盾牌垂直中心（180px）偏差 100px，连接线与盾牌中段错位
+6. **缺少 HTML lang 属性** — `<html>` 应有 `lang="zh-CN"`（已设 meta 但标签缺失）
+7. **Google Fonts @import 在 style 内** — 应使用 `<link>` 标签效率更佳
+
+### 修改建议
+
+1. 将 homoglyph-demo 移至 `top:400px`（或右下角安全区上方），避免与 defense-desc 行重叠
+2. enterprise-lock 改为单侧定位如 `left:40px; width:1200px` 确保覆盖所有盾牌
+3. 攻击箭头起点 x 对齐各盾牌中心（170/360/550/740/930/1120），y 从盾牌顶部 y:100 向上引出
+4. 统一 blocked-x 偏移量，建议固定 `left: [shield_left + 58]`（盾牌中心偏移）
+5. connection-line 改为 `top: 180px`（与盾牌垂直中心对齐）
+6. 添加 `lang="zh-CN"` 到 `<html>` 标签
+7. 将 `@import` 改为 `<link rel="stylesheet">` 放在 `<head>` 开头

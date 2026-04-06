@@ -1,0 +1,35 @@
+总分: 17/20
+
+布局: 4/5 — 网格行列对齐整齐，但5列布局在中小屏宽下略显拥挤，各组列高不一略显松散
+信息: 5/5 — 层级清晰，核心概念一眼可辨，相关概念高亮联动增强理解
+美学: 4/5 — 配色系统专业，GitHub风暗色主题精致，字体搭配得当，交互反馈细腻
+完整: 4/5 — 可直接运行，语法正确，语义化程度可进一步提升
+
+缺陷:
+
+1. **列表视图缺少语义化表头** — `<table class="list-table">` 直接跳到 `<tbody>`，没有 `<thead>` 定义列名（概念/定义/章节），屏幕阅读器用户体验受影响
+   - 位置: `renderList()` 函数中生成 list-table 的位置
+
+2. **搜索过滤时隐藏动画被中断** — `.hidden { display: none }` 会覆盖 fadeIn 动画，导致重新显示时无过渡效果，轻微视觉跳感
+   - 位置: CSS `.concept-card.hidden` 和 `.list-table tr.hidden`
+
+3. **5列网格行高不一** — 各组概念数量不同（3-6个），导致列底部参差不齐，空列无占位
+   - 位置: `.grid-view` 布局，5列时视觉不够均衡
+
+4. **列表视图中相关概念数量未显示** — 网格视图卡片显示"↔ N"相关计数，列表视图却未同步展示
+   - 位置: `renderList()` 生成的 `.list-table td:last-child` 只有章节信息
+
+5. **组标题颜色未通过CSS变量传递** — `group-header` 同时使用 class 变量 `--accent-color` 和内联 `style.borderColor`，二者职责重叠
+   - 位置: `renderGrid()` 中 `col.innerHTML` 的 group-header 部分
+
+修改建议:
+
+1. 添加 `<thead><tr><th>概念</th><th>定义</th><th>章节</th></tr></thead>` 语义化列头，或至少用 `<th scope="col">` 标注
+
+2. 将 `.hidden` 改为 `opacity: 0; pointer-events: none; transform: translateY(8px)` 配合 transition，让显示/隐藏有平滑过渡
+
+3. 在5列布局下对概念数量较少的组使用 `min-height` 占位，或考虑根据最大组高度统一行高
+
+4. 列表视图 `td:last-child` 旁增加相关计数显示，样式与章节信息并排：`${c.nameCN} <span style="opacity:0.6">↔ ${c.related.length}</span>`
+
+5. 统一颜色定义方式，推荐在 `groups` 数据中定义 `color` 后统一通过 `style.setProperty('--accent-color', color)` 注入，而非混合使用内联样式

@@ -1,0 +1,97 @@
+我将逐项审查此代码。
+
+---
+
+总分: 15/20
+
+**布局: 3/5** — 时间线交替布局逻辑清晰，但移动端自适应存在 transform 冲突，导致滚动动画在 <768px 时表现异常。
+
+**信息: 4/5** — 事件信息完整（中英双语、参数、用途），层次分明，但相位计数 8/10/5/4 为硬编码静态文本，不够健壮。
+
+**美学: 4/5** — 配色体系完整（4色对应4相位），噪点纹理 + 径向渐变背景提升质感，Space Mono + Noto Serif SC + Syncopate 字体组合协调。SVG 配对弧线设计精致。
+
+**完整: 4/5** — 功能完整（搜索、过滤、折叠、滚动入场动画、配对弧线），但存在多处逻辑问题影响稳定性。
+
+---
+
+**缺陷:**
+
+1. **行162-164** — 移动端 transform 覆盖冲突
+   ```css
+   .event-card{ transform:translateX(20px); }
+   .event-card:nth-child(even){ transform:translateX(20px); }
+   ```
+   CSS 直接设置了 `translateX(20px)`，覆盖了 JS 初始化的 `±40px`，导致 `visible` 类触发时动画方向错误（全部从右入）。
+
+2. **行370** — `drawPairArcs` 中 `collapsed` 检查顺序错误
+   ```js
+   svg.innerHTML = '';
+   if(section.classList.contains('collapsed')) return;
+   ```
+   清空 SVG 后才检查折叠状态，导致折叠后 SVG 内容被意外清空（应在清空前 return）。
+
+3. **行400** — `drawPairArcs` 的 `getBoundingClientRect` 跨相位计算错误
+   ```js
+   const svgRect = svg.getBoundingClientRect();
+   ```
+   循环遍历 phase-section，但 `svgRect` 是相对于 viewport 的绝对坐标，与后续卡片相对 SVG 容器的 `x1/y1/x2/y2` 计算混用了坐标系，导致弧线位置偏移。
+
+4. **行167** — 移动端宽度计算基准不一致
+   ```css
+   width:calc(100% - 56px);  /* 56px = 24px(left line) + 32px */
+   margin-left:56px;
+   ```
+   桌面端宽度 `calc(50% - 40px)` 基准是视口，但移动端基准是哪里并不明确，56px 来自 `24px + 32px` 的 hardcode，与 `gap:32px` 存在隐式耦合。
+
+5. **行302** — 窗口加载时重复动画触发
+   ```js
+   window.addEventListener('load',()=>{
+     document.querySelectorAll('.event-card').forEach((c,i)=>{
+       setTimeout(()=>c.classList.add('visible'),i*60);
+     });
+     setTimeout(drawPairArcs,400);
+   });
+   ```
+   同时触发了 `visible` 类添加动画（逐卡60ms间隔）和弧线绘制（400ms后），当事件数量变化时 400ms 固定延迟可能不足以覆盖所有卡片动画完成时间。
+
+---
+
+**修改建议:**
+
+1. **行162-164** — 移除移动端 CSS 的 `transform:translateX(20px)`，改由 JS 统一管理初始化 transform：
+   ```css
+   @media(max-width:768px){
+     .event-card{
+       width:calc(100% - 56px);
+       margin-left:56px;
+       /* 不在这里设置 transform，由 .visible 类统一处理 */
+     }
+   }
+   ```
+
+2. **行370** — 将 `collapsed` 检查提前到 `innerHTML` 之前：
+   ```js
+   if(section.classList.contains('collapsed')) return;
+   svg.innerHTML = '';
+   ```
+
+3. **行400** — 改用 `container.getBoundingClientRect()` 作为相对基准，或在循环内重新计算 `svgRect`：
+   ```js
+   const containerRect = container.getBoundingClientRect();
+   const svgRect = svg.getBoundingClientRect();
+   const offsetX = containerRect.left - svgRect.left;
+   const offsetY = containerRect.top - svgRect.top;
+   // 后续 x1/y1 减去 offsetX/offsetY
+   ```
+
+4. **行167** — 统一使用 `gap` 变量或 CSS 变量计算偏移量，避免 magic number。
+
+5. **行302** — 改为监听最后一个卡片的 `visible` 类添加完成后触发弧线重绘，或使用 `requestAnimationFrame` 确保障形绘制在所有动画 settle 后执行。
+
+6. **加分项建议** — 相位事件计数改为 JS 动态计算：
+   ```js
+   document.querySelectorAll('.phase-section').forEach(section => {
+     const count = section.querySelectorAll('.event-card').length;
+     section.querySelector('.phase-count').textContent = `${count} events`;
+   });
+   ```

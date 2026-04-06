@@ -1,0 +1,39 @@
+我来详细审查这份图表代码。
+
+总分: 15/20
+
+**布局: 3/5** — 四象限网格基本规整，但水位线与象限层叠关系错误，轴标签溢出容器
+
+**信息: 4/5** — 信息层次清晰，冰山比喻具象，但中央总计数字与象限数量之和不一致（45+33+13+10=101，总计101，但~45是约数近似值，精确性不足）
+
+**美学: 4/5** — 深色主题配霓虹色彩视觉冲击力强，玻璃拟态和光晕效果精致，但Q2/Q3/Q4的::after渐变遮罩与Q1hover效果不一致，破坏了整体统一性
+
+**完整: 4/5** — 代码完整可运行，响应式布局基本完备，但存在逻辑缺陷
+
+---
+
+**缺陷:**
+
+1. **层叠顺序错误（严重）** — `.water-surface` 设置 `z-index: 5`，但视觉上被象限覆盖。原因是象限内的 `::after` 伪元素（`q2::after`、`q3::after`、`q4::after`）创建了层叠上下文，而象限本身缺少 `position: relative` 和 `z-index`。应删除不必要的 `::after` 或为象限添加显式 `z-index`。
+
+2. **轴标签溢出（第260-266行）** — `.axis-left` 使用 `left: -80px`、`.axis-right` 使用 `right: -80px`，导致内容延伸到容器外。虽然 `body` 设置了 `overflow-x: hidden`，但这是不必要的溢出，应该用 `transform` 而非负定位。
+
+3. **Q2/Q3/Q4 暗角遮罩不一致（第147-152行、161-166行、175-180行）** — Q2/Q3/Q4 使用 `::after` 伪元素添加底部到顶部渐变暗角，Q1 没有此效果，且 hover 时 Q1 有内发光但其他象限没有。这导致四个象限的视觉权重不均衡。
+
+4. **响应式断点偏窄（media query max-width: 900px）** — 在 768px-900px 区间网格变为单列，但象限最小高度 200px 可能导致容器过高。
+
+5. **tooltip 在拖动时可能位置错误** — `updateTooltipPosition` 仅在 `mousemove` 时更新，若鼠标快速移动后离开标签区域，tooltip 可能停留在旧位置。
+
+---
+
+**修改建议:**
+
+1. **修复水位线层叠** — 为 `.quadrant` 添加 `position: relative; z-index: 2;`，并将 `.water-surface` 的 `z-index` 改为 `3`，使其位于象限之下、轴分割线之上。
+
+2. **统一象限视觉效果** — 删除 q2/q3/q4 的 `::after` 伪元素暗角，或为 q1 也添加相同的 `::after` 渐变遮罩，确保 hover 内发光效果一致。
+
+3. **修复轴标签定位** — 将 `left: -80px` 改为 `left: 0; transform: translateX(-100%) translateX(-20px)`，`right: -80px` 改为 `right: 0; transform: translateX(100%) translateX(20px)`，避免溢出。
+
+4. **优化响应式断点** — 将 media query 改为 `max-width: 768px`，与移动设备典型断点一致。
+
+5. **增强 tooltip 稳定性** — 在 `mouseleave` 时也记录最后一次已知位置，或使用 CSS `will-change: transform` 优化重绘性能。

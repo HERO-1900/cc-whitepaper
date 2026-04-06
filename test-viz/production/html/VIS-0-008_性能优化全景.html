@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code 性能优化全景 | Performance Optimization Panorama</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;
+  --bg-elev:#161b22;
+  --bg-glass:rgba(22,27,34,0.65);
+  --border:#30363d;
+  --green:#3fb950;
+  --green-dim:#238636;
+  --green-glow:rgba(63,185,80,0.18);
+  --red:#f85149;
+  --gray:#8b949e;
+  --gray-dim:#484f58;
+  --text:#c9d1d9;
+  --text-bright:#f0f6fc;
+  --accent-cyan:#39d0d8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Noto Sans SC","Space Grotesk",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  line-height:1.55;
+  overflow-x:hidden;
+}
+.bg-mesh{
+  position:fixed;inset:0;z-index:-2;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 30%,rgba(63,185,80,0.08) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 20%,rgba(57,208,216,0.06) 0%,transparent 55%),
+    radial-gradient(ellipse 70% 60% at 70% 90%,rgba(63,185,80,0.05) 0%,transparent 50%),
+    var(--bg);
+}
+.bg-noise{
+  position:fixed;inset:0;z-index:-1;
+  opacity:.035;
+  pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.container{
+  max-width:1100px;
+  margin:0 auto;
+  padding:64px 20px 96px;
+}
+header{
+  text-align:center;
+  margin-bottom:56px;
+  position:relative;
+}
+header::before{
+  content:"";
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:320px;height:120px;
+  background:radial-gradient(ellipse closest-side,rgba(63,185,80,0.18),transparent);
+  filter:blur(30px);
+  z-index:-1;
+}
+h1{
+  font-family:"Space Grotesk","Noto Sans SC",sans-serif;
+  font-size:clamp(2.2rem,5.5vw,3.6rem);
+  font-weight:700;
+  color:var(--text-bright);
+  letter-spacing:-0.03em;
+  line-height:1.1;
+}
+.subtitle{
+  font-size:1rem;
+  color:var(--gray);
+  margin-top:12px;
+  font-weight:400;
+}
+.kpi-strip{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+  margin-bottom:48px;
+}
+.kpi-card{
+  background:var(--bg-glass);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:22px 18px;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+  backdrop-filter:blur(8px);
+  transition:transform .25s ease,border-color .25s ease;
+}
+.kpi-card:hover{
+  transform:translateY(-3px);
+  border-color:var(--green-dim);
+}
+.kpi-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03);
+  pointer-events:none;
+}
+.kpi-value{
+  font-family:"JetBrains Mono","Space Grotesk",monospace;
+  font-size:2.2rem;
+  font-weight:700;
+  color:var(--green);
+  text-shadow:0 0 22px var(--green-glow);
+}
+.kpi-label{
+  font-size:.85rem;
+  color:var(--gray);
+  margin-top:6px;
+  letter-spacing:0.02em;
+}
+.cards-col{
+  display:flex;
+  flex-direction:column;
+  gap:28px;
+  position:relative;
+}
+.cards-col::before{
+  content:"";
+  position:absolute;
+  left:24px;top:48px;bottom:48px;
+  width:2px;
+  background:repeating-linear-gradient(180deg,var(--green-dim) 0px,transparent 6px,transparent 12px);
+  opacity:.45;
+  z-index:0;
+}
+.strategy-card{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:28px;
+  background:linear-gradient(135deg,rgba(22,27,34,0.9),rgba(13,17,23,0.95));
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:28px 30px;
+  position:relative;
+  z-index:1;
+  backdrop-filter:blur(10px);
+  transition:transform .3s ease,box-shadow .3s ease,border-color .3s ease;
+}
+.strategy-card:hover{
+  transform:translateX(6px);
+  border-color:var(--green-dim);
+  box-shadow:0 18px 50px rgba(0,0,0,0.35),0 0 0 1px rgba(63,185,80,0.12);
+}
+.card-left{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.card-num{
+  font-family:"JetBrains Mono",monospace;
+  font-size:.75rem;
+  color:var(--green);
+  font-weight:700;
+  margin-bottom:6px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+.card-title{
+  font-family:"Space Grotesk","Noto Sans SC",sans-serif;
+  font-size:1.55rem;
+  font-weight:700;
+  color:var(--text-bright);
+  line-height:1.2;
+  margin-bottom:4px;
+}
+.card-title-en{
+  font-family:"Space Grotesk",sans-serif;
+  font-size:.95rem;
+  font-weight:500;
+  color:var(--gray);
+  margin-bottom:14px;
+}
+.card-desc{
+  font-size:.92rem;
+  color:var(--text);
+  line-height:1.7;
+}
+.tech-tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:16px;
+}
+.tech-tag{
+  font-family:"JetBrains Mono",monospace;
+  font-size:.72rem;
+  padding:5px 10px;
+  border-radius:999px;
+  background:rgba(139,148,158,0.12);
+  color:var(--gray);
+  border:1px solid rgba(139,148,158,0.22);
+}
+.tech-tag.accent{
+  background:rgba(63,185,80,0.12);
+  color:var(--green);
+  border-color:rgba(63,185,80,0.35);
+}
+.card-right{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:flex-start;
+  min-height:160px;
+}
+.mini-chart{
+  width:100%;
+}
+.chart-labels{
+  display:flex;justify-content:space-between;
+  font-family:"JetBrains Mono",monospace;
+  font-size:.72rem;
+  color:var(--gray);
+  margin-bottom:8px;
+}
+.chart-bars{
+  display:flex;align-items:flex-end;gap:10px;height:110px;
+}
+.bar{
+  width:46%;
+  border-radius:8px 8px 0 0;
+  position:relative;
+  transition:height 1.2s cubic-bezier(0.22,1,0.36,1);
+}
+.bar::after{
+  content:attr(data-val);
+  position:absolute;
+  top:-20px;left:50%;
+  transform:translateX(-50%);
+  font-family:"JetBrains Mono",monospace;
+  font-size:.8rem;
+  font-weight:700;
+  color:var(--text-bright);
+  opacity:0;
+  transition:opacity .4s ease .8s;
+}
+.bar.grown::after{opacity:1}
+.bar.before{
+  background:var(--gray-dim);
+}
+.bar.after{
+  background:linear-gradient(180deg,var(--green) 0%,var(--green-dim) 100%);
+  box-shadow:0 0 24px var(--green-glow);
+}
+.big-number{
+  font-family:"Space Grotesk","JetBrains Mono",sans-serif;
+  font-size:3.2rem;
+  font-weight:700;
+  color:var(--green);
+  text-shadow:0 0 30px var(--green-glow);
+  line-height:1;
+}
+.big-unit{
+  font-size:1.1rem;
+  color:var(--green);
+  font-weight:500;
+  margin-left:4px;
+}
+.metric-caption{
+  font-size:.85rem;
+  color:var(--gray);
+  margin-top:10px;
+}
+.horizontal-bar-wrap{
+  width:100%;
+}
+.h-bar-track{
+  height:22px;
+  background:var(--gray-dim);
+  border-radius:12px;
+  overflow:hidden;
+  position:relative;
+}
+.h-bar-fill{
+  height:100%;
+  border-radius:12px;
+  background:linear-gradient(90deg,var(--green) 0%,var(--green-dim) 100%);
+  box-shadow:0 0 18px var(--green-glow);
+  width:0%;
+  transition:width 1.2s cubic-bezier(0.22,1,0.36,1);
+}
+.gauge-wrap{
+  position:relative;
+  width:160px;height:80px;
+  margin:0 auto;
+}
+.gauge-bg{
+  fill:none;
+  stroke:var(--gray-dim);
+  stroke-width:10;
+  stroke-linecap:round;
+}
+.gauge-fill{
+  fill:none;
+  stroke:var(--green);
+  stroke-width:10;
+  stroke-linecap:round;
+  stroke-dasharray:251;
+  stroke-dashoffset:251;
+  transition:stroke-dashoffset 1.4s cubic-bezier(0.22,1,0.36,1);
+  filter:drop-shadow(0 0 6px rgba(63,185,80,0.5));
+}
+.gauge-text{
+  font-family:"Space Grotesk","JetBrains Mono",sans-serif;
+  font-size:1.8rem;
+  font-weight:700;
+  fill:var(--green);
+  text-anchor:middle;
+}
+.gauge-label{
+  font-size:.75rem;
+  fill:var(--gray);
+  text-anchor:middle;
+}
+.synergy-note{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  margin-top:36px;
+  padding:14px 24px;
+  border:1px dashed var(--green-dim);
+  border-radius:999px;
+  color:var(--green);
+  font-size:.85rem;
+  background:rgba(63,185,80,0.06);
+  width:fit-content;
+  margin-left:auto;
+  margin-right:auto;
+  font-family:"Noto Sans SC","Space Grotesk",sans-serif;
+}
+.synergy-note span{
+  font-family:"JetBrains Mono",monospace;
+  font-size:.75rem;
+  opacity:.8;
+}
+@media(max-width:800px){
+  .strategy-card{grid-template-columns:1fr}
+  .card-right{align-items:center}
+  .cards-col::before{left:14px}
+  .kpi-strip{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="bg-noise"></div>
+
+<div class="container">
+  <header>
+    <h1>性能优化全景</h1>
+    <div class="subtitle">Performance Optimization Panorama — Claude Code 五大核心加速策略</div>
+  </header>
+
+  <section class="kpi-strip">
+    <div class="kpi-card">
+      <div class="kpi-value" data-target="90">0</div>
+      <div class="kpi-label">总成本节省 Total Cost Saving</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value" data-target="3">0</div>
+      <div class="kpi-label">感知速度提升 Perceived Speed</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value" data-target="70">0</div>
+      <div class="kpi-label">总效率增益 Total Efficiency Gain</div>
+    </div>
+  </section>
+
+  <section class="cards-col">
+    <article class="strategy-card">
+      <div class="card-left">
+        <div class="card-num">01</div>
+        <div class="card-title">Prompt Cache</div>
+        <div class="card-title-en">Prompt Cache Strategy</div>
+        <div class="card-desc">缓存 System Prompt 与历史消息前缀，跳过重复预填充。API 通过 <code>cache_control</code> 断点标记精准控制缓存边界，实现命中即加速。</div>
+        <div class="tech-tags">
+          <span class="tech-tag accent">命中率 90%</span>
+          <span class="tech-tag">cache_control</span>
+          <span class="tech-tag">prefix caching</span>
+        </div>
+      </div>
+      <div class="card-right">
+        <div class="mini-chart">
+          <div class="chart-labels"><span>Before</span><span>After</span></div>
+          <div class="chart-bars">
+            <div class="bar before" style="height:100%" data-val="基准"></div>
+            <div class="bar after" data-height="30%" data-val="-70%"></div>
+          </div>
+          <div class="metric-caption">延迟降低 &nbsp;Latency Reduction <strong style="color:var(--green)">70%</strong></div>
+        </div>
+        <div style="margin-top:18px;display:flex;align-items:baseline;gap:6px">
+          <span class="big-number" data-target="90">0</span><span class="big-unit">%</span>
+          <span style="color:var(--gray);font-size:.9rem">缓存命中率 Cache Hit Rate</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="strategy-card">
+      <div class="card-left">
+        <div class="card-num">02</div>
+        <div class="card-title">流式执行</div>
+        <div class="card-title-en">Streaming Execution</div>
+        <div class="card-desc">基于 SSE 协议实时推送 token，首 token 延迟压至 <500ms。配合 Ink 渲染器的增量更新与打字机效果，让用户在完整响应生成前即可开始阅读。</div>
+        <div class="tech-tags">
+          <span class="tech-tag accent">&lt;500ms TTFT</span>
+          <span class="tech-tag">SSE</span>
+          <span class="tech-tag">Ink renderer</span>
+        </div>
+      </div>
+      <div class="card-right">
+        <div class="mini-chart" style="padding-top:10px">
+          <div class="chart-labels"><span>Baseline Speed</span><span>Streaming Speed</span></div>
+          <div class="chart-bars">
+            <div class="bar before" style="height:45%" data-val="1x"></div>
+            <div class="bar after" data-height="100%" data-val="3x"></div>
+          </div>
+          <div class="metric-caption">感知速度提升 &nbsp;Perceived Speed <strong style="color:var(--green)">3x</strong></div>
+        </div>
+        <div style="margin-top:18px;display:flex;align-items:baseline;gap:6px">
+          <span class="big-number" data-target="3">0</span><span class="big-unit">x</span>
+          <span style="color:var(--gray);font-size:.9rem">感知加速 Perceived Acceleration</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="strategy-card">
+      <div class="card-left">
+        <div class="card-num">03</div>
+        <div class="card-title">投机执行</div>
+        <div class="card-title-en">Speculative Execution</div>
+        <div class="card-desc">基于工具使用模式统计，预判下一步极可能为 Bash 或 Read，提前预加载文件内容。将阻塞式多轮 API 往返压缩为预测性单轮响应。</div>
+        <div class="tech-tags">
+          <span class="tech-tag accent">轮次 ↓</span>
+          <span class="tech-tag">Bash/Read 预判</span>
+          <span class="tech-tag">pre-fetch</span>
+        </div>
+      </div>
+      <div class="card-right">
+        <svg width="100%" height="140" viewBox="0 0 320 140" class="mini-chart">
+          <line x1="20" y1="110" x2="140" y2="110" stroke="var(--gray-dim)" stroke-width="3" stroke-dasharray="4 3"/>
+          <circle cx="20" cy="110" r="5" fill="var(--gray)"/>
+          <circle cx="80" cy="110" r="5" fill="var(--gray)"/>
+          <circle cx="140" cy="110" r="5" fill="var(--gray)"/>
+          <text x="20" y="130" fill="var(--gray)" font-size="11" font-family="JetBrains Mono">Round 1</text>
+          <text x="80" y="130" fill="var(--gray)" font-size="11" font-family="JetBrains Mono">Round 2</text>
+          <text x="140" y="130" fill="var(--gray)" font-size="11" font-family="JetBrains Mono">Round 3</text>
+          
+          <line x1="180" y1="110" x2="300" y2="110" stroke="var(--green)" stroke-width="3"/>
+          <circle cx="180" cy="110" r="6" fill="var(--green)"/>
+          <circle cx="300" cy="110" r="6" fill="var(--green)"/>
+          <text x="180" y="130" fill="var(--green)" font-size="11" font-family="JetBrains Mono" font-weight="700">Predict</text>
+          <text x="300" y="130" fill="var(--green)" font-size="11" font-family="JetBrains Mono" font-weight="700">Result</text>
+          
+          <path d="M150 90 L170 90" stroke="var(--green)" stroke-width="2" marker-end="url(#arrow)"/>
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="var(--green)"/>
+            </marker>
+          </defs>
+          <text x="235" y="85" fill="var(--text-bright)" font-size="13" font-family="Noto Sans SC" text-anchor="middle">API 往返减少</text>
+        </svg>
+        <div style="margin-top:6px;display:flex;align-items:baseline;gap:6px">
+          <span class="big-number" style="font-size:2.4rem">−2</span>
+          <span style="color:var(--gray);font-size:.9rem">等待轮次 Reduced Rounds</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="strategy-card">
+      <div class="card-left">
+        <div class="card-num">04</div>
+        <div class="card-title">并行 I/O</div>
+        <div class="card-title-en">Parallel I/O</div>
+        <div class="card-desc">利用 Node.js 事件循环与 Promise.all 并发读取多文件，Glob 批量搜索与工具并发执行（max_concurrent）让吞吐量随核心数线性扩展。</div>
+        <div class="tech-tags">
+          <span class="tech-tag accent">吞吐 ↑</span>
+          <span class="tech-tag">Promise.all</span>
+          <span class="tech-tag">max_concurrent</span>
+        </div>
+      </div>
+      <div class="card-right">
+        <div class="mini-chart">
+          <div class="horizontal-bar-wrap" style="margin-bottom:16px">
+            <div class="chart-labels"><span>Before: Sequential</span><span>After: Parallel</span></div>
+            <div class="h-bar-track">
+              <div class="h-bar-fill" data-width="85%"></div>
+            </div>
+          </div>
+          <div class="metric-caption">吞吐量提升 &nbsp;Throughput Increase <strong style="color:var(--green)">Linear</strong></div>
+        </div>
+        <div style="margin-top:18px;display:flex;align-items:baseline;gap:6px">
+          <span class="big-number">N</span><span class="big-unit">x</span>
+          <span style="color:var(--gray);font-size:.9rem">并发文件数 Concurrent Files</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="strategy-card">
+      <div class="card-left">
+        <div class="card-num">05</div>
+        <div class="card-title">上下文压缩</div>
+        <div class="card-title-en">Context Compression</div>
+        <div class="card-desc">智能裁剪算法对旧消息进行摘要化，大文件输出自动截断，token 计数器精确控制窗口上限。在保证有效信息密度的前提下极限压缩成本。</div>
+        <div class="tech-tags">
+          <span class="tech-tag accent">密度 ↑</span>
+          <span class="tech-tag">token 精控</span>
+          <span class="tech-tag">summarization</span>
+        </div>
+      </div>
+      <div class="card-right">
+        <div class="gauge-wrap">
+          <svg viewBox="0 0 160 80" width="160" height="80">
+            <path class="gauge-bg" d="M 10 80 A 70 70 0 0 1 150 80"/>
+            <path class="gauge-fill" id="gauge" d="M 10 80 A 70 70 0 0 1 150 80"/>
+            <text x="80" y="70" class="gauge-text" id="gaugeText">0%</text>
+            <text x="80" y="92" class="gauge-label">Density</text>
+          </svg>
+        </div>
+        <div style="margin-top:8px;text-align:center">
+          <div class="metric-caption">有效信息密度 &nbsp;Effective Information Density</div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <div class="synergy-note">
+    <span>协同效应</span>
+    五大策略协同: Cache 减成本 + 流式提速 + 投机减轮次 + 并行提吞吐 + 压缩保质量
+    <span>Synergy</span>
+  </div>
+</div>
+
+<script>
+const animateValue=(el,target,duration=1200)=>{
+  const start=performance.now();
+  const step=(now)=>{
+    const p=Math.min((now-start)/duration,1);
+    const ease=1-Math.pow(1-p,3);
+    el.textContent=Math.floor(ease*target);
+    if(p<1)requestAnimationFrame(step);
+    else el.textContent=target;
+  };
+  requestAnimationFrame(step);
+};
+
+const io=new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(!entry.isIntersecting)return;
+    const t=entry.target;
+
+    t.querySelectorAll('.big-number[data-target]').forEach(el=>{
+      animateValue(el,parseInt(el.dataset.target));
+    });
+
+    t.querySelectorAll('.kpi-value[data-target]').forEach(el=>{
+      animateValue(el,parseInt(el.dataset.target));
+    });
+
+    t.querySelectorAll('.bar[data-height]').forEach(bar=>{
+      bar.style.height=bar.dataset.height;
+      bar.classList.add('grown');
+    });
+
+    t.querySelectorAll('.h-bar-fill[data-width]').forEach(bar=>{
+      bar.style.width=bar.dataset.width;
+    });
+
+    const gauge=t.querySelector('#gauge');
+    if(gauge){
+      gauge.style.strokeDashoffset=25;
+      setTimeout(()=>{
+        const gt=t.querySelector('#gaugeText');
+        if(gt){
+          let v=0;
+          const iv=setInterval(()=>{
+            v+=2;
+            gt.textContent=v+'%';
+            if(v>=90)clearInterval(iv);
+          },20);
+        }
+      },600);
+    }
+
+    io.unobserve(t);
+  });
+},{threshold:0.25});
+
+document.querySelectorAll('.strategy-card, .kpi-card').forEach(c=>io.observe(c));
+</script>
+</body>
+</html>

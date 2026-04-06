@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>依赖热力图 | Dependency Heatmap</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@400;700;900&family=Space+Grotesk:wght@500;700&display=swap');
+    
+    :root {
+      --bg-deep: #0a0a0f;
+      --bg-panel: #0f111a;
+      --accent-hot: #ff3d00;
+      --accent-warm: #ff9100;
+      --accent-neutral: #ffd600;
+      --accent-cool: #00b0ff;
+      --accent-cold: #2979ff;
+      --text-primary: #f0f0f5;
+      --text-secondary: #8b8b9a;
+      --border-color: #1e2130;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+    
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        radial-gradient(circle at 20% 80%, rgba(255, 61, 0, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 80% 20%, rgba(41, 121, 255, 0.06) 0%, transparent 40%),
+        linear-gradient(rgba(30, 33, 48, 0.3) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(30, 33, 48, 0.3) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    .noise {
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    #viz {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      cursor: grab;
+    }
+    
+    #viz:active {
+      cursor: grabbing;
+    }
+    
+    .ui-layer {
+      position: fixed;
+      z-index: 10;
+      pointer-events: none;
+    }
+    
+    .header {
+      top: 32px;
+      left: 40px;
+      pointer-events: auto;
+    }
+    
+    .header h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ff3d00 0%, #ff9100 50%, #ffd600 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
+    }
+    
+    .header .subtitle {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-top: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.05em;
+    }
+    
+    .discovery-badge {
+      position: fixed;
+      bottom: 32px;
+      left: 40px;
+      max-width: 380px;
+      background: rgba(15, 17, 26, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px 24px;
+      pointer-events: auto;
+    }
+    
+    .discovery-badge .label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent-warm);
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .discovery-badge h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+    
+    .discovery-badge p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    
+    .legend {
+      position: fixed;
+      top: 32px;
+      right: 40px;
+      background: rgba(15, 17, 26, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      pointer-events: auto;
+    }
+    
+    .legend h4 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 0.8rem;
+    }
+    
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    
+    .legend-dot.hot { background: #ff3d00; box-shadow: 0 0 10px rgba(255, 61, 0, 0.5); }
+    .legend-dot.warm { background: #ff9100; }
+    .legend-dot.cool { background: #00b0ff; }
+    .legend-dot.cold { background: #2979ff; }
+    
+    .concept-legend {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+    
+    .concept-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 0.8rem;
+    }
+    
+    .concept-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    
+    .concept-icon.radiation {
+      background: rgba(255, 61, 0, 0.15);
+      color: var(--accent-hot);
+      border: 1px solid rgba(255, 61, 0, 0.3);
+    }
+    
+    .concept-icon.sink {
+      background: rgba(0, 176, 255, 0.15);
+      color: var(--accent-cool);
+      border: 1px solid rgba(0, 176, 255, 0.3);
+    }
+    
+    .detail-panel {
+      position: fixed;
+      top: 50%;
+      right: 40px;
+      transform: translateY(-50%) translateX(120%);
+      width: 320px;
+      background: rgba(15, 17, 26, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      pointer-events: auto;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .detail-panel.active {
+      transform: translateY(-50%) translateX(0);
+    }
+    
+    .detail-panel .close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    
+    .detail-panel .close:hover {
+      background: var(--border-color);
+      color: var(--text-primary);
+    }
+    
+    .detail-panel .file-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      padding-right: 30px;
+    }
+    
+    .detail-panel .file-path {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .detail-panel .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .detail-panel .stat-row:last-child {
+      border-bottom: none;
+    }
+    
+    .detail-panel .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    
+    .detail-panel .stat-value {
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+    
+    .detail-panel .stat-value.hot { color: var(--accent-hot); }
+    .detail-panel .stat-value.warm { color: var(--accent-warm); }
+    .detail-panel .stat-value.cool { color: var(--accent-cool); }
+    
+    .node-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      fill: var(--text-primary);
+      pointer-events: none;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+      font-weight: 500;
+    }
+    
+    .node-label-bg {
+      fill: rgba(10, 10, 15, 0.7);
+      pointer-events: none;
+    }
+    
+    .tooltip {
+      position: absolute;
+      background: rgba(15, 17, 26, 0.95);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+      max-width: 220px;
+    }
+    
+    .tooltip .name {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    
+    .tooltip .meta {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+    }
+    
+    @keyframes pulse-glow {
+      0%, 100% { filter: drop-shadow(0 0 8px currentColor); }
+      50% { filter: drop-shadow(0 0 16px currentColor); }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="noise"></div>
+  
+  <div class="ui-layer header">
+    <h1>依赖热力图</h1>
+    <div class="subtitle">DEPENDENCY HEATMAP • VIS-2A-003</div>
+  </div>
+  
+  <div class="ui-layer legend">
+    <h4>Heat Legend / 热力图例</h4>
+    <div class="legend-item">
+      <div class="legend-dot hot"></div>
+      <span>高被依赖 / Hot (40+)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot warm"></div>
+      <span>中被依赖 / Warm (10-39)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot cool"></div>
+      <span>低被依赖 / Cool (2-9)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot cold"></div>
+      <span>入口/边缘 / Cold (0-1)</span>
+    </div>
+    <div class="concept-legend">
+      <div class="concept-item">
+        <div class="concept-icon radiation">辐</div>
+        <div>
+          <div style="font-weight: 600;">辐射点 Radiation</div>
+          <div style="color: var(--text-secondary); font-size: 0.75rem;">被大量依赖，自身依赖少</div>
+        </div>
+      </div>
+      <div class="concept-item">
+        <div class="concept-icon sink">汇</div>
+        <div>
+          <div style="font-weight: 600;">汇聚点 Convergence</div>
+          <div style="color: var(--text-secondary); font-size: 0.75rem;">依赖很多，被依赖很少</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="discovery-badge">
+    <div class="label">Key Discovery / 关键发现</div>
+    <h3>Tool.ts 比 main.tsx 更基础</h3>
+    <p>反直觉：工具接口 (Tool.ts) 是被依赖最多的辐射中心（43个工具），而入口文件 main.tsx 虽是启动点，却是"汇聚点"——它依赖几乎所有模块，却很少被其他模块依赖。</p>
+  </div>
+  
+  <div id="detail-panel" class="detail-panel">
+    <button class="close" onclick="closePanel()">×</button>
+    <div class="file-name" id="panel-name">Tool.ts</div>
+    <div class="file-path" id="panel-path">src/core/Tool.ts</div>
+    <div class="stat-row">
+      <span class="stat-label">被依赖次数 / Depended On</span>
+      <span class="stat-value hot" id="panel-indegree">43</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">主动依赖 / Depends On</span>
+      <span class="stat-value" id="panel-outdegree">2</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">节点类型 / Type</span>
+      <span class="stat-value warm" id="panel-type">辐射点 Radiation</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">代码行数 / Lines</span>
+      <span class="stat-value" id="panel-lines">186</span>
+    </div>
+  </div>
+  
+  <div class="tooltip" id="tooltip">
+    <div class="name" id="tt-name"></div>
+    <div class="meta" id="tt-meta"></div>
+  </div>
+  
+  <svg id="viz"></svg>
+
+  <script>
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    // Data definition
+    const nodes = [
+      { id: "Tool.ts", group: "core", indegree: 43, outdegree: 2, lines: 186, type: "radiation", desc: "所有工具接口基类" },
+      { id: "AppStateStore.ts", group: "state", indegree: 38, outdegree: 3, lines: 569, type: "radiation", desc: "全局状态存储中心" },
+      { id: "types/index.ts", group: "types", indegree: 35, outdegree: 1, lines: 240, type: "radiation", desc: "核心类型定义入口" },
+      { id: "constants.ts", group: "constants", indegree: 32, outdegree: 0, lines: 120, type: "radiation", desc: "全局常量定义" },
+      { id: "permissions/check.ts", group: "utils", indegree: 28, outdegree: 2, lines: 145, type: "radiation", desc: "权限检查核心" },
+      { id: "permissions/roles.ts", group: "utils", indegree: 22, outdegree: 1, lines: 89, type: "radiation", desc: "角色定义" },
+      { id: "ChatTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 210, type: "normal", desc: "聊天工具实现" },
+      { id: "SearchTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 195, type: "normal", desc: "搜索工具实现" },
+      { id: "FileTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 178, type: "normal", desc: "文件操作工具" },
+      { id: "CodeTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 230, type: "normal", desc: "代码分析工具" },
+      { id: "DebugTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 165, type: "normal", desc: "调试工具" },
+      { id: "TestTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 188, type: "normal", desc: "测试工具" },
+      { id: "BuildTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 156, type: "normal", desc: "构建工具" },
+      { id: "DeployTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 172, type: "normal", desc: "部署工具" },
+      { id: "LintTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 134, type: "normal", desc: "代码检查工具" },
+      { id: "FormatTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 128, type: "normal", desc: "格式化工具" },
+      { id: "ImportTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 142, type: "normal", desc: "导入工具" },
+      { id: "ExportTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 138, type: "normal", desc: "导出工具" },
+      { id: "ParseTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 151, type: "normal", desc: "解析工具" },
+      { id: "TransformTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 167, type: "normal", desc: "转换工具" },
+      { id: "AnalyzeTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 183, type: "normal", desc: "分析工具" },
+      { id: "RenderTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 175, type: "normal", desc: "渲染工具" },
+      { id: "FetchTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 159, type: "normal", desc: "网络请求工具" },
+      { id: "StoreTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 147, type: "normal", desc: "存储工具" },
+      { id: "CacheTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 136, type: "normal", desc: "缓存工具" },
+      { id: "LogTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 124, type: "normal", desc: "日志工具" },
+      { id: "MetricTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 148, type: "normal", desc: "指标工具" },
+      { id: "TraceTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 132, type: "normal", desc: "追踪工具" },
+      { id: "ValidateTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 144, type: "normal", desc: "验证工具" },
+      { id: "AuthTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 168, type: "normal", desc: "认证工具" },
+      { id: "SyncTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 157, type: "normal", desc: "同步工具" },
+      { id: "QueueTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 146, type: "normal", desc: "队列工具" },
+      { id: "ScheduleTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 139, type: "normal", desc: "调度工具" },
+      { id: "NotifyTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 131, type: "normal", desc: "通知工具" },
+      { id: "FilterTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 127, type: "normal", desc: "过滤工具" },
+      { id: "SortTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 123, type: "normal", desc: "排序工具" },
+      { id: "GroupTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 129, type: "normal", desc: "分组工具" },
+      { id: "MergeTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 135, type: "normal", desc: "合并工具" },
+      { id: "SplitTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 126, type: "normal", desc: "拆分工具" },
+      { id: "CompressTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 141, type: "normal", desc: "压缩工具" },
+      { id: "EncryptTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 154, type: "normal", desc: "加密工具" },
+      { id: "HashTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 118, type: "normal", desc: "哈希工具" },
+      { id: "MCPRoomTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 196, type: "normal", desc: "MCP房间工具" },
+      { id: "PluginTool.ts", group: "tool", indegree: 1, outdegree: 3, lines: 187, type: "normal", desc: "插件工具" },
+      { id: "query.ts", group: "core", indegree: 8, outdegree: 5, lines: 312, type: "normal", desc: "查询引擎主循环" },
+      { id: "main.tsx", group: "entry", indegree: 1, outdegree: 42, lines: 89, type: "sink", desc: "应用入口文件" },
+      { id: "App.tsx", group: "entry", indegree: 2, outdegree: 15, lines: 245, type: "normal", desc: "根组件" },
+      { id: "router.ts", group: "core", indegree: 4, outdegree: 2, lines: 134, type: "normal", desc: "路由配置" },
+      { id: "api/client.ts", group: "utils", indegree: 12, outdegree: 1, lines: 178, type: "normal", desc: "API客户端" },
+      { id: "hooks/useStore.ts", group: "utils", indegree: 10, outdegree: 1, lines: 56, type: "normal", desc: "状态Hook" },
+      { id: "components/Panel.tsx", group: "ui", indegree: 3, outdegree: 2, lines: 198, type: "normal", desc: "面板组件" },
+      { id: "components/Button.tsx", group: "ui", indegree: 5, outdegree: 1, lines: 67, type: "normal", desc: "按钮组件" }
+    ];
+    
+    const links = [];
+    
+    // Tool.ts radiates to all tools
+    const toolNodes = nodes.filter(n => n.group === "tool");
+    toolNodes.forEach(t => {
+      links.push({ source: t.id, target: "Tool.ts", value: 1 });
+    });
+    
+    // AppStateStore connections
+    nodes.filter(n => n.group !== "state" && n.id !== "constants.ts" && n.id !== "types/index.ts").forEach(n => {
+      links.push({ source: n.id, target: "AppStateStore.ts", value: 0.5 });
+    });
+    
+    // types connections
+    nodes.filter(n => n.group !== "types").forEach(n => {
+      links.push({ source: n.id, target: "types/index.ts", value: 0.4 });
+    });
+    
+    // constants connections
+    nodes.filter(n => n.group !== "constants").forEach(n => {
+      links.push({ source: n.id, target: "constants.ts", value: 0.3 });
+    });
+    
+    // permissions connections
+    nodes.filter(n => n.group === "tool").forEach(n => {
+      links.push({ source: n.id, target: "permissions/check.ts", value: 0.6 });
+      links.push({ source: n.id, target: "permissions/roles.ts", value: 0.4 });
+    });
+    
+    // main.tsx depends on almost everything
+    nodes.filter(n => n.id !== "main.tsx").forEach(n => {
+      links.push({ source: "main.tsx", target: n.id, value: 0.3 });
+    });
+    
+    // query.ts connections
+    links.push({ source: "query.ts", target: "Tool.ts", value: 0.8 });
+    links.push({ source: "query.ts", target: "AppStateStore.ts", value: 0.7 });
+    links.push({ source: "App.tsx", target: "query.ts", value: 0.5 });
+    
+    // Additional structural links
+    links.push({ source: "App.tsx", target: "main.tsx", value: 0.8 });
+    links.push({ source: "router.ts", target: "App.tsx", value: 0.5 });
+    links.push({ source: "components/Panel.tsx", target: "components/Button.tsx", value: 0.4 });
+    links.push({ source: "api/client.ts", target: "AppStateStore.ts", value: 0.5 });
+    links.push({ source: "hooks/useStore.ts", target: "AppStateStore.ts", value: 0.8 });
+    
+    const svg = d3.select("#viz")
+      .attr("width", width)
+      .attr("height", height);
+    
+    const g = svg.append("g");
+    
+    const zoom = d3.zoom()
+      .scaleExtent([0.1, 4])
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      });
+    
+    svg.call(zoom);
+    
+    // Color scale - inferno for heatmap effect
+    const colorScale = d3.scaleSequential()
+      .domain([0, 45])
+      .interpolator(d3.interpolateInferno);
+    
+    // Reverse for our semantic: high = red/yellow (hot), low = dark purple
+    const customColor = (indegree) => {
+      const t = Math.min(indegree / 43, 1);
+      if (t > 0.8) return d3.interpolateRgb("#ff3d00", "#ff9100")(t);
+      if (t > 0.5) return d3.interpolateRgb("#ff9100", "#ffd600")(t * 2 - 1);
+      if (t > 0.2) return d3.interpolateRgb("#00b0ff", "#2979ff")(t * 2.5);
+      return "#1a237e";
+    };
+    
+    const radiusScale = d3.scaleSqrt()
+      .domain([0, 45])
+      .range([6, 35]);
+    
+    const strokeScale = d3.scaleLinear()
+      .domain([0.3, 1])
+      .range([0.5, 2.5]);
+    
+    // Simulation
+    const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id(d => d.id).distance(d => {
+        if (d.source.id === "Tool.ts" || d.target.id === "Tool.ts") return 80;
+        if (d.source.id === "main.tsx") return 120;
+        return 100;
+      }))
+      .force("charge", d3.forceManyBody().strength(d => {
+        if (d.id === "Tool.ts") return -800;
+        if (d.id === "AppStateStore.ts") return -600;
+        if (d.id === "main.tsx") return -400;
+        return -200;
+      }))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collide", d3.forceCollide().radius(d => radiusScale(d.indegree) + 8).iterations(2))
+      .force("x", d3.forceX(width / 2).strength(d => d.id === "Tool.ts" ? 0.15 : 0.03))
+      .force("y", d3.forceY(height / 2).strength(d => d.id === "Tool.ts" ? 0.15 : 0.03));
+    
+    // Custom positioning forces
+    simulation.force("position", d3.forceX().x(d => {
+      if (d.id === "Tool.ts") return width / 2;
+      if (d.id === "AppStateStore.ts") return width / 2 - 180;
+      if (d.id === "main.tsx") return width / 2 + 280;
+      if (d.group === "tool") return width / 2 + (Math.random() - 0.5) * 400;
+      return width / 2;
+    }).strength(0.04));
+    
+    simulation.force("ypos", d3.forceY().y(d => {
+      if (d.id === "Tool.ts") return height / 2;
+      if (d.id === "AppStateStore.ts") return height / 2 - 120;
+      if (d.id === "main.tsx") return height / 2 + 180;
+      return height / 2;
+    }).strength(0.04));
+    
+    // Links
+    const link = g.append("g")
+      .attr("class", "links")
+      .selectAll("line")
+      .data(links)
+      .enter().append("line")
+      .attr("stroke", "#3a3a52")
+      .attr("stroke-opacity", 0.25)
+      .attr("stroke-width", d => strokeScale(d.value));
+    
+    // Node glow filters
+    const defs = svg.append("defs");
+    
+    const glowFilter = defs.append("filter")
+      .attr("id", "glow")
+      .attr("x", "-50%")
+      .attr("y", "-50%")
+      .attr("width", "200%")
+      .attr("height", "200%");
+    
+    glowFilter.append("feGaussianBlur")
+      .attr("stdDeviation", "3.5")
+      .attr("result", "coloredBlur");
+    
+    const feMerge = glowFilter.append("feMerge");
+    feMerge.append("feMergeNode").attr("in", "coloredBlur");
+    feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+    
+    // Nodes
+    const node = g.append("g")
+      .attr("class", "nodes")
+      .selectAll("g")
+      .data(nodes)
+      .enter().append("g")
+      .attr("class", "node")
+      .call(d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended));
+    
+    const circles = node.append("circle")
+      .attr("r", d => radiusScale(d.indegree))
+      .attr("fill", d => customColor(d.indegree))
+      .attr("stroke", d => d.type === "radiation" ? "#fff" : "rgba(255,255,255,0.2)")
+      .attr("stroke-width", d => d.type === "radiation" ? 2 : 1)
+      .style("filter", d => d.indegree > 20 ? "url(#glow)" : "none")
+      .style("cursor", "pointer");
+    
+    // Labels for important nodes
+    const labelGroup = g.append("g")
+      .attr("class", "labels")
+      .selectAll("g")
+      .data(nodes.filter(d => d.indegree > 5 || d.outdegree > 20 || d.type !== "normal"))
+      .enter().append("g");
+    
+    labelGroup.append("rect")
+      .attr("class", "node-label-bg")
+      .attr("rx", 4)
+      .attr("ry", 4);
+    
+    labelGroup.append("text")
+      .attr("class", "node-label")
+      .attr("dy", ".35em")
+      .attr("text-anchor", "middle")
+      .text(d => d.id)
+      .each(function(d) {
+        const bbox = this.getBBox();
+        const pad = 4;
+        d3.select(this.previousSibling)
+          .attr("x", bbox.x - pad)
+          .attr("y", bbox.y - pad)
+          .attr("width", bbox.width + pad * 2)
+          .attr("height", bbox.height + pad * 2);
+      });
+    
+    // Special annotations
+    const annotations = g.append("g").attr("class", "annotations");
+    
+    function updateAnnotations() {
+      annotations.selectAll("*").remove();
+      
+      const toolNode = nodes.find(n => n.id === "Tool.ts");
+      const mainNode = nodes.find(n => n.id === "main.tsx");
+      
+      if (toolNode && toolNode.x) {
+        annotations.append("text")
+          .attr("x", toolNode.x)
+          .attr("y", toolNode.y - radiusScale(toolNode.indegree) - 20)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#ff9100")
+          .attr("font-size", "11px")
+          .attr("font-weight", "700")
+          .attr("font-family", "Space Grotesk, sans-serif")
+          .text("辐射中心 RADIATION CORE");
+      }
+      
+      if (mainNode && mainNode.x) {
+        annotations.append("text")
+          .attr("x", mainNode.x)
+          .attr("y", mainNode.y + radiusScale(mainNode.indegree) + 24)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#00b0ff")
+          .attr("font-size", "11px")
+          .attr("font-weight", "700")
+          .attr("font-family", "Space Grotesk, sans-serif")
+          .text("汇聚点 CONVERGENCE SINK");
+      }
+    }
+    
+    // Tooltip
+    const tooltip = d3.select("#tooltip");
+    
+    node.on("mouseover", function(event, d) {
+      tooltip.style("opacity", 1);
+      d3.select("#tt-name").text(d.id);
+      d3.select("#tt-meta").text(`被依赖 ${d.indegree} • 依赖 ${d.outdegree} • ${d.desc}`);
+      
+      link.attr("stroke-opacity", l => {
+        if (l.source.id === d.id || l.target.id === d.id) return 0.8;
+        return 0.05;
+      }).attr("stroke", l => {
+        if (l.source.id === d.id || l.target.id === d.id) {
+          return l.source.id === d.id ? "#00b0ff" : "#ff9100";
+        }
+        return "#3a3a52";
+      });
+      
+      circles.attr("opacity", n => {
+        const connected = links.some(l => 
+          (l.source.id === d.id && l.target.id === n.id) || 
+          (l.target.id === d.id && l.source.id === n.id)
+        );
+        return n.id === d.id || connected ? 1 : 0.2;
+      });
+    })
+    .on("mousemove", function(event) {
+      tooltip
+        .style("left", (event.pageX + 12) + "px")
+        .style("top", (event.pageY - 12) + "px");
+    })
+    .on("mouseout", function() {
+      tooltip.style("opacity", 0);
+      link.attr("stroke-opacity", 0.25).attr("stroke", "#3a3a52");
+      circles.attr("opacity", 1);
+    })
+    .on("click", function(event, d) {
+      showPanel(d);
+      event.stopPropagation();
+    });
+    
+    svg.on("click", closePanel);
+    
+    simulation.on("tick", () => {
+      link
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
+      
+      node.attr("transform", d => `translate(${d.x},${d.y})`);
+      
+      labelGroup.attr("transform", d => `translate(${d.x},${d.y + radiusScale(d.indegree) + 14})`);
+      
+      updateAnnotations();
+    });
+    
+    function dragstarted(event, d) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+    }
+    
+    function dragged(event, d) {
+      d.fx = event.x;
+      d.fy = event.y;
+    }
+    
+    function dragended(event, d) {
+      if (!event.active) simulation.alphaTarget(0);
+      d.fx = null;
+      d.fy = null;
+    }
+    
+    function showPanel(d) {
+      const panel = document.getElementById("detail-panel");
+      document.getElementById("panel-name").textContent = d.id;
+      document.getElementById("panel-path").textContent = `src/${d.group === "entry" ? "" : d.group + "/"}${d.id}`;
+      document.getElementById("panel-indegree").textContent = d.indegree;
+      document.getElementById("panel-outdegree").textContent = d.outdegree;
+      document.getElementById("panel-type").textContent = d.type === "radiation" ? "辐射点 Radiation" : d.type === "sink" ? "汇聚点 Convergence" : "普通节点 Normal";
+      document.getElementById("panel-lines").textContent = d.lines;
+      
+      const typeEl = document.getElementById("panel-type");
+      typeEl.className = "stat-value " + (d.type === "radiation" ? "hot" : d.type === "sink" ? "cool" : "warm");
+      
+      panel.classList.add("active");
+    }
+    
+    function closePanel() {
+      document.getElementById("detail-panel").classList.remove("active");
+    }
+    
+    // Initial zoom to fit
+    setTimeout(() => {
+      const bounds = g.node().getBBox();
+      const fullWidth = width;
+      const fullHeight = height;
+      const width_ratio = fullWidth / bounds.width;
+      const height_ratio = fullHeight / bounds.height;
+      const min_ratio = Math.min(width_ratio, height_ratio) * 0.85;
+      const transform = d3.zoomIdentity
+        .translate(fullWidth / 2, fullHeight / 2)
+        .scale(min_ratio)
+        .translate(-bounds.x - bounds.width / 2, -bounds.y - bounds.height / 2);
+      svg.transition().duration(1000).call(zoom.transform, transform);
+    }, 100);
+  </script>
+</body>
+</html>

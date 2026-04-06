@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent生命周期图</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+--bg-primary: #1a1a2e;
+--bg-secondary: #16213e;
+--phase-create: #7b61ff;
+--phase-run: #48bb78;
+--phase-cleanup: #ff9f43;
+--lifecycle-main: #00d4ff;
+--text-primary: #e8e8f0;
+--text-secondary: #a0a0b8;
+--glow-create: rgba(123, 97, 255, 0.25);
+--glow-run: rgba(72, 187, 120, 0.25);
+--glow-cleanup: rgba(255, 159, 67, 0.25);
+}
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+}
+body {
+font-family: 'Space Grotesk', sans-serif;
+background: var(--bg-primary);
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 40px 20px;
+color: var(--text-primary);
+overflow-x: hidden;
+}
+.bg-mesh {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background:
+radial-gradient(ellipse at 20% 30%, rgba(123, 97, 255, 0.08) 0%, transparent 50%),
+radial-gradient(ellipse at 80% 70%, rgba(0, 212, 255, 0.06) 0%, transparent 50%),
+radial-gradient(ellipse at 50% 50%, rgba(72, 187, 120, 0.05) 0%, transparent 60%);
+pointer-events: none;
+z-index: 0;
+}
+.noise-overlay {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+opacity: 0.03;
+pointer-events: none;
+z-index: 1;
+}
+.container {
+position: relative;
+z-index: 2;
+width: 100%;
+max-width: 1400px;
+}
+.title-section {
+text-align: center;
+margin-bottom: 50px;
+}
+.main-title {
+font-size: 42px;
+font-weight: 700;
+letter-spacing: -1px;
+background: linear-gradient(135deg, var(--lifecycle-main), var(--phase-create));
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+margin-bottom: 8px;
+}
+.sub-title {
+font-family: 'JetBrains Mono', monospace;
+font-size: 14px;
+color: var(--text-secondary);
+text-transform: uppercase;
+letter-spacing: 3px;
+}
+.diagram-wrapper {
+background: rgba(22, 33, 62, 0.6);
+border-radius: 24px;
+padding: 40px;
+backdrop-filter: blur(20px);
+border: 1px solid rgba(255, 255, 255, 0.06);
+box-shadow: 0 40px 80px rgba(0, 0, 0, 0.4);
+}
+svg {
+width: 100%;
+height: auto;
+display: block;
+}
+.phase-zone {
+transition: all 0.4s ease;
+}
+.phase-zone:hover {
+filter: brightness(1.1);
+}
+.step-node {
+cursor: pointer;
+transition: all 0.3s ease;
+}
+.step-node:hover circle {
+r: 18;
+filter: drop-shadow(0 0 12px currentColor);
+}
+.step-node:hover text {
+font-weight: 600;
+}
+.ai-loop-circle {
+animation: rotate 20s linear infinite;
+transform-origin: 600px 280px;
+}
+@keyframes rotate {
+from { transform: rotate(0deg); }
+to { transform: rotate(360deg); }
+}
+.yield-arrow {
+animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+0%, 100% { opacity: 0.6; }
+50% { opacity: 1; }
+}
+.clock-icon {
+animation: tick 4s ease-in-out infinite;
+}
+@keyframes tick {
+0%, 90%, 100% { transform: scale(1); }
+95% { transform: scale(1.1); }
+}
+.isolation-line {
+stroke-dasharray: 6 4;
+animation: dash 30s linear infinite;
+}
+@keyframes dash {
+to { stroke-dashoffset: -1000; }
+}
+.tooltip {
+position: absolute;
+background: rgba(26, 26, 46, 0.95);
+border: 1px solid rgba(255, 255, 255, 0.1);
+border-radius: 12px;
+padding: 16px 20px;
+font-size: 13px;
+color: var(--text-primary);
+max-width: 320px;
+pointer-events: none;
+opacity: 0;
+transform: translateY(10px);
+transition: all 0.3s ease;
+box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+backdrop-filter: blur(10px);
+z-index: 100;
+}
+.tooltip.visible {
+opacity: 1;
+transform: translateY(0);
+}
+.tooltip-title {
+font-weight: 600;
+margin-bottom: 6px;
+color: var(--lifecycle-main);
+font-size: 12px;
+text-transform: uppercase;
+letter-spacing: 1px;
+}
+.tooltip-desc {
+color: var(--text-secondary);
+line-height: 1.5;
+font-family: 'JetBrains Mono', monospace;
+font-size: 12px;
+}
+.task-types {
+display: flex;
+flex-wrap: wrap;
+gap: 12px;
+justify-content: center;
+margin-top: 30px;
+padding-top: 30px;
+border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.task-badge {
+background: rgba(0, 212, 255, 0.08);
+border: 1px solid rgba(0, 212, 255, 0.2);
+border-radius: 20px;
+padding: 8px 16px;
+font-family: 'JetBrains Mono', monospace;
+font-size: 11px;
+color: var(--lifecycle-main);
+transition: all 0.3s ease;
+}
+.task-badge:hover {
+background: rgba(0, 212, 255, 0.15);
+transform: translateY(-2px);
+}
+.omit-badge {
+position: absolute;
+right: 40px;
+top: 40px;
+background: rgba(255, 159, 67, 0.1);
+border: 1px solid rgba(255, 159, 67, 0.3);
+border-radius: 8px;
+padding: 10px 16px;
+font-size: 12px;
+color: var(--phase-cleanup);
+}
+.omit-badge span {
+text-decoration: line-through;
+opacity: 0.6;
+margin-right: 6px;
+}
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="noise-overlay"></div>
+<div class="container">
+<div class="title-section">
+<h1 class="main-title">Agent生命周期</h1>
+<p class="sub-title">Agent Lifecycle Architecture</p>
+</div>
+<div class="diagram-wrapper">
+<div class="omit-badge">
+<span>CLAUDE.md</span>omitClaudeMd优化 · 节省5-15 GTok/week
+</div>
+<svg viewBox="0 0 1200 650" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<linearGradient id="grad-create" x1="0%" y1="0%" x2="100%" y2="0%">
+<stop offset="0%" stop-color="#7b61ff" stop-opacity="0.3"/>
+<stop offset="100%" stop-color="#7b61ff" stop-opacity="0.05"/>
+</linearGradient>
+<linearGradient id="grad-run" x1="0%" y1="0%" x2="100%" y2="0%">
+<stop offset="0%" stop-color="#48bb78" stop-opacity="0.05"/>
+<stop offset="50%" stop-color="#48bb78" stop-opacity="0.25"/>
+<stop offset="100%" stop-color="#48bb78" stop-opacity="0.05"/>
+</linearGradient>
+<linearGradient id="grad-cleanup" x1="0%" y1="0%" x2="100%" y2="0%">
+<stop offset="0%" stop-color="#ff9f43" stop-opacity="0.05"/>
+<stop offset="100%" stop-color="#ff9f43" stop-opacity="0.3"/>
+</linearGradient>
+<marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+<polygon points="0 0, 10 3, 0 6" fill="#00d4ff" opacity="0.8"/>
+</marker>
+<filter id="glow">
+<feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+<feMerge>
+<feMergeNode in="coloredBlur"/>
+<feMergeNode in="SourceGraphic"/>
+</feMerge>
+</filter>
+</defs>
+<g class="phase-zones">
+<rect x="50" y="120" width="300" height="280" rx="16" fill="url(#grad-create)" class="phase-zone"/>
+<rect x="370" y="120" width="480" height="280" rx="16" fill="url(#grad-run)" class="phase-zone"/>
+<rect x="870" y="120" width="280" height="280" rx="16" fill="url(#grad-cleanup)" class="phase-zone"/>
+<text x="200" y="155" text-anchor="middle" fill="#7b61ff" font-size="16" font-weight="600" letter-spacing="2">创建 CREATION</text>
+<text x="610" y="155" text-anchor="middle" fill="#48bb78" font-size="16" font-weight="600" letter-spacing="2">运行 RUNNING</text>
+<text x="1010" y="155" text-anchor="middle" fill="#ff9f43" font-size="16" font-weight="600" letter-spacing="2">销毁 CLEANUP</text>
+</g>
+<g class="isolation-levels">
+<text x="600" y="80" text-anchor="middle" fill="#a0a0b8" font-size="11" font-family="JetBrains Mono" letter-spacing="2">隔离级别 ISOLATION LEVELS</text>
+<line x1="150" y1="100" x2="350" y2="100" stroke="#00d4ff" stroke-width="2" opacity="0.6"/>
+<line x1="450" y1="100" x2="750" y2="100" stroke="#7b61ff" stroke-width="2" stroke-dasharray="6 4" opacity="0.6" class="isolation-line"/>
+<line x1="850" y1="100" x2="1050" y2="100" stroke="#ff9f43" stroke-width="3" opacity="0.6"/>
+<circle cx="250" cy="100" r="12" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
+<text x="250" y="104" text-anchor="middle" fill="#00d4ff" font-size="8">●</text>
+<text x="250" y="85" text-anchor="middle" fill="#e8e8f0" font-size="10">default</text>
+<text x="250" y="125" text-anchor="middle" fill="#a0a0b8" font-size="9" font-family="JetBrains Mono">shared</text>
+<g transform="translate(600, 100)">
+<circle cx="0" cy="0" r="12" fill="none" stroke="#7b61ff" stroke-width="1.5"/>
+<text x="0" y="4" text-anchor="middle" fill="#7b61ff" font-size="10">⚡</text>
+</g>
+<text x="600" y="85" text-anchor="middle" fill="#e8e8f0" font-size="10">worktree</text>
+<text x="600" y="125" text-anchor="middle" fill="#a0a0b8" font-size="9" font-family="JetBrains Mono">git branch</text>
+<g transform="translate(950, 100)">
+<circle cx="0" cy="0" r="12" fill="none" stroke="#ff9f43" stroke-width="1.5"/>
+<text x="0" y="4" text-anchor="middle" fill="#ff9f43" font-size="10">☁</text>
+</g>
+<text x="950" y="85" text-anchor="middle" fill="#e8e8f0" font-size="10">remote</text>
+<text x="950" y="125" text-anchor="middle" fill="#a0a0b8" font-size="9" font-family="JetBrains Mono">CCR env</text>
+</g>
+<g class="main-timeline">
+<line x1="80" y1="280" x2="1120" y2="280" stroke="#2a2a4a" stroke-width="4"/>
+<line x1="80" y1="280" x2="350" y2="280" stroke="#7b61ff" stroke-width="4" filter="url(#glow)"/>
+<line x1="370" y1="280" x2="850" y2="280" stroke="#48bb78" stroke-width="4" filter="url(#glow)"/>
+<line x1="870" y1="280" x2="1120" y2="280" stroke="#ff9f43" stroke-width="4" filter="url(#glow)"/>
+</g>
+<g class="step-nodes">
+<g class="step-node" data-step="1" data-title="1. AgentTool.call()入口" data-desc="模型发出子Agent调用，包含description/prompt/subagent_type/model/isolation等参数">
+<circle cx="120" cy="280" r="14" fill="#1a1a2e" stroke="#7b61ff" stroke-width="3"/>
+<text x="120" y="285" text-anchor="middle" fill="#7b61ff" font-size="10" font-weight="600">1</text>
+<text x="120" y="315" text-anchor="middle" fill="#e8e8f0" font-size="10">AgentTool.call()</text>
+<text x="120" y="330" text-anchor="middle" fill="#7b61ff" font-size="9" font-family="JetBrains Mono">入口</text>
+</g>
+<g class="step-node" data-step="2" data-title="2. runAgent()启动" data-desc="AsyncGenerator核心循环启动，准备执行子Agent">
+<circle cx="200" cy="280" r="14" fill="#1a1a2e" stroke="#7b61ff" stroke-width="3"/>
+<text x="200" y="285" text-anchor="middle" fill="#7b61ff" font-size="10" font-weight="600">2</text>
+<text x="200" y="315" text-anchor="middle" fill="#e8e8f0" font-size="10">runAgent()</text>
+<text x="200" y="330" text-anchor="middle" fill="#7b61ff" font-size="9" font-family="JetBrains Mono">AsyncGenerator</text>
+</g>
+<g class="step-node" data-step="3" data-title="3. createAgentId()" data-desc="生成唯一标识符，用于追踪和日志记录">
+<circle cx="280" cy="280" r="14" fill="#1a1a2e" stroke="#7b61ff" stroke-width="3"/>
+<text x="280" y="285" text-anchor="middle" fill="#7b61ff" font-size="10" font-weight="600">3</text>
+<text x="280" y="315" text-anchor="middle" fill="#e8e8f0" font-size="10">createAgentId()</text>
+<text x="280" y="330" text-anchor="middle" fill="#7b61ff" font-size="9" font-family="JetBrains Mono">唯一ID</text>
+</g>
+<g class="step-node" data-step="4" data-title="4. initializeAgentMcpServers()" data-desc="初始化MCP连接：字符串引用(共享父连接) 或 内联定义(新连接)">
+<circle cx="360" cy="280" r="14" fill="#1a1a2e" stroke="#48bb78" stroke-width="3"/>
+<text x="360" y="285" text-anchor="middle" fill="#48bb78" font-size="10" font-weight="600">4</text>
+<text x="360" y="250" text-anchor="middle" fill="#e8e8f0" font-size="10">init MCP</text>
+<text x="360" y="235" text-anchor="middle" fill="#48bb78" font-size="9" font-family="JetBrains Mono">servers</text>
+</g>
+<g class="step-node" data-step="5" data-title="5. 并行获取上下文" data-desc="Promise.all([getUserContext(), getSystemContext()]) 并行获取用户和系统上下文">
+<circle cx="440" cy="280" r="14" fill="#1a1a2e" stroke="#48bb78" stroke-width="3"/>
+<text x="440" y="285" text-anchor="middle" fill="#48bb78" font-size="10" font-weight="600">5</text>
+<text x="440" y="250" text-anchor="middle" fill="#e8e8f0" font-size="10">Promise.all</text>
+<text x="440" y="235" text-anchor="middle" fill="#48bb78" font-size="9" font-family="JetBrains Mono">上下文</text>
+</g>
+<g class="step-node" data-step="6" data-title="6. createSubagentContext()" data-desc="构建隔离ToolUseContext：setAppState=no-op, cloneFileStateCache, 独立对话历史">
+<circle cx="520" cy="280" r="14" fill="#1a1a2e" stroke="#48bb78" stroke-width="3"/>
+<text x="520" y="285" text-anchor="middle" fill="#48bb78" font-size="10" font-weight="600">6</text>
+<text x="520" y="250" text-anchor="middle" fill="#e8e8f0" font-size="10">隔离Context</text>
+<text x="520" y="235" text-anchor="middle" fill="#48bb78" font-size="9" font-family="JetBrains Mono">ToolUseContext</text>
+</g>
+<g class="step-node" data-step="7" data-title="7. AI主循环" data-desc="for await (message of query()) — AI推理主循环，持续处理消息">
+<circle cx="640" cy="280" r="18" fill="#1a1a2e" stroke="#48bb78" stroke-width="4" filter="url(#glow)"/>
+<text x="640" y="286" text-anchor="middle" fill="#48bb78" font-size="12" font-weight="700">AI</text>
+<text x="640" y="250" text-anchor="middle" fill="#e8e8f0" font-size="11" font-weight="600">主循环</text>
+<text x="640" y="235" text-anchor="middle" fill="#48bb78" font-size="9" font-family="JetBrains Mono">query()</text>
+</g>
+<g class="step-node" data-step="8" data-title="8. yield message" data-desc="流式yield消息，实时传回父Agent">
+<circle cx="760" cy="280" r="14" fill="#1a1a2e" stroke="#48bb78" stroke-width="3"/>
+<text x="760" y="285" text-anchor="middle" fill="#48bb78" font-size="10" font-weight="600">8</text>
+<text x="760" y="250" text-anchor="middle" fill="#e8e8f0" font-size="10">yield</text>
+<text x="760" y="235" text-anchor="middle" fill="#48bb78" font-size="9" font-family="JetBrains Mono">message</text>
+</g>
+<g class="step-node" data-step="9" data-title="9. 安全检查" data-desc="strictPluginOnlyCustomization — 仅admin-trusted Agent可用MCP">
+<circle cx="880" cy="280" r="14" fill="#1a1a2e" stroke="#ff9f43" stroke-width="3"/>
+<text x="880" y="285" text-anchor="middle" fill="#ff9f43" font-size="10" font-weight="600">9</text>
+<text x="880" y="315" text-anchor="middle" fill="#e8e8f0" font-size="10">安全检查</text>
+<text x="880" y="330" text-anchor="middle" fill="#ff9f43" font-size="9" font-family="JetBrains Mono">trusted</text>
+</g>
+<g class="step-node" data-step="10" data-title="10. 资源清理" data-desc="cleanup: MCP连接断开、worktree清理、Perfetto trace反注册">
+<circle cx="1000" cy="280" r="14" fill="#1a1a2e" stroke="#ff9f43" stroke-width="3"/>
+<text x="1000" y="285" text-anchor="middle" fill="#ff9f43" font-size="10" font-weight="600">10</text>
+<text x="1000" y="315" text-anchor="middle" fill="#e8e8f0" font-size="10">cleanup</text>
+<text x="1000" y="330" text-anchor="middle" fill="#ff9f43" font-size="9" font-family="JetBrains Mono">销毁</text>
+</g>
+</g>
+<g class="ai-loop-visual" transform="translate(640, 280)">
+<ellipse cx="0" cy="0" rx="55" ry="35" fill="none" stroke="#48bb78" stroke-width="2" stroke-dasharray="8 4" opacity="0.5" class="ai-loop-circle"/>
+<path d="M 40 -10 L 50 -15 L 45 -5 Z" fill="#48bb78" opacity="0.6">
+<animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="3s" repeatCount="indefinite"/>
+</path>
+</g>
+<g class="yield-flow">
+<line x1="760" y1="265" x2="760" y2="200" stroke="#00d4ff" stroke-width="2" stroke-dasharray="5 3" class="yield-arrow" marker-end="url(#arrowhead)"/>
+<text x="760" y="190" text-anchor="middle" fill="#00d4ff" font-size="11" font-weight="500">流式返回</text>
+<text x="760" y="175" text-anchor="middle" fill="#a0a0b8" font-size="9" font-family="JetBrains Mono">parent agent</text>
+</g>
+<g class="auto-background" transform="translate(700, 350)">
+<rect x="-60" y="-25" width="120" height="50" rx="25" fill="rgba(255, 159, 67, 0.1)" stroke="rgba(255, 159, 67, 0.3)" stroke-width="1"/>
+<g class="clock-icon" transform="translate(-40, 0)">
+<circle cx="0" cy="0" r="10" fill="none" stroke="#ff9f43" stroke-width="1.5"/>
+<line x1="0" y1="0" x2="0" y2="-6" stroke="#ff9f43" stroke-width="1.5"/>
+<line x1="0" y1="0" x2="4" y2="3" stroke="#ff9f43" stroke-width="1.5"/>
+</g>
+<text x="5" y="5" text-anchor="middle" fill="#ff9f43" font-size="11" font-weight="600">120s</text>
+<text x="5" y="35" text-anchor="middle" fill="#a0a0b8" font-size="9" font-family="JetBrains Mono">auto-background</text>
+<line x1="0" y1="-25" x2="0" y2="-55" stroke="#ff9f43" stroke-width="1" stroke-dasharray="3 2" opacity="0.5"/>
+</g>
+<g class="model-source" transform="translate(80, 220)">
+<rect x="-50" y="-30" width="100" height="40" rx="8" fill="rgba(123, 97, 255, 0.15)" stroke="#7b61ff" stroke-width="1"/>
+<text x="0" y="-8" text-anchor="middle" fill="#7b61ff" font-size="10" font-weight="600">Model</text>
+<text x="0" y="5" text-anchor="middle" fill="#a0a0b8" font-size="9" font-family="JetBrains Mono">LLM调用</text>
+<line x1="40" y1="-10" x2="70" y2="40" stroke="#7b61ff" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+</g>
+<g class="context-details" transform="translate(520, 360)">
+<rect x="-70" y="0" width="140" height="60" rx="8" fill="rgba(72, 187, 120, 0.08)" stroke="rgba(72, 187, 120, 0.2)" stroke-width="1"/>
+<text x="0" y="18" text-anchor="middle" fill="#48bb78" font-size="9" font-family="JetBrains Mono">setAppState = no-op</text>
+<text x="0" y="35" text-anchor="middle" fill="#e8e8f0" font-size="9">独立文件状态缓存</text>
+<text x="0" y="50" text-anchor="middle" fill="#e8e8f0" font-size="9">独立对话历史</text>
+</g>
+</svg>
+<div class="task-types">
+<span class="task-badge">local_bash</span>
+<span class="task-badge">local_agent</span>
+<span class="task-badge">remote_agent</span>
+<span class="task-badge">in_process_teammate</span>
+<span class="task-badge">local_workflow</span>
+<span class="task-badge">monitor_mcp</span>
+<span class="task-badge">dream</span>
+</div>
+</div>
+<div class="tooltip" id="tooltip">
+<div class="tooltip-title" id="tooltip-title"></div>
+<div class="tooltip-desc" id="tooltip-desc"></div>
+</div>
+</div>
+<script>
+const tooltip = document.getElementById('tooltip');
+const tooltipTitle = document.getElementById('tooltip-title');
+const tooltipDesc = document.getElementById('tooltip-desc');
+const stepNodes = document.querySelectorAll('.step-node');
+stepNodes.forEach(node => {
+node.addEventListener('mouseenter', (e) => {
+const title = node.dataset.title;
+const desc = node.dataset.desc;
+tooltipTitle.textContent = title;
+tooltipDesc.textContent = desc;
+tooltip.classList.add('visible');
+const rect = node.getBoundingClientRect();
+const tooltipRect = tooltip.getBoundingClientRect();
+let left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+let top = rect.bottom + 15;
+if (left < 10) left = 10;
+if (left + tooltipRect.width > window.innerWidth - 10) {
+left = window.innerWidth - tooltipRect.width - 10;
+}
+if (top + tooltipRect.height > window.innerHeight - 10) {
+top = rect.top - tooltipRect.height - 15;
+}
+tooltip.style.left = left + 'px';
+tooltip.style.top = top + 'px';
+});
+node.addEventListener('mouseleave', () => {
+tooltip.classList.remove('visible');
+});
+});
+</script>
+</body>
+</html>

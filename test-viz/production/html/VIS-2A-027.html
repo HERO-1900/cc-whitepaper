@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code 配置系统 - 九层套娃图</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --policy-red: #8B1E3F;
+  --flag-orange: #E85D04;
+  --enterprise-amber: #F4A261;
+  --project-blue: #2A9D8F;
+  --local-cyan: #00B4D8;
+  --user-green: #2D6A4F;
+  --default-gray: #6C757D;
+  --text-primary: #f0f0f5;
+  --text-secondary: #a0a0b0;
+  --text-muted: #606070;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+  background: var(--bg-primary);
+  min-height: 100vh;
+  color: var(--text-primary);
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* 背景纹理 */
+.bg-texture {
+  position: fixed;
+  inset: 0;
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(139, 30, 63, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(42, 157, 143, 0.1) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  position: relative;
+  z-index: 1;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 50px;
+  animation: fadeInDown 0.8s ease-out;
+}
+
+h1 {
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #fff 0%, #a0a0b0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  font-weight: 300;
+}
+
+.main-content {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+}
+
+/* 左侧优先级指示器 */
+.priority-sidebar {
+  flex-shrink: 0;
+  width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 100px;
+}
+
+.priority-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.arrow-line {
+  width: 3px;
+  height: 400px;
+  background: linear-gradient(180deg, 
+    var(--policy-red) 0%, 
+    var(--flag-orange) 15%,
+    var(--enterprise-amber) 30%,
+    var(--project-blue) 50%,
+    var(--local-cyan) 65%,
+    var(--user-green) 80%,
+    var(--default-gray) 100%
+  );
+  border-radius: 2px;
+  position: relative;
+}
+
+.arrow-head {
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 20px solid var(--default-gray);
+  margin-top: -5px;
+}
+
+.priority-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 15px;
+}
+
+/* 套娃容器 */
+.matryoshka-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 600px;
+  position: relative;
+}
+
+/* 嵌套层通用样式 */
+.layer {
+  position: relative;
+  border-radius: 16px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.layer:hover {
+  transform: scale(1.02);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+
+.layer-content {
+  position: relative;
+  height: 100%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.layer-label {
+  position: absolute;
+  top: 15px;
+  left: 20px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(255,255,255,0.6);
+  font-weight: 500;
+}
+
+.layer-number {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: rgba(0,0,0,0.3);
+  color: #fff;
+}
+
+.layer-title-cn {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 35px;
+  margin-bottom: 4px;
+}
+
+.layer-title-en {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  font-weight: 400;
+  margin-bottom: auto;
+}
+
+.layer-path {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 0.65rem;
+  opacity: 0.6;
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 6px;
+  word-break: break-all;
+}
+
+.layer-desc {
+  font-size: 0.7rem;
+  opacity: 0.5;
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* 各层特定样式 - 从外到内 */
+.policy-layer {
+  width: 720px;
+  height: 580px;
+  background: linear-gradient(145deg, rgba(139, 30, 63, 0.15) 0%, rgba(139, 30, 63, 0.05) 100%);
+  border: 4px solid var(--policy-red);
+  animation: expandFromCenter 1s ease-out 0.1s both;
+}
+
+.policy-sub-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+  height: calc(100% - 140px);
+}
+
+.policy-sub {
+  flex: 1;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 2px dashed;
+  transition: all 0.3s ease;
+}
+
+.policy-sub:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.policy-sub-flag {
+  border-color: var(--flag-orange);
+  background: rgba(232, 93, 4, 0.08);
+}
+
+.policy-sub-managed {
+  border-color: #D4A373;
+  background: rgba(212, 163, 115, 0.08);
+}
+
+.policy-sub-enterprise {
+  border-color: var(--enterprise-amber);
+  background: rgba(244, 162, 97, 0.08);
+}
+
+.policy-sub-project {
+  border-color: #E9C46A;
+  background: rgba(233, 196, 106, 0.08);
+}
+
+.sub-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.sub-name-cn {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.sub-name-en {
+  font-size: 0.65rem;
+  opacity: 0.6;
+}
+
+.sub-priority {
+  font-size: 0.7rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(0,0,0,0.3);
+}
+
+.project-layer {
+  width: 640px;
+  height: 460px;
+  background: linear-gradient(145deg, rgba(42, 157, 143, 0.15) 0%, rgba(42, 157, 143, 0.05) 100%);
+  border: 3px solid var(--project-blue);
+  margin: 40px;
+  animation: expandFromCenter 1s ease-out 0.2s both;
+}
+
+.local-layer {
+  width: 560px;
+  height: 340px;
+  background: linear-gradient(145deg, rgba(0, 180, 216, 0.15) 0%, rgba(0, 180, 216, 0.05) 100%);
+  border: 2.5px solid var(--local-cyan);
+  margin: 40px;
+  animation: expandFromCenter 1s ease-out 0.3s both;
+}
+
+.user-layer {
+  width: 480px;
+  height: 220px;
+  background: linear-gradient(145deg, rgba(45, 106, 79, 0.15) 0%, rgba(45, 106, 79, 0.05) 100%);
+  border: 2px solid var(--user-green);
+  margin: 40px;
+  animation: expandFromCenter 1s ease-out 0.4s both;
+}
+
+.default-layer {
+  width: 400px;
+  height: 100px;
+  background: linear-gradient(145deg, rgba(108, 117, 125, 0.15) 0%, rgba(108, 117, 125, 0.05) 100%);
+  border: 1.5px solid var(--default-gray);
+  margin: 40px;
+  animation: expandFromCenter 1s ease-out 0.5s both;
+}
+
+/* 类比标签 */
+.analogy-tags {
+  position: absolute;
+  right: -140px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 80px;
+}
+
+.analogy-tag {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+  border-left: 2px solid;
+  white-space: nowrap;
+}
+
+.analogy-tag.policy { border-color: var(--policy-red); }
+.analogy-tag.project { border-color: var(--project-blue); }
+.analogy-tag.local { border-color: var(--local-cyan); }
+.analogy-tag.user { border-color: var(--user-green); }
+.analogy-tag.default { border-color: var(--default-gray); }
+
+/* 底部图例 */
+.legend {
+  margin-top: 50px;
+  padding: 25px 30px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.05);
+  animation: fadeInUp 0.8s ease-out 0.8s both;
+}
+
+.legend-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: var(--text-primary);
+}
+
+.legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* 覆盖规则提示 */
+.rule-hint {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  max-width: 320px;
+  padding: 20px;
+  background: linear-gradient(145deg, rgba(139, 30, 63, 0.9) 0%, rgba(139, 30, 63, 0.7) 100%);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+  animation: slideInRight 0.6s ease-out 1s both;
+}
+
+.rule-hint h4 {
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.rule-hint p {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  line-height: 1.6;
+}
+
+/* 动画 */
+@keyframes expandFromCenter {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(50px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* 响应式 */
+@media (max-width: 1100px) {
+  .main-content {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .priority-sidebar {
+    width: 100%;
+    flex-direction: row;
+    justify-content: center;
+    padding-top: 0;
+    padding-bottom: 20px;
+  }
+  
+  .priority-arrow {
+    flex-direction: row;
+    align-items: center;
+  }
+  
+  .arrow-line {
+    width: 400px;
+    height: 3px;
+    background: linear-gradient(90deg, 
+      var(--policy-red) 0%, 
+      var(--flag-orange) 15%,
+      var(--enterprise-amber) 30%,
+      var(--project-blue) 50%,
+      var(--local-cyan) 65%,
+      var(--user-green) 80%,
+      var(--default-gray) 100%
+    );
+  }
+  
+  .arrow-head {
+    border-left: 20px solid var(--default-gray);
+    border-right: none;
+    border-top: 12px solid transparent;
+    border-bottom: 12px solid transparent;
+    margin-top: 0;
+    margin-left: -5px;
+  }
+  
+  .priority-label {
+    writing-mode: horizontal-tb;
+    margin-bottom: 0;
+    margin-right: 15px;
+  }
+  
+  .analogy-tags {
+    display: none;
+  }
+  
+  .policy-layer { width: 90vw; max-width: 600px; height: auto; min-height: 500px; }
+  .project-layer { width: calc(90vw - 80px); max-width: 520px; height: auto; min-height: 400px; }
+  .local-layer { width: calc(90vw - 160px); max-width: 440px; height: auto; min-height: 300px; }
+  .user-layer { width: calc(90vw - 240px); max-width: 360px; height: auto; min-height: 200px; }
+  .default-layer { width: calc(90vw - 320px); max-width: 280px; height: auto; min-height: 100px; }
+}
+
+@media (max-width: 600px) {
+  .layer-content { padding: 15px; }
+  .layer-title-cn { font-size: 0.95rem; }
+  .layer-title-en { font-size: 0.65rem; }
+  .policy-sub { padding: 10px 12px; }
+  .sub-name-cn { font-size: 0.8rem; }
+  .layer-path { font-size: 0.55rem; }
+  .rule-hint { left: 20px; right: 20px; max-width: none; bottom: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="bg-texture"></div>
+
+<div class="container">
+  <header>
+    <h1>Claude Code 配置系统 · 九层套娃图</h1>
+    <p class="subtitle">Configuration Sources Priority Hierarchy — Russian Doll Architecture</p>
+  </header>
+
+  <div class="main-content">
+    <aside class="priority-sidebar">
+      <div class="priority-arrow">
+        <span class="priority-label">优先级 Priority</span>
+        <div class="arrow-line"></div>
+        <div class="arrow-head"></div>
+      </div>
+    </aside>
+
+    <div class="matryoshka-container">
+      <!-- Policy Settings (最外层) -->
+      <div class="layer policy-layer" data-priority="1">
+        <div class="layer-content">
+          <span class="layer-label">最高权威 · Supreme Authority</span>
+          <span class="layer-number">1</span>
+          <h3 class="layer-title-cn">企业策略设置</h3>
+          <p class="layer-title-en">Policy Settings</p>
+          <p class="layer-desc">公司说不行就是不行</p>
+          <p class="layer-path">/etc/claude/settings.d/*</p>
+          
+          <div class="policy-sub-layers">
+            <div class="policy-sub policy-sub-flag">
+              <div class="sub-info">
+                <span class="sub-name-cn">Flag 策略</span>
+                <span class="sub-name-en">Policy Settings (flag)</span>
+              </div>
+              <span class="sub-priority">1A · 最高</span>
+            </div>
+            <div class="policy-sub policy-sub-managed">
+              <div class="sub-info">
+                <span class="sub-name-cn">托管策略</span>
+                <span class="sub-name-en">Policy Settings (managed)</span>
+              </div>
+              <span class="sub-priority">1B</span>
+            </div>
+            <div class="policy-sub policy-sub-enterprise">
+              <div class="sub-info">
+                <span class="sub-name-cn">企业配置</span>
+                <span class="sub-name-en">Policy Settings (enterprise)</span>
+              </div>
+              <span class="sub-priority">1C</span>
+            </div>
+            <div class="policy-sub policy-sub-project">
+              <div class="sub-info">
+                <span class="sub-name-cn">企业项目策略</span>
+                <span class="sub-name-en">Policy Settings (project)</span>
+              </div>
+              <span class="sub-priority">1D</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 类比标签 -->
+        <div class="analogy-tags">
+          <div class="analogy-tag policy">防弹衣 · Bulletproof Vest</div>
+        </div>
+      </div>
+
+      <!-- Project Settings -->
+      <div class="layer project-layer" data-priority="2">
+        <div class="layer-content">
+          <span class="layer-label">项目级 · Project Level</span>
+          <span class="layer-number">2</span>
+          <h3 class="layer-title-cn">项目设置</h3>
+          <p class="layer-title-en">Project Settings</p>
+          <p class="layer-desc">团队共享的配置</p>
+          <p class="layer-path">.claude/settings.json</p>
+          
+          <div class="analogy-tags">
+            <div class="analogy-tag project">外套 · Overcoat</div>
+          </div>
+        </div>
+        
+        <!-- Local Project Settings -->
+        <div class="layer local-layer" data-priority="3">
+          <div class="layer-content">
+            <span class="layer-label">本地级 · Local Only</span>
+            <span class="layer-number">3</span>
+            <h3 class="layer-title-cn">本地项目设置</h3>
+            <p class="layer-title-en">Local Project Settings</p>
+            <p class="layer-desc">不提交 git，仅本地生效</p>
+            <p class="layer-path">.claude/settings.local.json</p>
+            
+            <div class="analogy-tags">
+              <div class="analogy-tag local">衬衫 · Shirt</div>
+            </div>
+          </div>
+          
+          <!-- User Settings -->
+          <div class="layer user-layer" data-priority="4">
+            <div class="layer-content">
+              <span class="layer-label">用户级 · User Level</span>
+              <span class="layer-number">4</span>
+              <h3 class="layer-title-cn">用户全局设置</h3>
+              <p class="layer-title-en">User Settings</p>
+              <p class="layer-desc">个人偏好，跨项目生效</p>
+              <p class="layer-path">~/.claude/settings.json</p>
+              
+              <div class="analogy-tags">
+                <div class="analogy-tag user">内衣 · Underwear</div>
+              </div>
+            </div>
+            
+            <!-- Default Settings (最内层) -->
+            <div class="layer default-layer" data-priority="5">
+              <div class="layer-content">
+                <span class="layer-label">系统默认 · System Default</span>
+                <span class="layer-number">5</span>
+                <h3 class="layer-title-cn">默认设置</h3>
+                <p class="layer-title-en">Default Settings</p>
+                <p class="layer-path">built-in defaults</p>
+                
+                <div class="analogy-tags">
+                  <div class="analogy-tag default">皮肤 · Skin</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 图例 -->
+  <div class="legend">
+    <h4 class="legend-title">优先级序列 Priority Sequence (1-9)</h4>
+    <div class="legend-grid">
+      <div class="legend-item">
+        <span class="legend-color" style="background: var(--flag-orange);"></span>
+        <span>1. Policy (flag) — 命令行标志策略</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: #D4A373;"></span>
+        <span>2. Policy (managed) — 托管策略配置</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: var(--enterprise-amber);"></span>
+        <span>3. Policy (enterprise) — 企业级配置</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: #E9C46A;"></span>
+        <span>4. Policy (project) — 企业项目策略</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: var(--project-blue);"></span>
+        <span>5. Project Settings — 项目级设置</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: var(--local-cyan);"></span>
+        <span>6. Local Project — 本地项目设置</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: var(--user-green);"></span>
+        <span>7. User Settings — 用户全局设置</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-color" style="background: var(--default-gray);"></span>
+        <span>8. Default Settings — 系统默认值</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 覆盖规则提示 -->
+<div class="rule-hint">
+  <h4>覆盖规则 Override Rule</h4>
+  <p>外层永远不可被内层覆盖。当配置冲突时，高优先级来源胜出。Policy 内部四个子层采用 first-source-wins 合并策略。</p>
+</div>
+
+<script>
+// 交互：点击层显示详情
+document.querySelectorAll('.layer').forEach(layer => {
+  layer.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const priority = this.dataset.priority;
+    
+    // 移除其他高亮
+    document.querySelectorAll('.layer').forEach(l => {
+      l.style.opacity = l === this ? '1' : '0.4';
+    });
+    
+    // 2秒后恢复
+    setTimeout(() => {
+      document.querySelectorAll('.layer').forEach(l => {
+        l.style.opacity = '1';
+      });
+    }, 2000);
+  });
+});
+
+// Policy 子层展开交互
+document.querySelectorAll('.policy-sub').forEach((sub, index) => {
+  sub.addEventListener('mouseenter', function() {
+    this.style.background = 'rgba(255,255,255,0.12)';
+  });
+  sub.addEventListener('mouseleave', function() {
+    this.style.background = '';
+  });
+});
+</script>
+
+</body>
+</html>

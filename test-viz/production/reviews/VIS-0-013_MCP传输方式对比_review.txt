@@ -1,0 +1,39 @@
+总分: 15/20
+
+**布局: 4/5** — 整体网格结构规整，雷达图与表格间距一致，但雷达容器 `align-items: start` 与右侧图例高度不匹配可能造成错位
+
+**信息: 3/5** — 核心对比信息层次清晰，交互功能（高亮、切换、排序）完善，但复杂度维度数值逻辑反直觉（数值越高反而越复杂，普通用户会误判）
+
+**美学: 4/5** — 暗色主题配合噪点与渐变网格背景营造高级感，色彩体系一致（每个传输方式独立色），JetBrains Mono 用于数据值恰到好处；图标混用（emoji + 纯色图标）稍显风格不统一
+
+**完整: 4/5** — 语法正确，SVG 命名空间使用规范，字体预加载完整；Google Fonts CDN 路径在部分网络环境可能不可用
+
+---
+
+**缺陷:**
+
+1. **复杂度维度数值逻辑错误** — `transports` 中 `complexity` 值（如 stdio=95, gRPC=40）表示"越高分越复杂"，但雷达图视觉上高分通常被理解为"越好"，导致 stdio（最简单）在图表中反而显示为最差。应在数据结构中反转，或改用 "简洁" 作为维度名让高分正向
+
+2. **雷达图数据点坐标计算偏移** — `getCoordinates` 函数角度计算从 `-Math.PI/2` 开始偏移，导致"延迟"维度起始位置不在顶部12点钟方向，而是偏右约30度，轴标签也随之旋转，不符合阅读直觉
+
+3. **图例与雷达图切换状态不同步** — `toggleTransport` 函数只隐藏/显示多边形和圆点，但未同步修改 `.radar-polygon` 的 `display` 属性，导致重新显示时多边形可能丢失
+
+4. **表格列排序逻辑不完整** — `complexity` 和 `reliability` 列未在 `columnIndex` 映射中定义（仅定义了 name/latency/throughput/security），点击这两列标题会得到 `undefined`，排序失效
+
+5. **响应式断点冲突** — `1024px` 断点将雷达容器改为单列，但 `.radar-chart-wrapper` 的 `max-width: 600px` 在移动端可能撑满屏幕导致右侧标签被截断；表格 `min-width: 900px` 与移动端 padding 组合会产生难看的水平滚动条
+
+6. **Emoji 与视觉风格不统一** — 表头使用 ⚡📊🔒🔧🛡️ emoji，而场景标签使用 local/remote 等 CSS 彩色标签，两者风格割裂
+
+7. **推荐标记冗余** — stdio 和 SSE 均被标记为 `recommended: true`，但金色边框仅在第一行（tbody tr.recommended）显示，多个推荐时视觉引导模糊
+
+---
+
+**修改建议:**
+
+1. 将复杂度数据取反（`100 - 原值`），使高分代表"更简洁"，或改维度名为"复杂度（反向）"并调整说明
+2. 修正 `getCoordinates` 的角度偏移，将起始角度改为 `-Math.PI / 2 - Math.PI / dimensions.length` 使第一维位于正上方
+3. `toggleTransport` 中增加：`polygon.setAttribute('style', isHidden ? 'display:none' : '')`
+4. 在 `columnIndex` 映射中添加 `'complexity': 4, 'reliability': 5`
+5. 表格添加 `@media (max-width: 640px) { table { font-size: 0.75rem; } }` 收缩字号提升移动端容纳度
+6. 将 emoji 替换为 SVG 图标或纯文本符号（⚡→ 延迟，📊→ 吞吐），与场景标签风格对齐
+7. 若多推荐，将金色左边框扩展为所有 recommended 行；或仅保留一个推荐项（stdio）

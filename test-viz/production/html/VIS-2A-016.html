@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>七种任务类型隔离级别谱系图</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0a0a0f;
+            --bg-secondary: #12121a;
+            --spectrum-start: #60a5fa;
+            --spectrum-mid1: #a78bfa;
+            --spectrum-mid2: #c084fc;
+            --spectrum-end: #dc2626;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-tertiary: #64748b;
+            --accent-glow: rgba(96, 165, 250, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: auto;
+            background-image: 
+                radial-gradient(ellipse at 20% 30%, rgba(96, 165, 250, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(220, 38, 38, 0.06) 0%, transparent 50%);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--spectrum-start) 0%, var(--spectrum-end) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+            letter-spacing: 0.1em;
+        }
+
+        .spectrum-container {
+            position: relative;
+            margin: 80px 0 100px;
+            padding: 0 60px;
+        }
+
+        .direction-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            font-size: 0.85rem;
+            color: var(--text-tertiary);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+
+        .direction-label span:first-child {
+            color: var(--spectrum-start);
+        }
+
+        .direction-label span:last-child {
+            color: var(--spectrum-end);
+        }
+
+        .spectrum-wrapper {
+            position: relative;
+            height: 180px;
+        }
+
+        .spectrum-bar {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 12px;
+            transform: translateY(-50%);
+            border-radius: 6px;
+            background: linear-gradient(90deg, 
+                var(--spectrum-start) 0%, 
+                var(--spectrum-mid1) 35%,
+                var(--spectrum-mid2) 65%,
+                var(--spectrum-end) 100%
+            );
+            box-shadow: 
+                0 0 40px rgba(96, 165, 250, 0.2),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .spectrum-bar::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 8px;
+            background: linear-gradient(90deg, 
+                rgba(96, 165, 250, 0.3) 0%, 
+                rgba(192, 132, 252, 0.2) 50%,
+                rgba(220, 38, 38, 0.3) 100%
+            );
+            z-index: -1;
+            filter: blur(8px);
+        }
+
+        .node {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+        }
+
+        .node:hover {
+            transform: translate(-50%, -50%) scale(1.15);
+            z-index: 20;
+        }
+
+        .node-circle {
+            border-radius: 50%;
+            background: var(--bg-secondary);
+            border: 3px solid;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        .node.major .node-circle {
+            width: 72px;
+            height: 72px;
+            font-size: 1.5rem;
+        }
+
+        .node.minor .node-circle {
+            width: 48px;
+            height: 48px;
+            font-size: 1rem;
+        }
+
+        .node:nth-child(1) { left: 5%; }
+        .node:nth-child(2) { left: 28%; }
+        .node:nth-child(3) { left: 45%; }
+        .node:nth-child(4) { left: 55%; }
+        .node:nth-child(5) { left: 65%; }
+        .node:nth-child(6) { left: 78%; }
+        .node:nth-child(7) { left: 95%; }
+
+        .node:nth-child(1) .node-circle { border-color: var(--spectrum-start); color: var(--spectrum-start); }
+        .node:nth-child(2) .node-circle { border-color: #7dd3fc; color: #7dd3fc; }
+        .node:nth-child(3) .node-circle { border-color: #a78bfa; color: #a78bfa; }
+        .node:nth-child(4) .node-circle { border-color: #c084fc; color: #c084fc; }
+        .node:nth-child(5) .node-circle { border-color: #e879f9; color: #e879f9; }
+        .node:nth-child(6) .node-circle { border-color: #f472b6; color: #f472b6; }
+        .node:nth-child(7) .node-circle { border-color: var(--spectrum-end); color: var(--spectrum-end); }
+
+        .node:hover .node-circle {
+            box-shadow: 0 0 30px currentColor;
+            background: var(--bg-deep);
+        }
+
+        .node-label {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            transition: all 0.3s ease;
+        }
+
+        .node.major .node-label {
+            top: -50px;
+            font-size: 0.85rem;
+        }
+
+        .node.minor .node-label {
+            top: -38px;
+            font-size: 0.7rem;
+        }
+
+        .node-analogy {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+            font-style: italic;
+            transition: all 0.3s ease;
+        }
+
+        .node.major .node-analogy {
+            bottom: -45px;
+        }
+
+        .node.minor .node-analogy {
+            bottom: -32px;
+            font-size: 0.65rem;
+        }
+
+        .node:hover .node-analogy {
+            color: var(--text-primary);
+        }
+
+        .tooltip {
+            position: fixed;
+            background: rgba(18, 18, 26, 0.95);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            width: 320px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .tooltip.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .tooltip-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .tooltip-dimensions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .tooltip-dimension {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .tooltip-dimension .indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .tooltip-dimension.shared .indicator {
+            background: var(--spectrum-start);
+            box-shadow: 0 0 8px var(--spectrum-start);
+        }
+
+        .tooltip-dimension.isolated .indicator {
+            background: var(--spectrum-end);
+            box-shadow: 0 0 8px var(--spectrum-end);
+        }
+
+        .tooltip-comm {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+
+        .matrix-section {
+            margin-top: 60px;
+        }
+
+        .matrix-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.6rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 40px;
+            color: var(--text-secondary);
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.85rem;
+            border-radius: 16px;
+            overflow: hidden;
+            background: var(--bg-secondary);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .matrix-table th,
+        .matrix-table td {
+            padding: 16px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .matrix-table th {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.02);
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .matrix-table th:first-child {
+            text-align: left;
+            padding-left: 30px;
+        }
+
+        .matrix-table td:first-child {
+            text-align: left;
+            padding-left: 30px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+        }
+
+        .matrix-table tr:hover td {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .matrix-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-shared {
+            background: rgba(96, 165, 250, 0.15);
+            color: #60a5fa;
+        }
+
+        .badge-isolated {
+            background: rgba(220, 38, 38, 0.15);
+            color: #f87171;
+        }
+
+        .badge-partial {
+            background: rgba(167, 139, 250, 0.15);
+            color: #a78bfa;
+        }
+
+        .comm-cost-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 40px;
+            padding: 24px 30px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            font-size: 0.85rem;
+        }
+
+        .comm-cost-bar span {
+            color: var(--text-tertiary);
+            white-space: nowrap;
+        }
+
+        .cost-gradient {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, 
+                var(--spectrum-start) 0%, 
+                var(--spectrum-mid1) 50%,
+                var(--spectrum-end) 100%
+            );
+            position: relative;
+        }
+
+        .cost-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        @media (max-width: 1024px) {
+            .spectrum-container {
+                padding: 0 20px;
+            }
+            
+            .matrix-table {
+                font-size: 0.75rem;
+            }
+            
+            .matrix-table th,
+            .matrix-table td {
+                padding: 12px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Task Isolation Spectrum</h1>
+            <p class="subtitle">七种任务类型隔离级别谱系图 / Seven Task Types Isolation Levels</p>
+        </header>
+
+        <div class="spectrum-container">
+            <div class="direction-label">
+                <span>← 轻隔离 / Light Isolation</span>
+                <span>重隔离 / Heavy Isolation →</span>
+            </div>
+            
+            <div class="spectrum-wrapper">
+                <div class="spectrum-bar"></div>
+                
+                <div class="node major" data-type="in_process_teammate">
+                    <div class="node-label">in_process_teammate</div>
+                    <div class="node-circle">◆</div>
+                    <div class="node-analogy">同一间办公室 / Same Office</div>
+                </div>
+                
+                <div class="node minor" data-type="local_bash">
+                    <div class="node-label">local_bash</div>
+                    <div class="node-circle">◈</div>
+                    <div class="node-analogy">独立工位 / Private Desk</div>
+                </div>
+                
+                <div class="node major" data-type="local_agent">
+                    <div class="node-label">local_agent</div>
+                    <div class="node-circle">◆</div>
+                    <div class="node-analogy">同一栋楼不同部门 / Different Dept</div>
+                </div>
+                
+                <div class="node minor" data-type="local_workflow">
+                    <div class="node-label">local_workflow</div>
+                    <div class="node-circle">◈</div>
+                    <div class="node-analogy">流程外包 / Workflow Outsource</div>
+                </div>
+                
+                <div class="node minor" data-type="monitor_mcp">
+                    <div class="node-label">monitor_mcp</div>
+                    <div class="node-circle">◈</div>
+                    <div class="node-analogy">监控室 / Monitor Room</div>
+                </div>
+                
+                <div class="node minor" data-type="dream">
+                    <div class="node-label">dream</div>
+                    <div class="node-circle">◈</div>
+                    <div class="node-analogy">远程办公 / Remote Work</div>
+                </div>
+                
+                <div class="node major" data-type="remote_agent">
+                    <div class="node-label">remote_agent</div>
+                    <div class="node-circle">◆</div>
+                    <div class="node-analogy">外包公司 / Outsourced Company</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="matrix-section">
+            <h2 class="matrix-title">隔离维度对比矩阵 / Isolation Dimensions Matrix</h2>
+            <table class="matrix-table">
+                <thead>
+                    <tr>
+                        <th>任务类型 / Task Type</th>
+                        <th>进程内存<br>Process Memory</th>
+                        <th>消息历史<br>Message History</th>
+                        <th>权限上下文<br>Permission Context</th>
+                        <th>MCP连接<br>MCP Connection</th>
+                        <th>文件系统<br>Filesystem</th>
+                        <th>通信方式<br>Communication</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr data-type="in_process_teammate">
+                        <td>in_process_teammate</td>
+                        <td><span class="badge badge-shared">共享 Shared</span></td>
+                        <td><span class="badge badge-isolated">独立 Isolated</span></td>
+                        <td><span class="badge badge-shared">共享 Shared</span></td>
+                        <td><span class="badge badge-shared">共享 Shared</span></td>
+                        <td><span class="badge badge-shared">共享 Shared</span></td>
+                        <td><span class="badge badge-shared">函数调用 Function</span></td>
+                    </tr>
+                    <tr data-type="local_bash">
+                        <td>local_bash</td>
+                        <td><span class="badge badge-isolated">子进程 Subprocess</span></td>
+                        <td><span class="badge badge-isolated">独立 Isolated</span></td>
+                        <td><span class="badge badge-partial">受限 Limited</span></td>
+                        <td><span class="badge badge-shared">共享 Shared</span></td>
+                        <td><span class="badge badge-shared">本机 Local</span></td>
+                        <td><span class="badge badge-partial">Stdio/Signal</span></td>
+                    </tr>
+                    <tr data-type="local_agent">
+                        <td>local_agent</td>
+                        <td><span class="badge badge-shared">共享 Shared</span></td>
+                        <td><span class="badge badge-isolated">独立 Isolated</span></td>
+                        <td><span class="badge badge-isolated">独立 Isolated</span></td>
+                        <td><span class="badge badge-partial">可选 Optional</span></td>
+                        <td><span class="badge badge-partial">可选Worktree</span></td>
+                        <td><span class="badge badge-partial">Task Notification</span></td>
+                    </tr>
+                    <tr data-type="local_workflow">
+                        <td>local_workflow</td>
+                        <td><span class="badge badge-partial">工作流隔离</span></td>
+                        <td><span class="badge badge-isolated">独立 Isolated</span></td>
+                        <td><span class="badge badge-partial">继承 Inherited</span></td>
+                        <td><span class="badge badge-shared">共享 Shared</span></td>
+                        <td><span class="badge badge-shared">共享 Shared</span></td>
+                        <td><span class="badge badge-partial">Internal Events</span></td>
+                    </tr>
+                    <tr data-type="monitor_mcp">
+                        <td>monitor_mcp</td>
+                        <td><span class="badge badge-partial">监控沙箱</span></td>
+                        <td><span class="badge badge-isolated">独立 Isolated</span></td>
+                        <td><span class="badge badge-partial">只读 Read-only</span></td>
+                        <td><span class="badge badge-isolated">监控模式</span></td>
+                        <td><span class="badge badge-partial">观测 Observable</span></td>
+                        <td><span class="badge badge-partial">MCP Protocol</span></td>
+                    </tr>
+                    <tr data-type="dream">
+                        <td>dream</td>
+                        <td><span class="badge badge-partial">未确认 Unknown</span></td>
+                        <td><span class="badge badge-isolated">独立 Isolated</span></td>
+                        <td><span class="badge badge-partial">梦境上下文</span></td>
+                        <td><span class="badge badge-partial">梦境连接</span></td>
+                        <td><span class="badge badge-partial">虚拟 Virtual</span></td>
+                        <td><span class="badge badge-partial">Scratchpad</span></td>
+                    </tr>
+                    <tr data-type="remote_agent">
+                        <td>remote_agent</td>
+                        <td><span class="badge badge-isolated">独立进程 Independent</span></td>
+                        <td><span class="badge badge-isolated">独立 Isolated</span></td>
+                        <td><span class="badge badge-isolated">独立 Isolated</span></td>
+                        <td><span class="badge badge-isolated">独立 Independent</span></td>
+                        <td><span class="badge badge-isolated">独立机器 Remote</span></td>
+                        <td><span class="badge badge-isolated">Bridge Protocol</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="comm-cost-bar">
+            <span>通信成本 / Communication Cost:</span>
+            <div style="flex: 1;">
+                <div class="cost-gradient"></div>
+                <div class="cost-labels">
+                    <span>函数调用<br>Function Call</span>
+                    <span>Task Notification</span>
+                    <span>Scratchpad</span>
+                    <span>Bridge协议<br>Bridge Protocol</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-title"></div>
+        <div class="tooltip-dimensions"></div>
+        <div class="tooltip-comm"></div>
+    </div>
+
+    <script>
+        const taskData = {
+            in_process_teammate: {
+                title: 'in_process_teammate',
+                dimensions: {
+                    '进程内存': 'shared',
+                    '消息历史': 'isolated',
+                    '权限上下文': 'shared',
+                    'MCP连接': 'shared',
+                    '文件系统': 'shared'
+                },
+                comm: '函数调用 (最低成本) / Function Call (Lowest Cost)'
+            },
+            local_bash: {
+                title: 'local_bash',
+                dimensions: {
+                    '进程内存': 'isolated',
+                    '消息历史': 'isolated',
+                    '权限上下文': 'partial',
+                    'MCP连接': 'shared',
+                    '文件系统': 'shared'
+                },
+                comm: 'Stdio / Signal 通信'
+            },
+            local_agent: {
+                title: 'local_agent',
+                dimensions: {
+                    '进程内存': 'shared',
+                    '消息历史': 'isolated',
+                    '权限上下文': 'isolated',
+                    'MCP连接': 'partial',
+                    '文件系统': 'partial'
+                },
+                comm: 'Task Notification (中等成本) / Medium Cost'
+            },
+            local_workflow: {
+                title: 'local_workflow',
+                dimensions: {
+                    '进程内存': 'partial',
+                    '消息历史': 'isolated',
+                    '权限上下文': 'partial',
+                    'MCP连接': 'shared',
+                    '文件系统': 'shared'
+                },
+                comm: 'Internal Events / 工作流事件'
+            },
+            monitor_mcp: {
+                title: 'monitor_mcp',
+                dimensions: {
+                    '进程内存': 'partial',
+                    '消息历史': 'isolated',
+                    '权限上下文': 'partial',
+                    'MCP连接': 'isolated',
+                    '文件系统': 'partial'
+                },
+                comm: 'MCP Protocol / 监控协议'
+            },
+            dream: {
+                title: 'dream',
+                dimensions: {
+                    '进程内存': 'partial',
+                    '消息历史': 'isolated',
+                    '权限上下文': 'partial',
+                    'MCP连接': 'partial',
+                    '文件系统': 'partial'
+                },
+                comm: 'Scratchpad (中低成本) / Medium-Low Cost'
+            },
+            remote_agent: {
+                title: 'remote_agent',
+                dimensions: {
+                    '进程内存': 'isolated',
+                    '消息历史': 'isolated',
+                    '权限上下文': 'isolated',
+                    'MCP连接': 'isolated',
+                    '文件系统': 'isolated'
+                },
+                comm: 'Bridge Protocol (最高成本) / Highest Cost'
+            }
+        };
+
+        const tooltip = document.getElementById('tooltip');
+        const nodes = document.querySelectorAll('.node');
+        const rows = document.querySelectorAll('.matrix-table tbody tr');
+
+        nodes.forEach(node => {
+            node.addEventListener('mouseenter', (e) => {
+                const type = node.dataset.type;
+                const data = taskData[type];
+                
+                tooltip.querySelector('.tooltip-title').textContent = data.title;
+                tooltip.querySelector('.tooltip-comm').textContent = '通信: ' + data.comm;
+                
+                const dimsContainer = tooltip.querySelector('.tooltip-dimensions');
+                dimsContainer.innerHTML = '';
+                
+                Object.entries(data.dimensions).forEach(([key, value]) => {
+                    const div = document.createElement('div');
+                    div.className = `tooltip-dimension ${value}`;
+                    div.innerHTML = `<span class="indicator"></span><span>${key}</span>`;
+                    dimsContainer.appendChild(div);
+                });
+                
+                tooltip.classList.add('active');
+                
+                rows.forEach(row => {
+                    if (row.dataset.type === type) {
+                        row.style.background = 'rgba(96, 165, 250, 0.1)';
+                    } else {
+                        row.style.background = '';
+                    }
+                });
+            });
+            
+            node.addEventListener('mousemove', (e) => {
+                const rect = tooltip.getBoundingClientRect();
+                let left = e.clientX + 20;
+                let top = e.clientY - rect.height / 2;
+                
+                if (left + rect.width > window.innerWidth) {
+                    left = e.clientX - rect.width - 20;
+                }
+                if (top < 20) top = 20;
+                if (top + rect.height > window.innerHeight - 20) {
+                    top = window.innerHeight - rect.height - 20;
+                }
+                
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = top + 'px';
+            });
+            
+            node.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('active');
+                rows.forEach(row => row.style.background = '');
+            });
+        });
+
+        rows.forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                const type = row.dataset.type;
+                const node = document.querySelector(`.node[data-type="${type}"]`);
+                if (node) {
+                    node.style.transform = 'translate(-50%, -50%) scale(1.15)';
+                    node.querySelector('.node-circle').style.boxShadow = '0 0 30px currentColor';
+                }
+            });
+            
+            row.addEventListener('mouseleave', () => {
+                const type = row.dataset.type;
+                const node = document.querySelector(`.node[data-type="${type}"]`);
+                if (node) {
+                    node.style.transform = '';
+                    node.querySelector('.node-circle').style.boxShadow = '';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

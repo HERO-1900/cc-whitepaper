@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tool Use 循环机制 | Claude Code</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+:root {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --accent-blue: #00d4ff;
+  --accent-red: #ff6b6b;
+  --accent-purple: #7b61ff;
+  --accent-cyan: #4ecdc4;
+  --accent-orange: #ff9f43;
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0b0;
+  --glow-blue: rgba(0, 212, 255, 0.5);
+  --glow-purple: rgba(123, 97, 255, 0.5);
+  --glow-red: rgba(255, 107, 107, 0.5);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  font-family: 'Noto Sans SC', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  overflow-x: hidden;
+}
+
+/* 背景网格 */
+.bg-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bg-grid::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(ellipse at center, transparent 0%, var(--bg-primary) 100%);
+}
+
+/* 标题区域 */
+header {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+h1 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+/* 主容器 */
+.container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 图表容器 */
+.diagram-wrapper {
+  width: 100%;
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  padding: 30px;
+  border: 1px solid rgba(0, 212, 255, 0.1);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* 节点样式 */
+.node-rect {
+  fill: var(--bg-primary);
+  stroke: var(--accent-blue);
+  stroke-width: 2;
+  rx: 12;
+  filter: drop-shadow(0 4px 12px var(--glow-blue));
+  transition: all 0.3s ease;
+}
+
+.node-rect:hover {
+  fill: rgba(0, 212, 255, 0.1);
+  filter: drop-shadow(0 6px 20px var(--glow-blue));
+}
+
+.node-rect.purple {
+  stroke: var(--accent-purple);
+  filter: drop-shadow(0 4px 12px var(--glow-purple));
+}
+
+.node-rect.purple:hover {
+  fill: rgba(123, 97, 255, 0.1);
+  filter: drop-shadow(0 6px 20px var(--glow-purple));
+}
+
+.node-rect.cyan {
+  stroke: var(--accent-cyan);
+}
+
+.node-rect.cyan:hover {
+  fill: rgba(78, 205, 196, 0.1);
+}
+
+.node-rect.orange {
+  stroke: var(--accent-orange);
+}
+
+.node-rect.orange:hover {
+  fill: rgba(255, 159, 67, 0.1);
+}
+
+/* 菱形决策节点 */
+.diamond {
+  fill: var(--bg-primary);
+  stroke: var(--accent-purple);
+  stroke-width: 2;
+  filter: drop-shadow(0 4px 12px var(--glow-purple));
+}
+
+.diamond:hover {
+  fill: rgba(123, 97, 255, 0.1);
+}
+
+/* 文本样式 */
+.node-text {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  fill: var(--text-primary);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.node-text-small {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  fill: var(--text-secondary);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+/* 连接线和箭头 */
+.arrow-path {
+  fill: none;
+  stroke: var(--accent-blue);
+  stroke-width: 2;
+  stroke-linecap: round;
+  marker-end: url(#arrowhead-blue);
+}
+
+.arrow-path.pulse {
+  stroke-dasharray: 8 4;
+  animation: dash 1.5s linear infinite;
+}
+
+.arrow-path.purple {
+  stroke: var(--accent-purple);
+  marker-end: url(#arrowhead-purple);
+}
+
+.arrow-path.red {
+  stroke: var(--accent-red);
+  marker-end: url(#arrowhead-red);
+  stroke-dasharray: 4 2;
+}
+
+.arrow-path.cyan {
+  stroke: var(--accent-cyan);
+  marker-end: url(#arrowhead-cyan);
+}
+
+.arrow-path.orange {
+  stroke: var(--accent-orange);
+  marker-end: url(#arrowhead-orange);
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+/* 流动点动画 */
+.flow-dot {
+  fill: var(--accent-blue);
+  filter: drop-shadow(0 0 6px var(--accent-blue));
+}
+
+.flow-dot.purple {
+  fill: var(--accent-purple);
+  filter: drop-shadow(0 0 6px var(--accent-purple));
+}
+
+/* 退出条件标签 */
+.exit-label {
+  fill: var(--bg-primary);
+  stroke: var(--accent-red);
+  stroke-width: 1.5;
+  rx: 6;
+}
+
+.exit-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  fill: var(--accent-red);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.exit-text-cn {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 9px;
+  fill: var(--text-secondary);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+/* 图例 */
+.legend {
+  margin-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.legend-dot.blue { background: var(--accent-blue); }
+.legend-dot.purple { background: var(--accent-purple); }
+.legend-dot.red { background: var(--accent-red); }
+.legend-dot.cyan { background: var(--accent-cyan); }
+.legend-dot.orange { background: var(--accent-orange); }
+
+/* 说明文字 */
+.description {
+  margin-top: 24px;
+  padding: 16px 20px;
+  background: rgba(0, 212, 255, 0.05);
+  border-left: 3px solid var(--accent-blue);
+  border-radius: 0 8px 8px 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  max-width: 800px;
+}
+
+.description strong {
+  color: var(--text-primary);
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+  h1 { font-size: 22px; }
+  .diagram-wrapper { padding: 20px; }
+  .node-text { font-size: 11px; }
+  .node-text-small { font-size: 9px; }
+  .exit-text, .exit-text-cn { font-size: 8px; }
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<header>
+  <h1>Tool Use 循环机制</h1>
+  <p class="subtitle">Tool Invocation Loop Mechanism</p>
+</header>
+
+<div class="container">
+  <div class="diagram-wrapper">
+    <svg viewBox="0 0 800 560" xmlns="http://www.w3.org/2000/svg">
+      <!-- 定义 -->
+      <defs>
+        <!-- 箭头标记 -->
+        <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#00d4ff"/>
+        </marker>
+        <marker id="arrowhead-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#7b61ff"/>
+        </marker>
+        <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#ff6b6b"/>
+        </marker>
+        <marker id="arrowhead-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#4ecdc4"/>
+        </marker>
+        <marker id="arrowhead-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#ff9f43"/>
+        </marker>
+        
+        <!-- 发光滤镜 -->
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      
+      <!-- ========== 主循环路径 (椭圆环形) ========== -->
+      
+      <!-- 1. 用户输入 → AI思考 -->
+      <path class="arrow-path pulse" d="M 400 80 Q 520 80 580 160" />
+      
+      <!-- 2. AI思考 → 权限检查 (菱形) -->
+      <path class="arrow-path" d="M 620 220 L 620 260" />
+      
+      <!-- 3. 权限检查 → 工具执行 -->
+      <path class="arrow-path purple" d="M 580 320 Q 520 400 400 400" />
+      
+      <!-- 4. 工具执行 → 结果返回 -->
+      <path class="arrow-path cyan" d="M 280 400 Q 160 400 160 320" />
+      
+      <!-- 5. 结果返回 → 用户输入 (循环闭合) -->
+      <path class="arrow-path orange" d="M 160 260 L 160 220 Q 160 140 340 90" />
+      
+      <!-- 流动动画点 -->
+      <circle class="flow-dot" r="4">
+        <animateMotion dur="3s" repeatCount="indefinite" path="M 400 80 Q 520 80 580 160" />
+      </circle>
+      <circle class="flow-dot purple" r="4">
+        <animateMotion dur="3s" repeatCount="indefinite" begin="0.6s" path="M 580 320 Q 520 400 400 400" />
+      </circle>
+      <circle class="flow-dot" r="4" style="fill: #4ecdc4;">
+        <animateMotion dur="3s" repeatCount="indefinite" begin="1.2s" path="M 280 400 Q 160 400 160 320" />
+      </circle>
+      <circle class="flow-dot" r="4" style="fill: #ff9f43;">
+        <animateMotion dur="3s" repeatCount="indefinite" begin="1.8s" path="M 160 260 L 160 220 Q 160 140 340 90" />
+      </circle>
+      
+      <!-- ========== 主节点 ========== -->
+      
+      <!-- 节点1: 用户输入 (顶部) -->
+      <rect class="node-rect" x="320" y="40" width="120" height="50" rx="12" />
+      <text class="node-text" x="380" y="58">用户输入</text>
+      <text class="node-text-small" x="380" y="75">User Message</text>
+      
+      <!-- 节点2: AI思考 (右侧) -->
+      <rect class="node-rect" x="540" y="160" width="140" height="60" rx="12" />
+      <text class="node-text" x="610" y="185">AI 生成回复</text>
+      <text class="node-text-small" x="610" y="205">Assistant + tool_use</text>
+      
+      <!-- 节点3: 权限检查 (菱形决策节点) -->
+      <polygon class="diamond" points="610,260 660,290 610,320 560,290" />
+      <text class="node-text" x="610" y="285" style="font-size: 11px;">权限检查</text>
+      <text class="node-text-small" x="610" y="298">Permission</text>
+      
+      <!-- 节点4: 工具执行 (底部) -->
+      <rect class="node-rect cyan" x="340" y="375" width="140" height="50" rx="12" />
+      <text class="node-text" x="410" y="393">工具执行</text>
+      <text class="node-text-small" x="410" y="410">Tool Execution</text>
+      
+      <!-- 节点5: 结果返回 (左侧) -->
+      <rect class="node-rect orange" x="100" y="260" width="120" height="60" rx="12" />
+      <text class="node-text" x="160" y="285">结果返回</text>
+      <text class="node-text-small" x="160" y="305">tool_result</text>
+      
+      <!-- 追加到历史提示 -->
+      <text class="node-text-small" x="160" y="250" style="fill: #666; font-size: 9px;">↓ 追加到消息历史</text>
+      
+      <!-- ========== 退出条件分支 (右上角) ========== -->
+      
+      <!-- 退出分支箭头 -->
+      <path class="arrow-path red" d="M 660 200 Q 720 200 740 160" />
+      <text class="node-text-small" x="700" y="195" style="fill: #ff6b6b;">Exit Conditions</text>
+      
+      <!-- 6个退出条件标签 -->
+      <g transform="translate(750, 80)">
+        <rect class="exit-label" x="0" y="0" width="70" height="32" rx="6" />
+        <text class="exit-text" x="35" y="14">end_turn</text>
+        <text class="exit-text-cn" x="35" y="26">正常结束</text>
+      </g>
+      
+      <g transform="translate(750, 120)">
+        <rect class="exit-label" x="0" y="0" width="70" height="32" rx="6" />
+        <text class="exit-text" x="35" y="14">interrupt</text>
+        <text class="exit-text-cn" x="35" y="26">用户中断</text>
+      </g>
+      
+      <g transform="translate(750, 160)">
+        <rect class="exit-label" x="0" y="0" width="70" height="32" rx="6" />
+        <text class="exit-text" x="35" y="14">max_tokens</text>
+        <text class="exit-text-cn" x="35" y="26">Token耗尽</text>
+      </g>
+      
+      <g transform="translate(750, 200)">
+        <rect class="exit-label" x="0" y="0" width="70" height="32" rx="6" />
+        <text class="exit-text" x="35" y="14">error</text>
+        <text class="exit-text-cn" x="35" y="26">执行错误</text>
+      </g>
+      
+      <g transform="translate(750, 240)">
+        <rect class="exit-label" x="0" y="0" width="70" height="32" rx="6" />
+        <text class="exit-text" x="35" y="14">max_turns</text>
+        <text class="exit-text-cn" x="35" y="26">轮次上限</text>
+      </g>
+      
+      <g transform="translate(750, 280)">
+        <rect class="exit-label" x="0" y="0" width="70" height="32" rx="6" />
+        <text class="exit-text" x="35" y="14">tool_stop</text>
+        <text class="exit-text-cn" x="35" y="26">工具要求停止</text>
+      </g>
+      
+      <!-- 最终输出给用户 -->
+      <g transform="translate(320, 480)">
+        <rect class="node-rect" x="0" y="0" width="120" height="45" rx="12" style="stroke: #ff6b6b;" />
+        <text class="node-text" x="60" y="18">最终输出</text>
+        <text class="node-text-small" x="60" y="35">Final Response</text>
+      </g>
+      
+      <!-- 最终输出连接线 -->
+      <path class="arrow-path red" d="M 610 80 L 610 60 Q 610 40 520 40" style="opacity: 0.3;" />
+      <path class="arrow-path red" d="M 380 480 L 380 450" />
+      
+      <!-- ========== 辅助标注 ========== -->
+      
+      <!-- QueryEngine 标注 -->
+      <text class="node-text-small" x="400" y="140" style="fill: #555;">QueryEngine</text>
+      
+      <!-- Anthropic API 标注 -->
+      <text class="node-text-small" x="520" y="130" style="fill: #7b61ff;">Anthropic API</text>
+      
+      <!-- shouldContinue 检查点 -->
+      <circle cx="620" cy="200" r="6" fill="#7b61ff" filter="url(#glow)" />
+      <text class="node-text-small" x="620" y="190" style="fill: #7b61ff; font-size: 8px;">shouldContinue()</text>
+      
+      <!-- StreamingToolExecutor 标注 -->
+      <text class="node-text-small" x="520" y="380" style="fill: #4ecdc4;">StreamingToolExecutor</text>
+      
+      <!-- 消息历史标注 -->
+      <text class="node-text-small" x="260" y="290" style="fill: #ff9f43;">Message History</text>
+      
+      <!-- 图例说明箭头 -->
+      <text class="node-text-small" x="280" y="520" style="fill: #666; font-size: 10px;">
+        实线箭头 = 正常流程 | 虚线箭头 = 退出路径 | 动画 = 循环运行中
+      </text>
+    </svg>
+  </div>
+  
+  <!-- 图例 -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot blue"></div>
+      <span>主循环路径</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot purple"></div>
+      <span>权限检查</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot cyan"></div>
+      <span>工具执行</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot orange"></div>
+      <span>结果返回</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot red"></div>
+      <span>退出条件</span>
+    </div>
+  </div>
+  
+  <!-- 说明文字 -->
+  <div class="description">
+    <strong>核心机制：</strong>Claude Code 通过 Tool Use 循环实现"能做事"的能力。AI 生成工具调用请求后，系统执行
+    <strong>九步权限检查</strong>，通过后由 StreamingToolExecutor 执行工具，结果追加到消息历史并返回给 AI。
+    AI 根据结果决定继续调用下一个工具或结束循环。当满足六种退出条件之一（正常结束/用户中断/Token耗尽/
+    错误/轮次上限/工具要求停止）时，循环终止并输出最终结果给用户。
+  </div>
+</div>
+
+</body>
+</html>

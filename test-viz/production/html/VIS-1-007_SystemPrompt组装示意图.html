@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Prompt 组装示意图</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0e1a;
+            min-height: 100vh;
+            font-family: 'Noto Serif SC', serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 80%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(123, 97, 255, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(255, 217, 61, 0.03) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.03;
+            z-index: 1;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .title-section {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .main-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 42px;
+            font-weight: 700;
+            color: #f0f4f8;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #8b9dc3;
+            font-weight: 400;
+        }
+
+        .diagram-wrapper {
+            display: flex;
+            gap: 32px;
+            align-items: flex-start;
+        }
+
+        .layers-container {
+            flex: 1;
+            position: relative;
+        }
+
+        .layer {
+            position: relative;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .layer:hover {
+            transform: translateX(8px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .layer::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, currentColor 0%, transparent 100%);
+            opacity: 0.5;
+        }
+
+        .layer-inner {
+            display: flex;
+            align-items: center;
+            padding: 16px 24px;
+            height: 100%;
+            position: relative;
+        }
+
+        .layer-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            font-weight: 500;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+
+        .layer-content {
+            flex: 1;
+        }
+
+        .layer-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #f0f4f8;
+        }
+
+        .layer-desc {
+            font-size: 13px;
+            color: rgba(240, 244, 248, 0.7);
+            line-height: 1.5;
+        }
+
+        .layer-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-left: auto;
+            padding-left: 24px;
+        }
+
+        .cache-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .token-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+
+        .change-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        /* Layer 1 - Default System Prompt */
+        .layer-1 {
+            height: 140px;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.15) 0%, rgba(0, 212, 255, 0.08) 100%);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .layer-1 .layer-number {
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+        }
+
+        .layer-1 .cache-badge {
+            background: rgba(0, 212, 255, 0.15);
+            color: #00d4ff;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .layer-1 .token-count {
+            color: #00d4ff;
+        }
+
+        /* Layer 2 - Tool Definitions */
+        .layer-2 {
+            height: 100px;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.12) 0%, rgba(78, 205, 196, 0.06) 100%);
+            border: 1px solid rgba(78, 205, 196, 0.25);
+        }
+
+        .layer-2 .layer-number {
+            background: rgba(78, 205, 196, 0.15);
+            color: #4ecdc4;
+        }
+
+        .layer-2 .cache-badge {
+            background: rgba(78, 205, 196, 0.12);
+            color: #4ecdc4;
+            border: 1px solid rgba(78, 205, 196, 0.25);
+        }
+
+        .layer-2 .token-count {
+            color: #4ecdc4;
+        }
+
+        /* Layer 3 - Enterprise/Org */
+        .layer-3 {
+            height: 80px;
+            background: linear-gradient(135deg, rgba(78, 205, 196, 0.1) 0%, rgba(78, 205, 196, 0.04) 100%);
+            border: 1px solid rgba(78, 205, 196, 0.2);
+        }
+
+        .layer-3 .layer-number {
+            background: rgba(78, 205, 196, 0.12);
+            color: #7fdbda;
+        }
+
+        .layer-3 .cache-badge {
+            background: rgba(78, 205, 196, 0.1);
+            color: #7fdbda;
+            border: 1px solid rgba(78, 205, 196, 0.2);
+        }
+
+        .layer-3 .token-count {
+            color: #7fdbda;
+        }
+
+        /* Cache Boundary */
+        .cache-boundary {
+            height: 4px;
+            margin: 16px 0;
+            position: relative;
+            background: repeating-linear-gradient(
+                90deg,
+                #ffd93d 0px,
+                #ffd93d 12px,
+                transparent 12px,
+                transparent 20px
+            );
+            animation: shimmer 2s ease-in-out infinite;
+            border-radius: 2px;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .cache-boundary-label {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: #0a0e1a;
+            padding: 4px 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: #ffd93d;
+            font-weight: 500;
+            letter-spacing: 1px;
+            border: 1px solid rgba(255, 217, 61, 0.3);
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        /* Layer 4 - CLAUDE.md */
+        .layer-4 {
+            height: 90px;
+            background: linear-gradient(135deg, rgba(123, 97, 255, 0.12) 0%, rgba(123, 97, 255, 0.05) 100%);
+            border: 1px solid rgba(123, 97, 255, 0.25);
+        }
+
+        .layer-4 .layer-number {
+            background: rgba(123, 97, 255, 0.15);
+            color: #a78bfa;
+        }
+
+        .layer-4 .cache-badge {
+            background: rgba(123, 97, 255, 0.12);
+            color: #a78bfa;
+            border: 1px solid rgba(123, 97, 255, 0.25);
+        }
+
+        .layer-4 .token-count {
+            color: #a78bfa;
+        }
+
+        /* Layer 5 - MCP Tools */
+        .layer-5 {
+            height: 60px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.04) 100%);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .layer-5 .layer-number {
+            background: rgba(139, 92, 246, 0.12);
+            color: #b794f6;
+        }
+
+        .layer-5 .cache-badge {
+            background: rgba(139, 92, 246, 0.1);
+            color: #b794f6;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .layer-5 .token-count {
+            color: #b794f6;
+        }
+
+        /* Layer 6 - Dynamic Injection */
+        .layer-6 {
+            height: 50px;
+            background: linear-gradient(135deg, rgba(160, 174, 192, 0.1) 0%, rgba(160, 174, 192, 0.04) 100%);
+            border: 1px solid rgba(160, 174, 192, 0.2);
+        }
+
+        .layer-6 .layer-number {
+            background: rgba(160, 174, 192, 0.12);
+            color: #a0aec0;
+        }
+
+        .layer-6 .cache-badge {
+            background: rgba(160, 174, 192, 0.1);
+            color: #a0aec0;
+            border: 1px solid rgba(160, 174, 192, 0.2);
+        }
+
+        .layer-6 .token-count {
+            color: #a0aec0;
+        }
+
+        /* Side Panel */
+        .side-panel {
+            width: 220px;
+            flex-shrink: 0;
+        }
+
+        .bracket-section {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .bracket {
+            position: absolute;
+            right: 0;
+            width: 30px;
+            border-right: 3px solid currentColor;
+            display: flex;
+            align-items: center;
+        }
+
+        .bracket::before,
+        .bracket::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            width: 15px;
+            height: 3px;
+            background: currentColor;
+        }
+
+        .bracket::before {
+            top: 0;
+        }
+
+        .bracket::after {
+            bottom: 0;
+        }
+
+        .bracket-label {
+            position: absolute;
+            right: 40px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .bracket-sublabel {
+            font-size: 11px;
+            font-weight: 400;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        .cacheable-bracket {
+            color: #4ecdc4;
+            height: 324px;
+            top: 0;
+        }
+
+        .uncacheable-bracket {
+            color: #a78bfa;
+            height: 200px;
+            top: 0;
+        }
+
+        .cacheable-section {
+            height: 324px;
+            position: relative;
+            margin-bottom: 36px;
+        }
+
+        .uncacheable-section {
+            height: 200px;
+            position: relative;
+        }
+
+        .price-comparison {
+            margin-top: 32px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .price-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: #8b9dc3;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .price-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .price-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .price-label {
+            color: #8b9dc3;
+        }
+
+        .price-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        .price-hit {
+            color: #4ecdc4;
+        }
+
+        .price-miss {
+            color: #ff6b6b;
+        }
+
+        .bottom-info {
+            margin-top: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .total-tokens {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: #f0f4f8;
+        }
+
+        .total-tokens span {
+            color: #8b9dc3;
+            font-weight: 400;
+        }
+
+        .function-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #ffd93d;
+            background: rgba(255, 217, 61, 0.1);
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 217, 61, 0.2);
+        }
+
+        .arrow-down {
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid currentColor;
+            margin-right: 4px;
+        }
+
+        .arrow-right {
+            width: 0;
+            height: 0;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 5px solid currentColor;
+            margin-right: 4px;
+        }
+
+        .arrow-up {
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 5px solid currentColor;
+            margin-right: 4px;
+        }
+
+        .change-indicator {
+            display: flex;
+            align-items: center;
+        }
+
+        .frequency-low { color: #4ecdc4; }
+        .frequency-medium { color: #ffd93d; }
+        .frequency-high { color: #ff6b6b; }
+
+        /* Icons */
+        .icon-globe::before { content: '◐'; }
+        .icon-building::before { content: '▣'; }
+        .icon-null::before { content: '✕'; }
+
+        .tooltip {
+            position: fixed;
+            background: rgba(10, 14, 26, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #f0f4f8;
+            max-width: 300px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .sources-note {
+            font-size: 11px;
+            color: rgba(167, 139, 250, 0.8);
+            margin-top: 4px;
+        }
+
+        @media (max-width: 900px) {
+            .diagram-wrapper {
+                flex-direction: column;
+            }
+            .side-panel {
+                width: 100%;
+                display: flex;
+                gap: 20px;
+                flex-wrap: wrap;
+            }
+            .cacheable-section, .uncacheable-section {
+                height: auto;
+                flex: 1;
+                min-width: 200px;
+            }
+            .bracket {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="noise"></div>
+    <div class="tooltip" id="tooltip"></div>
+
+    <div class="container">
+        <div class="title-section">
+            <h1 class="main-title">System Prompt 组装结构</h1>
+            <p class="subtitle">三级缓存优化的"三明治"分层架构</p>
+        </div>
+
+        <div class="diagram-wrapper">
+            <div class="layers-container">
+                <!-- Layer 6: Dynamic Injection (Top) -->
+                <div class="layer layer-6" data-layer="6">
+                    <div class="layer-inner">
+                        <div class="layer-number">6</div>
+                        <div class="layer-content">
+                            <div class="layer-title">动态注入 / Dynamic Injection</div>
+                            <div class="layer-desc">system-reminder 标签注入的上下文</div>
+                        </div>
+                        <div class="layer-meta">
+                            <div class="cache-badge"><span class="icon-null"></span> null</div>
+                            <div class="change-indicator frequency-high">
+                                <span class="arrow-up"></span>极高
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Layer 5: MCP Tools -->
+                <div class="layer layer-5" data-layer="5">
+                    <div class="layer-inner">
+                        <div class="layer-number">5</div>
+                        <div class="layer-content">
+                            <div class="layer-title">MCP 工具定义 / MCP Tool Definitions</div>
+                            <div class="layer-desc">外部 MCP 服务器提供的动态工具</div>
+                        </div>
+                        <div class="layer-meta">
+                            <div class="cache-badge"><span class="icon-null"></span> null</div>
+                            <div class="change-indicator frequency-high">
+                                <span class="arrow-up"></span>高
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Layer 4: CLAUDE.md -->
+                <div class="layer layer-4" data-layer="4">
+                    <div class="layer-inner">
+                        <div class="layer-number">4</div>
+                        <div class="layer-content">
+                            <div class="layer-title">CLAUDE.md 内容 / Project Memory</div>
+                            <div class="layer-desc">6种来源合并的项目级配置</div>
+                        </div>
+                        <div class="layer-meta">
+                            <div class="cache-badge"><span class="icon-null"></span> null</div>
+                            <div class="change-indicator frequency-medium">
+                                <span class="arrow-right"></span>中
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cache Boundary -->
+                <div class="cache-boundary">
+                    <div class="cache-boundary-label">__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__</div>
+                </div>
+
+                <!-- Layer 3: Enterprise/Org -->
+                <div class="layer layer-3" data-layer="3">
+                    <div class="layer-inner">
+                        <div class="layer-number">3</div>
+                        <div class="layer-content">
+                            <div class="layer-title">企业/组织配置 / Enterprise + Org Settings</div>
+                            <div class="layer-desc">企业策略、组织级规则</div>
+                        </div>
+                        <div class="layer-meta">
+                            <div class="cache-badge"><span class="icon-building"></span> Org</div>
+                            <div class="change-indicator frequency-low">
+                                <span class="arrow-down"></span>中低
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Layer 2: Tool Definitions -->
+                <div class="layer layer-2" data-layer="2">
+                    <div class="layer-inner">
+                        <div class="layer-number">2</div>
+                        <div class="layer-content">
+                            <div class="layer-title">工具定义 / Tool Definitions</div>
+                            <div class="layer-desc">43个内置工具的 name/description/input_schema</div>
+                        </div>
+                        <div class="layer-meta">
+                            <div class="cache-badge"><span class="icon-globe"></span> Global</div>
+                            <div class="change-indicator frequency-low">
+                                <span class="arrow-down"></span>低
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Layer 1: Default System Prompt (Bottom) -->
+                <div class="layer layer-1" data-layer="1">
+                    <div class="layer-inner">
+                        <div class="layer-number">1</div>
+                        <div class="layer-content">
+                            <div class="layer-title">默认系统提示词 / Default System Prompt</div>
+                            <div class="layer-desc">核心行为规则、安全指令、工具使用格式</div>
+                        </div>
+                        <div class="layer-meta">
+                            <div class="cache-badge"><span class="icon-globe"></span> Global</div>
+                            <div class="change-indicator frequency-low">
+                                <span class="arrow-down"></span>极低
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="side-panel">
+                <div class="cacheable-section">
+                    <div class="bracket cacheable-bracket">
+                        <div class="bracket-label">
+                            <div>可缓存前缀</div>
+                            <div class="bracket-sublabel">Cacheable Prefix</div>
+                            <div style="margin-top: 8px; color: #4ecdc4;">~12K tokens</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="uncacheable-section">
+                    <div class="bracket uncacheable-bracket">
+                        <div class="bracket-label">
+                            <div>不可缓存部分</div>
+                            <div class="bracket-sublabel">Uncached Suffix</div>
+                            <div style="margin-top: 8px; color: #a78bfa;">~3K-22K tokens</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="price-comparison">
+                    <div class="price-title">Cache Cost Impact</div>
+                    <div class="price-item">
+                        <span class="price-label">Cache Hit</span>
+                        <span class="price-value price-hit">1/10x</span>
+                    </div>
+                    <div class="price-item">
+                        <span class="price-label">Cache Miss</span>
+                        <span class="price-value price-miss">10x</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-info">
+            <div class="total-tokens">
+                Total: <span>15K-34K tokens</span> / API call
+            </div>
+            <div class="function-badge">
+                splitSysPromptPrefix()
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tooltip = document.getElementById('tooltip');
+        const layers = document.querySelectorAll('.layer');
+
+        const layerDetails = {
+            1: {
+                title: '默认系统提示词 (Layer 1)',
+                content: '核心行为规则、安全指令、工具使用格式<br><br>缓存: Global 作用域<br>全世界所有 Claude Code 用户共享<br><br>变化频率: 极低(仅版本更新时变)<br>Token 量: ~8K',
+                tokens: '~8K tokens'
+            },
+            2: {
+                title: '工具定义 (Layer 2)',
+                content: '43个内置工具的 name/description/input_schema<br><br>缓存: Global 作用域<br>工具列表基本固定<br><br>包含 isDeferred 优化: 冷门工具只放名称不放详情<br>变化频率: 低(偶尔增减工具)',
+                tokens: '~3K tokens'
+            },
+            3: {
+                title: '企业/组织配置 (Layer 3)',
+                content: '企业策略、组织级规则<br><br>缓存: Org 作用域<br>同组织用户共享<br><br>变化频率: 中低<br>Token 量: ~1K',
+                tokens: '~1K tokens'
+            },
+            4: {
+                title: 'CLAUDE.md 内容 (Layer 4)',
+                content: '6种 CLAUDE.md 合并后的内容<br><br>缓存: null — 每次可能不同<br>变化频率: 中(用户随时可改)<br><br>6种来源:<br>• 项目共享<br>• 个人私有<br>• 全局用户<br>• 企业强制<br>• 上游目录<br>• 工作区根目录',
+                tokens: '~2K-20K'
+            },
+            5: {
+                title: 'MCP 工具定义 (Layer 5)',
+                content: '外部 MCP 服务器提供的动态工具<br><br>缓存: null — 外部服务不可预测<br>变化频率: 高<br><br>DANGEROUS_uncachedSystemPromptSection',
+                tokens: '~1K-5K'
+            },
+            6: {
+                title: '动态注入 (Layer 6)',
+                content: 'system-reminder 标签注入的上下文<br><br>例如: 当前文件信息、对话状态<br><br>缓存: null — 每轮对话都不同<br>变化频率: 极高',
+                tokens: '~500-1K'
+            }
+        };
+
+        layers.forEach(layer => {
+            layer.addEventListener('mouseenter', (e) => {
+                const layerNum = layer.dataset.layer;
+                const detail = layerDetails[layerNum];
+                if (detail) {
+                    tooltip.innerHTML = `<strong>${detail.title}</strong><br><br>${detail.content}`;
+                    tooltip.classList.add('visible');
+                }
+            });
+
+            layer.addEventListener('mousemove', (e) => {
+                tooltip.style.left = (e.clientX + 16) + 'px';
+                tooltip.style.top = (e.clientY + 16) + 'px';
+            });
+
+            layer.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+        });
+    </script>
+</body>
+</html>

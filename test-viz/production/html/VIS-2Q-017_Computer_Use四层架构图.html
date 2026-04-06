@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Computer Use 四层架构图</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-deep: #0a0a0f;
+            --bg-mid: #12121a;
+            --bg-light: #1a1a25;
+            --mcp-color: #66ccff;
+            --wrapper-color: #00d4ff;
+            --executor-color: #0066aa;
+            --native-rust: #ff7b29;
+            --native-swift: #ff6b9d;
+            --accent-red: #ff4757;
+            --text-primary: #e8e8f0;
+            --text-secondary: #8b8b9e;
+            --glow-mcp: rgba(102, 204, 255, 0.3);
+            --glow-wrapper: rgba(0, 212, 255, 0.3);
+            --glow-executor: rgba(0, 102, 170, 0.4);
+            --glow-native: rgba(123, 97, 255, 0.3);
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-deep);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 0%, rgba(102, 204, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(123, 97, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(0, 212, 255, 0.03) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .title h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--mcp-color) 0%, var(--wrapper-color) 50%, var(--native-swift) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .title p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .architecture {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+        }
+
+        .layer {
+            background: var(--bg-light);
+            border-radius: 16px;
+            padding: 28px 32px;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .layer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        .layer:hover {
+            transform: translateX(8px);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .layer-mcp::before { background: var(--mcp-color); box-shadow: 0 0 20px var(--glow-mcp); }
+        .layer-wrapper::before { background: var(--wrapper-color); box-shadow: 0 0 20px var(--glow-wrapper); }
+        .layer-executor::before { background: var(--executor-color); box-shadow: 0 0 20px var(--glow-executor); }
+        .layer-native::before { background: linear-gradient(90deg, var(--native-rust) 50%, var(--native-swift) 50%); box-shadow: 0 0 20px var(--glow-native); }
+
+        .layer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .layer-title-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .layer-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        .layer-mcp .layer-icon { background: rgba(102, 204, 255, 0.15); color: var(--mcp-color); }
+        .layer-wrapper .layer-icon { background: rgba(0, 212, 255, 0.15); color: var(--wrapper-color); }
+        .layer-executor .layer-icon { background: rgba(0, 102, 170, 0.2); color: var(--executor-color); }
+        .layer-native .layer-icon { background: rgba(123, 97, 255, 0.15); color: #9b8aff; }
+
+        .layer-name {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .layer-name h2 {
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        .layer-name span {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .layer-stats {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .stat {
+            text-align: right;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .layer-content {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s;
+        }
+
+        .feature:hover {
+            background: rgba(255, 255, 255, 0.06);
+            transform: translateY(-2px);
+        }
+
+        .feature-icon {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .layer-mcp .feature-icon { color: var(--mcp-color); }
+        .layer-wrapper .feature-icon { color: var(--wrapper-color); }
+        .layer-executor .feature-icon { color: var(--executor-color); }
+        .layer-native .feature-icon { color: #9b8aff; }
+
+        .feature-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .feature-text strong {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .feature-text small {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .arrow-down {
+            position: absolute;
+            left: 50%;
+            bottom: -12px;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 24px;
+            z-index: 10;
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        .layer:not(:last-child) {
+            margin-bottom: 12px;
+        }
+
+        .native-split {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .native-side {
+            flex: 1;
+            padding: 16px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .native-rust {
+            background: linear-gradient(135deg, rgba(255, 123, 41, 0.08) 0%, rgba(255, 123, 41, 0.02) 100%);
+            border-color: rgba(255, 123, 41, 0.2);
+        }
+
+        .native-swift {
+            background: linear-gradient(135deg, rgba(255, 107, 157, 0.08) 0%, rgba(255, 107, 157, 0.02) 100%);
+            border-color: rgba(255, 107, 157, 0.2);
+        }
+
+        .native-side-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .native-side-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .native-rust h3 { color: var(--native-rust); }
+        .native-swift h3 { color: var(--native-swift); }
+
+        .native-side-content {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .drain-panel {
+            position: absolute;
+            right: -220px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            background: linear-gradient(135deg, rgba(255, 71, 87, 0.1) 0%, rgba(255, 71, 87, 0.02) 100%);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .drain-panel::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            right: -1px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-red), transparent);
+            border-radius: 16px 16px 0 0;
+        }
+
+        .drain-icon {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 12px;
+            border: 2px solid var(--accent-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            animation: pulse 2s infinite;
+            color: var(--accent-red);
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(255, 71, 87, 0); }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .spin-icon {
+            animation: spin 4s linear infinite;
+        }
+
+        .drain-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--accent-red);
+            margin-bottom: 4px;
+        }
+
+        .drain-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .drain-desc {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            padding: 10px;
+            background: rgba(255, 71, 87, 0.08);
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .drain-connector {
+            position: absolute;
+            left: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-red), transparent);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        .badge-hotkey {
+            color: var(--native-rust);
+            background: rgba(255, 123, 41, 0.15);
+        }
+
+        .badge-clipboard {
+            color: var(--wrapper-color);
+            background: rgba(0, 212, 255, 0.15);
+        }
+
+        .terminal-exclude {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px dashed rgba(255, 71, 87, 0.3);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: var(--accent-red);
+            margin-left: 10px;
+        }
+
+        @media (max-width: 1200px) {
+            .drain-panel {
+                position: static;
+                width: 100%;
+                margin-top: 20px;
+                transform: none;
+            }
+            .drain-connector { display: none; }
+        }
+
+        @media (max-width: 768px) {
+            .title h1 { font-size: 1.8rem; }
+            .layer { padding: 20px 24px; }
+            .layer-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .layer-stats { width: 100%; justify-content: space-between; }
+            .native-split { flex-direction: column; }
+            .layer:hover { transform: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">
+            <h1>Computer Use 四层架构</h1>
+            <p>Four-Layer Architecture for AI Screen Control</p>
+        </div>
+
+        <div class="architecture">
+            <!-- Layer 1: MCP Server -->
+            <div class="layer layer-mcp">
+                <div class="layer-header">
+                    <div class="layer-title-group">
+                        <div class="layer-icon">📡</div>
+                        <div class="layer-name">
+                            <h2>MCP Server</h2>
+                            <span>Protocol Layer / 协议层</span>
+                        </div>
+                    </div>
+                    <div class="layer-stats">
+                        <div class="stat">
+                            <div class="stat-value">106</div>
+                            <div class="stat-label">Lines</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer-content">
+                    <div class="feature">
+                        <div class="feature-icon">🔧</div>
+                        <div class="feature-text">
+                            <strong>工具暴露</strong>
+                            <small>Tool Exposure</small>
+                        </div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🏷️</div>
+                        <div class="feature-text">
+                            <strong>mcp__computer-use__*</strong>
+                            <small>命名前缀触发指引</small>
+                        </div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">⚡</div>
+                        <div class="feature-text">
+                            <strong>1秒超时枚举</strong>
+                            <small>tryGetInstalledAppNames</small>
+                        </div>
+                    </div>
+                </div>
+                <svg class="arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M19 12l-7 7-7-7"/>
+                </svg>
+            </div>
+
+            <!-- Layer 2: Wrapper -->
+            <div class="layer layer-wrapper">
+                <div class="layer-header">
+                    <div class="layer-title-group">
+                        <div class="layer-icon">🔒</div>
+                        <div class="layer-name">
+                            <h2>Wrapper</h2>
+                            <span>Bridge Layer / 桥接层</span>
+                        </div>
+                    </div>
+                    <div class="layer-stats">
+                        <div class="stat">
+                            <div class="stat-value">React</div>
+                            <div class="stat-label">Context</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer-content">
+                    <div class="feature">
+                        <div class="feature-icon">📝</div>
+                        <div class="feature-text">
+                            <strong>bindSessionContext</strong>
+                            <small>进程级缓存绑定</small>
+                        </div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🛡️</div>
+                        <div class="feature-text">
+                            <strong>ComputerUseApproval</strong>
+                            <small>权限审批对话框</small>
+                        </div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🔐</div>
+                        <div class="feature-text">
+                            <strong>computerUseLock.ts</strong>
+                            <small>跨会话文件锁</small>
+                        </div>
+                    </div>
+                </div>
+                <svg class="arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M19 12l-7 7-7-7"/>
+                </svg>
+            </div>
+
+            <!-- Layer 3: Executor -->
+            <div class="layer layer-executor">
+                <div class="layer-header">
+                    <div class="layer-title-group">
+                        <div class="layer-icon">⚙️</div>
+                        <div class="layer-name">
+                            <h2>Executor</h2>
+                            <span>Core Layer / 核心执行层</span>
+                        </div>
+                    </div>
+                    <div class="layer-stats">
+                        <div class="stat">
+                            <div class="stat-value">658</div>
+                            <div class="stat-label">Lines</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer-content">
+                    <div class="feature">
+                        <div class="feature-icon">📸</div>
+                        <div class="feature-text">
+                            <strong>SCContentFilter</strong>
+                            <small>截图 API</small>
+                            <span class="terminal-exclude">🚫 终端排除</span>
+                        </div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🖱️</div>
+                        <div class="feature-text">
+                            <strong>Mouse Control</strong>
+                            <small>moveAndSettle(50ms) · 拖拽60fps</small>
+                        </div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">⌨️</div>
+                        <div class="feature-text">
+                            <strong>Keyboard Input</strong>
+                            <small>8ms间隔</small>
+                            <span class="badge badge-clipboard">📋 typeViaClipboard (6步)</span>
+                        </div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">🔥</div>
+                        <div class="feature-text">
+                            <strong>Escape Hotkey</strong>
+                            <small>CGEventTap 全局拦截</small>
+                            <span class="badge badge-hotkey">⚡ 系统级</span>
+                        </div>
+                    </div>
+                </div>
+                <svg class="arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M19 12l-7 7-7-7"/>
+                </svg>
+            </div>
+
+            <!-- Layer 4: Native Modules -->
+            <div class="layer layer-native">
+                <div class="layer-header">
+                    <div class="layer-title-group">
+                        <div class="layer-icon">🔌</div>
+                        <div class="layer-name">
+                            <h2>Native Modules</h2>
+                            <span>System Layer / 系统原生层</span>
+                        </div>
+                    </div>
+                    <div class="layer-stats">
+                        <div class="stat">
+                            <div class="stat-value">Rust+Swift</div>
+                            <div class="stat-label">Native</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="native-split">
+                    <div class="native-side native-rust">
+                        <div class="native-side-header">
+                            <span>🦀</span>
+                            <h3>@ant/computer-use-input</h3>
+                        </div>
+                        <div class="native-side-content">
+                            Rust 实现键鼠操作<br>
+                            <strong>CGEvent</strong> 底层事件<br>
+                            <span style="color: var(--native-rust);">⏵ 首次操作时懒加载</span>
+                        </div>
+                    </div>
+                    <div class="native-side native-swift">
+                        <div class="native-side-header">
+                            <span>🍎</span>
+                            <h3>@ant/computer-use-swift</h3>
+                        </div>
+                        <div class="native-side-content">
+                            Swift 实现屏幕截图<br>
+                            <strong>SCContentFilter</strong> 精确控制<br>
+                            <span style="color: var(--native-swift);">⏵ 工厂创建时立即加载</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- drainRunLoop Panel -->
+                <div class="drain-panel">
+                    <div class="drain-connector"></div>
+                    <div class="drain-icon">
+                        <span class="spin-icon">↻</span>
+                    </div>
+                    <div class="drain-title">drainRunLoop</div>
+                    <div class="drain-subtitle">Node.js 阿喀琉斯之踵</div>
+                    <div class="drain-desc">
+                        setInterval 1ms<br>
+                        手动泵送 macOS CFRunLoop<br>
+                        引用计数模式桥接事件循环
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

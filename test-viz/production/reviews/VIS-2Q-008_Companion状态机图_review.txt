@@ -1,0 +1,107 @@
+总分: 14/20
+
+布局: 3/5 — 各区块横向对齐良好，但 node-sprite 未设高度导致内部绝对定位元素无参考基准
+
+信息: 4/5 — 状态机流程清晰，层次分明，但流程主轴与辅助区块视觉区分不足
+
+美学: 3/5 — 配色方案协调，字体搭配有新意，但 ASCII 鸭子与整体风格略显突兀，CSS 组织可更系统
+
+完整: 4/5 — 可直接运行，语法正确，但存在布局隐患
+
+---
+
+缺陷:
+
+1. **node-sprite 高度未约束** (line ~130)
+   - 内部含 `.duck-frame` (top:70px, 高≈65px) 和 `.details` (margin-top:75px)
+   - 由于 node-sprite 无 position:relative/height，其绝对定位子元素以 diagram 为参考而非自身
+   - 导致 click 事件 offsetX/Y 计算错误，影响心形粒子生成位置
+
+2. **稀有度条与属性区块纵向未对齐** (lines 200-250, 252-280)
+   - rarity-section: left:200px; stats-section: left:560px
+   - 状态节点从 left:20→920px 横向展开，但下方两辅助区块偏左，与主轴视觉脱节
+
+3. **tick-indicator 与 stats-section 水平重叠** (lines 185-190, 265)
+   - tick-indicator: right:20px, top:320px → 实际 left≈980px
+   - stats-section: left:560px, top:320px, width:300px → 实际 left≈560px
+   - 两者 y 坐标相同(320px)，tick-indicator 的 left:980px 与 stats 区块(560-860px)存在40px间隙，逻辑上不重叠但视觉上分散
+
+4. **idle-sequence 与 stats-section 垂直重叠** (lines 282-290, 265)
+   - idle-section: top:435px, height≈22px → 底部在 457px
+   - stats-section: top:320px, padding:16px → 底部在 320+16+4×32=464px
+   - 两者在 435-457px 区间重叠约22px
+
+5. **duck-frame 样式定义在 node-sprite 之后但使用相同选择器** (lines 100-108, 130)
+   - `.duck-frame` 的 left:20px, top:70px 相对于 node-sprite 定位
+   - node-sprite 无明确高度时，绝对定位子元素以 diagram 为包含块
+   - 建议加 `position:relative` 和 `min-height:140px` 到 node-sprite
+
+6. **Anti-cheat 与 Hash Formula 垂直间距过紧** (lines 172-180)
+   - hash-formula: top:130px
+   - anti-cheat: top:130px
+   - 两者并排于同一水平线，间距仅靠 gap:8px 撑开，视觉上略显拥挤
+
+7. **idle-sequence 水平溢出风险** (line 282)
+   - 15个 step × 22px + 14个 gap×3px = 330px + 42px = 372px
+   - container width:1100px，idle-section left:560px → 右侧边界在 932px
+   - 372px 宽度可容纳，但 400px width 设置偏大
+
+8. **图例 Legend 与 stored-box 底边对齐** (lines 295-305, 176-180)
+   - stored-box: top:20px, 估计高度约80px → 底部在 100px
+   - legend: bottom:20px → 相对于 container 底部定位
+   - container padding:40px，legend 实际 top: 480-40-20=420px
+   - stored-box 与 legend 纵向跨度大(100px vs 420px)，中间空白过多
+
+---
+
+修改建议:
+
+1. **给 node-sprite 添加高度约束**:
+```css
+.node-sprite {
+  left: 560px;
+  top: 180px;
+  position: relative; /* 新增 */
+  min-height: 140px;  /* 新增 */
+  ...
+}
+```
+
+2. **调整 rarity-section 与 stats-section 的横向位置**:
+```css
+.rarity-section { left: 200px; }  /* 或改为 280px 更居中 */
+.stats-section { left: 560px; }    /* 与 sprite 节点对齐 */
+```
+
+3. **将 tick-indicator 移至 stats-section 内部或调整 top 值避让**:
+```css
+.tick-indicator {
+  left: 880px;      /* 改为 left 定位 */
+  top: 320px;
+  /* 或 */
+  top: 395px;      /* 放在 stats-section 下方 */
+}
+```
+
+4. **idle-section 向上偏移或 stats-section 压缩**:
+```css
+.idle-section {
+  top: 390px;  /* 从 435px 上移，与 stats-section 底部留10px间隙 */
+  width: 280px; /* 收紧宽度匹配内容实际尺寸 */
+}
+```
+
+5. **Anti-cheat 与 Hash Formula 加垂直间距**:
+```css
+.hash-formula { top: 120px; }
+.anti-cheat { top: 155px; }  /* 与 hash-formula 隔开 */
+```
+
+6. **给 stored-box 添加底部 margin 或调整 legend 位置**:
+```css
+.stored-box { margin-bottom: 20px; }
+.legend {
+  left: 20px;
+  bottom: 60px;  /* 相对 container 底部上移，与 stored-box 更近 */
+}
+```

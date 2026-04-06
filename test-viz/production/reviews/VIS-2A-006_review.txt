@@ -1,0 +1,25 @@
+总分: 13/20
+
+**布局: 2/5** — 并行窗口Y坐标溢出图表边界，pre-import窗口顶部超出第一行任务条
+
+**信息: 3/5** — 核心指标突出，但图例与实际渲染不完全一致（legend中async/deferred的opacity与代码不符）
+
+**美学: 3/5** — 配色体系完整，但并行窗口矩形溢出（top:9窗口bottom=592 > SVG高度600，且远超图表底部540）
+
+**完整: 5/5** — 代码完整可直接运行，SVG语法正确，交互功能完整
+
+---
+
+**缺陷:**
+
+1. **并行窗口高度溢出** — `drawParallelWindows()`中`top:9`窗口高度=5×38=190，y起始=402，bottom=592。但图表底部=margin.top+13×38=554，SVG高度=600。该窗口底部超出图表可见区域52px。
+2. **pre-import并行窗口Y偏上** — `top:1`→y=38，但第一行任务条y=48（bar top=36）。窗口顶部比任务条顶部还高12px，应从row 1开始而非row 0上方。
+3. **legend与代码不一致** — `async`类型在legend中opacity为0.6，但代码中`mdm-read`是0.5，`background-tasks`是0.4；`deferred`在legend中是0.7，代码中是0.6。
+4. **任务标签堆叠** — 中英文标签（中文主标签+英文副标签）Y坐标仅差13px，英文标签baseline在y+18，几乎贴着一半bar的下沿，可读性差。
+
+**修改建议:**
+
+1. 将`parallelWindows`中`top:9`的`height`从`5*38`改为`4*38`（覆盖row 9-12），或调整`chartHeight`使空间足够
+2. `parallelWindows`第一个窗口`top`改为0（或调整计算逻辑让窗口恰好包围对应行）
+3. Legend中的opacity值改为与代码一致：`async→0.5`，`deferred→0.6`，或改为范围标注如"异步并行(early return)"
+4. 将主标签英文名作为tooltip或次级标题展示，或增大左侧margin至320px以容纳更长标签并改善Y轴间距

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>压缩 vs 缓存决策树 | Compression vs Cache Decision Tree</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0d14;
+  --panel: #111827;
+  --text: #f3f4f6;
+  --text-dim: #9ca3af;
+  --green: #10b981;
+  --yellow: #f59e0b;
+  --orange: #f97316;
+  --red: #ef4444;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+.bg-noise {
+  position: fixed;
+  inset: 0;
+  opacity: 0.04;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+header {
+  text-align: center;
+  padding: 2.5rem 1rem 1rem;
+}
+header h1 {
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+header p {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  margin-top: 0.4rem;
+  letter-spacing: 0.05em;
+}
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+  position: relative;
+  z-index: 1;
+}
+.diagram-wrap {
+  background: linear-gradient(180deg, rgba(17,24,39,0.55) 0%, rgba(10,13,20,0.35) 100%);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.node {
+  cursor: pointer;
+  transition: filter 0.3s ease;
+}
+.node:hover { filter: brightness(1.25); }
+.node-rect { stroke-width: 1.5; }
+.node-diamond { stroke-width: 1.5; }
+.node-text-main {
+  font-size: 13px;
+  font-weight: 500;
+  fill: var(--text);
+  pointer-events: none;
+}
+.node-text-sub {
+  font-size: 10px;
+  font-weight: 400;
+  fill: var(--text-dim);
+  pointer-events: none;
+}
+.node-text-detail {
+  font-size: 9px;
+  font-weight: 500;
+  fill: #6b7280;
+  pointer-events: none;
+}
+.branch-label {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #6b7280;
+  pointer-events: none;
+}
+.path-line {
+  fill: none;
+  stroke: #374151;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.path-glow {
+  fill: none;
+  stroke-width: 4;
+  opacity: 0;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 0.4s ease;
+}
+.path-active {
+  fill: none;
+  stroke-width: 3;
+  stroke-dasharray: 8 6;
+  opacity: 0;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.animate-flow .path-active {
+  opacity: 1;
+  animation: dashFlow 1.2s linear infinite;
+}
+@keyframes dashFlow {
+  to { stroke-dashoffset: -28; }
+}
+.scale-indicator {
+  transition: transform 0.6s cubic-bezier(0.34,1.56,0.64,1);
+}
+.ladder-step { cursor: pointer; transition: all 0.3s ease; }
+.ladder-step:hover { filter: brightness(1.2); }
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s, transform 0.2s;
+  background: rgba(13,17,28,0.98);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  min-width: 240px;
+  max-width: 300px;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+  z-index: 50;
+}
+.tooltip.visible { opacity: 1; transform: translateY(0); }
+.tooltip h4 { font-size: 0.9rem; margin-bottom: 0.35rem; }
+.tooltip p { font-size: 0.75rem; color: var(--text-dim); line-height: 1.6; }
+.footer-policy {
+  text-align: center;
+  margin-top: 2.5rem;
+  padding: 1.25rem;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+}
+.replay-btn {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text);
+  padding: 0.45rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  font-weight: 500;
+  z-index: 10;
+}
+.replay-btn:hover { background: rgba(255,255,255,0.12); }
+.mobile-cards { display: none; }
+@media (max-width: 768px) {
+  .diagram-wrap svg { display: none; }
+  .mobile-cards { display: flex; flex-direction: column; gap: 1rem; }
+  .mobile-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    position: relative;
+  }
+  .mobile-card h3 { font-size: 1rem; margin-bottom: 0.25rem; }
+  .mobile-card p { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.25rem; }
+  .mobile-badge {
+    position: absolute; top: 1rem; right: 1rem;
+    font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 999px; font-weight: 600;
+  }
+}
+</style>
+</head>
+<body>
+<div class="bg-noise"></div>
+<header>
+  <h1>压缩 vs 缓存 · 决策树</h1>
+  <p>Compression vs Cache Decision Tree — VIS-2A-026</p>
+</header>
+<div class="container">
+  <div class="diagram-wrap" id="diagramWrap">
+    <button class="replay-btn" onclick="replayAnimation()">Replay Typical Path</button>
+    <svg viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="gradScale" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#10b981"/>
+          <stop offset="35%" stop-color="#f59e0b"/>
+          <stop offset="70%" stop-color="#f97316"/>
+          <stop offset="100%" stop-color="#ef4444"/>
+        </linearGradient>
+        <filter id="glowGreen" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#10b981" flood-opacity="0.5"/>
+        </filter>
+        <filter id="glowYellow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#f59e0b" flood-opacity="0.5"/>
+        </filter>
+        <filter id="glowOrange" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#f97316" flood-opacity="0.5"/>
+        </filter>
+        <filter id="glowRed" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#ef4444" flood-opacity="0.5"/>
+        </filter>
+      </defs>
+      
+      <!-- Left Scale -->
+      <text x="50" y="55" text-anchor="middle" class="node-text-main" style="font-size:12px;">缓存命中率</text>
+      <text x="50" y="70" text-anchor="middle" class="node-text-sub">Cache Hit Rate</text>
+      <rect x="35" y="85" width="10" height="460" rx="5" fill="url(#gradScale)" opacity="0.85"/>
+      
+      <line x1="50" y1="105" x2="70" y2="105" stroke="#374151" stroke-width="1"/>
+      <text x="78" y="109" class="node-text-sub" style="fill:#10b981">95%</text>
+      <line x1="50" y1="255" x2="70" y2="255" stroke="#374151" stroke-width="1"/>
+      <text x="78" y="259" class="node-text-sub" style="fill:#f59e0b">70%</text>
+      <line x1="50" y1="395" x2="70" y2="395" stroke="#374151" stroke-width="1"/>
+      <text x="78" y="399" class="node-text-sub" style="fill:#f97316">40%</text>
+      <line x1="50" y1="525" x2="70" y2="525" stroke="#374151" stroke-width="1"/>
+      <text x="78" y="529" class="node-text-sub" style="fill:#ef4444">10%</text>
+      
+      <polygon id="scaleIndicator" class="scale-indicator" points="80,105 90,100 90,110" fill="#fff"/>
+      
+      <!-- Balance Scale Icon -->
+      <g transform="translate(450, 86)">
+        <path d="M-14,0 L14,0 M0,0 L0,-10 M-14,-10 L14,-10" stroke="#9ca3af" stroke-width="1.5" fill="none"/>
+        <path d="M-14,-10 L-18,5 L-10,5 Z M14,-10 L10,5 L18,5 Z" stroke="#9ca3af" stroke-width="1.5" fill="none"/>
+        <circle cx="0" cy="-12" r="2.5" fill="#9ca3af"/>
+      </g>
+      
+      <!-- Base Paths -->
+      <polyline class="path-line" points="450,72 450,110"/>
+      <polyline class="path-line" id="line-d1-green" points="390,140 320,140"/>
+      <polyline class="path-line" id="line-d1-d2" points="450,170 450,225"/>
+      <polyline class="path-line" id="line-d2-yellow" points="520,260 600,260"/>
+      <polyline class="path-line" id="line-d2-d3" points="450,295 450,355"/>
+      <polyline class="path-line" id="line-d3-orange" points="520,390 600,390"/>
+      <polyline class="path-line" id="line-d3-d4" points="450,425 450,490"/>
+      <polyline class="path-line" id="line-d4-red" points="510,520 600,520"/>
+      
+      <!-- Animated overlays -->
+      <polyline class="path-glow" id="glow-d1-d2" points="450,170 450,225" stroke="#f59e0b"/>
+      <polyline class="path-glow" id="glow-d2-yellow" points="520,260 600,260" stroke="#f59e0b"/>
+      <polyline class="path-active" id="active-d1-d2" points="450,170 450,225" stroke="#f59e0b"/>
+      <polyline class="path-active" id="active-d2-yellow" points="520,260 600,260" stroke="#f59e0b"/>
+      
+      <!-- Root Node -->
+      <g class="node" data-cache="95" data-tooltip="&lt;h4 style='color:#94a3b8'&gt;当前 Context 状态&lt;/h4&gt;&lt;p&gt;系统持续监控对话的 context 使用率和缓存命中率，作为压缩策略的动态输入。&lt;/p&gt;">
+        <rect x="380" y="28" width="140" height="44" rx="8" fill="rgba(30,41,59,0.5)" stroke="#64748b" class="node-rect"/>
+        <text x="450" y="50" text-anchor="middle" class="node-text-main">当前 Context 状态</text>
+        <text x="450" y="63" text-anchor="middle" class="node-text-sub">Current Context State</text>
+      </g>
+      
+      <!-- D1 -->
+      <g class="node" data-cache="75" data-tooltip="&lt;h4 style='color:#f59e0b'&gt;阈值检查&lt;/h4&gt;&lt;p&gt;判断上下文是否逼近安全阈值。若未超过，优先保留完整缓存前缀，维持最低单次成本。&lt;/p&gt;">
+        <polygon points="450,110 510,140 450,170 390,140" fill="rgba(30,41,59,0.5)" stroke="#f59e0b" class="node-diamond"/>
+        <text x="450" y="136" text-anchor="middle" class="node-text-main" style="font-size:12px;">使用率超过阈值？</text>
+        <text x="450" y="148" text-anchor="middle" class="node-text-sub">Above Threshold?</text>
+      </g>
+      <text x="355" y="134" text-anchor="middle" class="branch-label" style="fill:#10b981">No</text>
+      <text x="470" y="198" text-anchor="start" class="branch-label">Yes</text>
+      
+      <!-- Green Leaf -->
+      <g class="node" data-cache="95" data-tooltip="&lt;h4 style='color:#10b981'&gt;不压缩&lt;/h4&gt;&lt;p&gt;完全保留历史上下文与缓存前缀，单机请求成本最低，对话体验最连贯。&lt;/p&gt;">
+        <rect x="250" y="108" width="140" height="64" rx="6" fill="rgba(16,185,129,0.08)" stroke="#10b981" class="node-rect" filter="url(#glowGreen)"/>
+        <text x="320" y="132" text-anchor="middle" class="node-text-main" style="fill:#10b981">不压缩</text>
+        <text x="320" y="146" text-anchor="middle" class="node-text-sub" style="fill:#10b981">No Compression</text>
+        <text x="320" y="160" text-anchor="middle" class="node-text-detail" style="fill:#10b981">缓存影响 0% · Token 节省 0%</text>
+      </g>
+      
+      <!-- D2 -->
+      <g class="node" data-cache="70" data-tooltip="&lt;h4 style='color:#f59e0b'&gt;轻量压缩评估&lt;/h4&gt;&lt;p&gt;尝试截断超长工具结果、折叠已确认代码编辑、移除冗余空白，以最小代价延长对话寿命。&lt;/p&gt;">
+        <polygon points="450,225 520,260 450,295 380,260" fill="rgba(30,41,59,0.5)" stroke="#f59e0b" class="node-diamond"/>
+        <text x="450" y="254" text-anchor="middle" class="node-text-main" style="font-size:12px;">轻量压缩足够？</text>
+        <text x="450" y="266" text-anchor="middle" class="node-text-sub">Light Compression OK?</text>
+      </g>
+      <text x="560" y="250" text-anchor="middle" class="branch-label" style="fill:#f59e0b">Yes</text>
+      <text x="470" y="328" text-anchor="start" class="branch-label">No</text>
+      
+      <!-- Yellow Leaf -->
+      <g class="node" data-cache="70" data-tooltip="&lt;h4 style='color:#f59e0b'&gt;轻量压缩 Layer 1-3&lt;/h4&gt;&lt;p&gt;applyToolResultBudget → snipCompact → microcompact。仅对非核心前缀进行裁剪，部分缓存命中仍可持续。&lt;/p&gt;">
+        <rect x="600" y="228" width="160" height="64" rx="6" fill="rgba(245,158,11,0.08)" stroke="#f59e0b" class="node-rect" filter="url(#glowYellow)"/>
+        <text x="680" y="252" text-anchor="middle" class="node-text-main" style="fill:#f59e0b">Layer 1-3 轻量压缩</text>
+        <text x="680" y="266" text-anchor="middle" class="node-text-sub" style="fill:#f59e0b">Partial Cache Hit</text>
+        <text x="680" y="280" text-anchor="middle" class="node-text-detail" style="fill:#f59e0b">缓存影响 20-30% · Token 节省 10-25%</text>
+      </g>
+      
+      <!-- D3 -->
+      <g class="node" data-cache="40" data-tooltip="&lt;h4 style='color:#f97316'&gt;重度压缩评估&lt;/h4&gt;&lt;p&gt;轻量级释放不足以缓解 context window 压力，需要折叠整段工具调用或 AI 摘要改写历史。&lt;/p&gt;">
+        <polygon points="450,355 520,390 450,425 380,390" fill="rgba(30,41,59,0.5)" stroke="#f97316" class="node-diamond"/>
+        <text x="450" y="384" text-anchor="middle" class="node-text-main" style="font-size:12px;">需要重度压缩？</text>
+        <text x="450" y="396" text-anchor="middle" class="node-text-sub">Heavy Compression?</text>
+      </g>
+      <text x="560" y="380" text-anchor="middle" class="branch-label" style="fill:#f97316">Yes</text>
+      <text x="470" y="458" text-anchor="start" class="branch-label">No</text>
+      
+      <!-- Orange Leaf -->
+      <g class="node" data-cache="40" data-tooltip="&lt;h4 style='color:#f97316'&gt;重度压缩 Layer 4-5&lt;/h4&gt;&lt;p&gt;applyCollapses → autocompact。大面积改写历史上下文，缓存命中率显著下降，但能有效避免对话终止。&lt;/p&gt;">
+        <rect x="600" y="358" width="160" height="64" rx="6" fill="rgba(249,115,22,0.08)" stroke="#f97316" class="node-rect" filter="url(#glowOrange)"/>
+        <text x="680" y="382" text-anchor="middle" class="node-text-main" style="fill:#f97316">Layer 4-5 重度压缩</text>
+        <text x="680" y="396" text-anchor="middle" class="node-text-sub" style="fill:#f97316">Cache Invalidated</text>
+        <text x="680" y="410" text-anchor="middle" class="node-text-detail" style="fill:#f97316">缓存影响 60-80% · Token 节省 30-50%</text>
+      </g>
+      
+      <!-- D4 -->
+      <g class="node" data-cache="10" data-tooltip="&lt;h4 style='color:#ef4444'&gt;413 错误检查&lt;/h4&gt;&lt;p&gt;对话已因超出 context length 触发 blocking_limit，或 API 返回 413 Payload Too Large。&lt;/p&gt;">
+        <polygon points="450,490 510,520 450,550 390,520" fill="rgba(30,41,59,0.5)" stroke="#ef4444" class="node-diamond"/>
+        <text x="450" y="517" text-anchor="middle" class="node-text-main" style="font-size:12px;">遇到 413 错误？</text>
+        <text x="450" y="529" text-anchor="middle" class="node-text-sub">413 Error?</text>
+      </g>
+      <text x="395" y="575" text-anchor="middle" class="branch-label">No</text>
+      <text x="560" y="510" text-anchor="middle" class="branch-label" style="fill:#ef4444">Yes</text>
+      
+      <!-- Red Leaf -->
+      <g class="node" data-cache="10" data-tooltip="&lt;h4 style='color:#ef4444'&gt;紧急压缩 Layer 6&lt;/h4&gt;&lt;p&gt;reactiveCompact 紧急触发。以牺牲几乎全部缓存为代价，强制将上下文压回可用范围，恢复对话。&lt;/p&gt;">
+        <rect x="600" y="488" width="160" height="64" rx="6" fill="rgba(239,68,68,0.08)" stroke="#ef4444" class="node-rect" filter="url(#glowRed)"/>
+        <text x="680" y="512" text-anchor="middle" class="node-text-main" style="fill:#ef4444">Layer 6 紧急压缩</text>
+        <text x="680" y="526" text-anchor="middle" class="node-text-sub" style="fill:#ef4444">Emergency Compact</text>
+        <text x="680" y="540" text-anchor="middle" class="node-text-detail" style="fill:#ef4444">缓存影响 95%+ · Token 节省 50%+</text>
+      </g>
+      
+      <!-- Right Ladder -->
+      <text x="880" y="55" text-anchor="middle" class="node-text-main" style="font-size:12px;">六层递进压缩</text>
+      <text x="880" y="70" text-anchor="middle" class="node-text-sub">6-Layer Escalation</text>
+      
+      <g class="ladder-step" data-tooltip="&lt;h4&gt;Layer 1&lt;/h4&gt;&lt;p&gt;applyToolResultBudget — 截断过长的工具返回值&lt;/p&gt;">
+        <rect x="800" y="90" width="160" height="34" rx="4" fill="rgba(245,158,11,0.1)" stroke="#f59e0b" stroke-width="1"/>
+        <text x="880" y="112" text-anchor="middle" class="node-text-main" style="font-size:11px;">L1 · applyToolResultBudget</text>
+      </g>
+      <g class="ladder-step" data-tooltip="&lt;h4&gt;Layer 2&lt;/h4&gt;&lt;p&gt;snipCompact — 折叠已确认的代码编辑&lt;/p&gt;">
+        <rect x="810" y="130" width="160" height="34" rx="4" fill="rgba(245,158,11,0.12)" stroke="#f59e0b" stroke-width="1"/>
+        <text x="890" y="152" text-anchor="middle" class="node-text-main" style="font-size:11px;">L2 · snipCompact</text>
+      </g>
+      <g class="ladder-step" data-tooltip="&lt;h4&gt;Layer 3&lt;/h4&gt;&lt;p&gt;microcompact — 移除冗余空白和格式&lt;/p&gt;">
+        <rect x="820" y="170" width="160" height="34" rx="4" fill="rgba(245,158,11,0.14)" stroke="#f59e0b" stroke-width="1"/>
+        <text x="900" y="192" text-anchor="middle" class="node-text-main" style="font-size:11px;">L3 · microcompact</text>
+      </g>
+      <g class="ladder-step" data-tooltip="&lt;h4&gt;Layer 4&lt;/h4&gt;&lt;p&gt;applyCollapses — 折叠整段工具调用&lt;/p&gt;">
+        <rect x="830" y="210" width="160" height="34" rx="4" fill="rgba(249,115,22,0.1)" stroke="#f97316" stroke-width="1"/>
+        <text x="910" y="232" text-anchor="middle" class="node-text-main" style="font-size:11px;">L4 · applyCollapses</text>
+      </g>
+      <g class="ladder-step" data-tooltip="&lt;h4&gt;Layer 5&lt;/h4&gt;&lt;p&gt;autocompact — AI 摘要（最激进，完全改写历史）&lt;/p&gt;">
+        <rect x="840" y="250" width="160" height="34" rx="4" fill="rgba(249,115,22,0.12)" stroke="#f97316" stroke-width="1"/>
+        <text x="920" y="272" text-anchor="middle" class="node-text-main" style="font-size:11px;">L5 · autocompact</text>
+      </g>
+      <g class="ladder-step" data-tooltip="&lt;h4&gt;Layer 6&lt;/h4&gt;&lt;p&gt;reactiveCompact — 413 错误后的紧急压缩&lt;/p&gt;">
+        <rect x="850" y="290" width="160" height="34" rx="4" fill="rgba(239,68,68,0.1)" stroke="#ef4444" stroke-width="1"/>
+        <text x="930" y="312" text-anchor="middle" class="node-text-main" style="font-size:11px;">L6 · reactiveCompact</text>
+      </g>
+      
+      <line x1="800" y1="107" x2="800" y2="307" stroke="#374151" stroke-width="1" stroke-dasharray="4 4"/>
+    </svg>
+    
+    <div class="mobile-cards">
+      <div class="mobile-card" style="border-left:3px solid #64748b;">
+        <span class="mobile-badge" style="background:rgba(100,116,139,0.15);color:#94a3b8;">Root</span>
+        <h3>当前 Context 状态</h3>
+        <p>Current Context State<br>系统监控使用率与缓存命中率</p>
+      </div>
+      <div class="mobile-card" style="border-left:3px solid #10b981;">
+        <span class="mobile-badge" style="background:rgba(16,185,129,0.15);color:#10b981;">Safe</span>
+        <h3>不压缩 · No Compression</h3>
+        <p>缓存完全保留 · Cache preserved<br>缓存影响 0% · Token 节省 0%</p>
+      </div>
+      <div class="mobile-card" style="border-left:3px solid #f59e0b;">
+        <span class="mobile-badge" style="background:rgba(245,158,11,0.15);color:#f59e0b;">Light</span>
+        <h3>轻量压缩 Layer 1-3</h3>
+        <p>applyToolResultBudget → snipCompact → microcompact<br>缓存影响 20-30% · Token 节省 10-25%</p>
+      </div>
+      <div class="mobile-card" style="border-left:3px solid #f97316;">
+        <span class="mobile-badge" style="background:rgba(249,115,22,0.15);color:#f97316;">Heavy</span>
+        <h3>重度压缩 Layer 4-5</h3>
+        <p>applyCollapses → autocompact<br>缓存影响 60-80% · Token 节省 30-50%</p>
+      </div>
+      <div class="mobile-card" style="border-left:3px solid #ef4444;">
+        <span class="mobile-badge" style="background:rgba(239,68,68,0.15);color:#ef4444;">Emergency</span>
+        <h3>紧急压缩 Layer 6</h3>
+        <p>reactiveCompact after 413 error<br>缓存影响 95%+ · Token 节省 50%+</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer-policy">
+    <strong>系统策略</strong>：尽可能晚压缩、尽可能少压缩 &nbsp;|&nbsp; Policy: Compress as late as possible, as little as possible
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const tooltip = document.getElementById('tooltip');
+const diagramWrap = document.getElementById('diagramWrap');
+const scaleIndicator = document.getElementById('scaleIndicator');
+
+function showTooltip(e, html) {
+  tooltip.innerHTML = html;
+  tooltip.classList.add('visible');
+  moveTooltip(e);
+}
+function moveTooltip(e) {
+  const rect = diagramWrap.getBoundingClientRect();
+  let x = e.clientX - rect.left + 16;
+  let y = e.clientY - rect.top + 16;
+  if (x + 260 > rect.width) x = e.clientX - rect.left - 276;
+  if (y + 140 > rect.height) y = e.clientY - rect.top - 140;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+}
+
+function setScaleIndicator(cacheRate) {
+  const maxY = 525, minY = 105;
+  const rate = Math.max(10, Math.min(95, cacheRate));
+  const y = minY + (95 - rate) * ((maxY - minY) / 85);
+  scaleIndicator.setAttribute('points', `80,${y} 90,${y-5} 90,${y+5}`);
+}
+
+document.querySelectorAll('.node, .ladder-step').forEach(el => {
+  el.addEventListener('mouseenter', (e) => {
+    const tip = el.getAttribute('data-tooltip');
+    if (tip) showTooltip(e, tip);
+    const cache = el.getAttribute('data-cache');
+    if (cache) setScaleIndicator(parseInt(cache));
+  });
+  el.addEventListener('mousemove', moveTooltip);
+  el.addEventListener('mouseleave', hideTooltip);
+});
+
+function replayAnimation() {
+  const svg = document.querySelector('svg');
+  svg.classList.remove('animate-flow');
+  void svg.offsetWidth;
+  svg.classList.add('animate-flow');
+  setTimeout(() => svg.classList.remove('animate-flow'), 3000);
+  setScaleIndicator(70);
+}
+
+window.addEventListener('load', () => setTimeout(replayAnimation, 700));
+</script>
+</body>
+</html>

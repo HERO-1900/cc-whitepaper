@@ -1,13 +1,31 @@
-test-viz/
-scripts/reviews/
+# ===== 节点模块、系统、日志 =====
 node_modules/
 .DS_Store
 *.log
-handoff/
-briefs/
 
-# Secrets — never commit
+# ===== Secrets — 永远不能进 git =====
 .env
 .env.local
 .env.*.local
+
+# ===== test-viz：默认忽略，仅公开 production HTML + 嵌入索引 =====
+# 用 test-viz/* 而不是 test-viz/，是为了允许子目录 re-include
+test-viz/*
+!test-viz/chart-embedding-map.json
+!test-viz/production/
+
+# ===== handoff：默认忽略（含 agent 报告、secrets-to-purge、安全 runbook）=====
+# 仅公开 brainstorm/sparks-v1.json（灵感系统的线上数据源）
+handoff/*
+!handoff/brainstorm/
+handoff/brainstorm/*
+!handoff/brainstorm/sparks-v1.json
+
+# ===== briefs：内容生产中间产物，不入库 =====
+briefs/
+
+# ===== scripts/reviews：评审脚本输出（含临时 prompt） =====
+scripts/reviews/
+
+# ===== 历史遗留：本地审计文件，含敏感 prompt =====
 prompt-audit-full.md

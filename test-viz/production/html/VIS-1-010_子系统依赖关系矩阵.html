@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>子系统依赖关系矩阵</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+            padding: 40px 20px;
+            overflow-x: auto;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #00d4ff, #7b61ff, #f7931a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 1rem;
+            margin-bottom: 50px;
+            font-weight: 300;
+        }
+        
+        .matrix-wrapper {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .matrix-container {
+            position: relative;
+        }
+        
+        table {
+            border-collapse: separate;
+            border-spacing: 4px;
+        }
+        
+        th, td {
+            width: 72px;
+            height: 72px;
+            text-align: center;
+            vertical-align: middle;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .col-header {
+            height: 120px;
+            vertical-align: bottom;
+            padding-bottom: 15px;
+        }
+        
+        .col-header-inner {
+            transform: rotate(-45deg);
+            transform-origin: left bottom;
+            white-space: nowrap;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+            padding-left: 10px;
+        }
+        
+        .row-header {
+            width: 160px;
+            text-align: right;
+            padding-right: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .row-header .zh {
+            display: block;
+            font-size: 1rem;
+        }
+        
+        .row-header .en {
+            display: block;
+            font-size: 0.7rem;
+            opacity: 0.7;
+            font-weight: 400;
+            margin-top: 2px;
+        }
+        
+        .brand-qe { color: #00d4ff; }
+        .brand-sp { color: #ff6b9d; }
+        .brand-tr { color: #a78bfa; }
+        .brand-ag { color: #f7931a; }
+        .brand-sa { color: #ef4444; }
+        .brand-st { color: #14b8a6; }
+        .brand-ex { color: #84cc16; }
+        .brand-tu { color: #94a3b8; }
+        
+        .cell {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .cell:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        tr.highlight .cell,
+        td.highlight {
+            background: rgba(255, 255, 255, 0.12);
+        }
+        
+        .diagonal {
+            background: rgba(30, 41, 59, 0.8);
+        }
+        
+        .diagonal::after {
+            content: '×';
+            font-size: 1.5rem;
+            color: #475569;
+            font-weight: 300;
+        }
+        
+        .dep-strong {
+            width: 28px;
+            height: 28px;
+            background: #00d4ff;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        }
+        
+        .dep-medium {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(180deg, #7b61ff 50%, transparent 50%);
+            border: 2px solid #7b61ff;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .dep-weak {
+            width: 20px;
+            height: 20px;
+            background: transparent;
+            border: 2px solid #a0aec0;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .dep-bidi {
+            position: relative;
+        }
+        
+        .dep-bidi::before {
+            content: '⇄';
+            font-size: 1.3rem;
+            color: #f7931a;
+            font-weight: bold;
+        }
+        
+        .stat-header {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+        
+        .stat-cell {
+            padding: 8px;
+        }
+        
+        .bar-chart {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        
+        .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+        
+        .bar-cyan { background: #00d4ff; }
+        .bar-purple { background: #7b61ff; }
+        .bar-gray { background: #a0aec0; }
+        
+        .stat-number {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        
+        #tooltip {
+            position: fixed;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(123, 97, 255, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            max-width: 320px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+        }
+        
+        #tooltip.show {
+            opacity: 1;
+        }
+        
+        #tooltip .title {
+            font-weight: 700;
+            color: #00d4ff;
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+        }
+        
+        #tooltip .desc {
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            line-height: 1.5;
+        }
+        
+        .insights {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 50px;
+            flex-wrap: wrap;
+        }
+        
+        .insight-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 24px 30px;
+            min-width: 220px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .insight-card .number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .insight-card .label {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        
+        .corner-cell {
+            width: 160px;
+            text-align: right;
+            padding-right: 20px;
+            font-size: 0.8rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>子系统依赖关系矩阵</h1>
+        <p class="subtitle">Subsystem Dependency Matrix — 8×8 全景依赖视图</p>
+        
+        <div class="matrix-wrapper">
+            <div class="matrix-container">
+                <table id="matrix">
+                    <thead>
+                        <tr>
+                            <th class="corner-cell">调用方 →<br>被调用方 ↓</th>
+                            <th class="col-header"><span class="col-header-inner brand-qe">1. QueryEngine</span></th>
+                            <th class="col-header"><span class="col-header-inner brand-sp">2. System Prompt</span></th>
+                            <th class="col-header"><span class="col-header-inner brand-tr">3. Tool Runtime</span></th>
+                            <th class="col-header"><span class="col-header-inner brand-ag">4. Agent编排</span></th>
+                            <th class="col-header"><span class="col-header-inner brand-sa">5. 安全架构</span></th>
+                            <th class="col-header"><span class="col-header-inner brand-st">6. 状态持久化</span></th>
+                            <th class="col-header"><span class="col-header-inner brand-ex">7. 扩展生态</span></th>
+                            <th class="col-header"><span class="col-header-inner brand-tu">8. 终端UI</span></th>
+                            <th class="col-header stat-header"><span class="col-header-inner">被依赖数</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr data-row="0">
+                            <td class="row-header brand-qe">
+                                <span class="zh">QueryEngine</span>
+                                <span class="en">查询循环</span>
+                            </td>
+                            <td class="cell diagonal"></td>
+                            <td class="cell" data-dep="strong" data-from="QueryEngine" data-to="System Prompt" data-desc="每次调用前组装提示词，强依赖"><span class="dep-strong"></span></td>
+                            <td class="cell" data-dep="strong" data-from="QueryEngine" data-to="Tool Runtime" data-desc="执行AI回复中的tool_use调用，强依赖"><span class="dep-strong"></span></td>
+                            <td class="cell" data-dep="bidi" data-from="QueryEngine" data-to="Agent编排" data-desc="Agent编排创建新的QueryEngine实例，双向依赖"><span class="dep-bidi"></span></td>
+                            <td class="cell" data-dep="medium" data-from="QueryEngine" data-to="安全架构" data-desc="通过Tool Runtime间接进行安全检查，中依赖"><span class="dep-medium"></span></td>
+                            <td class="cell" data-dep="strong" data-from="QueryEngine" data-to="状态持久化" data-desc="保存和读取消息历史，强依赖"><span class="dep-strong"></span></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">4</div>
+                                <div class="bar-chart"><div class="bar-fill bar-cyan" style="width:57%"></div></div>
+                            </td>
+                        </tr>
+                        <tr data-row="1">
+                            <td class="row-header brand-sp">
+                                <span class="zh">System Prompt</span>
+                                <span class="en">提示词工厂</span>
+                            </td>
+                            <td class="cell"></td>
+                            <td class="cell diagonal"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell" data-dep="medium" data-from="System Prompt" data-to="扩展生态" data-desc="将MCP工具段注入提示词，中依赖"><span class="dep-medium"></span></td>
+                            <td class="cell"></td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">1</div>
+                                <div class="bar-chart"><div class="bar-fill bar-gray" style="width:14%"></div></div>
+                            </td>
+                        </tr>
+                        <tr data-row="2">
+                            <td class="row-header brand-tr">
+                                <span class="zh">Tool Runtime</span>
+                                <span class="en">工具运行时</span>
+                            </td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell diagonal"></td>
+                            <td class="cell"></td>
+                            <td class="cell" data-dep="strong" data-from="Tool Runtime" data-to="安全架构" data-desc="每次工具调用前进行权限检查，强依赖"><span class="dep-strong"></span></td>
+                            <td class="cell" data-dep="medium" data-from="Tool Runtime" data-to="状态持久化" data-desc="文件操作历史快照，中依赖"><span class="dep-medium"></span></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">2</div>
+                                <div class="bar-chart"><div class="bar-fill bar-purple" style="width:29%"></div></div>
+                            </td>
+                        </tr>
+                        <tr data-row="3">
+                            <td class="row-header brand-ag">
+                                <span class="zh">Agent编排</span>
+                                <span class="en">Agent Orchestration</span>
+                            </td>
+                            <td class="cell" data-dep="bidi" data-from="Agent编排" data-to="QueryEngine" data-desc="子Agent复用QueryEngine查询循环，双向依赖"><span class="dep-bidi"></span></td>
+                            <td class="cell"></td>
+                            <td class="cell" data-dep="medium" data-from="Agent编排" data-to="Tool Runtime" data-desc="Agent本身被抽象为一种特殊Tool，中依赖"><span class="dep-medium"></span></td>
+                            <td class="cell diagonal"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">2</div>
+                                <div class="bar-chart"><div class="bar-fill bar-purple" style="width:29%"></div></div>
+                            </td>
+                        </tr>
+                        <tr data-row="4">
+                            <td class="row-header brand-sa">
+                                <span class="zh">安全架构</span>
+                                <span class="en">Security Layer</span>
+                            </td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell diagonal"></td>
+                            <td class="cell" data-dep="weak" data-from="安全架构" data-to="状态持久化" data-desc="读取权限规则配置，弱依赖"><span class="dep-weak"></span></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">1</div>
+                                <div class="bar-chart"><div class="bar-fill bar-gray" style="width:14%"></div></div>
+                            </td>
+                        </tr>
+                        <tr data-row="5">
+                            <td class="row-header brand-st">
+                                <span class="zh">状态与持久化</span>
+                                <span class="en">State & Persistence</span>
+                            </td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell diagonal"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">0</div>
+                                <div class="bar-chart"><div class="bar-fill" style="width:0%"></div></div>
+                            </td>
+                        </tr>
+                        <tr data-row="6">
+                            <td class="row-header brand-ex">
+                                <span class="zh">扩展生态</span>
+                                <span class="en">MCP + Hooks</span>
+                            </td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell" data-dep="strong" data-from="扩展生态" data-to="Tool Runtime" data-desc="MCP工具注册到运行时，强依赖"><span class="dep-strong"></span></td>
+                            <td class="cell"></td>
+                            <td class="cell" data-dep="medium" data-from="扩展生态" data-to="安全架构" data-desc="插件加载时进行安全检查，中依赖"><span class="dep-medium"></span></td>
+                            <td class="cell"></td>
+                            <td class="cell diagonal"></td>
+                            <td class="cell"></td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">2</div>
+                                <div class="bar-chart"><div class="bar-fill bar-purple" style="width:29%"></div></div>
+                            </td>
+                        </tr>
+                        <tr data-row="7">
+                            <td class="row-header brand-tu">
+                                <span class="zh">终端UI</span>
+                                <span class="en">Terminal UI</span>
+                            </td>
+                            <td class="cell" data-dep="strong" data-from="终端UI" data-to="QueryEngine" data-desc="用户输入触发查询循环，强依赖"><span class="dep-strong"></span></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell"></td>
+                            <td class="cell" data-dep="medium" data-from="终端UI" data-to="状态持久化" data-desc="读取会话状态用于界面渲染，中依赖"><span class="dep-medium"></span></td>
+                            <td class="cell"></td>
+                            <td class="cell diagonal"></td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">2</div>
+                                <div class="bar-chart"><div class="bar-fill bar-purple" style="width:29%"></div></div>
+                            </td>
+                        </tr>
+                        <tr class="stat-row">
+                            <td class="corner-cell">依赖数统计 →</td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">3</div>
+                                <div class="bar-chart"><div class="bar-fill bar-cyan" style="width:43%"></div></div>
+                            </td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">1</div>
+                                <div class="bar-chart"><div class="bar-fill bar-gray" style="width:14%"></div></div>
+                            </td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">3</div>
+                                <div class="bar-chart"><div class="bar-fill bar-cyan" style="width:43%"></div></div>
+                            </td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">1</div>
+                                <div class="bar-chart"><div class="bar-fill bar-gray" style="width:14%"></div></div>
+                            </td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">2</div>
+                                <div class="bar-chart"><div class="bar-fill bar-purple" style="width:29%"></div></div>
+                            </td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">3</div>
+                                <div class="bar-chart"><div class="bar-fill bar-cyan" style="width:43%"></div></div>
+                            </td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">1</div>
+                                <div class="bar-chart"><div class="bar-fill bar-gray" style="width:14%"></div></div>
+                            </td>
+                            <td class="cell stat-cell">
+                                <div class="stat-number">0</div>
+                                <div class="bar-chart"><div class="bar-fill" style="width:0%"></div></div>
+                            </td>
+                            <td class="cell diagonal"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item"><span class="dep-strong"></span> 强依赖 — 核心功能路径</div>
+            <div class="legend-item"><span class="dep-medium"></span> 中依赖 — 增强功能路径</div>
+            <div class="legend-item"><span class="dep-weak"></span> 弱依赖 — 辅助功能路径</div>
+            <div class="legend-item"><span class="dep-bidi"></span> 双向依赖 — 互相调用</div>
+        </div>
+        
+        <div class="insights">
+            <div class="insight-card">
+                <div class="number brand-sa">5+</div>
+                <div class="label">被依赖最多<br>安全架构 & 状态持久化</div>
+            </div>
+            <div class="insight-card">
+                <div class="number brand-qe">4-5</div>
+                <div class="label">依赖最多<br>QueryEngine</div>
+            </div>
+            <div class="insight-card">
+                <div class="number brand-tu">1</div>
+                <div class="label">最独立<br>终端UI (几乎不被依赖)</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="tooltip">
+        <div class="title"></div>
+        <div class="desc"></div>
+    </div>
+    
+    <script>
+        const tooltip = document.getElementById('tooltip');
+        const matrix = document.getElementById('matrix');
+        const cells = matrix.querySelectorAll('.cell[data-dep]');
+        
+        cells.forEach(cell => {
+            cell.addEventListener('mouseenter', (e) => {
+                const dep = cell.dataset.dep;
+                const from = cell.dataset.from;
+                const to = cell.dataset.to;
+                const desc = cell.dataset.desc;
+                
+                let depText = '';
+                if (dep === 'strong') depText = '强依赖';
+                else if (dep === 'medium') depText = '中依赖';
+                else if (dep === 'weak') depText = '弱依赖';
+                else if (dep === 'bidi') depText = '双向依赖';
+                
+                tooltip.querySelector('.title').textContent = `${from} → ${to}: ${depText}`;
+                tooltip.querySelector('.desc').textContent = desc;
+                tooltip.classList.add('show');
+                
+                const row = cell.closest('tr');
+                const colIndex = cell.cellIndex;
+                row.classList.add('highlight');
+                matrix.querySelectorAll('tr').forEach(tr => {
+                    const td = tr.cells[colIndex];
+                    if (td) td.classList.add('highlight');
+                });
+            });
+            
+            cell.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('show');
+                matrix.querySelectorAll('tr').forEach(tr => tr.classList.remove('highlight'));
+                matrix.querySelectorAll('td, th').forEach(td => td.classList.remove('highlight'));
+            });
+            
+            cell.addEventListener('mousemove', (e) => {
+                tooltip.style.left = (e.clientX + 15) + 'px';
+                tooltip.style.top = (e.clientY + 15) + 'px';
+            });
+        });
+    </script>
+</body>
+</html>

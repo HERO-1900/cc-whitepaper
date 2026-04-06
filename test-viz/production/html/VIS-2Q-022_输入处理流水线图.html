@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>输入处理流水线图 | Input Processing Pipeline</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+--bg-primary: #0f0f1a;
+--bg-secondary: #1a1a2e;
+--bg-tertiary: #16213e;
+--text-primary: #eaeaea;
+--text-secondary: #a0a0b0;
+--accent-cyan: #66ccff;
+--accent-teal: #00d4ff;
+--accent-blue: #00aacc;
+--accent-purple: #7b61ff;
+--accent-gold: #ffd93d;
+--accent-violet: #9b59b6;
+--accent-green: #00ff88;
+--accent-red: #ff4757;
+--glass-bg: rgba(255,255,255,0.03);
+--glass-border: rgba(255,255,255,0.08);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+font-family: 'Noto Sans SC', 'Space Grotesk', sans-serif;
+background: var(--bg-primary);
+background-image:
+radial-gradient(ellipse at 20% 30%, rgba(102,204,255,0.08) 0%, transparent 50%),
+radial-gradient(ellipse at 80% 70%, rgba(123,97,255,0.08) 0%, transparent 50%),
+radial-gradient(ellipse at 50% 50%, rgba(0,212,255,0.05) 0%, transparent 70%);
+color: var(--text-primary);
+min-height: 100vh;
+overflow-x: auto;
+}
+.container {
+width: 1600px;
+margin: 0 auto;
+padding: 40px 20px;
+}
+.header {
+text-align: center;
+margin-bottom: 50px;
+position: relative;
+}
+.header h1 {
+font-family: 'Space Grotesk', sans-serif;
+font-size: 2.5rem;
+font-weight: 700;
+background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+margin-bottom: 8px;
+letter-spacing: -0.02em;
+}
+.header .subtitle {
+font-size: 1rem;
+color: var(--text-secondary);
+font-weight: 400;
+}
+.header::after {
+content: '';
+position: absolute;
+bottom: -20px;
+left: 50%;
+transform: translateX(-50%);
+width: 60px;
+height: 3px;
+background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+border-radius: 2px;
+}
+#pipeline-svg {
+width: 100%;
+height: 650px;
+display: block;
+}
+.stage-rect {
+rx: 12;
+ry: 12;
+stroke-width: 2;
+transition: all 0.3s ease;
+cursor: pointer;
+}
+.stage-rect:hover {
+filter: brightness(1.15);
+transform: translateY(-3px);
+}
+.stage-g:hover .stage-rect {
+stroke-width: 3;
+}
+.pipe-line {
+fill: none;
+stroke: var(--accent-green);
+stroke-width: 4;
+stroke-linecap: round;
+opacity: 0.8;
+}
+.pipe-glow {
+fill: none;
+stroke: var(--accent-green);
+stroke-width: 8;
+stroke-linecap: round;
+opacity: 0.2;
+filter: blur(4px);
+}
+.data-packet {
+fill: var(--accent-green);
+filter: drop-shadow(0 0 8px var(--accent-green));
+}
+.stage-title {
+font-family: 'Space Grotesk', sans-serif;
+font-size: 14px;
+font-weight: 700;
+fill: #fff;
+text-anchor: middle;
+}
+.stage-line {
+font-family: 'JetBrains Mono', monospace;
+font-size: 10px;
+fill: rgba(255,255,255,0.5);
+text-anchor: middle;
+}
+.stage-desc {
+font-size: 11px;
+fill: var(--text-secondary);
+text-anchor: middle;
+}
+.io-label {
+font-family: 'JetBrains Mono', monospace;
+font-size: 9px;
+fill: var(--accent-green);
+text-anchor: middle;
+font-weight: 600;
+}
+.side-effect-line {
+stroke: #666;
+stroke-width: 1.5;
+stroke-dasharray: 5,3;
+fill: none;
+opacity: 0.7;
+}
+.side-effect-icon {
+fill: #444;
+stroke: #888;
+stroke-width: 1;
+}
+.side-effect-text {
+font-family: 'JetBrains Mono', monospace;
+font-size: 9px;
+fill: #aaa;
+text-anchor: middle;
+}
+.hook-exit {
+font-size: 10px;
+font-weight: 600;
+text-anchor: middle;
+}
+.hook-exit-x { fill: var(--accent-red); }
+.hook-exit-pause { fill: var(--accent-gold); }
+.hook-exit-plus { fill: var(--accent-green); }
+.final-box {
+fill: rgba(123,97,255,0.15);
+stroke: var(--accent-purple);
+stroke-width: 2;
+stroke-dasharray: 8,4;
+rx: 16;
+ry: 16;
+}
+.pulse {
+animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+0%, 100% { opacity: 0.4; }
+50% { opacity: 1; }
+}
+.flow-particle {
+fill: #fff;
+filter: drop-shadow(0 0 6px #fff);
+}
+.tooltip {
+position: absolute;
+background: rgba(20,20,35,0.98);
+border: 1px solid var(--glass-border);
+border-radius: 12px;
+padding: 20px;
+max-width: 360px;
+font-size: 13px;
+color: var(--text-primary);
+box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+backdrop-filter: blur(20px);
+pointer-events: none;
+opacity: 0;
+transition: opacity 0.2s, transform 0.2s;
+z-index: 1000;
+line-height: 1.7;
+}
+.tooltip.show {
+opacity: 1;
+}
+.tooltip h4 {
+font-family: 'Space Grotesk', sans-serif;
+color: var(--accent-cyan);
+margin-bottom: 12px;
+font-size: 15px;
+border-bottom: 1px solid var(--glass-border);
+padding-bottom: 8px;
+}
+.tooltip .section {
+margin-bottom: 10px;
+}
+.tooltip .label {
+color: var(--text-secondary);
+font-size: 11px;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+margin-bottom: 4px;
+}
+.tooltip code {
+font-family: 'JetBrains Mono', monospace;
+background: rgba(0,0,0,0.3);
+padding: 2px 6px;
+border-radius: 4px;
+color: var(--accent-green);
+font-size: 11px;
+}
+.stage-icon {
+font-size: 24px;
+text-anchor: middle;
+}
+.arrow-marker path {
+fill: var(--accent-green);
+}
+.side-effects-row {
+fill: rgba(100,100,120,0.08);
+stroke: rgba(100,100,120,0.2);
+stroke-width: 1;
+rx: 8;
+ry: 8;
+}
+.input-trigger {
+animation: glow 2s ease-in-out infinite;
+}
+@keyframes glow {
+0%, 100% { filter: drop-shadow(0 0 5px var(--accent-cyan)); }
+50% { filter: drop-shadow(0 0 20px var(--accent-cyan)); }
+}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>输入处理流水线</h1>
+<div class="subtitle">Input Processing Pipeline · From Enter to API Request</div>
+</div>
+<svg id="pipeline-svg" viewBox="0 0 1550 650">
+<defs>
+<linearGradient id="grad-stage0" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#66ccff" stop-opacity="0.3"/>
+<stop offset="100%" stop-color="#66ccff" stop-opacity="0.1"/>
+</linearGradient>
+<linearGradient id="grad-stage1" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#00d4ff" stop-opacity="0.3"/>
+<stop offset="100%" stop-color="#00d4ff" stop-opacity="0.1"/>
+</linearGradient>
+<linearGradient id="grad-stage2" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#00aacc" stop-opacity="0.3"/>
+<stop offset="100%" stop-color="#00aacc" stop-opacity="0.1"/>
+</linearGradient>
+<linearGradient id="grad-stage3" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#7b61ff" stop-opacity="0.3"/>
+<stop offset="100%" stop-color="#7b61ff" stop-opacity="0.1"/>
+</linearGradient>
+<linearGradient id="grad-stage4" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#ffd93d" stop-opacity="0.4"/>
+<stop offset="100%" stop-color="#ffd93d" stop-opacity="0.15"/>
+</linearGradient>
+<linearGradient id="grad-stage5" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" stop-color="#9b59b6" stop-opacity="0.3"/>
+<stop offset="100%" stop-color="#9b59b6" stop-opacity="0.1"/>
+</linearGradient>
+<marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+<path d="M0,0 L0,6 L9,3 z" fill="#00ff88"/>
+</marker>
+<marker id="arrow-cyan" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+<path d="M0,0 L0,6 L9,3 z" fill="#66ccff"/>
+</marker>
+<filter id="glow-green" x="-50%" y="-50%" width="200%" height="200%">
+<feGaussianBlur stdDeviation="3" result="blur"/>
+<feMerge>
+<feMergeNode in="blur"/>
+<feMergeNode in="SourceGraphic"/>
+</feMerge>
+</filter>
+</defs>
+<g id="pipeline-container"></g>
+</svg>
+</div>
+<div class="tooltip" id="tooltip"></div>
+<script>
+const svg = d3.select("#pipeline-svg");
+const container = svg.select("#pipeline-container");
+const tooltip = d3.select("#tooltip");
+const stageWidth = 180;
+const stageHeight = 140;
+const startX = 60;
+const startY = 80;
+const gap = 40;
+const sideEffectY = 480;
+const stages = [
+{
+id: 0,
+name: "阶段 0",
+enName: "Stage 0 · Enter",
+color: "#66ccff",
+gradient: "url(#grad-stage0)",
+x: startX,
+icon: "⌨️",
+lineRef: "",
+title: "用户按下 Enter",
+processing: ["原始键盘事件捕获", "即时UI反馈"],
+input: "KeyboardEvent",
+output: "string | ContentBlockParam[]",
+sideEffects: [
+{ icon: "💫", text: "setUserInputOnProcessing", desc: "即时UI反馈，显示输入处理中状态" }
+],
+detail: "用户按下Enter键，触发输入处理流程。原始键盘事件被转换为字符串或内容块数组，同时UI立即反馈处理状态。"
+},
+{
+id: 1,
+name: "阶段 1",
+enName: "Stage 1 · Images",
+color: "#00d4ff",
+gradient: "url(#grad-stage1)",
+x: startX + (stageWidth + gap) * 1,
+icon: "🖼️",
+lineRef: "processUserInput.ts:317-388",
+title: "图片处理",
+processing: ["maybeResizeAndDownsampleImageBlock", "Promise.all 并行处理"],
+input: "ContentBlockParam[]",
+output: "标准化 ContentBlockParam[]",
+sideEffects: [
+{ icon: "💾", text: "storeImages", desc: "剪贴板图片存盘到本地存储" },
+{ icon: "📐", text: "尺寸元数据收集", desc: "收集图片尺寸信息供后续使用" }
+],
+detail: "并行处理所有图片块，进行缩放和降采样。兼容iOS的mediaType修正为media_type。剪贴板图片会被持久化存储，尺寸元数据被收集用于后续注入。"
+},
+{
+id: 2,
+name: "阶段 2",
+enName: "Stage 2 · Attachments",
+color: "#00aacc",
+gradient: "url(#grad-stage2)",
+x: startX + (stageWidth + gap) * 2,
+icon: "@",
+lineRef: "processUserInput.ts:499-514",
+title: "附件提取",
+processing: ["getAttachmentMessages 生成器", "扫描 @mentions", "IDE选择注入"],
+input: "inputString + ideSelection",
+output: "AttachmentMessage[]",
+condition: "!skipAttachments && string输入 && !斜杠命令",
+sideEffects: [],
+detail: "使用异步生成器扫描@提及和IDE选择，生成附件消息数组。仅当不跳过附件、输入为字符串且非斜杠命令时执行。"
+},
+{
+id: 3,
+name: "阶段 3",
+enName: "Stage 3 · Text",
+color: "#7b61ff",
+gradient: "url(#grad-stage3)",
+x: startX + (stageWidth + gap) * 3,
+icon: "📝",
+lineRef: "processTextPrompt (~100行)",
+title: "文本处理",
+processing: ["生成 promptId (UUID)", "startInteractionSpan 性能追踪", "关键词检测"],
+input: "文本字符串 + 图片块",
+output: "UserMessage",
+sideEffects: [
+{ icon: "🎯", text: "setPromptId", desc: "UUID存入全局状态" },
+{ icon: "📊", text: "OTel: user_prompt", desc: "记录长度+内容(findLast text block)" },
+{ icon: "🔍", text: "关键词检测", desc: "matchesNegativeKeyword / matchesKeepGoingKeyword" }
+],
+detail: "核心文本处理阶段。生成唯一promptId，启动性能追踪span，发送OTel事件。检测关键词，构造包含uuid、imagePasteIds、permissionMode的UserMessage。"
+},
+{
+id: 4,
+name: "阶段 4",
+enName: "Stage 4 · Hooks",
+color: "#ffd93d",
+gradient: "url(#grad-stage4)",
+x: startX + (stageWidth + gap) * 4,
+icon: "⚡",
+lineRef: "processUserInput.ts:182-264",
+title: "Hook 拦截",
+processing: ["executeUserPromptSubmitHooks", "三种结果分支处理"],
+input: "messages[] + shouldQuery=true",
+output: "最终 messages[] + shouldQuery",
+exits: [
+{ type: "error", label: "阻断", enLabel: "blockingError", color: "#ff4757", desc: "替换消息，shouldQuery=false" },
+{ type: "pause", label: "保留", enLabel: "preventContinuation", color: "#ffd93d", desc: "shouldQuery=false，消息保留" },
+{ type: "append", label: "追加", enLabel: "additionalContexts", color: "#00ff88", desc: "追加消息到数组" }
+],
+sideEffects: [],
+detail: "最后的拦截关卡。Hook可以阻断请求(显示错误)、阻止继续(保留消息但不发送)、或追加额外上下文。输出截断于MAX_HOOK_OUTPUT_LENGTH=10000字符。"
+},
+{
+id: 5,
+name: "阶段 5",
+enName: "Stage 5 · Metadata",
+color: "#9b59b6",
+gradient: "url(#grad-stage5)",
+x: startX + (stageWidth + gap) * 5,
+icon: "👁️",
+lineRef: "processUserInput.ts:592-605",
+title: "图片元数据注入",
+processing: ["addImageMetadataMessage"],
+input: "messages[] + 尺寸元数据",
+output: "messages[] + 隐形消息",
+sideEffects: [
+{ icon: "👁️", text: "isMeta隐形消息", desc: "模型可见，用户不可见" }
+],
+detail: "将收集的图片尺寸元数据注入为隐形消息(isMeta:true)。这条消息对模型可见但用户不可见，帮助模型理解图片上下文。"
+}
+];
+const finalOutput = {
+x: startX + (stageWidth + gap) * 6 + 20,
+title: "ProcessUserInputBaseResult",
+fields: [
+"messages: (UserMessage | AttachmentMessage |",
+"         SystemMessage | ProgressMessage)[]",
+"shouldQuery: boolean",
+"allowedTools?: string[]",
+"model?: string",
+"effort?: EffortValue",
+"resultText?: string",
+"nextInput / submitNextInput"
+]
+};
+stages.forEach((stage, i) => {
+const g = container.append("g")
+.attr("class", "stage-g")
+.attr("transform", `translate(${stage.x}, ${startY})`)
+.on("mouseover", function(event) {
+showTooltip(event, stage);
+})
+.on("mouseout", hideTooltip);
+g.append("rect")
+.attr("class", "stage-rect input-trigger")
+.attr("width", stageWidth)
+.attr("height", stageHeight)
+.attr("fill", stage.gradient)
+.attr("stroke", stage.color)
+.attr("x", 0)
+.attr("y", 0);
+g.append("text")
+.attr("class", "stage-icon")
+.attr("x", stageWidth / 2)
+.attr("y", 35)
+.text(stage.icon);
+g.append("text")
+.attr("class", "stage-title")
+.attr("x", stageWidth / 2)
+.attr("y", 60)
+.text(stage.title);
+if (stage.lineRef) {
+g.append("text")
+.attr("class", "stage-line")
+.attr("x", stageWidth / 2)
+.attr("y", 78)
+.text(stage.lineRef);
+}
+const processingTexts = stage.processing;
+processingTexts.forEach((text, idx) => {
+g.append("text")
+.attr("class", "stage-desc")
+.attr("x", stageWidth / 2)
+.attr("y", 98 + idx * 14)
+.text(text);
+});
+const ioY = stageHeight - 25;
+g.append("text")
+.attr("class", "io-label")
+.attr("x", stageWidth / 2)
+.attr("y", ioY)
+.text(`${stage.input} → ${stage.output}`);
+g.append("text")
+.attr("class", "stage-title")
+.attr("x", stageWidth / 2)
+.attr("y", -15)
+.style("font-size", "12px")
+.style("fill", stage.color)
+.text(stage.enName);
+if (stage.sideEffects && stage.sideEffects.length > 0) {
+const seGroup = container.append("g");
+seGroup.append("rect")
+.attr("class", "side-effects-row")
+.attr("x", stage.x + 10)
+.attr("y", sideEffectY - 30)
+.attr("width", stageWidth - 20)
+.attr("height", 60);
+stage.sideEffects.forEach((se, idx) => {
+const seX = stage.x + stageWidth / 2;
+const seY = sideEffectY - 10 + idx * 22;
+seGroup.append("text")
+.attr("class", "side-effect-text")
+.attr("x", seX)
+.attr("y", seY)
+.text(`${se.icon} ${se.text}`);
+});
+seGroup.append("path")
+.attr("class", "side-effect-line")
+.attr("d", `M${stage.x + stageWidth/2},${startY + stageHeight} L${stage.x + stageWidth/2},${sideEffectY - 30}`);
+}
+if (stage.exits) {
+const exitG = g.append("g");
+stage.exits.forEach((exit, idx) => {
+const angle = (idx - 1) * 60;
+const rad = angle * Math.PI / 180;
+const exitR = 70;
+const exitX = stageWidth / 2 + Math.sin(rad) * exitR;
+const exitY = stageHeight / 2 + Math.cos(rad) * exitR;
+exitG.append("circle")
+.attr("cx", exitX)
+.attr("cy", exitY)
+.attr("r", 22)
+.attr("fill", "rgba(0,0,0,0.6)")
+.attr("stroke", exit.color)
+.attr("stroke-width", 2);
+exitG.append("text")
+.attr("class", "hook-exit")
+.attr("x", exitX)
+.attr("y", exitY - 3)
+.style("fill", exit.color)
+.style("font-size", "11px")
+.style("font-weight", "700")
+.text(exit.label);
+exitG.append("text")
+.attr("class", "hook-exit")
+.attr("x", exitX)
+.attr("y", exitY + 10)
+.style("fill", exit.color)
+.style("font-size", "8px")
+.text(exit.enLabel);
+});
+g.select(".stage-rect")
+.attr("stroke-width", 4);
+}
+if (i < stages.length - 1) {
+const nextStage = stages[i + 1];
+const pipeGroup = container.append("g");
+const x1 = stage.x + stageWidth;
+const y1 = startY + stageHeight / 2;
+const x2 = nextStage.x;
+const y2 = startY + stageHeight / 2;
+const cp1x = x1 + gap / 2;
+const cp2x = x2 - gap / 2;
+pipeGroup.append("path")
+.attr("class", "pipe-glow pulse")
+.attr("d", `M${x1},${y1} C${cp1x},${y1} ${cp2x},${y2} ${x2},${y2}`);
+pipeGroup.append("path")
+.attr("class", "pipe-line")
+.attr("d", `M${x1},${y1} C${cp1x},${y1} ${cp2x},${y2} ${x2},${y2}`)
+.attr("marker-end", "url(#arrow-green)");
+const particle = pipeGroup.append("circle")
+.attr("class", "flow-particle")
+.attr("r", 5)
+.attr("cx", x1)
+.attr("cy", y1);
+const path = pipeGroup.select(".pipe-line").node();
+const length = path.getTotalLength();
+particle.append("animateMotion")
+.attr("dur", "2s")
+.attr("repeatCount", "indefinite")
+.attr("path", `M${x1},${y1} C${cp1x},${y1} ${cp2x},${y2} ${x2},${y2}`);
+}
+});
+const finalG = container.append("g")
+.attr("transform", `translate(${finalOutput.x}, ${startY + 20})`);
+finalG.append("rect")
+.attr("class", "final-box")
+.attr("width", 220)
+.attr("height", 200);
+finalG.append("text")
+.attr("class", "stage-title")
+.attr("x", 110)
+.attr("y", 30)
+.style("fill", "#7b61ff")
+.text("最终产出");
+finalG.append("text")
+.attr("class", "stage-line")
+.attr("x", 110)
+.attr("y", 48)
+.text("ProcessUserInputBaseResult");
+finalOutput.fields.forEach((field, idx) => {
+finalG.append("text")
+.attr("class", "stage-desc")
+.attr("x", 20)
+.attr("y", 75 + idx * 18)
+.style("text-anchor", "start")
+.style("font-size", "10px")
+.text(field);
+});
+const lastStage = stages[stages.length - 1];
+const finalPipe = container.append("g");
+const fx1 = lastStage.x + stageWidth;
+const fy1 = startY + stageHeight / 2;
+const fx2 = finalOutput.x;
+const fy2 = startY + 120;
+finalPipe.append("path")
+.attr("class", "pipe-glow pulse")
+.attr("d", `M${fx1},${fy1} L${fx2 - 30},${fy1} L${fx2},${fy2}`);
+finalPipe.append("path")
+.attr("class", "pipe-line")
+.attr("d", `M${fx1},${fy1} L${fx2 - 30},${fy1} L${fx2},${fy2}`)
+.attr("marker-end", "url(#arrow-green)");
+const apiBox = container.append("g")
+.attr("transform", `translate(${finalOutput.x + 240}, ${startY + 70})`);
+apiBox.append("rect")
+.attr("width", 140)
+.attr("height", 100)
+.attr("rx", 12)
+.attr("fill", "rgba(0,255,136,0.1)")
+.attr("stroke", "#00ff88")
+.attr("stroke-width", 2);
+apiBox.append("text")
+.attr("class", "stage-title")
+.attr("x", 70)
+.attr("y", 35)
+.style("fill", "#00ff88")
+.text("API 调用");
+apiBox.append("text")
+.attr("class", "stage-desc")
+.attr("x", 70)
+.attr("y", 60)
+.text("shouldQuery=true");
+apiBox.append("text")
+.attr("class", "stage-desc")
+.attr("x", 70)
+.attr("y", 78)
+.text("时发送请求");
+const decisionLine = container.append("g");
+decisionLine.append("path")
+.attr("class", "pipe-line")
+.attr("d", `M${finalOutput.x + 220},${startY + 120} L${finalOutput.x + 240},${startY + 120}`)
+.attr("stroke", "#00ff88")
+.attr("marker-end", "url(#arrow-green)");
+const legendG = container.append("g")
+.attr("transform", `translate(60, 580)`);
+legendG.append("text")
+.attr("class", "stage-desc")
+.attr("x", 0)
+.attr("y", 0)
+.style("text-anchor", "start")
+.style("font-weight", "600")
+.style("fill", "#888")
+.text("图例 Legend:");
+const legendItems = [
+{ color: "#00ff88", text: "数据流 Data Flow" },
+{ color: "#666", text: "副作用 Side Effects" },
+{ color: "#ffd93d", text: "Hook拦截 Hook Interception" }
+];
+legendItems.forEach((item, idx) => {
+const lx = 100 + idx * 160;
+legendG.append("line")
+.attr("x1", lx)
+.attr("y1", -4)
+.attr("x2", lx + 20)
+.attr("y2", -4)
+.attr("stroke", item.color)
+.attr("stroke-width", 3);
+legendG.append("text")
+.attr("class", "stage-desc")
+.attr("x", lx + 28)
+.attr("y", 0)
+.style("text-anchor", "start")
+.text(item.text);
+});
+function showTooltip(event, stage) {
+const exitsHtml = stage.exits ? `
+<div class="section">
+<div class="label">出口分支 Exit Branches</div>
+${stage.exits.map(e => `<code style="color:${e.color}">${e.enLabel}</code>: ${e.desc}`).join('<br>')}</div>` : '';
+const conditionHtml = stage.condition ? `
+<div class="section">
+<div class="label">执行条件 Condition</div>
+<code>${stage.condition}</code></div>` : '';
+const sideEffectsHtml = stage.sideEffects.length > 0 ? `
+<div class="section">
+<div class="label">副作用 Side Effects</div>
+${stage.sideEffects.map(se => `${se.icon} <b>${se.text}</b>: ${se.desc}`).join('<br>')}</div>` : '';
+tooltip.html(`
+<h4>${stage.icon} ${stage.title}</h4>
+<div class="section">
+<div class="label">代码位置 Code Location</div>
+<code>${stage.lineRef || 'N/A'}</code></div>
+<div class="section">
+<div class="label">处理逻辑 Processing</div>
+${stage.processing.map(p => `• ${p}`).join('<br>')}</div>
+<div class="section">
+<div class="label">输入 Input</div>
+<code>${stage.input}</code></div>
+<div class="section">
+<div class="label">输出 Output</div>
+<code>${stage.output}</code></div>
+${conditionHtml}${sideEffectsHtml}${exitsHtml}
+<div class="section">
+<div class="label">详细说明 Description</div>
+${stage.detail}</div>
+`);
+const tooltipNode = tooltip.node();
+const rect = tooltipNode.getBoundingClientRect();
+let left = event.pageX + 20;
+let top = event.pageY - 20;
+if (left + rect.width > window.innerWidth) {
+left = event.pageX - rect.width - 20;
+}
+if (top + rect.height > window.innerHeight) {
+top = event.pageY - rect.height + 20;
+}
+tooltip
+.style("left", left + "px")
+.style("top", top + "px")
+.classed("show", true);
+}
+function hideTooltip() {
+tooltip.classed("show", false);
+}
+</script>
+</body>
+</html>

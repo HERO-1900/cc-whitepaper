@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>思考深度控制层级图</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-deep: #0a0f1a;
+            --bg-mid: #111827;
+            --effort-low: #5ee7df;
+            --effort-medium: #00d4ff;
+            --effort-high: #0066cc;
+            --effort-max: #7c3aed;
+            --advisor-gold: #ffcc00;
+            --text-primary: #f0f4f8;
+            --text-secondary: #94a3b8;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', 'Noto Serif SC', sans-serif;
+            background: var(--bg-deep);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            padding: 40px;
+        }
+        
+        .diagram-wrapper {
+            position: relative;
+            width: 100%;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 
+                0 25px 80px rgba(0,0,0,0.6),
+                inset 0 1px 1px rgba(255,255,255,0.05);
+            overflow: hidden;
+        }
+        
+        .diagram-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse 80% 50% at 20% 40%, rgba(0,212,255,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(124,58,237,0.06) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        
+        .title {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .title h1 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+        
+        .title p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        
+        .diagram {
+            position: relative;
+            width: 100%;
+            height: 480px;
+        }
+        
+        /* Layer Base Styles */
+        .layer {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 12px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            overflow: hidden;
+        }
+        
+        .layer:hover {
+            transform: translateX(-50%) scale(1.02);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        
+        /* Effort Layer - Bottom */
+        .layer-effort {
+            bottom: 0;
+            width: 90%;
+            height: 180px;
+            background: linear-gradient(180deg, rgba(0,212,255,0.15) 0%, rgba(0,102,204,0.1) 100%);
+            border: 1px solid rgba(0,212,255,0.3);
+        }
+        
+        .layer-effort::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--effort-medium), transparent);
+        }
+        
+        /* Ultrathink Layer - Middle */
+        .layer-ultrathink {
+            bottom: 200px;
+            width: 65%;
+            height: 120px;
+            background: linear-gradient(135deg, 
+                rgba(255,0,85,0.15) 0%, 
+                rgba(255,165,0,0.15) 25%,
+                rgba(255,255,0,0.15) 50%,
+                rgba(0,255,136,0.15) 75%,
+                rgba(0,212,255,0.15) 100%);
+            border: 1px solid rgba(255,255,255,0.2);
+            animation: rainbow-pulse 4s ease-in-out infinite;
+        }
+        
+        @keyframes rainbow-pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(255,0,85,0.2); }
+            25% { box-shadow: 0 0 20px rgba(255,255,0,0.2); }
+            50% { box-shadow: 0 0 20px rgba(0,255,136,0.2); }
+            75% { box-shadow: 0 0 20px rgba(0,212,255,0.2); }
+        }
+        
+        /* Advisor Layer - Top */
+        .layer-advisor {
+            bottom: 340px;
+            width: 40%;
+            height: 100px;
+            background: linear-gradient(135deg, rgba(255,204,0,0.2) 0%, rgba(255,170,0,0.15) 100%);
+            border: 1px solid rgba(255,204,0,0.4);
+            box-shadow: 0 0 30px rgba(255,204,0,0.15);
+        }
+        
+        /* Layer Headers */
+        .layer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .layer-title {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+        
+        .layer-title .zh {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .layer-title .en {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .layer-icon {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .layer-effort .layer-icon {
+            background: rgba(0,212,255,0.2);
+            color: var(--effort-medium);
+        }
+        
+        .layer-ultrathink .layer-icon {
+            background: linear-gradient(135deg, #ff0055, #ffaa00, #00ff88, #00d4ff);
+            color: white;
+            animation: shimmer 2s linear infinite;
+            background-size: 300% 300%;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .layer-advisor .layer-icon {
+            background: rgba(255,204,0,0.2);
+            color: var(--advisor-gold);
+        }
+        
+        /* Gear Levels */
+        .gear-container {
+            display: flex;
+            padding: 15px 20px;
+            gap: 12px;
+        }
+        
+        .gear {
+            flex: 1;
+            padding: 12px 8px;
+            border-radius: 8px;
+            text-align: center;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+        
+        .gear:hover {
+            transform: translateY(-3px);
+        }
+        
+        .gear-low {
+            background: linear-gradient(135deg, rgba(94,231,223,0.2), rgba(94,231,223,0.05));
+            border: 1px solid var(--effort-low);
+        }
+        
+        .gear-medium {
+            background: linear-gradient(135deg, rgba(0,212,255,0.25), rgba(0,212,255,0.08));
+            border: 1px solid var(--effort-medium);
+            box-shadow: 0 0 15px rgba(0,212,255,0.1);
+        }
+        
+        .gear-high {
+            background: linear-gradient(135deg, rgba(0,102,204,0.25), rgba(0,102,204,0.08));
+            border: 1px solid var(--effort-high);
+        }
+        
+        .gear-max {
+            background: linear-gradient(135deg, rgba(124,58,237,0.25), rgba(124,58,237,0.08));
+            border: 1px solid var(--effort-max);
+            position: relative;
+        }
+        
+        .gear-max::after {
+            content: 'Opus 4.6 Only';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #dc2626;
+            color: white;
+            font-size: 8px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .gear-label {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .gear-low .gear-label { color: var(--effort-low); }
+        .gear-medium .gear-label { color: var(--effort-medium); }
+        .gear-high .gear-label { color: var(--effort-high); }
+        .gear-max .gear-label { color: #a78bfa; }
+        
+        .gear-value {
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+        
+        /* Priority Chain */
+        .priority-chain {
+            position: absolute;
+            right: 20px;
+            top: 60px;
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-align: right;
+        }
+        
+        .priority-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+            opacity: 0.8;
+        }
+        
+        .priority-arrow {
+            color: var(--effort-medium);
+        }
+        
+        /* Ultrathink Content */
+        .ultrathink-content {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .ultrathink-keyword {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #ff0055, #ffaa00, #ffff00, #00ff88, #00d4ff, #aa00ff, #ff0055);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: rainbow-text 3s linear infinite;
+            font-family: 'Space Grotesk', monospace;
+            letter-spacing: 1px;
+        }
+        
+        @keyframes rainbow-text {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 300% 50%; }
+        }
+        
+        .ultrathink-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+            max-width: 200px;
+            text-align: right;
+            line-height: 1.5;
+        }
+        
+        .ultrathink-gate {
+            position: absolute;
+            bottom: 10px;
+            left: 20px;
+            font-size: 9px;
+            color: rgba(255,255,255,0.4);
+            font-family: monospace;
+        }
+        
+        /* Advisor Content */
+        .advisor-content {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .advisor-visual {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .model-badge {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+        
+        .review-arrow {
+            color: var(--advisor-gold);
+            font-size: 20px;
+        }
+        
+        .advisor-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            max-width: 150px;
+            line-height: 1.5;
+        }
+        
+        /* Cost Curve */
+        .cost-panel {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            width: 140px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .cost-title {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .cost-graph {
+            height: 80px;
+            position: relative;
+        }
+        
+        .cost-bar {
+            position: absolute;
+            bottom: 20px;
+            width: 22px;
+            border-radius: 3px 3px 0 0;
+            transition: height 0.5s ease;
+        }
+        
+        .cost-bar-low { 
+            left: 10px; 
+            height: 25px; 
+            background: linear-gradient(to top, var(--effort-low), transparent);
+        }
+        .cost-bar-medium { 
+            left: 42px; 
+            height: 45px; 
+            background: linear-gradient(to top, var(--effort-medium), transparent);
+        }
+        .cost-bar-high { 
+            left: 74px; 
+            height: 65px; 
+            background: linear-gradient(to top, var(--effort-high), transparent);
+        }
+        .cost-bar-max { 
+            left: 106px; 
+            height: 80px; 
+            background: linear-gradient(to top, var(--effort-max), transparent);
+        }
+        
+        .cost-curve {
+            position: absolute;
+            bottom: 20px;
+            left: 10px;
+            right: 10px;
+            height: 60px;
+        }
+        
+        .cost-curve svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .cost-curve path {
+            fill: none;
+            stroke: url(#costGradient);
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+        
+        .cost-dots {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            font-size: 8px;
+            color: var(--text-secondary);
+        }
+        
+        .economics-note {
+            position: absolute;
+            left: 20px;
+            bottom: 20px;
+            background: rgba(0,212,255,0.1);
+            border-left: 3px solid var(--effort-medium);
+            padding: 10px 15px;
+            border-radius: 0 8px 8px 0;
+            max-width: 280px;
+        }
+        
+        .economics-note .label {
+            font-size: 10px;
+            color: var(--effort-medium);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        
+        .economics-note .text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        
+        .economics-note .highlight {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        /* Connection Lines */
+        .connection-line {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        }
+        
+        .line-1 {
+            bottom: 180px;
+            height: 20px;
+        }
+        
+        .line-2 {
+            bottom: 320px;
+            height: 20px;
+        }
+        
+        /* Budget Tokens */
+        .budget-panel {
+            position: absolute;
+            right: 20px;
+            top: 80px;
+            width: 140px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .budget-title {
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        
+        .budget-range {
+            font-size: 11px;
+            color: var(--text-primary);
+            font-family: monospace;
+        }
+        
+        .budget-note {
+            font-size: 9px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="diagram-wrapper">
+            <div class="title">
+                <h1>思考深度控制层级</h1>
+                <p>Thinking Depth Control Architecture</p>
+            </div>
+            
+            <div class="diagram">
+                <!-- Connection Lines -->
+                <div class="connection-line line-2"></div>
+                <div class="connection-line line-1"></div>
+                
+                <!-- Layer 3: Advisor -->
+                <div class="layer layer-advisor">
+                    <div class="layer-header">
+                        <div class="layer-title">
+                            <span class="zh">顾问审查</span>
+                            <span class="en">Advisor</span>
+                        </div>
+                        <div class="layer-icon">👁</div>
+                    </div>
+                    <div class="advisor-content">
+                        <div class="advisor-visual">
+                            <div class="model-badge">当前<br>模型</div>
+                            <span class="review-arrow">→</span>
+                            <div class="model-badge" style="border-color: var(--advisor-gold); color: var(--advisor-gold);">更强<br>模型</div>
+                        </div>
+                        <div class="advisor-text">调用更强模型审查当前工作输出，提供第二意见</div>
+                    </div>
+                </div>
+                
+                <!-- Layer 2: Ultrathink -->
+                <div class="layer layer-ultrathink">
+                    <div class="layer-header">
+                        <div class="layer-title">
+                            <span class="zh">深度思考</span>
+                            <span class="en">Ultrathink</span>
+                        </div>
+                        <div class="layer-icon">✦</div>
+                    </div>
+                    <div class="ultrathink-content">
+                        <div class="ultrathink-keyword">/ultrathink</div>
+                        <div class="ultrathink-desc">
+                            魔法关键词触发<br>
+                            临时提升至 high 档位<br>
+                            单次消息有效
+                        </div>
+                    </div>
+                    <div class="ultrathink-gate">feature('ULTRATHINK') + tengu_turtle_carbon</div>
+                </div>
+                
+                <!-- Layer 1: Effort -->
+                <div class="layer layer-effort">
+                    <div class="layer-header">
+                        <div class="layer-title">
+                            <span class="zh">思考档位</span>
+                            <span class="en">Effort Level</span>
+                        </div>
+                        <div class="layer-icon">⚙</div>
+                    </div>
+                    
+                    <div class="priority-chain">
+                        <div class="priority-item">
+                            <span>环境变量 CLAUDE_CODE_EFFORT_LEVEL</span>
+                            <span class="priority-arrow">▲</span>
+                        </div>
+                        <div class="priority-item">
+                            <span>用户设置 (appState)</span>
+                            <span class="priority-arrow">▲</span>
+                        </div>
+                        <div class="priority-item">
+                            <span>模型默认值</span>
+                        </div>
+                    </div>
+                    
+                    <div class="gear-container">
+                        <div class="gear gear-low">
+                            <div class="gear-label">low</div>
+                            <div class="gear-value">1,024 tokens</div>
+                        </div>
+                        <div class="gear gear-medium">
+                            <div class="gear-label">medium</div>
+                            <div class="gear-value">默认档</div>
+                        </div>
+                        <div class="gear gear-high">
+                            <div class="gear-label">high</div>
+                            <div class="gear-value">较高消耗</div>
+                        </div>
+                        <div class="gear gear-max">
+                            <div class="gear-label">max</div>
+                            <div class="gear-value">128,000</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Economics Note -->
+                <div class="economics-note">
+                    <div class="label">Economics</div>
+                    <div class="text">
+                        Opus 4.6 默认 <span class="highlight">medium</span> 而非 high<br>
+                        最大化 rate limits 利用率，平衡成本与性能
+                    </div>
+                </div>
+                
+                <!-- Budget Panel -->
+                <div class="budget-panel">
+                    <div class="budget-title">Budget Range</div>
+                    <div class="budget-range">1,024 — 128,000</div>
+                    <div class="budget-note">thinking_tokens</div>
+                </div>
+                
+                <!-- Cost Curve -->
+                <div class="cost-panel">
+                    <div class="cost-title">Cost Curve</div>
+                    <div class="cost-graph">
+                        <svg viewBox="0 0 120 80" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="costGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#5ee7df"/>
+                                    <stop offset="33%" style="stop-color:#00d4ff"/>
+                                    <stop offset="66%" style="stop-color:#0066cc"/>
+                                    <stop offset="100%" style="stop-color:#7c3aed"/>
+                                </linearGradient>
+                            </defs>
+                            <path d="M 10 70 Q 40 60, 50 45 Q 70 25, 110 10" />
+                            <circle cx="10" cy="70" r="3" fill="#5ee7df"/>
+                            <circle cx="50" cy="45" r="3" fill="#00d4ff"/>
+                            <circle cx="75" cy="28" r="3" fill="#0066cc"/>
+                            <circle cx="110" cy="10" r="3" fill="#7c3aed"/>
+                        </svg>
+                        <div class="cost-bar cost-bar-low"></div>
+                        <div class="cost-bar cost-bar-medium"></div>
+                        <div class="cost-bar cost-bar-high"></div>
+                        <div class="cost-bar cost-bar-max"></div>
+                    </div>
+                    <div class="cost-dots">
+                        <span>low</span>
+                        <span>med</span>
+                        <span>high</span>
+                        <span>max</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,51 @@
+总分: 15/20
+
+**布局: 3/5** — 车道与事件点位置基本准确，但合并弧线端点落在泳道垂直中心而非渲染块上，视觉终点模糊；放大镜标注区域与主块的空间关系不直观。
+
+**信息: 4/5** — 核心流程（API chunks → React合并 → Terminal输出）层次清晰，双语文本标注实用；但图例中"pipe-mid"色块无独立示例、时序标签"t=0ms"与"+16ms"混用易生歧义。
+
+**美学: 4/5** — 深色背景+霓虹配色方案成熟；渐变管道、发光点、圆弧连线质感良好；中英混排字重/字号层次分明。
+
+**完整: 4/5** — HTML单文件可独立运行，SVG结构完整，事件交互全部实现；zoom/replay功能逻辑正确。
+
+---
+
+**缺陷:**
+
+1. **Merge弧线端点偏移** — `merges`数组中`to.y`固定为`laneY.react`(210)，即泳道垂直中心，但渲染块中心在y=201（110+9+18/2），弧线视觉终点与"渲染管线"块无明确关联。行257-262弧线路径`d`生成正确，但与`to`目标的几何对应应明确。
+
+2. **放大镜子块颜色引用断裂** — 行226-229动态创建`subgrad-${idx}`渐变并用`palette.pipeStart`/`pipeEnd`，但SVG主渐变`pipeGrad`（行48-52）停点色值硬编码为`var(--pipe-start)`字符串而非JS计算值，SVG不支持CSS变量此处，导致两处颜色实际来源不一致。
+
+3. **时序标签不统一** — 行209用`+16ms`标注帧边界（相对增量），而行186-196用`t=${i*msPerFrame}ms`（绝对时间），两者混用易混淆。
+
+4. **Legend缺少pipe-mid色块示意** — 图例中`linear-gradient`色条实际展示三色渐变，但仅标题写"Render pipeline"，未标注各阶段含义。
+
+5. **Tooltip越界判断潜在bug** — 行134-137中`rect.width`/`rect.height`来自`getBoundingClientRect()`（viewport绝对坐标），而`left`/`top`是相对`.diagram`容器的偏移量，单位不统一在极端情况下可能失效。
+
+---
+
+**修改建议:**
+
+1. 将`merges`的`to`目标改为精确的渲染块中心y坐标（如`laneY.react - 9 + 18/2 = 201`），或显式画一条从弧线终点到渲染块的短垂直连接线。
+
+2. 统一`pipeGrad`渐变停点为JS计算值：
+   ```js
+   // 行48-52改为：
+   <stop offset="0%" stop-color="#34d399"/>
+   <stop offset="50%" stop-color="#facc15"/>
+   <stop offset="100%" stop-color="#fb923c"/>
+   ```
+   同时将`palette.pipeStart/End`也硬编码以保持同步。
+
+3. 将帧边界标签统一为绝对时间`t=XXms`，或全部改为相对增量`+16ms`，保持一种体系。
+
+4. 图例增加pipe-mid单色示例：`--pipe-mid: #facc15` 并添加"中间状态 Mid-state"标注。
+
+5. `positionTooltip`中的边界检测改用纯相对坐标：
+   ```js
+   const diagram = document.getElementById('diagram');
+   const rect = diagram.getBoundingClientRect();
+   let left = e.clientX - rect.left + 14;
+   let top = e.clientY - rect.top + 14;
+   // 改用diagram.offsetWidth/Height比较
+   ```

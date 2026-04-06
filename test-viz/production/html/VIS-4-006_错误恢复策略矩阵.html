@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>错误处理的艺术 — 错误恢复策略矩阵</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --accent-green: #48bb78;
+  --accent-yellow: #ffd93d;
+  --accent-blue: #4dabf7;
+  --accent-red: #ff6b6b;
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0aec0;
+  --grid-line: rgba(255,255,255,0.15);
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  font-family: 'Noto Sans SC', 'Space Grotesk', sans-serif;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: 
+    radial-gradient(ellipse at 20% 30%, rgba(72, 187, 120, 0.08) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 70%, rgba(255, 107, 107, 0.08) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 50%, rgba(77, 171, 247, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.noise {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.03;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 1;
+}
+
+.title h1 {
+  font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff 0%, #a0aec0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+
+.title .subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+}
+
+.matrix-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  z-index: 1;
+}
+
+.y-axis {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  height: 600px;
+  justify-content: center;
+  gap: 12px;
+}
+
+.y-axis-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.y-axis-arrow {
+  width: 2px;
+  height: 60px;
+  background: linear-gradient(to top, var(--text-secondary), transparent);
+  position: relative;
+}
+
+.y-axis-arrow::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -4px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 8px solid var(--text-secondary);
+}
+
+.matrix-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.matrix {
+  width: 600px;
+  height: 600px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+  background: var(--grid-line);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 
+    0 25px 50px -12px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(255,255,255,0.05);
+}
+
+.quadrant {
+  position: relative;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.quadrant::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  transition: opacity 0.4s ease;
+}
+
+.quadrant:hover {
+  transform: scale(1.02);
+  z-index: 10;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+.quadrant:hover::before {
+  opacity: 0.2;
+}
+
+.q1 { 
+  background: linear-gradient(135deg, rgba(72, 187, 120, 0.15) 0%, rgba(72, 187, 120, 0.05) 100%);
+}
+.q1::before { background: var(--accent-green); }
+.q1:hover { box-shadow: 0 0 30px rgba(72, 187, 120, 0.3); }
+
+.q2 { 
+  background: linear-gradient(135deg, rgba(255, 217, 61, 0.15) 0%, rgba(255, 217, 61, 0.05) 100%);
+}
+.q2::before { background: var(--accent-yellow); }
+.q2:hover { box-shadow: 0 0 30px rgba(255, 217, 61, 0.3); }
+
+.q3 { 
+  background: linear-gradient(135deg, rgba(77, 171, 247, 0.15) 0%, rgba(77, 171, 247, 0.05) 100%);
+}
+.q3::before { background: var(--accent-blue); }
+.q3:hover { box-shadow: 0 0 30px rgba(77, 171, 247, 0.3); }
+
+.q4 { 
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.15) 0%, rgba(255, 107, 107, 0.05) 100%);
+}
+.q4::before { background: var(--accent-red); }
+.q4:hover { box-shadow: 0 0 30px rgba(255, 107, 107, 0.3); }
+
+.quadrant-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.q1 .quadrant-icon { color: var(--accent-green); }
+.q2 .quadrant-icon { color: var(--accent-yellow); }
+.q3 .quadrant-icon { color: var(--accent-blue); }
+.q4 .quadrant-icon { color: var(--accent-red); }
+
+.quadrant-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 1;
+  letter-spacing: -0.01em;
+}
+
+.q1 .quadrant-title { color: var(--accent-green); }
+.q2 .quadrant-title { color: var(--accent-yellow); }
+.q3 .quadrant-title { color: var(--accent-blue); }
+.q4 .quadrant-title { color: var(--accent-red); }
+
+.quadrant-subtitle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 20px;
+  opacity: 0.8;
+  position: relative;
+  z-index: 1;
+}
+
+.q1 .quadrant-subtitle { color: rgba(72, 187, 120, 0.8); }
+.q2 .quadrant-subtitle { color: rgba(255, 217, 61, 0.8); }
+.q3 .quadrant-subtitle { color: rgba(77, 171, 247, 0.8); }
+.q4 .quadrant-subtitle { color: rgba(255, 107, 107, 0.8); }
+
+.examples {
+  list-style: none;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+
+.examples li {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding-left: 16px;
+  position: relative;
+}
+
+.examples li::before {
+  content: '›';
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+}
+
+.q1 .examples li::before { color: var(--accent-green); }
+.q2 .examples li::before { color: var(--accent-yellow); }
+.q3 .examples li::before { color: var(--accent-blue); }
+.q4 .examples li::before { color: var(--accent-red); }
+
+.code-ref {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 6px;
+  border-left: 3px solid;
+  position: relative;
+  z-index: 1;
+  color: var(--text-secondary);
+}
+
+.q1 .code-ref { border-left-color: var(--accent-green); }
+.q2 .code-ref { border-left-color: var(--accent-yellow); }
+.q3 .code-ref { border-left-color: var(--accent-blue); }
+.q4 .code-ref { border-left-color: var(--accent-red); }
+
+.x-axis {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 600px;
+}
+
+.x-axis-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.x-axis-arrow {
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(to right, var(--text-secondary), transparent);
+  position: relative;
+}
+
+.x-axis-arrow::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -4px;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid var(--text-secondary);
+}
+
+.center-node {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100px;
+  height: 100px;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.center-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-primary);
+  border-radius: 50%;
+  border: 2px solid var(--grid-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 0 40px rgba(0,0,0,0.5),
+    inset 0 0 20px rgba(255,255,255,0.02);
+}
+
+.center-diamond {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+  transform: rotate(45deg);
+  border: 1px solid rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.center-icon {
+  transform: rotate(-45deg);
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+}
+
+.center-label {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--bg-primary);
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--grid-line);
+}
+
+.axis-labels {
+  position: absolute;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+}
+
+.axis-minor { bottom: 10px; left: 10px; }
+.axis-critical { bottom: 10px; right: 10px; }
+.axis-low { left: 10px; top: 10px; }
+.axis-high { left: 10px; bottom: 10px; }
+
+@media (max-width: 768px) {
+  .title h1 { font-size: 1.75rem; }
+  .matrix { width: 100%; max-width: 500px; height: 500px; }
+  .x-axis { width: 100%; max-width: 500px; }
+  .quadrant { padding: 20px; }
+  .quadrant-title { font-size: 1.1rem; }
+  .quadrant-icon { width: 36px; height: 36px; }
+  .examples li { font-size: 0.75rem; }
+  .code-ref { font-size: 0.65rem; }
+}
+
+.philosophy {
+  margin-top: 50px;
+  padding: 24px 40px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  max-width: 700px;
+}
+
+.philosophy-quote {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent-yellow);
+  font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.philosophy-sub {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+</style>
+</head>
+<body>
+<div class="noise"></div>
+
+<div class="title">
+  <h1>错误处理的艺术</h1>
+  <div class="subtitle">错误恢复策略矩阵 / Error Recovery Strategy Matrix</div>
+</div>
+
+<div class="matrix-container">
+  <div class="y-axis">
+    <div class="y-axis-arrow"></div>
+    <div class="y-axis-label">Recovery Possibility ↑</div>
+    <div class="y-axis-label" style="writing-mode: horizontal-tb; transform: rotate(180deg);">恢复可能性</div>
+  </div>
+  
+  <div class="matrix-wrapper">
+    <div class="matrix">
+      <!-- Q1: Auto Retry (Green) -->
+      <div class="quadrant q1">
+        <svg class="quadrant-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+          <path d="M21 3v9h-9"/>
+        </svg>
+        <div class="quadrant-title">自动重试</div>
+        <div class="quadrant-subtitle">Auto Retry</div>
+        <ul class="examples">
+          <li>API调用 429/500 → 指数退避重试(maxRetries=3)</li>
+          <li>文件读取 ENOENT → 尝试相似路径/glob搜索</li>
+          <li>MCP工具超时 → 重新连接后重试</li>
+        </ul>
+        <div class="code-ref">retryWithBackoff()<br>handleTransientError()</div>
+        <span class="axis-labels axis-high">High · 高</span>
+      </div>
+      
+      <!-- Q2: Graceful Degradation (Yellow) -->
+      <div class="quadrant q2">
+        <svg class="quadrant-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <div class="quadrant-title">降级运行</div>
+        <div class="quadrant-subtitle">Graceful Degradation</div>
+        <ul class="examples">
+          <li>MCP服务器不可用 → 禁用该MCP继续运行</li>
+          <li>沙箱初始化失败 → 无沙箱模式运行</li>
+          <li>模型不可用 → 回退到备选模型</li>
+        </ul>
+        <div class="code-ref">gracefulDegradation()<br>fallbackModel()</div>
+      </div>
+      
+      <!-- Q3: Log & Continue (Blue) -->
+      <div class="quadrant q3">
+        <svg class="quadrant-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <div class="quadrant-title">记录并继续</div>
+        <div class="quadrant-subtitle">Log & Continue</div>
+        <ul class="examples">
+          <li>遥测导出失败 → 丢弃Span继续执行</li>
+          <li>非关键Hook失败 → 记录警告继续</li>
+          <li>更新检查失败 → 跳过更新提示继续</li>
+        </ul>
+        <div class="code-ref">logAndContinue()<br>suppressNonCritical()</div>
+        <span class="axis-labels axis-minor">Minor · 轻微</span>
+      </div>
+      
+      <!-- Q4: Safe Abort (Red) -->
+      <div class="quadrant q4">
+        <svg class="quadrant-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/>
+          <rect x="9" y="9" width="6" height="6"/>
+        </svg>
+        <div class="quadrant-title">安全中止</div>
+        <div class="quadrant-subtitle">Safe Abort</div>
+        <ul class="examples">
+          <li>API密钥无效 → 提示检查配置并退出</li>
+          <li>磁盘空间耗尽 → 安全保存状态后退出</li>
+          <li>未知致命错误 → 记录错误报告+退出</li>
+        </ul>
+        <div class="code-ref">fatalError()<br>gracefulShutdown()</div>
+        <span class="axis-labels axis-critical">Critical · 严重</span>
+      </div>
+      
+      <!-- Center Node -->
+      <div class="center-node">
+        <div class="center-bg">
+          <div class="center-diamond">
+            <svg class="center-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+              <circle cx="12" cy="12" r="4"/>
+            </svg>
+          </div>
+        </div>
+        <div class="center-label">错误分类器</div>
+      </div>
+    </div>
+    
+    <div class="x-axis">
+      <div class="x-axis-label">Error Severity</div>
+      <div class="x-axis-arrow"></div>
+      <div class="x-axis-label">错误严重程度</div>
+    </div>
+  </div>
+</div>
+
+<div class="philosophy">
+  <div class="philosophy-quote">"宁可降级也不崩溃" — 最大化可用性</div>
+  <div class="philosophy-sub">Graceful degradation over catastrophic failure. Maximize availability.</div>
+</div>
+
+</body>
+</html>

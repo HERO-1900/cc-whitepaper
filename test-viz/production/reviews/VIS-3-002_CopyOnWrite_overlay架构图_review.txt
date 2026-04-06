@@ -1,0 +1,32 @@
+我来仔细审查这份 Copy-on-Write Overlay Architecture 图表代码。
+
+**总分: 12/20**
+
+---
+
+**布局: 2/5** — 元素大致对齐，但 COW 箭头起点与源文件中心偏差明显（~20px），且 COW 标签"COW copy"落在主目录层边框上（y=335 vs 边框 y=320），存在轻微侵入
+
+**信息: 3/5** — 层次结构清晰，Read/Write/Bash/Other 四路分支 + Accept/Reject 两大出口语义分明；但"Permission Check"与写入路径的几何关系（箭头起点终点）逻辑上不够紧凑
+
+**美学: 3/5** — 配色方案专业（蓝/绿/橙/红语义编码一致），JetBrains Mono + Noto Sans SC 组合得当；overlay 层虚线边框与 COW 虚线箭头视觉权重相近，易混淆
+
+**完整: 4/5** — 语法完全正确，浏览器可直接运行；Google Fonts CDN 依赖在离线环境可能失效
+
+---
+
+**缺陷:**
+
+1. **COW 箭头起点偏移** — `src/utils.js` 文件中心 x=300，但 COW 箭头起点 x=320；`README.md` 文件中心 x=340，但 COW 箭头起点 x=540；偏差约 20px，对应行 ~250-255
+2. **COW 标签位置不当** — `text x="290" y="335"` 落在主目录层 rect 上边沿（y=320），标签与边框重叠/粘连
+3. **overlay 层宽度不足** — overlay rect width=600 (x:200-800)，但覆盖层目录路径 `~/.claude/tmp/speculation/<PID>/<UUID>/` 文本宽度远超 rect 可容纳空间，字号被压缩挤占
+4. **permission check 路径不清晰** — "write to overlay" 箭头从 `path d="M 340 257"` 出发，但 permission check box 在 x=240-340 区域，箭头起点 x=340 贴着 box 右边缘，视觉上像是从 box 表面"滑出"而非从左侧接入
+5. **MISS 路径文字遮挡** — `text x="220" y="265"` 和 `text x="200" y="278"` 位于 COW 箭头曲线上方（COW 二次贝塞尔控制点 y=350，最近处 y≈315），文字与曲线局部重叠
+6. **Legend 右下角贴边** — 图例在 y=580，最下方 boundary markers 在 y=560，间距仅 20px，略紧张
+
+**修改建议:**
+
+1. 将 COW 箭头起点改为精确对准文件中心：src/utils.js → x=300；README.md → x=340；并将"COW copy"标签 y 降至 310 以避免与主目录边框重叠
+2. 扩大 overlay rect width 至 650 (x:175-825)，为长路径文本留出足够空间
+3. 将"write to overlay"箭头起点改为 `M 250 257`（紧接 permission check 左侧），箭头改为水平向左→向上的折线而非直接从右侧斜出
+4. 将 MISS 标签右移至 x=280 避开 COW 曲线，或将 COW 控制点 y 增至 380 以加大间距
+5. 将 boundary markers (edit boundary ✓/X) 与 legend 之间的垂直间距从 20px 增至 40px

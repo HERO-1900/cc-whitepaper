@@ -1,0 +1,37 @@
+总分: 12/20
+
+**布局: 2/5** — 三列Zone对齐基本正确，但右侧分支入口点不统一（x=240/235/280），影响视觉节奏；cleanup区贴近viewBox边界有裁剪风险。
+
+**信息: 2/5** — 降级逻辑尚可，但决策菱形缺失YES/NO标注，浏览者须自行推断；tooltip与代码行号存在不一致。
+
+**美学: 3/5** — 配色体系完整且有层次，字体搭配合理；但Level 1意外使用glow filter而Level 2/3未用，造成视觉不一致；锁图标与OAuth+OrgUUID语义欠匹配。
+
+**完整: 5/5** — HTML/SVG语法完整，可直接用浏览器打开运行，无报错。
+
+---
+
+**缺陷:**
+
+1. **行145-155 (cleanup区越界)** — `<g transform="translate(0, 590)">` 内元素实际y=590+50=640，而viewBox高度仅650，cleanup底部50px内容紧贴边界
+2. **行85-87 (Zone区标签定位)** — `.zone-local` 用`left: 15%`但应贴Zone左边(x=20)；`.zone-cloud` 用`right: 15%`但应贴Zone右边(x=720)
+3. **行100 (100MB线仅覆盖Local区)** — `<line x1="20" y1="400" x2="380"` 仅横跨Local zone(20-380)，应延伸至覆盖Transfer和Cloud区边界
+4. **行111 (Level 1多余glow filter)** — Level 2/3无filter但Level 1有`filter="url(#glowBlue)"`，破坏三阶段视觉一致性
+5. **行152 (锁图标语义不匹配)** — API Upload配锁图标，但tooltip描述的是OAuth token + organization UUID，语义更接近"认证"而非"锁定"
+6. **行181-183 (tooltip行号存疑)** — tooltip写`gitBundle.ts:193`，但页面subtitle标注`gitBundle.ts:50-146`，行号可能不匹配
+7. **行225-227 (决策菱形无YES/NO标注)** — 菱形仅显示`> 100MB?`但无分支标签，需靠箭头方向猜逻辑
+8. **行228-231 (右侧分支入口x坐标不一致)** — 菱形1→Level2用x=240，菱形2→Level3用x=235，成功路径→API用x=280，三者不对齐
+9. **行77 (动画节奏失调)** — `.flow-line`动画30秒完成一次循环过于缓慢；`.retry-step` pulse 2秒，两者视觉节奏不协调
+
+---
+
+**修改建议:**
+
+1. 将cleanup区y坐标从590降至570，为底部留20px边距
+2. Zone标签改用固定px定位：Local用`left: 50px`，Transfer用`left: 50%; transform: translateX(-50%)`，Cloud用`right: 50px`
+3. 100MB threshold线改为`x1="20" y1="400" x2="1180"`，贯穿全图并用opacity分层（Local区实线，Transfer区淡化）暗示限制范围
+4. 移除Level 1的`filter="url(#glowBlue)"`，或为Level 2/3补充统一级别的filter
+5. 锁图标替换为钥匙/令牌图标，更贴近OAuth+UUID语义
+6. 修正tooltip行号或移除具体行号避免误导
+7. 在决策菱形内或附近增加`是/否`或`YES/NO`文字标签（如`<text x="-30" y="4">YES</text>`）
+8. 统一右侧分支入口x坐标：全部使用x=240或统一计算到同一参考线
+9. 调整flow-line动画时长至8-12秒；retry-step保持pulse但可缩短至1.5秒

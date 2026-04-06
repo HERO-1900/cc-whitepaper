@@ -1,0 +1,42 @@
+我来仔细审查这份图表代码。
+
+**总分: 11/20**
+
+**布局: 2/5** — arrow-connector 绝对定位缺少定位上下文导致箭头位置错位
+**信息: 3/5** — 四阶段流程清晰，但信息密度过高导致视觉疲劳
+**美学: 3/5** — 配色体系完整，但 --glow-purple 未定义导致背景渐变失效
+**完整: 3/5** — 语法正确可运行，但两处 CSS 变量缺失会产生渲染错误
+
+---
+
+**缺陷:**
+
+1. **[CSS:58]** `--glow-purple` 未定义。`.bg-mesh` 使用了 `var(--glow-purple)` 但变量表中只有 `glow-blue/green/orange/red`，导致紫色光晕完全失效，背景层次感丢失。
+
+2. **[CSS:299-306]** `.arrow-connector` 使用 `position: absolute`，但其父元素 `.phase` 没有 `position: relative`。箭头会以 `<body>` 或最近定位祖先为参考，导致 4 个阶段间的箭头箭头位置漂移。
+
+3. **[HTML:144-147]** `.dir-tree` 内的 `<span>` 元素采用 `&nbsp;` 手动缩进，在不同字体下对齐会错位。应该用 CSS `margin-left` 或 `::before` 伪元素实现缩进。
+
+4. **[CSS:237-239]** `.phase-track` 的 `phase-a/phase-b/phase-c` 边框色覆盖了 CSS 变量 `--phase-color`，但 Phase 2/3/4 的 `.logic-item` 没有使用这些颜色变量，当 hover 或后续扩展时颜色会不统一。
+
+5. **[HTML:168-173]** Phase 1 的 Phase A/B/C 使用了硬编码颜色 `#00d4ff/#00a8cc/#007a99`（通过 class phase-a/phase-b/phase-c），而非 CSS 变量体系，扩展性差且与其他阶段风格不一致。
+
+6. **[CSS:407]** `.fifo-fill` 宽度 85% 是硬编码的 mock 数据，真实场景应该是动态值，应标注或用 CSS 变量表示。
+
+7. **[信息层次]** 四个 phase 的 `.phase-body` 内容高度差异大（Phase 1 有3个 logic-item + 2个 opt-item，Phase 4 只有2个 logic-item + 1个 opt-item），会导致卡片底部参差不齐。
+
+---
+
+**修改建议:**
+
+1. **修复变量缺失 (CSS:58)** — 在 `:root` 中添加 `--glow-purple: rgba(123, 97, 255, 0.15);`
+
+2. **修复箭头定位 (CSS:299)** — 给 `.phase` 添加 `position: relative;`
+
+3. **修复目录树缩进 (HTML:144-147)** — 删除 `&nbsp;`，改用 CSS 类 `.indent-1/2/3` 配合 `margin-left`
+
+4. **统一颜色体系 (CSS:237-239, HTML:168-173)** — 删除 `.phase-track .logic-item.phase-a/b/c` 硬编码颜色，改为统一使用 `var(--phase-color)`
+
+5. **平衡卡片高度 (建议)** — 给 `.phase-body` 添加 `min-height` 或使用 CSS Grid 自动对齐
+
+6. **标注动态数据 (CSS:407)** — 给 `.fifo-fill` 加注释 `/* TODO: 动态计算 */`

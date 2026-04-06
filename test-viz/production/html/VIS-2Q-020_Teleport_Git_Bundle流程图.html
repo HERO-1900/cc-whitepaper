@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teleport Git Bundle 流程图</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #1a1a2e;
+            --bg-card: #16213e;
+            --bg-card-hover: #1e2a4a;
+            --level1: #00d4ff;
+            --level2: #ffa94d;
+            --level3: #ff6b6b;
+            --wip: #48bb78;
+            --api: #7b61ff;
+            --cleanup: #888888;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --border-subtle: rgba(255,255,255,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-deep);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            color: var(--text-primary);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--level1), var(--api));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+
+        .header .subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        .diagram-container {
+            width: 100%;
+            max-width: 1400px;
+            background: linear-gradient(180deg, rgba(22,33,62,0.5) 0%, rgba(26,26,46,0) 100%);
+            border-radius: 24px;
+            padding: 40px;
+            position: relative;
+        }
+
+        .zone-label {
+            position: absolute;
+            top: -12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            padding: 4px 16px;
+            border-radius: 12px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .zone-local { left: 15%; color: var(--wip); }
+        .zone-transfer { left: 50%; transform: translateX(-50%); color: var(--api); }
+        .zone-cloud { right: 15%; color: var(--level1); }
+
+        svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Hover tooltips */
+        .node-group {
+            cursor: pointer;
+        }
+
+        .node-group:hover .node-rect {
+            filter: brightness(1.2);
+            stroke-width: 2;
+        }
+
+        .node-group:hover .node-text {
+            fill: #fff;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.9);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 100;
+            max-width: 280px;
+            line-height: 1.5;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip code {
+            color: var(--level1);
+            background: rgba(0,212,255,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .flow-line {
+            stroke-dasharray: 8 4;
+            animation: dash 30s linear infinite;
+        }
+
+        @keyframes dash {
+            to { stroke-dashoffset: -1000; }
+        }
+
+        .retry-step {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .legend-dot.level1 { background: var(--level1); }
+        .legend-dot.level2 { background: var(--level2); }
+        .legend-dot.level3 { background: var(--level3); }
+        .legend-dot.wip { background: var(--wip); }
+        .legend-dot.api { background: var(--api); }
+
+        @media (max-width: 900px) {
+            .diagram-container {
+                padding: 20px;
+                overflow-x: auto;
+            }
+            
+            svg {
+                min-width: 800px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Teleport Git Bundle</h1>
+        <div class="subtitle">gitBundle.ts:50-146 | api.ts:181-198</div>
+    </div>
+
+    <div class="diagram-container">
+        <div class="zone-label zone-local">Local</div>
+        <div class="zone-label zone-transfer">Transfer</div>
+        <div class="zone-label zone-cloud">Cloud</div>
+        
+        <svg viewBox="0 0 1200 650" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <!-- Gradients -->
+                <linearGradient id="gradLevel1" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#00d4ff" stop-opacity="0.1"/>
+                </linearGradient>
+                <linearGradient id="gradLevel2" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#ffa94d" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#ffa94d" stop-opacity="0.1"/>
+                </linearGradient>
+                <linearGradient id="gradLevel3" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#ff6b6b" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#ff6b6b" stop-opacity="0.1"/>
+                </linearGradient>
+                <linearGradient id="gradWip" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#48bb78" stop-opacity="0.2"/>
+                    <stop offset="100%" stop-color="#48bb78" stop-opacity="0.05"/>
+                </linearGradient>
+                <linearGradient id="gradApi" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#7b61ff" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#7b61ff" stop-opacity="0.1"/>
+                </linearGradient>
+                
+                <!-- Glow filters -->
+                <filter id="glowBlue" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+                
+                <!-- Arrow marker -->
+                <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                        markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#666"/>
+                </marker>
+            </defs>
+
+            <!-- Background zones -->
+            <rect x="20" y="40" width="360" height="520" rx="16" fill="#0f1220" stroke="none" opacity="0.5"/>
+            <rect x="400" y="40" width="300" height="520" rx="16" fill="#0f1220" stroke="none" opacity="0.5"/>
+            <rect x="720" y="40" width="460" height="520" rx="16" fill="#0f1220" stroke="none" opacity="0.5"/>
+
+            <!-- 100MB Threshold Line -->
+            <line x1="20" y1="400" x2="380" y2="400" stroke="#ff6b6b" stroke-width="2" stroke-dasharray="8 4" opacity="0.6"/>
+            <text x="30" y="395" fill="#ff6b6b" font-family="JetBrains Mono" font-size="11">100MB limit</text>
+
+            <!-- WIP Stash Section -->
+            <g class="node-group" data-tooltip="git stash create (gitBundle.ts:193)<br>隐式创建，不影响工作区和refs/stash<br>→ git update-ref refs/seed/stash">
+                <rect x="60" y="70" width="280" height="70" rx="8" fill="url(#gradWip)" 
+                      stroke="#48bb78" stroke-width="1.5" stroke-dasharray="6 3" class="node-rect"/>
+                <text x="200" y="95" text-anchor="middle" fill="#48bb78" font-family="Space Grotesk" 
+                      font-size="14" font-weight="600" class="node-text">WIP Stash</text>
+                <text x="200" y="115" text-anchor="middle" fill="#a0a0a0" font-family="JetBrains Mono" 
+                      font-size="10" class="node-text">git stash create → refs/seed/stash</text>
+                <text x="200" y="130" text-anchor="middle" fill="#666" font-family="JetBrains Mono" 
+                      font-size="9" class="node-text">不影响工作区状态</text>
+            </g>
+
+            <!-- Arrow from WIP to bundle flow -->
+            <path d="M 200 140 L 200 160" stroke="#48bb78" stroke-width="2" marker-end="url(#arrow)"/>
+
+            <!-- Level 1: --all (Largest) -->
+            <g class="node-group" data-tooltip="Level 1: git bundle create --all (gitBundle.ts:86)<br>包含所有分支和标签<br>默认100MB限制，GrowthBook可配置">
+                <rect x="40" y="180" width="320" height="70" rx="8" fill="url(#gradLevel1)" 
+                      stroke="#00d4ff" stroke-width="2" class="node-rect" filter="url(#glowBlue)"/>
+                <text x="200" y="205" text-anchor="middle" fill="#00d4ff" font-family="Space Grotesk" 
+                      font-size="15" font-weight="600" class="node-text">Level 1: --all</text>
+                <text x="200" y="225" text-anchor="middle" fill="#a0a0a0" font-family="JetBrains Mono" 
+                      font-size="10" class="node-text">包含所有分支、标签</text>
+                <text x="200" y="240" text-anchor="middle" fill="#00d4ff" font-family="JetBrains Mono" 
+                      font-size="9" opacity="0.8" class="node-text">320px 最大数据包</text>
+            </g>
+
+            <!-- Decision Diamond 1 -->
+            <g transform="translate(200, 295)">
+                <polygon points="0,-25 40,0 0,25 -40,0" fill="#1a1a2e" stroke="#ffa94d" stroke-width="2"/>
+                <text x="0" y="4" text-anchor="middle" fill="#ffa94d" font-family="JetBrains Mono" font-size="10">> 100MB?</text>
+            </g>
+
+            <!-- Level 2: HEAD (Medium) - shown when Level 1 fails -->
+            <g class="node-group" data-tooltip="Level 2: git bundle create HEAD (gitBundle.ts:108)<br>仅打包当前分支历史<br>Size check again → 超限继续降级">
+                <rect x="80" y="340" width="240" height="60" rx="8" fill="url(#gradLevel2)" 
+                      stroke="#ffa94d" stroke-width="2" class="node-rect"/>
+                <text x="200" y="365" text-anchor="middle" fill="#ffa94d" font-family="Space Grotesk" 
+                      font-size="14" font-weight="600" class="node-text">Level 2: HEAD</text>
+                <text x="200" y="385" text-anchor="middle" fill="#a0a0a0" font-family="JetBrains Mono" 
+                      font-size="10" class="node-text">仅当前分支 · 240px</text>
+            </g>
+
+            <!-- Decision Diamond 2 -->
+            <g transform="translate(200, 440)">
+                <polygon points="0,-20 35,0 0,20 -35,0" fill="#1a1a2e" stroke="#ff6b6b" stroke-width="2"/>
+                <text x="0" y="4" text-anchor="middle" fill="#ff6b6b" font-family="JetBrains Mono" font-size="10">> 100MB?</text>
+            </g>
+
+            <!-- Level 3: Squashed Root (Smallest) -->
+            <g class="node-group" data-tooltip="Level 3: Squashed Root (gitBundle.ts:132)<br>git commit-tree 创建 orphan commit<br>零历史，仅当前树快照">
+                <rect x="120" y="480" width="160" height="55" rx="8" fill="url(#gradLevel3)" 
+                      stroke="#ff6b6b" stroke-width="2" class="node-rect"/>
+                <text x="200" y="502" text-anchor="middle" fill="#ff6b6b" font-family="Space Grotesk" 
+                      font-size="13" font-weight="600" class="node-text">Level 3: Squashed</text>
+                <text x="200" y="520" text-anchor="middle" fill="#a0a0a0" font-family="JetBrains Mono" 
+                      font-size="9" class="node-text">无历史 · 160px</text>
+            </g>
+
+            <!-- Flow arrows -->
+            <path d="M 200 250 L 200 270" stroke="#00d4ff" stroke-width="2" marker-end="url(#arrow)"/>
+            <path d="M 240 295 L 360 295 L 360 370 L 324 370" stroke="#ffa94d" stroke-width="1.5" 
+                  stroke-dasharray="4 2" fill="none"/>
+            <path d="M 200 320 L 200 340" stroke="#ffa94d" stroke-width="2" marker-end="url(#arrow)"/>
+            <path d="M 235 440 L 350 440 L 350 510 L 284 510" stroke="#ff6b6b" stroke-width="1.5" 
+                  stroke-dasharray="4 2" fill="none"/>
+            <path d="M 200 460 L 200 480" stroke="#ff6b6b" stroke-width="2" marker-end="url(#arrow)"/>
+
+            <!-- Success paths to API -->
+            <path d="M 280 625 L 280 535 L 450 535 L 450 420" stroke="#00d4ff" stroke-width="2" 
+                  fill="none" opacity="0.6" class="flow-line"/>
+            <text x="290" y="530" fill="#00d4ff" font-family="JetBrains Mono" font-size="9">success</text>
+
+            <!-- API Upload Section -->
+            <g class="node-group" data-tooltip="prepareApiRequest (api.ts:181)<br>检查 OAuth token + organization UUID<br>上传后返回 seed_bundle_file_id">
+                <rect x="450" y="180" width="200" height="80" rx="8" fill="url(#gradApi)" 
+                      stroke="#7b61ff" stroke-width="2" class="node-rect"/>
+                <text x="550" y="210" text-anchor="middle" fill="#7b61ff" font-family="Space Grotesk" 
+                      font-size="15" font-weight="600" class="node-text">API Upload</text>
+                <text x="550" y="232" text-anchor="middle" fill="#a0a0a0" font-family="JetBrains Mono" 
+                      font-size="10" class="node-text">OAuth + Org UUID</text>
+                <text x="550" y="248" text-anchor="middle" fill="#7b61ff" font-family="JetBrains Mono" 
+                      font-size="9" class="node-text">seed_bundle_file_id</text>
+                
+                <!-- Lock icon -->
+                <circle cx="475" cy="205" r="12" fill="none" stroke="#7b61ff" stroke-width="1.5"/>
+                <rect x="470" y="202" width="10" height="8" rx="1" fill="#7b61ff"/>
+                <path d="M 472 202 L 472 198 A 3 3 0 0 1 478 198 L 478 202" fill="none" stroke="#7b61ff" stroke-width="1.5"/>
+            </g>
+
+            <!-- Retry Steps -->
+            <g transform="translate(450, 300)">
+                <text x="100" y="-15" text-anchor="middle" fill="#a0a0a0" font-family="JetBrains Mono" 
+                      font-size="10">指数退避重试</text>
+                
+                <!-- Staircase -->
+                <rect x="10" y="0" width="40" height="20" rx="3" fill="#7b61ff" opacity="0.3" class="retry-step" style="animation-delay: 0s"/>
+                <text x="30" y="14" text-anchor="middle" fill="#7b61ff" font-family="JetBrains Mono" font-size="9">2s</text>
+                
+                <rect x="55" y="25" width="40" height="20" rx="3" fill="#7b61ff" opacity="0.5" class="retry-step" style="animation-delay: 0.5s"/>
+                <text x="75" y="39" text-anchor="middle" fill="#7b61ff" font-family="JetBrains Mono" font-size="9">4s</text>
+                
+                <rect x="100" y="50" width="40" height="20" rx="3" fill="#7b61ff" opacity="0.7" class="retry-step" style="animation-delay: 1s"/>
+                <text x="120" y="64" text-anchor="middle" fill="#7b61ff" font-family="JetBrains Mono" font-size="9">8s</text>
+                
+                <rect x="145" y="75" width="40" height="20" rx="3" fill="#7b61ff" opacity="0.9" class="retry-step" style="animation-delay: 1.5s"/>
+                <text x="165" y="89" text-anchor="middle" fill="#7b61ff" font-family="JetBrains Mono" font-size="9">16s</text>
+            </g>
+
+            <!-- Error handling -->
+            <g transform="translate(450, 420)">
+                <text x="100" y="0" text-anchor="middle" fill="#a0a0a0" font-family="JetBrains Mono" font-size="10">错误处理策略</text>
+                <rect x="20" y="15" width="70" height="28" rx="4" fill="none" stroke="#00d4ff" stroke-width="1"/>
+                <text x="55" y="34" text-anchor="middle" fill="#00d4ff" font-family="JetBrains Mono" font-size="9">5xx → 重试</text>
+                
+                <rect x="110" y="15" width="70" height="28" rx="4" fill="none" stroke="#ff6b6b" stroke-width="1"/>
+                <text x="145" y="34" text-anchor="middle" fill="#ff6b6b" font-family="JetBrains Mono" font-size="9">4xx → 终止</text>
+            </g>
+
+            <!-- Arrow to Cloud -->
+            <path d="M 650 220 L 720 220" stroke="#7b61ff" stroke-width="2" marker-end="url(#arrow)"/>
+
+            <!-- Cloud Session Section -->
+            <g class="node-group" data-tooltip="SessionContext 创建<br>sources: Git仓库/知识库<br>outcomes: Git分支输出<br>custom_system_prompt">
+                <rect x="740" y="160" width="420" height="100" rx="12" fill="url(#gradLevel1)" 
+                      stroke="#00d4ff" stroke-width="2" class="node-rect" opacity="0.3"/>
+                <rect x="750" y="170" width="400" height="80" rx="8" fill="#0f1220" 
+                      stroke="#00d4ff" stroke-width="1" class="node-rect"/>
+                <text x="950" y="195" text-anchor="middle" fill="#00d4ff" font-family="Space Grotesk" 
+                      font-size="16" font-weight="600" class="node-text">SessionContext</text>
+                
+                <!-- Three components -->
+                <rect x="765" y="210" width="110" height="30" rx="4" fill="#00d4ff" opacity="0.15"/>
+                <text x="820" y="230" text-anchor="middle" fill="#a0a0a0" font-family="JetBrains Mono" font-size="9">sources[]</text>
+                
+                <rect x="885" y="210" width="110" height="30" rx="4" fill="#00d4ff" opacity="0.15"/>
+                <text x="940" y="230" text-anchor="middle" fill="#a0a0a0" font-family="JetBrains Mono" font-size="9">outcomes[]</text>
+                
+                <rect x="1005" y="210" width="130" height="30" rx="4" fill="#00d4ff" opacity="0.15"/>
+                <text x="1070" y="230" text-anchor="middle" fill="#a0a0a0" font-family="JetBrains Mono" font-size="9">system_prompt</text>
+            </g>
+
+            <!-- Environment Tags -->
+            <g transform="translate(750, 280)">
+                <text x="0" y="0" fill="#666" font-family="JetBrains Mono" font-size="10">Environment:</text>
+                <rect x="85" y="-12" width="80" height="22" rx="11" fill="#7b61ff" opacity="0.2"/>
+                <text x="125" y="4" text-anchor="middle" fill="#7b61ff" font-family="JetBrains Mono" font-size="9">anthropic_cloud</text>
+                
+                <rect x="175" y="-12" width="50" height="22" rx="11" fill="#48bb78" opacity="0.2"/>
+                <text x="200" y="4" text-anchor="middle" fill="#48bb78" font-family="JetBrains Mono" font-size="9">byoc</text>
+                
+                <rect x="235" y="-12" width="55" height="22" rx="11" fill="#ffa94d" opacity="0.2"/>
+                <text x="262" y="4" text-anchor="middle" fill="#ffa94d" font-family="JetBrains Mono" font-size="9">bridge</text>
+            </g>
+
+            <!-- Remote Sandbox -->
+            <g class="node-group" data-tooltip="sendEventToRemoteSession (30s超时)<br>CCR冷启动约2.6秒<br>Claude在远程沙箱中工作">
+                <rect x="850" y="330" width="200" height="80" rx="12" fill="none" 
+                      stroke="#00d4ff" stroke-width="2" stroke-dasharray="8 4" class="node-rect"/>
+                <text x="950" y="360" text-anchor="middle" fill="#00d4ff" font-family="Space Grotesk" 
+                      font-size="15" font-weight="600" class="node-text">Remote Sandbox</text>
+                <text x="950" y="380" text-anchor="middle" fill="#a0a0a0" font-family="JetBrains Mono" 
+                      font-size="10" class="node-text">30s timeout</text>
+                <text x="950" y="398" text-anchor="middle" fill="#666" font-family="JetBrains Mono" 
+                      font-size="9" class="node-text">CCR cold start ~2.6s</text>
+                
+                <!-- Claude icon -->
+                <circle cx="880" cy="370" r="15" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
+                <text x="880" y="375" text-anchor="middle" fill="#00d4ff" font-family="Space Grotesk" font-size="12">C</text>
+            </g>
+
+            <!-- Arrow to sandbox -->
+            <path d="M 950 260 L 950 330" stroke="#00d4ff" stroke-width="2" marker-end="url(#arrow)" opacity="0.6"/>
+
+            <!-- Cleanup Section (Bottom) -->
+            <g transform="translate(0, 590)">
+                <rect x="40" y="0" width="1120" height="50" rx="8" fill="#1a1a1a" stroke="#888" stroke-width="1"/>
+                
+                <!-- Broom icon -->
+                <g transform="translate(70, 15)">
+                    <path d="M 5 20 L 15 0 L 25 20 Z" fill="none" stroke="#888" stroke-width="2"/>
+                    <line x1="5" y1="20" x2="25" y2="20" stroke="#888" stroke-width="2"/>
+                    <line x1="8" y1="23" x2="22" y2="23" stroke="#888" stroke-width="2"/>
+                    <line x1="11" y1="26" x2="19" y2="26" stroke="#888" stroke-width="2"/>
+                </g>
+                
+                <text x="110" y="22" fill="#888" font-family="Space Grotesk" font-size="13" font-weight="600">finally 清理</text>
+                <text x="110" y="38" fill="#666" font-family="JetBrains Mono" font-size="9">gitBundle.ts:279-291</text>
+                
+                <text x="280" y="30" fill="#a0a0a0" font-family="JetBrains Mono" font-size="11">删除临时文件</text>
+                <text x="420" y="22" fill="#a0a0a0" font-family="JetBrains Mono" font-size="11">+ refs/seed/stash</text>
+                <text x="420" y="38" fill="#a0a0a0" font-family="JetBrains Mono" font-size="11">+ refs/seed/root</text>
+                
+                <rect x="580" y="10" width="280" height="30" rx="4" fill="#888" opacity="0.1"/>
+                <text x="600" y="22" fill="#888" font-family="JetBrains Mono" font-size="10">函数开头预清理 (gitBundle.ts:164)</text>
+                <text x="600" y="36" fill="#666" font-family="JetBrains Mono" font-size="9">处理上次崩溃残留的 stale refs</text>
+            </g>
+
+            <!-- User trigger -->
+            <g transform="translate(200, 15)">
+                <text x="0" y="0" text-anchor="middle" fill="#fff" font-family="Space Grotesk" font-size="12" font-weight="600">/remote 命令</text>
+                <path d="M 0 5 L 0 55" stroke="#fff" stroke-width="2" marker-end="url(#arrow)"/>
+            </g>
+
+        </svg>
+
+        <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-dot level1"></div>
+            <span>Level 1: --all (全部)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot level2"></div>
+            <span>Level 2: HEAD (当前分支)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot level3"></div>
+            <span>Level 3: Squashed (无历史)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot wip"></div>
+            <span>WIP Stash</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot api"></div>
+            <span>API Upload</span>
+        </div>
+    </div>
+
+    <script>
+        const tooltip = document.getElementById('tooltip');
+        const nodeGroups = document.querySelectorAll('.node-group');
+
+        nodeGroups.forEach(node => {
+            node.addEventListener('mouseenter', (e) => {
+                const content = node.getAttribute('data-tooltip');
+                if (content) {
+                    tooltip.innerHTML = content;
+                    tooltip.classList.add('visible');
+                }
+            });
+
+            node.addEventListener('mousemove', (e) => {
+                const container = document.querySelector('.diagram-container');
+                const rect = container.getBoundingClientRect();
+                tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+                tooltip.style.top = (e.clientY - rect.top + 15) + 'px';
+            });
+
+            node.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+        });
+    </script>
+</body>
+</html>

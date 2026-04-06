@@ -1,0 +1,37 @@
+我来严格审查这份图表代码。
+
+**总分: 11/20**
+
+---
+
+**布局: 2/5** — Worker C 徽章与节点严重重叠，多处标注定位未对齐圆形边界
+
+**信息: 3/5** — 架构层级清晰，tooltip 补充到位，但核心节点信息一眼不可见
+
+**美学: 3/5** — 配色现代、动画流畅，但 emoji 图标风格不统一、legend 双线边框过于厚重
+
+**完整: 3/5** — 可直接运行，CSS 动画和 tooltip 均正确，语法无误
+
+---
+
+**缺陷:**
+
+1. **行163** — Worker C 徽章 `x=630, width=100`，但节点圆心 cx=620、r=35（左右边缘 585~655），徽章左边缘 630 压在节点上，右边缘 730 超出容器
+2. **行156** — Worker A 的 `skip CLAUDE.md` 徽章 x=225 width=90（左225 右315），节点圆心 cx=280、r=35（边缘 245~315），徽章右边缘正好对齐节点右边缘，内部遮挡严重
+3. **行147-149** — 三个 isolation-level 说明文字 y=450/480/480，与 Sub-Agent (y=450) 和 Worker B (y=345) 距离过近，缺乏足够呼吸空间
+4. **行135-137** — 动画 `connection-flow` 与基础 `connection` 叠加，但基础连接线 stroke-width=2、flow 线 stroke-width=3 且带透明度，可能导致线条粗细不一或颜色浑浊
+5. **行66-69** — `legend-double` 使用 `border: 4px double`，双线边框在 16×16 的小元素上过于厚重，且与节点图例风格不一致
+6. **行83-85** — `node-icon` 使用 emoji (🧠⚡🌿☁️🔧)，在不同系统和浏览器渲染差异大，建议改用 SVG path 或 font-icon
+7. **行159** — `120s → 后台化` 标注指向 Worker C (x=620)，但实际位于 x=630-730 区域，与 Worker C 节点中心偏移
+8. **行140** — return line (虚线) 起点 290,290 与 Worker A 圆心 280,290 偏差 10px，未精确对齐
+
+**修改建议:**
+
+1. Worker C 徽章改为 `x=570 width=85`，左边缘对齐节点左边缘（585），或改放节点下方
+2. Worker A 徽章改为 `x=175 width=100`，整体左移避免遮挡节点
+3. Isolation 说明文字下移至 y=510/540/540，Sub-Agent 下方留出足够空白
+4. `connection-flow` 的 stroke-width 改为 2 与基础线一致，或去掉基础线只保留流动线
+5. `legend-double` 改为 `border: 2px dashed` 统一风格，或用不同 fill 而非 border 区分
+6. 将 emoji 替换为统一风格的 SVG icon 或改用图标字体（如 Phosphor/Material Symbols）
+7. `120s → 后台化` 标注 x 改为 580，与 Worker C 圆心 620 对齐
+8. Return line 起点 x 改为 280 与 Worker A 圆心对齐，或将控制点 Q 参数调整为 `Q 450 250` 使曲线更平滑

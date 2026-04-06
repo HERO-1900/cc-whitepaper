@@ -1,0 +1,22 @@
+总分: 17/20
+
+布局: 4/5 — 网格结构规整，但 detail card 在中等宽度窗口（960-1200px）时易遮挡左侧树节点内容
+信息: 4/5 — 层次清晰，但搜索功能的灰度效果暴露了隐藏状态，且 hover 触达不够直接
+美学: 5/5 — 配色体系完整，GitHub 暗色主题过渡自然，字体对比度良好，细节精致
+完整: 4/5 — 功能完备可运行，语法正确，但键盘无障碍支持缺失，screen reader 无法使用
+
+缺陷:
+1. 行304: `highlightSyntax()` 函数定义后从未被调用，预填充代码直接用内联 HTML span 实现高亮，功能冗余
+2. 无键盘导航支持 — tree-node 仅绑定 mouseenter/click，无 focus/blur 事件，Tab 键无法遍历
+3. 无 ARIA 属性 — tree 结构缺少 role="tree"/role="treeitem"，screen reader 无法解析层级
+4. 行368: 搜索过滤隐藏节点后，灰度状态不会在重新显示时清除（当同一 `li` 内有多个 tree-node 时）
+5. 行368: `node.classList.remove('grayscale')` 只处理了 node 本身，未递归处理子级 nested 内的 tree-node
+6. 行367: `.hidden` class 只隐藏 `li`，但搜索逻辑是逐 `.tree-node` 判断，两个 tree-node 共处同一 `li` 时会误判
+7. detail card 的 detail-card 在 960-1200px 区间的 right: 16px 和 width: 320px 可能与左侧面板底部重叠
+
+修改建议:
+1. 为 `.tree-node` 添加 `tabindex="0"` 和键盘事件（ArrowDown/ArrowUp 展开/折叠），补全 ARIA role
+2. 简化或移除 `highlightSyntax` 函数（当前方案可行但冗余）
+3. 修复搜索逻辑：对 `li.hidden` 的判断应改为检测是否有任何子 tree-node 匹配，而非单独判断
+4. 在 960-1200px 区间为 detail card 添加 left 约束或减小 width，避免遮挡左侧内容
+5. 考虑为 detail card 添加 `role="dialog"` 和 `aria-label`/`aria-labelledby` 以支持无障碍

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>串行 vs 并行执行对比时序图</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+    
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-tertiary: #0f3460;
+      --accent-blue: #00d4ff;
+      --accent-red: #ff6b6b;
+      --accent-green: #00ff88;
+      --accent-yellow: #ffd700;
+      --accent-purple: #9d4edd;
+      --text-primary: #ffffff;
+      --text-secondary: #a0a0b0;
+      --text-muted: #6c6c7d;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg-primary);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    
+    .title {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .title h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    
+    .title .subtitle {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      background: linear-gradient(180deg, rgba(15, 52, 96, 0.3) 0%, rgba(26, 26, 46, 0.5) 100%);
+      border-radius: 12px;
+      padding: 1.5rem;
+      overflow: hidden;
+    }
+    
+    .chart-wrapper::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+      opacity: 0.5;
+    }
+    
+    svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    
+    .grid-line {
+      stroke: rgba(255, 255, 255, 0.05);
+      stroke-width: 1;
+      stroke-dasharray: 4, 4;
+    }
+    
+    .axis-line {
+      stroke: rgba(255, 255, 255, 0.2);
+      stroke-width: 1.5;
+    }
+    
+    .axis-label {
+      fill: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    
+    .time-tick {
+      stroke: rgba(255, 255, 255, 0.3);
+      stroke-width: 1;
+    }
+    
+    .section-label {
+      fill: var(--text-primary);
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    
+    .section-label-en {
+      fill: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 400;
+    }
+    
+    .serial-bar {
+      fill: url(#serialGradient);
+      stroke: var(--accent-red);
+      stroke-width: 1.5;
+      filter: drop-shadow(0 2px 8px rgba(255, 107, 107, 0.3));
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .serial-bar:hover {
+      filter: drop-shadow(0 4px 16px rgba(255, 107, 107, 0.5));
+    }
+    
+    .parallel-bar {
+      fill: url(#parallelGradient);
+      stroke: var(--accent-blue);
+      stroke-width: 1.5;
+      filter: drop-shadow(0 2px 8px rgba(0, 212, 255, 0.3));
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .parallel-bar:hover {
+      filter: drop-shadow(0 4px 16px rgba(0, 212, 255, 0.5));
+    }
+    
+    .bar-label {
+      fill: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    
+    .bar-duration {
+      fill: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+    }
+    
+    .savings-area {
+      fill: rgba(0, 255, 136, 0.12);
+      stroke: var(--accent-green);
+      stroke-width: 2;
+      stroke-dasharray: 6, 3;
+    }
+    
+    .savings-label {
+      fill: var(--accent-green);
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    
+    .savings-value {
+      fill: var(--accent-green);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    
+    .model-output-bar {
+      fill: url(#modelGradient);
+    }
+    
+    .model-output-text {
+      fill: var(--text-primary);
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    
+    .streaming-indicator {
+      fill: none;
+      stroke: var(--accent-purple);
+      stroke-width: 2;
+      stroke-dasharray: 4, 2;
+      animation: dash 1s linear infinite;
+    }
+    
+    @keyframes dash {
+      to { stroke-dashoffset: -6; }
+    }
+    
+    .add-tool-arrow {
+      fill: none;
+      stroke: var(--accent-yellow);
+      stroke-width: 1.5;
+      marker-end: url(#arrowhead);
+    }
+    
+    .add-tool-label {
+      fill: var(--accent-yellow);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 500;
+    }
+    
+    .get-results-arrow {
+      fill: none;
+      stroke: var(--accent-green);
+      stroke-width: 1.5;
+      stroke-dasharray: 3, 2;
+      marker-end: url(#arrowhead-green);
+    }
+    
+    .get-results-label {
+      fill: var(--accent-green);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 500;
+    }
+    
+    .divider-line {
+      stroke: rgba(255, 255, 255, 0.1);
+      stroke-width: 1.5;
+    }
+    
+    .legend {
+      margin-top: 1.5rem;
+      padding: 1rem 1.5rem;
+      background: rgba(15, 52, 96, 0.4);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .legend-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.75rem;
+      font-family: 'Noto Sans SC', sans-serif;
+    }
+    
+    .legend-row {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+    }
+    
+    .legend-dot.serial { background: var(--accent-red); }
+    .legend-dot.parallel { background: var(--accent-blue); }
+    .legend-dot.savings { background: var(--accent-green); }
+    .legend-dot.model { background: var(--accent-purple); }
+    
+    .batch-scheduler {
+      margin-top: 1.5rem;
+      padding: 1.25rem;
+      background: linear-gradient(135deg, rgba(15, 52, 96, 0.5) 0%, rgba(26, 26, 46, 0.6) 100%);
+      border-radius: 10px;
+      border: 1px solid rgba(0, 212, 255, 0.15);
+    }
+    
+    .batch-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+      font-family: 'Noto Sans SC', sans-serif;
+    }
+    
+    .batch-title span {
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      margin-left: 0.5rem;
+    }
+    
+    .batch-flow {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    
+    .batch {
+      display: flex;
+      gap: 0.25rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .batch.concurrent {
+      background: rgba(0, 212, 255, 0.15);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+    }
+    
+    .batch.serial {
+      background: rgba(255, 107, 107, 0.15);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+    }
+    
+    .batch-item {
+      padding: 0.25rem 0.5rem;
+      border-radius: 3px;
+      background: rgba(0, 0, 0, 0.3);
+      color: var(--text-primary);
+    }
+    
+    .batch-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      font-family: 'Noto Sans SC', sans-serif;
+    }
+    
+    .arrow-flow {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    
+    .concurrency-limit {
+      margin-top: 0.75rem;
+      font-size: 11px;
+      color: var(--accent-yellow);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .sibling-abort {
+      margin-top: 0.5rem;
+      font-size: 11px;
+      color: var(--accent-red);
+      font-family: 'Noto Sans SC', sans-serif;
+    }
+    
+    .tooltip {
+      position: absolute;
+      background: rgba(26, 26, 46, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 11px;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 100;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .tooltip.show {
+      opacity: 1;
+    }
+    
+    .total-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    
+    .total-time.serial { fill: var(--accent-red); }
+    .total-time.parallel { fill: var(--accent-blue); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">
+      <h1>串行 vs 并行执行对比</h1>
+      <div class="subtitle">Serial vs Parallel Execution Timeline</div>
+    </div>
+    
+    <div class="chart-wrapper">
+      <svg viewBox="0 0 900 520" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="serialGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="rgba(255, 107, 107, 0.4)"/>
+            <stop offset="100%" stop-color="rgba(255, 107, 107, 0.15)"/>
+          </linearGradient>
+          <linearGradient id="parallelGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="rgba(0, 212, 255, 0.4)"/>
+            <stop offset="100%" stop-color="rgba(0, 212, 255, 0.15)"/>
+          </linearGradient>
+          <linearGradient id="modelGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="rgba(157, 78, 221, 0.5)"/>
+            <stop offset="100%" stop-color="rgba(157, 78, 221, 0.2)"/>
+          </linearGradient>
+          <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#ffd700"/>
+          </marker>
+          <marker id="arrowhead-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#00ff88"/>
+          </marker>
+        </defs>
+        
+        <!-- Background Grid -->
+        <line class="grid-line" x1="0" y1="80" x2="900" y2="80"/>
+        <line class="grid-line" x1="0" y1="150" x2="900" y2="150"/>
+        <line class="grid-line" x1="0" y1="220" x2="900" y2="220"/>
+        <line class="grid-line" x1="0" y1="290" x2="900" y2="290"/>
+        <line class="grid-line" x1="0" y1="360" x2="900" y2="360"/>
+        
+        <!-- Vertical Divider -->
+        <line class="divider-line" x1="420" y1="40" x2="420" y2="400"/>
+        
+        <!-- Section Labels -->
+        <text class="section-label" x="210" y="30" text-anchor="middle">传统串行</text>
+        <text class="section-label-en" x="210" y="48" text-anchor="middle">Traditional Serial</text>
+        
+        <text class="section-label" x="660" y="30" text-anchor="middle">StreamingToolExecutor</text>
+        <text class="section-label-en" x="660" y="48" text-anchor="middle">Parallel Execution</text>
+        
+        <!-- Time Axis Labels (Left Side) -->
+        <text class="axis-label" x="50" y="85" text-anchor="end">0ms</text>
+        <text class="axis-label" x="50" y="155" text-anchor="end">50ms</text>
+        <text class="axis-label" x="50" y="225" text-anchor="end">100ms</text>
+        <text class="axis-label" x="50" y="295" text-anchor="end">150ms</text>
+        
+        <!-- Time Axis -->
+        <line class="axis-line" x1="60" y1="80" x2="60" y2="360"/>
+        <line class="time-tick" x1="55" y1="80" x2="65" y2="80"/>
+        <line class="time-tick" x1="55" y1="150" x2="65" y2="150"/>
+        <line class="time-tick" x1="55" y1="220" x2="65" y2="220"/>
+        <line class="time-tick" x1="55" y1="290" x2="65" y2="290"/>
+        <line class="time-tick" x1="55" y1="360" x2="65" y2="360"/>
+        
+        <!-- Model Output Stream -->
+        <rect class="model-output-bar" x="470" y="62" width="180" height="28" rx="4"/>
+        <text class="model-output-text" x="560" y="81" text-anchor="middle">模型流式输出中...</text>
+        <rect class="streaming-indicator" x="475" y="66" width="170" height="20" rx="2"/>
+        
+        <!-- Serial Path - Read(a) -->
+        <rect class="serial-bar" x="100" y="150" width="220" height="50" rx="4"/>
+        <text class="bar-label" x="210" y="180" text-anchor="middle">Read(a)</text>
+        <text class="bar-duration" x="210" y="195" text-anchor="middle">50ms</text>
+        
+        <!-- Serial Path - Read(b) -->
+        <rect class="serial-bar" x="100" y="220" width="220" height="50" rx="4"/>
+        <text class="bar-label" x="210" y="250" text-anchor="middle">Read(b)</text>
+        <text class="bar-duration" x="210" y="265" text-anchor="middle">50ms</text>
+        
+        <!-- Serial Path - Read(c) -->
+        <rect class="serial-bar" x="100" y="290" width="220" height="50" rx="4"/>
+        <text class="bar-label" x="210" y="320" text-anchor="middle">Read(c)</text>
+        <text class="bar-duration" x="210" y="335" text-anchor="middle">50ms</text>
+        
+        <!-- Serial Total Time -->
+        <text class="total-time serial" x="210" y="375" text-anchor="middle">总计: 150ms</text>
+        
+        <!-- Parallel Path - All Reads (overlapping visually) -->
+        <rect class="parallel-bar" x="550" y="110" width="220" height="40" rx="4" opacity="0.9"/>
+        <rect class="parallel-bar" x="550" y="125" width="220" height="40" rx="4" opacity="0.7"/>
+        <rect class="parallel-bar" x="550" y="140" width="220" height="40" rx="4" opacity="0.9"/>
+        
+        <text class="bar-label" x="660" y="135" text-anchor="middle">Read(a)</text>
+        <text class="bar-label" x="660" y="150" text-anchor="middle">Read(b)</text>
+        <text class="bar-label" x="660" y="165" text-anchor="middle">Read(c)</text>
+        <text class="bar-duration" x="660" y="180" text-anchor="middle">同时执行 · 50ms</text>
+        
+        <!-- Parallel Total Time -->
+        <text class="total-time parallel" x="660" y="210" text-anchor="middle">总计: 50ms</text>
+        
+        <!-- Savings Area Highlight -->
+        <rect class="savings-area" x="100" y="230" width="670" height="110" rx="6"/>
+        <text class="savings-label" x="435" y="280" text-anchor="middle">节省时间</text>
+        <text class="savings-value" x="435" y="300" text-anchor="middle">100ms (66% ↓)</text>
+        
+        <!-- Add Tool Arrows (showing streaming execution) -->
+        <path class="add-tool-arrow" d="M 470 110 L 440 125"/>
+        <text class="add-tool-label" x="455" y="115" text-anchor="middle">addTool()</text>
+        
+        <path class="add-tool-arrow" d="M 480 100 L 450 132"/>
+        <text class="add-tool-label" x="465" y="110" text-anchor="middle">addTool()</text>
+        
+        <path class="add-tool-arrow" d="M 490 90 L 460 140"/>
+        <text class="add-tool-label" x="475" y="100" text-anchor="middle">addTool()</text>
+        
+        <!-- Get Results Arrows -->
+        <path class="get-results-arrow" d="M 660 180 L 660 220"/>
+        <text class="get-results-label" x="690" y="205" text-anchor="middle">getRemainingResults()</text>
+        
+        <!-- Model Output Arrow to first tool -->
+        <line x1="650" y1="90" x2="650" y2="105" stroke="#9d4edd" stroke-width="2" stroke-dasharray="4,2"/>
+        <polygon points="650,110 645,102 655,102" fill="#9d4edd"/>
+        
+        <!-- Concurrency Safe Indicator -->
+        <text x="785" y="165" fill="#00ff88" font-size="9" font-family="JetBrains Mono" opacity="0.8">isConcurrencySafe=true</text>
+      </svg>
+      
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+    
+    <div class="legend">
+      <div class="legend-title">图例说明</div>
+      <div class="legend-row">
+        <div class="legend-item">
+          <div class="legend-dot serial"></div>
+          <span>串行执行 (Sequential)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot parallel"></div>
+          <span>并行执行 (Concurrent)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot savings"></div>
+          <span>节省时间 (Time Saved)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot model"></div>
+          <span>模型输出流 (Model Stream)</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="batch-scheduler">
+      <div class="batch-title">runTools 批次调度逻辑 <span>Batch Scheduling</span></div>
+      <div class="batch-flow">
+        <div>
+          <div class="batch-label">批次 1 · 并发执行</div>
+          <div class="batch concurrent">
+            <span class="batch-item">Read</span>
+            <span class="batch-item">Grep</span>
+            <span class="batch-item">Read</span>
+          </div>
+        </div>
+        <span class="arrow-flow">→</span>
+        <div>
+          <div class="batch-label">批次 2 · 串行执行</div>
+          <div class="batch serial">
+            <span class="batch-item">Edit</span>
+          </div>
+        </div>
+        <span class="arrow-flow">→</span>
+        <div>
+          <div class="batch-label">批次 3 · 串行执行</div>
+          <div class="batch serial">
+            <span class="batch-item">Bash</span>
+          </div>
+        </div>
+      </div>
+      <div class="concurrency-limit">⚡ 并发上限: CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY = 10</div>
+      <div class="sibling-abort">⛔ siblingAbortController: 一个 Bash 出错时中止所有兄弟进程</div>
+    </div>
+  </div>
+  
+  <script>
+    const tooltip = document.getElementById('tooltip');
+    const bars = document.querySelectorAll('.serial-bar, .parallel-bar');
+    
+    bars.forEach(bar => {
+      bar.addEventListener('mouseenter', (e) => {
+        const rect = bar.getBoundingClientRect();
+        const isSerial = bar.classList.contains('serial-bar');
+        const isParallel = bar.classList.contains('parallel-bar');
+        
+        let content = '';
+        if (isSerial) {
+          content = 'Read Tool<br>耗时: 50ms<br>模式: 串行等待';
+        } else if (isParallel) {
+          content = 'Read Tool<br>耗时: 50ms<br>模式: 并行执行<br>isConcurrencySafe: true';
+        }
+        
+        tooltip.innerHTML = content;
+        tooltip.classList.add('show');
+        tooltip.style.left = (rect.left + rect.width / 2 - tooltip.offsetWidth / 2) + 'px';
+        tooltip.style.top = (rect.top - tooltip.offsetHeight - 10) + 'px';
+      });
+      
+      bar.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('show');
+      });
+    });
+  </script>
+</body>
+</html>

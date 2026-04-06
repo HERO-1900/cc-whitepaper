@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code 安全模型全景图</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --border-color: #30363d;
+  --text-primary: #f0f6fc;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --color-strong: #3fb950;
+  --color-medium: #d29922;
+  --color-weak: #f85149;
+  --color-accent: #58a6ff;
+  --glow-strong: 0 0 20px rgba(63, 185, 80, 0.3);
+  --glow-medium: 0 0 20px rgba(210, 153, 34, 0.3);
+  --glow-weak: 0 0 20px rgba(248, 81, 73, 0.3);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Background hex pattern */
+.bg-pattern {
+  position: fixed;
+  inset: 0;
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(88, 166, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(63, 185, 80, 0.03) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill='none' stroke='%2330363d' stroke-width='0.5' opacity='0.3'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 50px;
+  position: relative;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+}
+
+.title {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  letter-spacing: -2px;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #fff 0%, var(--color-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.subtitle span {
+  color: var(--color-strong);
+  font-weight: 600;
+}
+
+/* Main Layout */
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 30px;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Matrix Container */
+.matrix-container {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 30px;
+  position: relative;
+  overflow: hidden;
+}
+
+.matrix-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+}
+
+/* Security Matrix */
+.security-matrix {
+  display: grid;
+  grid-template-columns: 180px repeat(3, 1fr);
+  gap: 12px;
+}
+
+/* Headers */
+.col-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 15px;
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.col-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.3), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.threat-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 24px;
+}
+
+.threat-prompt .threat-icon { background: rgba(248, 81, 73, 0.15); }
+.threat-file .threat-icon { background: rgba(210, 153, 34, 0.15); }
+.threat-command .threat-icon { background: rgba(139, 148, 158, 0.15); }
+
+.col-header h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.col-header h3.en {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Row Headers */
+.row-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.row-header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: var(--color-accent);
+  border-radius: 0 3px 3px 0;
+}
+
+.layer-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border: 1px solid var(--border-color);
+}
+
+.layer-info h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.layer-info h4.en {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Matrix Cells */
+.cell {
+  padding: 20px;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: cellFadeIn 0.5s ease forwards;
+}
+
+.cell:hover {
+  transform: translateY(-4px);
+  border-color: var(--color-accent);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.cell-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cell-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.strength-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.strength-strong {
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--color-strong);
+}
+
+.strength-medium {
+  background: rgba(210, 153, 34, 0.15);
+  color: var(--color-medium);
+}
+
+.strength-weak {
+  background: rgba(248, 81, 73, 0.15);
+  color: var(--color-weak);
+}
+
+.cell-details {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, margin-top 0.3s ease;
+}
+
+.cell:hover .cell-details {
+  max-height: 200px;
+  margin-top: 8px;
+}
+
+.source-ref {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-color);
+  margin-top: 8px;
+}
+
+/* Cell Strength Colors */
+.cell[data-strength="strong"]:hover {
+  box-shadow: var(--glow-strong);
+}
+
+.cell[data-strength="medium"]:hover {
+  box-shadow: var(--glow-medium);
+}
+
+.cell[data-strength="weak"]:hover {
+  box-shadow: var(--glow-weak);
+}
+
+/* Strength Dot */
+.strength-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.strength-strong .strength-dot { background: var(--color-strong); box-shadow: 0 0 8px var(--color-strong); }
+.strength-medium .strength-dot { background: var(--color-medium); box-shadow: 0 0 8px var(--color-medium); }
+.strength-weak .strength-dot { background: var(--color-strong); box-shadow: 0 0 8px var(--color-strong); }
+
+/* Animations */
+@keyframes cellFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered Animation Delays */
+.cell:nth-child(4) { animation-delay: 0.05s; }
+.cell:nth-child(5) { animation-delay: 0.1s; }
+.cell:nth-child(6) { animation-delay: 0.15s; }
+.cell:nth-child(7) { animation-delay: 0.2s; }
+.cell:nth-child(8) { animation-delay: 0.25s; }
+.cell:nth-child(9) { animation-delay: 0.3s; }
+.cell:nth-child(10) { animation-delay: 0.35s; }
+.cell:nth-child(11) { animation-delay: 0.4s; }
+.cell:nth-child(12) { animation-delay: 0.45s; }
+.cell:nth-child(13) { animation-delay: 0.5s; }
+.cell:nth-child(14) { animation-delay: 0.55s; }
+.cell:nth-child(15) { animation-delay: 0.6s; }
+
+/* Empty corner */
+.corner-cell {
+  background: transparent;
+  border: none;
+}
+
+/* Dashboard */
+.dashboard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 30px;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at 30% 20%, rgba(63, 185, 80, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(88, 166, 255, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.dashboard-title {
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 30px;
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-title span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-top: 4px;
+}
+
+/* Gauge */
+.gauge-container {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 30px;
+}
+
+.gauge-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.gauge-bg {
+  fill: none;
+  stroke: var(--bg-tertiary);
+  stroke-width: 12;
+}
+
+.gauge-fill {
+  fill: none;
+  stroke: url(#gaugeGradient);
+  stroke-width: 12;
+  stroke-linecap: round;
+  stroke-dasharray: 471;
+  stroke-dashoffset: 471;
+  animation: gaugeFill 1.5s ease-out 0.5s forwards;
+}
+
+.gauge-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.gauge-score {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--color-strong);
+  line-height: 1;
+}
+
+.gauge-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+@keyframes gaugeFill {
+  to {
+    stroke-dashoffset: 94;
+  }
+}
+
+/* Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  position: relative;
+  z-index: 1;
+}
+
+.stat-item {
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+  padding: 15px;
+  text-align: center;
+  border: 1px solid var(--border-color);
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.stat-value.strong { color: var(--color-strong); }
+.stat-value.medium { color: var(--color-medium); }
+.stat-value.weak { color: var(--color-weak); }
+
+.stat-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Legend */
+.legend {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.legend-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: var(--text-secondary);
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* Footer Note */
+.footer-note {
+  margin-top: 40px;
+  padding: 20px 30px;
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  border-left: 3px solid var(--color-accent);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.footer-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: rgba(88, 166, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.footer-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.footer-text strong {
+  color: var(--text-primary);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .security-matrix {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .corner-cell,
+  .col-header {
+    display: none;
+  }
+  
+  .row-header {
+    margin-bottom: 10px;
+  }
+  
+  .cell {
+    margin-bottom: 10px;
+  }
+  
+  .cell-details {
+    max-height: none;
+    margin-top: 12px;
+  }
+}
+
+/* Scanline effect */
+.scanline {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: rgba(88, 166, 255, 0.1);
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+  z-index: 100;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100vh); }
+  100% { transform: translateY(100vh); }
+}
+</style>
+</head>
+<body>
+<div class="bg-pattern"></div>
+<div class="scanline"></div>
+
+<div class="container">
+  <header class="header">
+    <h1 class="title">Security Model Panorama</h1>
+    <p class="subtitle">四层纵深防御 × 三种威胁向量 <span>|</span> Defense in Depth Architecture</p>
+  </header>
+
+  <div class="main-layout">
+    <div class="matrix-container">
+      <div class="security-matrix">
+        <!-- Corner -->
+        <div class="corner-cell"></div>
+        
+        <!-- Column Headers -->
+        <div class="col-header threat-prompt">
+          <div class="threat-icon">💉</div>
+          <h3>Prompt注入</h3>
+          <h3 class="en">Prompt Injection</h3>
+        </div>
+        <div class="col-header threat-file">
+          <div class="threat-icon">📁</div>
+          <h3>文件越权</h3>
+          <h3 class="en">File Breach</h3>
+        </div>
+        <div class="col-header threat-command">
+          <div class="threat-icon">💻</div>
+          <h3>命令逃逸</h3>
+          <h3 class="en">Command Escape</h3>
+        </div>
+
+        <!-- Row 1: Permission System -->
+        <div class="row-header">
+          <div class="layer-badge">🛡️</div>
+          <div class="layer-info">
+            <h4>权限系统</h4>
+            <h4 class="en">Layer 1 · Permission</h4>
+          </div>
+        </div>
+        <div class="cell" data-strength="strong">
+          <div class="cell-content">
+            <div class="cell-header">
+              <span class="cell-title">CLAUDE.md审查</span>
+              <span class="strength-indicator strength-strong">
+                <span class="strength-dot"></span>
+                强
+              </span>
+            </div>
+            <div class="cell-details">
+              加载CLAUDE.md前进行内容安全扫描，检测潜在恶意指令。工具调用前实施权限门控，阻断未授权操作。
+            </div>
+            <div class="source-ref">src/core/permissions.ts:124</div>
+          </div>
+        </div>
+        <div class="cell" data-strength="strong">
+          <div class="cell-content">
+            <div class="cell-header">
+              <span class="cell-title">路径白名单</span>
+              <span class="strength-indicator strength-strong">
+                <span class="strength-dot"></span>
+                强
+              </span>
+            </div>
+            <div class="cell-details">
+              只读/读写工具分离设计。敏感文件(.env, credentials)默认拒绝访问，通过白名单机制控制可访问路径。
+            </div>
+            <div class="source-ref">src/tools/filesystem.ts:89</div>
+          </div>
+        </div>
+        <div class="cell" data-strength="medium">
+          <div class="cell-content">
+            <div class="cell-header">
+              <span class="cell-title">命令预检</span>
+              <span class="strength-indicator strength-medium">
+                <span class="strength-dot"></span>
+                中
+              </span>
+            </div>
+            <div class="cell-details">
+              Bash命令执行前进行危险命令黑名单检查。rm -rf、dd等高危操作需用户显式确认。
+            </div>
+            <div class="source-ref">src/tools/bash.ts:156</div>
+          </div>
+        </div>
+
+        <!-- Row 2: Sandbox -->
+        <div class="row-header">
+          <div class="layer-badge">🔒</div>
+          <div class="layer-info">
+            <h4>沙箱隔离</h4>
+            <h4 class="en">Layer 2 · Sandbox</h4>
+          </div>
+        </div>
+        <div class="cell" data-strength="medium">
+          <div class="cell-content">
+            <div class="cell-header">
+              <span class="cell-title">执行范围限制</span>
+              <span class="strength-indicator strength-medium">
+                <span class="strength-dot"></span>
+                中
+              </span>
+            </div>
+            <div class="cell-details">
+              沙箱内执行限制注入影响范围。即使恶意Prompt突破外层防御，其影响被限制在隔离环境中。
+            </div>
+            <div class="source-ref">src/sandbox/seatbelt.ts:78</div>
+          </div>
+        </div>
+        <div class="cell" data-strength="strong">
+          <div class="cell-content">
+            <div class="cell-header">
+              <span class="cell-title">文件系统隔离</span>
+              <span class="strength-indicator strength-strong">
+                <span class="strength-dot"></span>
+                强
+              </span>
+            </div>
+            <div class="cell-details">
+              macOS Seatbelt(sandbox-exec)、Linux命名空间隔离。工作目录只读挂载，禁止写入系统路径。
+            </div>
+            <div class="source-ref">src/sandbox/macos.ts:203</div>
+          </div>
+        </div>
+        <div class="cell" data-strength="strong">
+          <div class="cell-content">
+            <div class="cell-header">
+              <span class="cell-title">能力限制</span>
+              <span class="strength-indicator strength-strong">
+                <span class="strength-dot"></span>
+                强
+              </span>
+            </div>
+            <div class="cell-details">
+              Linux capabilities精细控制，禁用CAP_SYS_ADMIN等特权。网络访问受限，防止横向移动。
+            </div>
+            <div class="source-ref">src/sandbox/linux.ts:145</div>
+          </div>
+        </div>
+
+        <!-- Row 3: Input Validation -->
+        <div class="row-header">
+          <div class="layer-badge">✓</div>
+          <div class="layer-info">
+            <h4>输入校验</h4>
+            <h4 class="en">Layer 3 · Validation</h4>
+          </div>
+        </div>
+        <div class="cell" data-strength="strong">
+          <div class="cell-content">
+            <div class="cell-header">
+              <span class="cell-title">Schema验证</span>
+              <span class="strength-indicator strength-strong">
+                <span class="strength-dot"></span>
+                强
+              </span>
+            </div>
+            <div class="cell-details">
+              Zod Schema严格验证所有工具参数类型和结构，拒绝不符合预期的输入，阻断注入攻击载体。
+            </div>
+            <div class="source-ref">src/validation/schemas.ts:67</div>
+          </div>
+        </div>
+        <div class="cell" data-strength="strong">
+          <div class="cell-content">
+            <div class="cell-header">
+              <span class="cell-title">路径遍历检测</span>
+              <span class="strength-indicator strength-strong">
+                <span class="strength-dot"></span>
+                强
+              </span>
+            </div>
+            <div class="cell-details">
+              检测并阻断../、符号链接攻击。路径规范化处理，解析真实绝对路径后再进行权限校验。
+            </div>
+            <div class="source-ref">src/validation/paths.ts:92</div>
+          </div>
+        </div>
+        <div class="cell" data-strength="strong">
+          <div class="cell-content">
+            <div class="cell-header">
+              <span class="cell-title">命令注入过滤</span>
+              <span class="strength-indicator strength-strong">
+                <span class="strength-dot"></span>
+                强
+              </span>
+            </div>
+            <div class="cell-details">
+              参数化命令执行，禁止shell元字符。输入长度限制，正则过滤危险模式(>;|&$`等)。
+            </div>
+            <div class="source-ref">src/validation/commands.ts:118</div>
+          </div>
+        </div>
+
+        <!-- Row 4: Audit -->
+        <div class="row-header">
+          <div class="layer-badge">📊</div>
+          <div class="layer-info">
+            <h4>审计日志</h4>
+            <h4 class="en">Layer 4 · Audit</h4>
+          </div>
+        </div>
+        <div class="cell" data-strength="medium">
+          <div class="cell-content">
+            <div class="cell-header">
+              <span class="cell-title">行为追踪</span>
+              <span class="strength-indicator strength-medium">
+                <span class="strength-dot"></span>
+                中
+              </span>
+            </div>
+            <div class="cell-details">
+              完整记录CLAUDE.md加载和工具调用序列。异常行为模式检测，识别潜在的Prompt注入迹象。
+            </div>
+            <div class="source-ref">src/audit/logger.ts:203</div>
+          </div>
+        </div>
+        <div class="cell" data-strength="medium">
+          <div class="cell-content">
+            <div class="cell-header">
+              <span class="cell-title">访问审计</span>
+              <span class="strength-indicator strength-medium">
+                <span class="strength-dot"></span>
+                中
+              </span>
+            </div>
+            <div class="cell-details">
+              所有文件访问操作记录时间戳、路径、结果。敏感文件访问标记，支持事后追溯分析。
+            </div>
+            <div class="source-ref">src/audit/filesystem.ts:156</div>
+          </div>
+        </div>
+        <div class="cell" data-strength="strong">
+          <div class="cell-content">
+            <div class="cell-header">
+              <span class="cell-title">执行监控</span>
+              <span class="strength-indicator strength-strong">
+                <span class="strength-dot"></span>
+                强
+              </span>
+            </div>
+            <div class="cell-details">
+              命令执行实时监控，进程树追踪。异常退出码、超时、资源超限告警，支持强制终止。
+            </div>
+            <div class="source-ref">src/audit/process.ts:89</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard">
+      <h2 class="dashboard-title">
+        安全评分
+        <span>Security Score</span>
+      </h2>
+      
+      <div class="gauge-container">
+        <svg class="gauge-svg" viewBox="0 0 200 200">
+          <defs>
+            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#f85149" />
+              <stop offset="50%" stop-color="#d29922" />
+              <stop offset="100%" stop-color="#3fb950" />
+            </linearGradient>
+          </defs>
+          <circle class="gauge-bg" cx="100" cy="100" r="75" />
+          <circle class="gauge-fill" cx="100" cy="100" r="75" />
+        </svg>
+        <div class="gauge-center">
+          <div class="gauge-score">A+</div>
+          <div class="gauge-label">Overall Grade</div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value strong">9</div>
+          <div class="stat-label">强防护 Strong</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value medium">4</div>
+          <div class="stat-label">中防护 Medium</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value weak">0</div>
+          <div class="stat-label">弱防护 Weak</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" style="color: var(--color-accent);">12</div>
+          <div class="stat-label">总计 Total</div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-title">防护强度说明</div>
+        <div class="legend-items">
+          <div class="legend-item">
+            <span class="legend-dot" style="background: var(--color-strong); box-shadow: 0 0 8px var(--color-strong);"></span>
+            <span>强 - 多层防御 / 高置信度</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" style="background: var(--color-medium); box-shadow: 0 0 8px var(--color-medium);"></span>
+            <span>中 - 单层防御 / 需关注</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" style="background: var(--color-weak); box-shadow: 0 0 8px var(--color-weak);"></span>
+            <span>弱 - 需强化 / 低置信度</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    <div class="footer-icon">🔐</div>
+    <div class="footer-text">
+      <strong>安全不是一个功能，而是贯穿全系统的体系。</strong><br>
+      Security is not a feature, but a system-wide discipline woven into every layer.
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

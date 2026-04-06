@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>插件信任链安全架构图</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --accent-1: #e94560;
+  --accent-2: #f39c12;
+  --accent-3: #3498db;
+  --accent-4: #9b59b6;
+  --accent-5: #1abc9c;
+  --accent-6: #2ecc71;
+  --text-primary: #eaeaea;
+  --text-secondary: #a0a0a0;
+  --danger: #e74c3c;
+  --success: #2ecc71;
+}
+
+body {
+  font-family: 'Noto Serif SC', serif;
+  background: var(--bg-primary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  color: var(--text-primary);
+  overflow-x: auto;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  background: linear-gradient(90deg, #fff, #a0a0a0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-align: center;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 40px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.diagram-container {
+  position: relative;
+  width: 1400px;
+  height: 750px;
+  background: radial-gradient(ellipse at center, rgba(22,33,62,0.8) 0%, rgba(26,26,46,1) 100%);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 0 80px rgba(233,69,96,0.1);
+}
+
+/* Shield base style */
+.shield {
+  position: absolute;
+  width: 140px;
+  height: 160px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.shield:hover {
+  transform: scale(1.05);
+}
+
+.shield-bg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 20px currentColor);
+  animation: breathe 3s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { filter: drop-shadow(0 0 15px currentColor); }
+  50% { filter: drop-shadow(0 0 30px currentColor); }
+}
+
+.shield-layer-1 { fill: url(#grad1); color: var(--accent-1); }
+.shield-layer-2 { fill: url(#grad2); color: var(--accent-2); }
+.shield-layer-3 { fill: url(#grad3); color: var(--accent-3); }
+.shield-layer-4 { fill: url(#grad4); color: var(--accent-4); }
+.shield-layer-5 { fill: url(#grad5); color: var(--accent-5); }
+.shield-layer-6 { fill: url(#grad6); color: var(--accent-6); }
+
+.shield-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 36px;
+  color: white;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+.shield-label {
+  position: absolute;
+  bottom: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.shield-label .zh {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+}
+
+.shield-label .en {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  display: block;
+  margin-top: 2px;
+}
+
+/* Connection lines */
+.connection-line {
+  position: absolute;
+  height: 4px;
+  background: linear-gradient(90deg, var(--success) 0%, #27ae60 100%);
+  top: 80px;
+  border-radius: 2px;
+}
+
+.connection-line::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: -6px;
+  width: 0;
+  height: 0;
+  border-left: 12px solid var(--success);
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+}
+
+/* Attack arrows */
+.attack-arrow {
+  position: absolute;
+  stroke: var(--danger);
+  stroke-width: 2;
+  stroke-dasharray: 8,4;
+  fill: none;
+  animation: dash 1s linear infinite;
+}
+
+@keyframes dash {
+  to { stroke-dashoffset: -12; }
+}
+
+.attack-label {
+  position: absolute;
+  background: rgba(231,76,60,0.15);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+.blocked-x {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background: var(--danger);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  animation: pulse-x 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-x {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231,76,60,0.7); }
+  50% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(231,76,60,0); }
+}
+
+/* Defense description */
+.defense-desc {
+  position: absolute;
+  bottom: 180px;
+  width: 120px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Safe zone */
+.safe-zone {
+  position: absolute;
+  right: 60px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 200px;
+  height: 300px;
+  background: linear-gradient(135deg, rgba(46,204,113,0.1) 0%, rgba(39,174,96,0.05) 100%);
+  border: 2px solid var(--success);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.safe-zone::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--success), transparent);
+  z-index: -1;
+  opacity: 0.3;
+}
+
+.safe-zone-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--success);
+  margin-bottom: 20px;
+}
+
+.capability {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.capability-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.cap-skill { background: rgba(155,89,182,0.3); }
+.cap-cmd { background: rgba(52,152,219,0.3); }
+.cap-res { background: rgba(243,156,18,0.3); }
+.cap-chan { background: rgba(26,188,156,0.3); }
+
+/* Enterprise lock */
+.enterprise-lock {
+  position: absolute;
+  left: 40px;
+  top: 40px;
+  right: 280px;
+  bottom: 40px;
+  border: 2px dashed rgba(155,89,182,0.5);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.enterprise-label {
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  background: var(--bg-primary);
+  padding: 0 12px;
+  color: var(--accent-4);
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Homoglyph demo */
+.homoglyph-demo {
+  position: absolute;
+  left: 430px;
+  top: 280px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(52,152,219,0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+.homoglyph-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 8px;
+}
+
+.homoglyph-row:last-child { margin-bottom: 0; }
+
+.homo-normal { color: var(--success); }
+.homo-danger { color: var(--danger); text-decoration: line-through; }
+
+.homo-arrow {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+/* Plugin only policy */
+.policy-box {
+  position: absolute;
+  left: 40px;
+  bottom: 60px;
+  background: rgba(155,89,182,0.1);
+  border: 1px solid var(--accent-4);
+  border-radius: 8px;
+  padding: 15px 20px;
+  max-width: 280px;
+}
+
+.policy-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-4);
+  margin-bottom: 8px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.policy-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.policy-code {
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent-5);
+}
+
+/* Channel whitelist */
+.channel-box {
+  position: absolute;
+  right: 60px;
+  bottom: 60px;
+  background: rgba(26,188,156,0.1);
+  border: 1px solid var(--accent-5);
+  border-radius: 8px;
+  padding: 15px 20px;
+  width: 200px;
+}
+
+.channel-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-5);
+  margin-bottom: 8px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.channel-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Hover tooltip */
+.tooltip {
+  position: fixed;
+  background: rgba(0,0,0,0.95);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 16px;
+  max-width: 280px;
+  z-index: 1000;
+  display: none;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+.tooltip-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: white;
+}
+
+.tooltip-blocks {
+  font-size: 11px;
+  color: var(--danger);
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.tooltip-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Migration pattern */
+.migration-box {
+  position: absolute;
+  left: 40px;
+  bottom: 200px;
+  background: rgba(52,152,219,0.1);
+  border: 1px solid var(--accent-3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  width: 260px;
+}
+
+.migration-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-3);
+  margin-bottom: 6px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.migration-desc {
+  font-size: 10px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.migration-code {
+  margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--accent-2);
+}
+</style>
+</head>
+<body>
+<h1 class="title">插件信任链安全架构</h1>
+<p class="subtitle">Plugin Trust Chain Security Architecture</p>
+
+<div class="diagram-container">
+  <!-- SVG Gradients -->
+  <svg width="0" height="0">
+    <defs>
+      <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#e94560;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#c0392b;stop-opacity:1" />
+      </linearGradient>
+      <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#f39c12;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#e67e22;stop-opacity:1" />
+      </linearGradient>
+      <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#2980b9;stop-opacity:1" />
+      </linearGradient>
+      <linearGradient id="grad4" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#9b59b6;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#8e44ad;stop-opacity:1" />
+      </linearGradient>
+      <linearGradient id="grad5" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#1abc9c;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#16a085;stop-opacity:1" />
+      </linearGradient>
+      <linearGradient id="grad6" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#2ecc71;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#27ae60;stop-opacity:1" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <!-- Enterprise Lock Border -->
+  <div class="enterprise-lock">
+    <span class="enterprise-label">Enterprise Lock: pluginOnlyPolicy</span>
+  </div>
+
+  <!-- Shield 1: Developer/Marketplace -->
+  <div class="shield" style="left: 100px; top: 100px;" data-index="0">
+    <svg class="shield-bg shield-layer-1" viewBox="0 0 140 160">
+      <path d="M70 5 L130 25 L130 80 Q130 125 70 150 Q10 125 10 80 L10 25 Z"/>
+    </svg>
+    <div class="shield-icon">📦</div>
+    <div class="shield-label">
+      <span class="zh">Marketplace审查</span>
+      <span class="en">Marketplace Review</span>
+    </div>
+  </div>
+
+  <!-- Shield 2: Signature -->
+  <div class="shield" style="left: 290px; top: 100px;" data-index="1">
+    <svg class="shield-bg shield-layer-2" viewBox="0 0 140 160">
+      <path d="M70 5 L130 25 L130 80 Q130 125 70 150 Q10 125 10 80 L10 25 Z"/>
+    </svg>
+    <div class="shield-icon">🔐</div>
+    <div class="shield-label">
+      <span class="zh">签名验证</span>
+      <span class="en">Signature Verify</span>
+    </div>
+  </div>
+
+  <!-- Shield 3: Homoglyph -->
+  <div class="shield" style="left: 480px; top: 100px;" data-index="2">
+    <svg class="shield-bg shield-layer-3" viewBox="0 0 140 160">
+      <path d="M70 5 L130 25 L130 80 Q130 125 70 150 Q10 125 10 80 L10 25 Z"/>
+    </svg>
+    <div class="shield-icon">👁️</div>
+    <div class="shield-label">
+      <span class="zh">同形字检测</span>
+      <span class="en">Homoglyph Detect</span>
+    </div>
+  </div>
+
+  <!-- Shield 4: User Consent -->
+  <div class="shield" style="left: 670px; top: 100px;" data-index="3">
+    <svg class="shield-bg shield-layer-4" viewBox="0 0 140 160">
+      <path d="M70 5 L130 25 L130 80 Q130 125 70 150 Q10 125 10 80 L10 25 Z"/>
+    </svg>
+    <div class="shield-icon">✋</div>
+    <div class="shield-label">
+      <span class="zh">用户确认</span>
+      <span class="en">User Consent</span>
+    </div>
+  </div>
+
+  <!-- Shield 5: Workspace Trust -->
+  <div class="shield" style="left: 860px; top: 100px;" data-index="4">
+    <svg class="shield-bg shield-layer-5" viewBox="0 0 140 160">
+      <path d="M70 5 L130 25 L130 80 Q130 125 70 150 Q10 125 10 80 L10 25 Z"/>
+    </svg>
+    <div class="shield-icon">🏢</div>
+    <div class="shield-label">
+      <span class="zh">工作区信任</span>
+      <span class="en">Workspace Trust</span>
+    </div>
+  </div>
+
+  <!-- Shield 6: MCP Sandbox -->
+  <div class="shield" style="left: 1050px; top: 100px;" data-index="5">
+    <svg class="shield-bg shield-layer-6" viewBox="0 0 140 160">
+      <path d="M70 5 L130 25 L130 80 Q130 125 70 150 Q10 125 10 80 L10 25 Z"/>
+    </svg>
+    <div class="shield-icon">🛡️</div>
+    <div class="shield-label">
+      <span class="zh">MCP沙箱</span>
+      <span class="en">MCP Sandbox</span>
+    </div>
+  </div>
+
+  <!-- Connection Lines -->
+  <div class="connection-line" style="left: 240px; width: 50px;"></div>
+  <div class="connection-line" style="left: 430px; width: 50px;"></div>
+  <div class="connection-line" style="left: 620px; width: 50px;"></div>
+  <div class="connection-line" style="left: 810px; width: 50px;"></div>
+  <div class="connection-line" style="left: 1000px; width: 50px;"></div>
+
+  <!-- Attack Arrows -->
+  <svg style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;">
+    <!-- Attack 1: Supply Chain -->
+    <path class="attack-arrow" d="M 170 60 Q 170 30 170 80" style="left: 100px;"/>
+  </svg>
+
+  <!-- Attack Labels & X marks -->
+  <div class="attack-label" style="left: 85px; top: 50px;">供应链攻击</div>
+  <div class="blocked-x" style="left: 158px; top: 75px;">✕</div>
+
+  <div class="attack-label" style="left: 275px; top: 50px;">中间人篡改</div>
+  <div class="blocked-x" style="left: 348px; top: 75px;">✕</div>
+
+  <div class="attack-label" style="left: 465px; top: 50px;">仿冒攻击</div>
+  <div class="blocked-x" style="left: 538px; top: 75px;">✕</div>
+
+  <div class="attack-label" style="left: 655px; top: 50px;">权限越界</div>
+  <div class="blocked-x" style="left: 728px; top: 75px;">✕</div>
+
+  <div class="attack-label" style="left: 845px; top: 50px;">配置绕过</div>
+  <div class="blocked-x" style="left: 918px; top: 75px;">✕</div>
+
+  <div class="attack-label" style="left: 1035px; top: 50px;">运行时逃逸</div>
+  <div class="blocked-x" style="left: 1108px; top: 75px;">✕</div>
+
+  <!-- Defense descriptions -->
+  <div class="defense-desc" style="left: 110px;">代码审查<br/>恶意功能拦截</div>
+  <div class="defense-desc" style="left: 300px;">密码学验证<br/>完整性保证</div>
+  <div class="defense-desc" style="left: 490px;">Unicode检测<br/>视觉欺骗防护</div>
+  <div class="defense-desc" style="left: 680px;">权限清单<br/>显式授权</div>
+  <div class="defense-desc" style="left: 870px;">信任级别<br/>访问控制</div>
+  <div class="defense-desc" style="left: 1060px;">策略约束<br/>资源隔离</div>
+
+  <!-- Homoglyph Demo -->
+  <div class="homoglyph-demo">
+    <div class="homoglyph-row">
+      <span class="homo-normal">github-tools</span>
+      <span class="homo-arrow">→</span>
+      <span style="color: var(--success);">✓ Safe</span>
+    </div>
+    <div class="homoglyph-row">
+      <span class="homo-danger">githüb-tools</span>
+      <span class="homo-arrow">→</span>
+      <span style="color: var(--danger);">✗ Blocked</span>
+    </div>
+    <div style="font-size: 10px; color: var(--text-secondary); margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+      西里尔字母 о vs 拉丁字母 o
+    </div>
+  </div>
+
+  <!-- Safe Zone -->
+  <div class="safe-zone">
+    <div class="safe-zone-title">安全执行环境</div>
+    <div class="capability">
+      <div class="capability-icon cap-skill">⚡</div>
+      <div>Skills<br/><span style="font-size: 10px; color: var(--text-secondary);">whenToUse</span></div>
+    </div>
+    <div class="capability">
+      <div class="capability-icon cap-cmd">⌘</div>
+      <div>Commands<br/><span style="font-size: 10px; color: var(--text-secondary);">/slash</span></div>
+    </div>
+    <div class="capability">
+      <div class="capability-icon cap-res">📄</div>
+      <div>Resources<br/><span style="font-size: 10px; color: var(--text-secondary);">read-only</span></div>
+    </div>
+    <div class="capability">
+      <div class="capability-icon cap-chan">📡</div>
+      <div>Channels<br/><span style="font-size: 10px; color: var(--text-secondary);">whitelisted</span></div>
+    </div>
+  </div>
+
+  <!-- Policy Box -->
+  <div class="policy-box">
+    <div class="policy-title">pluginOnlyPolicy 企业管控</div>
+    <div class="policy-desc">仅允许插件来源的 MCP 服务器，拒绝任意外部 MCP 连接，确保企业环境安全合规。</div>
+    <div class="policy-code">isRestrictedToPluginOnly()<br/>→ reject non-plugin MCP</div>
+  </div>
+
+  <!-- Channel Whitelist -->
+  <div class="channel-box">
+    <div class="channel-title">Channel 白名单</div>
+    <div class="channel-desc">高权限能力仅限白名单插件访问，通过 tengu_harbor_ledger GrowthBook gate 控制。</div>
+  </div>
+
+  <!-- Migration Pattern -->
+  <div class="migration-box">
+    <div class="migration-title">createMovedToPluginCommand 迁移模式</div>
+    <div class="migration-desc">内置命令优雅迁移至插件，保持向后兼容的同时引导用户使用插件版本。</div>
+    <div class="migration-code">/command → "已迁移至插件"<br/>→ 引导安装对应插件</div>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-title"></div>
+  <div class="tooltip-blocks"></div>
+  <div class="tooltip-desc"></div>
+</div>
+
+<script>
+const shields = document.querySelectorAll('.shield');
+const tooltip = document.getElementById('tooltip');
+
+const shieldData = [
+  {
+    title: 'Marketplace 审查',
+    blocks: '阻挡: 恶意代码、未审查功能、违规内容',
+    desc: '人工+自动化的代码审查流程，验证插件功能与声明一致，检测已知恶意模式，确保发布者身份可信。'
+  },
+  {
+    title: '签名验证',
+    blocks: '阻挡: 中间人攻击、传输篡改、供应链攻击',
+    desc: '使用Ed25519数字签名，安装时验证插件内容与发布签名一致，确保从Marketplace到用户的传输完整性。'
+  },
+  {
+    title: '同形字检测',
+    blocks: '阻挡: 视觉仿冒攻击、IDN同形字欺骗',
+    desc: '检测Unicode同形字符（如西里尔о vs 拉丁o），防止恶意插件通过视觉相似的名称仿冒知名插件。'
+  },
+  {
+    title: '用户确认',
+    blocks: '阻挡: 权限越界、未经授权的访问',
+    desc: '安装前向用户展示完整权限清单，包括文件访问、网络请求、命令执行等，需用户显式同意后方可继续。'
+  },
+  {
+    title: '工作区信任',
+    blocks: '阻挡: 不受信工作区的插件执行',
+    desc: '根据工作区信任级别（Trusted/Restricted/Untrusted）决定是否允许插件激活，防止在克隆的未知仓库中自动运行。'
+  },
+  {
+    title: 'MCP 沙箱',
+    blocks: '阻挡: 运行时逃逸、资源滥用、横向移动',
+    desc: '插件以scope=plugin注册为MCP服务器，受沙箱策略约束：受限文件系统访问、网络隔离、执行超时、资源配额限制。'
+  }
+];
+
+shields.forEach((shield, index) => {
+  shield.addEventListener('mouseenter', (e) => {
+    const data = shieldData[index];
+    tooltip.querySelector('.tooltip-title').textContent = data.title;
+    tooltip.querySelector('.tooltip-blocks').textContent = data.blocks;
+    tooltip.querySelector('.tooltip-desc').textContent = data.desc;
+    tooltip.style.display = 'block';
+  });
+
+  shield.addEventListener('mousemove', (e) => {
+    tooltip.style.left = e.clientX + 15 + 'px';
+    tooltip.style.top = e.clientY + 15 + 'px';
+  });
+
+  shield.addEventListener('mouseleave', () => {
+    tooltip.style.display = 'none';
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+总分: 10/20
+
+**布局: 2/5** — 连接线与内存文件中心严重错位（偏移30-90px），且Token Cost Badge超出画布边界
+
+**信息: 2/5** — 8种内存类型仅展示4个文件图标，截断提示与连接线关系模糊，缺少视觉焦点层次
+
+**美学: 3/5** — 配色体系完整且和谐，CSS动画设计合理，但hover交互完全缺失（内存文件盒无视觉反馈）
+
+**完整: 3/5** — 可直接运行，语法正确，但frontmatter tooltip的hover交互因设计缺陷无法有效呈现
+
+---
+
+**缺陷:**
+
+1. **连接线错位（严重）** — 第240-243行，4条连接线x坐标为`340, 410, 480, 550`，但4个内存文件中心x为`310, 420, 530, 640`，偏移量分别为`-30, +10, +50, +90`像素
+
+2. **Token Cost Badge越界** — 第228行 `<g transform="translate(640, 300)">`，x=640+120=760在1000px容器内，但右移后与右侧图例.legend重叠且无连接关系
+
+3. **On-Demand Loading越界** — 第269行旋转文本`transform="rotate(35)"`后x=750+延伸超出可见区
+
+4. **内存文件hover效果缺失** — 第195-270行，`.memory-file-*`各类仅定义了fill/stroke，无`:hover`状态，cursor:pointer但无视觉反馈
+
+5. **frontmatter tooltip位置不当** — User/Feedback/Project/Reference的tooltip偏移分别为`translate(0,-90), (-30,-90), (-60,-90), (-90,-90)`，导致左侧tooltip被父元素遮挡或超出容器
+
+6. **EXCLUSION RULES间距浪费** — 第275行起，三个140px宽的矩形间隔155px（空白15px），横向空间利用不紧凑
+
+7. **Warning Note贴底** — 第290行y=620，650px容器底部仅余20px边距
+
+---
+
+**修改建议:**
+
+1. 将连接线x坐标改为`310, 420, 530, 640`（内存文件中心x=其transform-x+50）
+
+2. Token Cost Badge左移至x=500附近，或用虚线连接至MEMORY.md右侧
+
+3. "按需读取"组改用不旋转的布局，或缩减x起始位置
+
+4. 为`.memory-file-user/feedback/project/reference`添加`:hover`样式，如`filter: brightness(1.2)`或增加光晕
+
+5. frontmatter tooltip统一改为`translate(-30, -90)`并确保父组无overflow:hidden
+
+6. 排除规则三项目间距从155px缩减至145px，紧凑排列
+
+7. Warning Note下移至y=605，为底部保留30px边距

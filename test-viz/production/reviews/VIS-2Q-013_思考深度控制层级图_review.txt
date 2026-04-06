@@ -1,0 +1,37 @@
+总分: 13/20
+
+**布局: 3/5** — 层叠结构清晰，但存在元素重叠（右下方 economics-note/cost-panel 与 priority-chain/budget-panel 互相压盖）
+
+**信息: 3/5** — 核心层级（Effort→Ultrathink→Advisor）层次分明，但 priority-chain 与 budget-panel 重叠导致可读性下降
+
+**美学: 4/5** — 暗色主题配色和谐，渐变与动画有设计感，但 rainbow-pulse/shimmer 动画略显喧闹
+
+**完整: 5/5** — 语法正确，可直接在浏览器打开运行
+
+---
+
+**缺陷（具体坐标/行号）：**
+
+1. **重叠冲突** — `.priority-chain`（行 299，`right: 20px; top: 60px`）与 `.budget-panel`（行 348，`right: 20px; top: 80px`）水平方向重叠，当 priority-chain 展开时遮挡 budget-panel
+
+2. **重叠冲突** — `.economics-note`（行 339，`left: 20px; bottom: 20px`）与 `.cost-panel`（行 351，`right: 20px; bottom: 20px`）在右下角同时出现，争夺视觉焦点
+
+3. **过度动画风险** — `.layer-ultrathink` 的 `rainbow-pulse`（行 89-95）和 `.layer-icon` 的 `shimmer`（行 123-128）以及彩虹文字（行 203-209）三处动画同时运行，可能分散注意力
+
+4. **连接线过淡** — `.connection-line`（行 294-295）透明度 `0.1` / `0.05` 几乎不可见，层级间的连接关系传达弱
+
+5. **Opus 4.6 badge 溢出** — `.gear-max::after`（行 141）使用 `-8px` 负值定位，在父容器 `overflow: hidden` 的 layer-effort 内可能被意外裁剪
+
+---
+
+**修改建议：**
+
+1. 将 `.budget-panel` 移至 `right: 180px; top: 80px`，与 priority-chain 左右错开；或把 priority-chain 缩小宽度至 `100px` 以避免水平重叠
+
+2. 将 `.economics-note` 改至 `left: 20px; bottom: 220px`（层-effort 上方），与 cost-panel 完全分离
+
+3. 减少动画：保留 ultrathink 层级的彩虹渐变，但移除 `.layer-icon` 的 shimmer 动画；将 rainbow-pulse 改为更柔和的单色光晕
+
+4. 将连接线透明度提升至 `0.3` / `0.2`，或改用虚线（`border-style: dashed`）增强层级分隔感
+
+5. 将 `.gear-max::after` 改为 `top: -10px; right: 50%; transform: translateX(50%)` 水平居中，避免被 `overflow: hidden` 裁切

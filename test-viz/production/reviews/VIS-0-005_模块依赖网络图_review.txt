@@ -1,0 +1,35 @@
+总分: 11/20
+
+**布局: 2/5** — 标题卡片与右侧面板存在局部重叠（top:28px left:32px vs top:28px right:28px），且 Tools 集群标签被标题区遮挡；此外 hooks 集群节点有颜色但无背景标签。
+
+**信息: 3/5** — 核心结构（星形拓扑、循环依赖）一目了然，hub 节点信息丰富，但 hover 交互过于强势导致难以平移浏览，且 cluster label 全透明（opacity 0.04）实际不可见。
+
+**美学: 3/5** — 配色系统完整（6色+glow+cycle 警示红），字体搭配合理（JetBrains Mono + Crimson Pro），但 legend 中 Cycle 图例用透明 background + dashed border 实现不够直观；utils 集群标签在 clusterLabels 里重复出现（text: '工具类' 出现两次）而 hooks 完全缺失。
+
+**完整: 3/5** — 可在浏览器直接运行，无语法错误；但存在数据不一致——cycleLinks 用字符串作为 source/target（`{source: 'hooks-engine.ts', target: 'hook-runner.ts'}`），而普通 links 用 forceLink 解析后的节点对象，导致 links 数组中 cycle 链接的 source/target 是字符串而非对象引用。
+
+---
+
+**缺陷:**
+
+1. **数据不一致** — `links` 数组中 cycle 链接的 source/target 是字符串，普通链接是节点对象。循环链接被 `if (!existing) links.push({...c, weight: 1})` 推入 links 后，simulation 尝试将字符串解析为节点 ID，可能产生错误坐标。
+2. **hooks 集群无背景标签** — `clusterLabels` 数组只有 6 项，缺失 `{text: 'Hooks集群', sub: 'HOOKS', ...}`；但 `clusterCenters.hooks` 和 `colorMap/groups.hooks` 均已定义，节点正常着色。
+3. **重复 link** — `links` 数组中 `{source: 'queryLoop.ts', target: 'permissions.ts', weight: 1}` 出现两次（第 4 行和第 8 行）。
+4. **utils 标签重复** — `clusterLabels` 末两项 `sub: 'UTILS'` 和 `sub: 'UTILS'` 重复，hooks 标签缺失。
+5. **warning 图标无过渡动画** — `.warning-icon` 的 CSS transition 只写了 `opacity 0.25s ease`，但 JS 中通过 `.classed("visible", bool)` 直接控制显隐，视觉跳跃感强；且 !important 的 `stroke-opacity: 0.9` 会干扰 highlight/dim 状态。
+6. **布局遮挡** — title-card (top:28px left:32px) 与 panel (top:28px right:28px width:260px) 在大字体标题下存在重叠风险；Tools cluster label 位于 x:25% y:35%，靠近左上角标题区。
+7. **cluster label 透明度过低** — `fill: rgba(255,255,255,0.04)` 在大多数显示器上肉眼不可见，形同虚设。
+
+---
+
+**修改建议:**
+
+1. 将 `cycleLinks` 改为对象引用形式：`cycleLinks = cycles.map(c => ({source: nodes.find(n=>n.id===c.source), target: nodes.find(n=>n.id===c.target)}))`，或统一所有 link 的 source/target 处理逻辑。
+2. 在 `clusterLabels` 数组添加 hooks 项，并删除重复的 utils 项：
+   ```js
+   {text: 'Hooks集群', sub: 'HOOKS', x: clusterCenters.hooks.x, y: clusterCenters.hooks.y}
+   ```
+3. 删除重复的 `permissions.ts` link。
+4. warning 图标改用 `transition: opacity 0.3s ease, transform 0.3s ease`，通过 `transform: scale()` 而非 `display`/`opacity` 切换显隐以提升平滑度。
+5. 调整 title-card 位置至 `top: 24px; left: 28px`，panel 改 `top: 80px` 以避免遮挡；或减小 title h1 字号至 `1.8rem`。
+6. 将 cluster label 透明度提升至 `0.07~0.10`，确保在深色背景上隐约可见。

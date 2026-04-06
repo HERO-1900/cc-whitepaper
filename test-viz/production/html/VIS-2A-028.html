@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>两套合并规则对比 | Merge Rules Comparison</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a25;
+            
+            /* Cross-source: Blue/Cyan */
+            --cross-primary: #00d4ff;
+            --cross-secondary: #0099cc;
+            --cross-glow: rgba(0, 212, 255, 0.3);
+            --cross-bg: rgba(0, 212, 255, 0.08);
+            
+            /* Same-source: Orange/Yellow */
+            --same-primary: #ffaa00;
+            --same-secondary: #ff7700;
+            --same-glow: rgba(255, 170, 0, 0.3);
+            --same-bg: rgba(255, 170, 0, 0.08);
+            
+            /* Code colors */
+            --code-key: #8899a6;
+            --code-string: #7ee787;
+            --code-bracket: #ffa657;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: #e6e6e6;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated gradient mesh background */
+        .bg-mesh {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.6;
+            background: 
+                radial-gradient(ellipse 80% 50% at 20% 40%, rgba(0, 212, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(255, 170, 0, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse 50% 30% at 50% 100%, rgba(100, 100, 255, 0.08) 0%, transparent 50%);
+            animation: meshBreathe 15s ease-in-out infinite;
+        }
+
+        @keyframes meshBreathe {
+            0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.6; }
+            50% { transform: scale(1.1) rotate(2deg); opacity: 0.8; }
+        }
+
+        /* Noise texture overlay */
+        .noise {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #fff 0%, #a0a0b0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header .subtitle {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.25rem;
+            font-style: italic;
+            color: #8899a6;
+            letter-spacing: 0.02em;
+        }
+
+        /* Main comparison grid */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 0;
+            align-items: start;
+            position: relative;
+        }
+
+        /* Panel styling */
+        .panel {
+            padding: 40px;
+            position: relative;
+        }
+
+        .panel-left {
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .panel-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            position: relative;
+        }
+
+        .panel-left .panel-icon {
+            background: var(--cross-bg);
+            border: 1px solid var(--cross-secondary);
+            box-shadow: 0 0 30px var(--cross-glow);
+        }
+
+        .panel-right .panel-icon {
+            background: var(--same-bg);
+            border: 1px solid var(--same-secondary);
+            box-shadow: 0 0 30px var(--same-glow);
+        }
+
+        .panel-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .panel-left .panel-title {
+            color: var(--cross-primary);
+        }
+
+        .panel-right .panel-title {
+            color: var(--same-primary);
+        }
+
+        .panel-subtitle {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1rem;
+            color: #8899a6;
+            margin-top: 4px;
+        }
+
+        /* Source label */
+        .source-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
+            opacity: 0.7;
+        }
+
+        .panel-left .source-label {
+            color: var(--cross-primary);
+        }
+
+        .panel-right .source-label {
+            color: var(--same-primary);
+        }
+
+        /* JSON Box */
+        .json-box {
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 20px 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .json-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+        }
+
+        .panel-left .json-box::before {
+            background: linear-gradient(90deg, transparent, var(--cross-primary), transparent);
+        }
+
+        .panel-right .json-box::before {
+            background: linear-gradient(90deg, transparent, var(--same-primary), transparent);
+        }
+
+        .json-box.source-a {
+            border-left: 3px solid;
+        }
+
+        .panel-left .json-box.source-a {
+            border-left-color: var(--cross-primary);
+        }
+
+        .panel-right .json-box.source-a {
+            border-left-color: var(--same-primary);
+        }
+
+        .json-box.source-b {
+            border-left: 3px solid;
+            opacity: 0.9;
+        }
+
+        .panel-left .json-box.source-b {
+            border-left-color: var(--cross-secondary);
+        }
+
+        .panel-right .json-box.source-b {
+            border-left-color: var(--same-secondary);
+        }
+
+        .json-key { color: var(--code-key); }
+        .json-string { color: var(--code-string); }
+        .json-bracket { color: var(--code-bracket); }
+
+        /* Result box - highlighted */
+        .result-box {
+            background: var(--bg-tertiary);
+            border: 2px solid;
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 32px;
+            position: relative;
+        }
+
+        .panel-left .result-box {
+            border-color: var(--cross-primary);
+            box-shadow: 0 0 40px var(--cross-glow), inset 0 0 60px var(--cross-bg);
+        }
+
+        .panel-right .result-box {
+            border-color: var(--same-primary);
+            box-shadow: 0 0 40px var(--same-glow), inset 0 0 60px var(--same-bg);
+        }
+
+        .result-label {
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: var(--bg-primary);
+            padding: 4px 16px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border-radius: 20px;
+        }
+
+        .panel-left .result-label {
+            color: var(--cross-primary);
+            border: 1px solid var(--cross-primary);
+        }
+
+        .panel-right .result-label {
+            color: var(--same-primary);
+            border: 1px solid var(--same-primary);
+        }
+
+        .highlight-new {
+            background: rgba(126, 231, 135, 0.15);
+            border-radius: 4px;
+            padding: 2px 4px;
+            margin: -2px -4px;
+        }
+
+        .panel-left .highlight-new {
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+
+        .panel-right .highlight-new {
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+        }
+
+        /* Arrow flow container */
+        .flow-container {
+            position: relative;
+            height: 80px;
+            margin: 20px 0;
+        }
+
+        /* VS Divider */
+        .vs-divider {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0 30px;
+            position: relative;
+        }
+
+        .vs-line {
+            width: 2px;
+            height: 400px;
+            background: linear-gradient(180deg, 
+                transparent 0%, 
+                rgba(255,255,255,0.1) 20%, 
+                rgba(255,255,255,0.2) 50%,
+                rgba(255,255,255,0.1) 80%, 
+                transparent 100%
+            );
+            position: relative;
+        }
+
+        .vs-badge {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: var(--bg-primary);
+            border: 2px solid rgba(255,255,255,0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 0.05em;
+        }
+
+        /* SVG Arrows */
+        .arrow-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        .arrow-path {
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+
+        .panel-left .arrow-path {
+            stroke: var(--cross-primary);
+        }
+
+        .panel-right .arrow-path {
+            stroke: var(--same-primary);
+        }
+
+        .arrow-head {
+            fill: currentColor;
+        }
+
+        /* Cross-source: Two converging arrows */
+        .cross-arrow-1 {
+            stroke-dasharray: 200;
+            stroke-dashoffset: 200;
+            animation: drawArrow 1.5s ease-out forwards;
+        }
+
+        .cross-arrow-2 {
+            stroke-dasharray: 200;
+            stroke-dashoffset: 200;
+            animation: drawArrow 1.5s ease-out 0.3s forwards;
+        }
+
+        @keyframes drawArrow {
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* Same-source: Override arrow */
+        .same-arrow-base {
+            stroke-dasharray: 200;
+            stroke-dashoffset: 200;
+            animation: drawArrow 1s ease-out forwards;
+        }
+
+        .same-arrow-override {
+            stroke-dasharray: 200;
+            stroke-dashoffset: 200;
+            animation: drawArrow 1s ease-out 0.5s forwards;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 8px var(--same-glow));
+        }
+
+        .fade-arrow {
+            opacity: 0.3;
+            stroke-dasharray: 8 4;
+        }
+
+        /* Intent box */
+        .intent-box {
+            margin-top: 32px;
+            padding: 20px 24px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .intent-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 10px;
+            color: #8899a6;
+        }
+
+        .intent-text {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            color: #b0b8c0;
+        }
+
+        /* Code snippet at bottom */
+        .code-section {
+            margin-top: 60px;
+            text-align: center;
+        }
+
+        .code-container {
+            display: inline-block;
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 32px 40px;
+            max-width: 700px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .code-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--cross-primary), var(--same-primary));
+        }
+
+        .code-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: #8899a6;
+            margin-bottom: 16px;
+        }
+
+        .code-block {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.8;
+            text-align: left;
+            color: #b0b8c0;
+        }
+
+        .code-keyword { color: #ff7b72; }
+        .code-function { color: #d2a8ff; }
+        .code-parameter { color: #79c0ff; }
+        .code-comment { color: #8b949e; font-style: italic; }
+
+        .line-numbers {
+            display: inline-block;
+            color: #484f58;
+            text-align: right;
+            padding-right: 16px;
+            border-right: 1px solid #30363d;
+            margin-right: 16px;
+            user-select: none;
+        }
+
+        /* Scenario pills */
+        .scenario-bar {
+            margin-top: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .scenario-label {
+            font-size: 0.75rem;
+            color: #8899a6;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .scenario-pill {
+            background: var(--bg-tertiary);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #c9d1d9;
+        }
+
+        .scenario-arrow {
+            color: #8899a6;
+            font-size: 1.2rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            .panel-left {
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.05);
+            }
+
+            .vs-divider {
+                flex-direction: row;
+                padding: 20px 0;
+            }
+
+            .vs-line {
+                width: 200px;
+                height: 2px;
+                background: linear-gradient(90deg, 
+                    transparent 0%, 
+                    rgba(255,255,255,0.1) 20%, 
+                    rgba(255,255,255,0.2) 50%,
+                    rgba(255,255,255,0.1) 80%, 
+                    transparent 100%
+                );
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        /* Hover effects */
+        .json-box {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .json-box:hover {
+            transform: translateY(-2px);
+        }
+
+        .panel-left .json-box:hover {
+            box-shadow: 0 8px 30px var(--cross-glow);
+        }
+
+        .panel-right .json-box:hover {
+            box-shadow: 0 8px 30px var(--same-glow);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-mesh"></div>
+    <div class="noise"></div>
+
+    <div class="container">
+        <header class="header">
+            <h1>两套合并规则对比</h1>
+            <p class="subtitle">Cross-Source vs Same-Source Merge Rules</p>
+        </header>
+
+        <div class="comparison-grid">
+            <!-- Left Panel: Cross-Source Merge -->
+            <div class="panel panel-left">
+                <div class="panel-header">
+                    <div class="panel-icon">⇄</div>
+                    <div>
+                        <div class="panel-title">跨来源合并</div>
+                        <div class="panel-subtitle">Cross-Source Merge</div>
+                    </div>
+                </div>
+
+                <div class="source-label">Source A — 企业层配置</div>
+                <div class="json-box source-a">
+                    <span class="json-bracket">{</span><br>
+                    &nbsp;&nbsp;<span class="json-key">allowedTools</span>: <span class="json-bracket">[</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-string">"Read"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-string">"Edit"</span><br>
+                    &nbsp;&nbsp;<span class="json-bracket">]</span><br>
+                    <span class="json-bracket">}</span>
+                </div>
+
+                <div class="flow-container">
+                    <svg class="arrow-svg" viewBox="0 0 300 80" preserveAspectRatio="none">
+                        <!-- Two converging arrows -->
+                        <path class="arrow-path cross-arrow-1" d="M 40 10 Q 80 40 150 70" />
+                        <path class="arrow-path cross-arrow-2" d="M 40 70 Q 80 40 150 70" />
+                        <polygon class="arrow-head" fill="var(--cross-primary)" points="145,65 155,70 145,75" />
+                    </svg>
+                </div>
+
+                <div class="source-label">Source B — 用户层配置</div>
+                <div class="json-box source-b">
+                    <span class="json-bracket">{</span><br>
+                    &nbsp;&nbsp;<span class="json-key">allowedTools</span>: <span class="json-bracket">[</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-string">"Bash"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-string">"Glob"</span><br>
+                    &nbsp;&nbsp;<span class="json-bracket">]</span><br>
+                    <span class="json-bracket">}</span>
+                </div>
+
+                <div class="result-box">
+                    <div class="result-label">合并结果 Union</div>
+                    <div class="json-box" style="margin:0;background:transparent;border:none;padding:0;">
+                        <span class="json-bracket">{</span><br>
+                        &nbsp;&nbsp;<span class="json-key">allowedTools</span>: <span class="json-bracket">[</span><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-string">"Read"</span>,<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-string">"Edit"</span>,<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight-new"><span class="json-string">"Bash"</span></span>,<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight-new"><span class="json-string">"Glob"</span></span><br>
+                        &nbsp;&nbsp;<span class="json-bracket">]</span><br>
+                        <span class="json-bracket">}</span>
+                    </div>
+                </div>
+
+                <div class="intent-box">
+                    <div class="intent-title">设计意图 Design Intent</div>
+                    <div class="intent-text">
+                        允许每一层"贡献"配置——企业策略添加安全限制，用户添加个人偏好。数组拼接+去重，实现配置的渐进式叠加。
+                    </div>
+                </div>
+            </div>
+
+            <!-- VS Divider -->
+            <div class="vs-divider">
+                <div class="vs-line"></div>
+                <div class="vs-badge">VS</div>
+            </div>
+
+            <!-- Right Panel: Same-Source Merge -->
+            <div class="panel panel-right">
+                <div class="panel-header">
+                    <div class="panel-icon">→</div>
+                    <div>
+                        <div class="panel-title">同来源合并</div>
+                        <div class="panel-subtitle">Same-Source Merge</div>
+                    </div>
+                </div>
+
+                <div class="source-label">File A — 00-base.json</div>
+                <div class="json-box source-a">
+                    <span class="json-bracket">{</span><br>
+                    &nbsp;&nbsp;<span class="json-key">allowedTools</span>: <span class="json-bracket">[</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-string">"Read"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-string">"Edit"</span><br>
+                    &nbsp;&nbsp;<span class="json-bracket">]</span><br>
+                    <span class="json-bracket">}</span>
+                </div>
+
+                <div class="flow-container">
+                    <svg class="arrow-svg" viewBox="0 0 300 80" preserveAspectRatio="none">
+                        <!-- Override arrow: faded base, strong override -->
+                        <path class="arrow-path same-arrow-base fade-arrow" d="M 40 40 L 150 40" />
+                        <path class="arrow-path same-arrow-override" d="M 100 40 L 150 40" />
+                        <line x1="90" y1="30" x2="90" y2="50" stroke="var(--same-primary)" stroke-width="2" opacity="0.5" />
+                        <polygon class="arrow-head" fill="var(--same-primary)" points="145,35 155,40 145,45" />
+                    </svg>
+                </div>
+
+                <div class="source-label">File B — 20-team-override.json</div>
+                <div class="json-box source-b">
+                    <span class="json-bracket">{</span><br>
+                    &nbsp;&nbsp;<span class="json-key">allowedTools</span>: <span class="json-bracket">[</span><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-string">"Bash"</span>,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="json-string">"Glob"</span><br>
+                    &nbsp;&nbsp;<span class="json-bracket">]</span><br>
+                    <span class="json-bracket">}</span>
+                </div>
+
+                <div class="result-box">
+                    <div class="result-label">合并结果 Replace</div>
+                    <div class="json-box" style="margin:0;background:transparent;border:none;padding:0;">
+                        <span class="json-bracket">{</span><br>
+                        &nbsp;&nbsp;<span class="json-key">allowedTools</span>: <span class="json-bracket">[</span><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight-new"><span class="json-string">"Bash"</span></span>,<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight-new"><span class="json-string">"Glob"</span></span><br>
+                        &nbsp;&nbsp;<span class="json-bracket">]</span><br>
+                        <span class="json-bracket">}</span>
+                    </div>
+                </div>
+
+                <div class="intent-box">
+                    <div class="intent-title">设计意图 Design Intent</div>
+                    <div class="intent-text">
+                        同一层多个文件，后加载的为准——避免配置碎片化。drop-in 目录中顺序加载，后面的文件覆盖前者，实现精确的层级控制。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Code Section -->
+        <div class="code-section">
+            <div class="code-container">
+                <div class="code-title">核心实现 Core Implementation — settingsMergeCustomizer</div>
+                <div class="code-block">
+                    <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10</div>
+                    <div style="display: inline-block; vertical-align: top;">
+                        <span class="code-keyword">function</span> <span class="code-function">settingsMergeCustomizer</span>(<span class="code-parameter">objValue</span>, <span class="code-parameter">srcValue</span>, <span class="code-parameter">key</span>, <span class="code-parameter">object</span>, <span class="code-parameter">source</span>) {<br>
+                        &nbsp;&nbsp;<span class="code-comment">// 同来源: 后者完全替换前者</span><br>
+                        &nbsp;&nbsp;<span class="code-keyword">if</span> (isSameSource(object, source)) <span class="code-keyword">return</span> srcValue;<br>
+                        &nbsp;&nbsp;<span class="code-comment">// 跨来源数组: 拼接并去重</span><br>
+                        &nbsp;&nbsp;<span class="code-keyword">if</span> (Array.isArray(objValue)) {<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="code-keyword">return</span> [...<span class="code-keyword">new</span> Set([...objValue, ...srcValue])];<br>
+                        &nbsp;&nbsp;}<br>
+                        &nbsp;&nbsp;<span class="code-comment">// 对象: 递归深合并</span><br>
+                        &nbsp;&nbsp;<span class="code-keyword">return</span> <span class="code-keyword">undefined</span>; <span class="code-comment">// 使用默认合并</span><br>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenario Bar -->
+        <div class="scenario-bar">
+            <span class="scenario-label">典型场景 Typical Scenario</span>
+            <span class="scenario-pill">00-base.json</span>
+            <span class="scenario-arrow">→</span>
+            <span class="scenario-pill">10-security.json</span>
+            <span class="scenario-arrow">→</span>
+            <span class="scenario-pill">20-team-override.json</span>
+        </div>
+    </div>
+</body>
+</html>

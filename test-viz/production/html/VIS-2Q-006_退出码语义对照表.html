@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>退出码语义对照表 | Exit Code Semantics</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg-deep: #0f0f1a;
+  --bg-navy: #131325;
+  --bg-row-odd: #1a1a30;
+  --bg-row-even: #1e1e38;
+  --accent-green: #00d9a3;
+  --accent-red: #ff3864;
+  --accent-yellow: #ffc857;
+  --accent-cyan: #00d9ff;
+  --text-primary: #e8e8f0;
+  --text-secondary: #9a9ab5;
+  --glow-green: rgba(0, 217, 163, 0.15);
+  --glow-red: rgba(255, 56, 100, 0.2);
+  --glow-yellow: rgba(255, 200, 87, 0.15);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Space Grotesk', 'Noto Serif SC', sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 20px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: 
+    radial-gradient(circle at 20% 30%, rgba(0, 217, 163, 0.03) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(255, 56, 100, 0.03) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(0, 217, 255, 0.02) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  position: relative;
+  z-index: 1;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.header-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  margin-bottom: 16px;
+  display: inline-block;
+  padding: 6px 16px;
+  border: 1px solid rgba(0, 217, 255, 0.3);
+  border-radius: 20px;
+}
+
+h1 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: clamp(28px, 5vw, 48px);
+  font-weight: 700;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #ffffff 0%, #a0a0c0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 40px;
+}
+
+.dichotomy {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  margin-bottom: 50px;
+  flex-wrap: wrap;
+}
+
+.dichotomy-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 28px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  transition: transform 0.3s ease;
+}
+
+.dichotomy-item:hover {
+  transform: translateY(-3px);
+}
+
+.dichotomy-item.model {
+  background: linear-gradient(135deg, rgba(0, 217, 163, 0.1) 0%, rgba(0, 217, 163, 0.05) 100%);
+  border: 1px solid rgba(0, 217, 163, 0.3);
+  color: var(--accent-green);
+}
+
+.dichotomy-item.user {
+  background: linear-gradient(135deg, rgba(255, 200, 87, 0.1) 0%, rgba(255, 200, 87, 0.05) 100%);
+  border: 1px solid rgba(255, 200, 87, 0.3);
+  color: var(--accent-yellow);
+}
+
+.dichotomy-arrow {
+  font-size: 32px;
+  color: var(--text-secondary);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.table-wrapper {
+  background: var(--bg-navy);
+  border-radius: 16px;
+  padding: 8px;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+}
+
+table {
+  width: 100%;
+  min-width: 800px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 15px;
+}
+
+th, td {
+  padding: 20px 24px;
+  text-align: left;
+  position: relative;
+}
+
+thead th {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+thead th:first-child {
+  border-radius: 12px 0 0 0;
+  width: 140px;
+}
+
+thead th:last-child {
+  border-radius: 0 12px 0 0;
+}
+
+thead th.hook-col {
+  text-align: center;
+  min-width: 180px;
+}
+
+.hook-name {
+  font-size: 15px;
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.hook-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+tbody tr {
+  transition: all 0.2s ease;
+}
+
+tbody tr:nth-child(odd) td {
+  background: var(--bg-row-odd);
+}
+
+tbody tr:nth-child(even) td {
+  background: var(--bg-row-even);
+}
+
+tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  vertical-align: top;
+}
+
+td:first-child {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 18px;
+  border-left: 4px solid transparent;
+}
+
+.exit-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.cell-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cell-main {
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.cell-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.flow-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  margin-top: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  width: fit-content;
+}
+
+.flow-to-claude {
+  background: rgba(0, 217, 163, 0.1);
+  color: var(--accent-green);
+}
+
+.flow-to-user {
+  background: rgba(255, 200, 87, 0.1);
+  color: var(--accent-yellow);
+}
+
+.flow-forget {
+  background: rgba(154, 154, 181, 0.1);
+  color: var(--text-secondary);
+}
+
+/* Exit code row styling */
+tr.exit-0 td:first-child {
+  border-left-color: var(--accent-green);
+}
+
+tr.exit-2 td:first-child {
+  border-left-color: var(--accent-red);
+}
+
+tr.exit-other td:first-child {
+  border-left-color: var(--accent-yellow);
+}
+
+tr.exit-2 {
+  position: relative;
+}
+
+tr.exit-2 td {
+  background: linear-gradient(90deg, rgba(255, 56, 100, 0.05) 0%, transparent 100%);
+}
+
+tr.exit-2:hover td {
+  background: linear-gradient(90deg, rgba(255, 56, 100, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
+.counter-intuitive-badge {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent-red);
+  background: rgba(255, 56, 100, 0.1);
+  border: 1px solid rgba(255, 56, 100, 0.3);
+  padding: 4px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+/* PermissionRequest special column */
+td.permission-col {
+  background: linear-gradient(180deg, rgba(0, 217, 255, 0.03) 0%, transparent 100%) !important;
+}
+
+.hook-specific {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 217, 255, 0.08);
+  border: 1px solid rgba(0, 217, 255, 0.2);
+  border-radius: 8px;
+  margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--accent-cyan);
+}
+
+.code-snippet {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent-cyan);
+}
+
+.footnote {
+  margin-top: 40px;
+  padding: 24px 28px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border-left: 3px solid var(--accent-cyan);
+}
+
+.footnote-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footnote-content {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.unix-convention {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.unix-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.unix-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--accent-cyan);
+  min-width: 30px;
+}
+
+.unix-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Hover cross-highlight */
+tbody td {
+  transition: background 0.15s ease;
+}
+
+/* Column hover effect via CSS */
+.col-hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.svg-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+@media (max-width: 768px) {
+  body { padding: 30px 16px; }
+  .dichotomy { gap: 16px; }
+  .dichotomy-item { font-size: 15px; padding: 12px 20px; }
+  th, td { padding: 16px 18px; }
+  .counter-intuitive-badge { position: static; transform: none; margin-top: 8px; display: inline-block; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-label">VIS-2Q-006 · Hook Semantics</div>
+    <h1>退出码语义对照表</h1>
+    <p class="subtitle">Exit Code Semantics Reference · Claude Code Hooks</p>
+  </div>
+
+  <div class="dichotomy">
+    <div class="dichotomy-item model">
+      <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/>
+      </svg>
+      给模型看 → Claude
+    </div>
+    <div class="dichotomy-arrow">⟷</div>
+    <div class="dichotomy-item user">
+      <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+      </svg>
+      给用户看 → User
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Exit Code<br><span class="hook-desc">退出码</span></th>
+          <th class="hook-col">
+            <span class="hook-name">PreToolUse</span>
+            <span class="hook-desc">工具调用前拦截</span>
+          </th>
+          <th class="hook-col">
+            <span class="hook-name">PostToolUse</span>
+            <span class="hook-desc">工具调用后处理</span>
+          </th>
+          <th class="hook-col">
+            <span class="hook-name">Stop</span>
+            <span class="hook-desc">停止/中断行为</span>
+          </th>
+          <th class="hook-col">
+            <span class="hook-name">PermissionRequest</span>
+            <span class="hook-desc">权限请求决策</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="exit-0">
+          <td>
+            0
+            <span class="exit-label">成功 / Success</span>
+          </td>
+          <td>
+            <div class="cell-content">
+              <div class="cell-main" style="color: var(--accent-green);">工具正常继续</div>
+              <div class="cell-sub">stdout 可能传递给 Claude</div>
+              <span class="flow-indicator flow-to-claude">
+                → stdout → Claude
+              </span>
+            </div>
+          </td>
+          <td>
+            <div class="cell-content">
+              <div class="cell-main" style="color: var(--accent-green);">正常继续</div>
+              <div class="cell-sub">后处理完成，操作继续执行</div>
+              <span class="flow-indicator flow-to-claude">
+                → stdout → Claude
+              </span>
+            </div>
+          </td>
+          <td>
+            <div class="cell-content">
+              <div class="cell-main" style="color: var(--accent-green);">正常停止</div>
+              <div class="cell-sub">按常规流程终止当前操作</div>
+              <span class="flow-indicator flow-to-claude">
+                → Claude
+              </span>
+            </div>
+          </td>
+          <td class="permission-col">
+            <div class="cell-content">
+              <div class="cell-main" style="color: var(--accent-green);">允许请求通过</div>
+              <div class="cell-sub">配合 hookSpecificOutput 返回决策</div>
+              <div class="hook-specific">
+                <span class="code-snippet">{ decision: "allow" }</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr class="exit-2">
+          <td>
+            2
+            <span class="exit-label">阻断 / Block</span>
+            <span class="counter-intuitive-badge">最反直觉</span>
+          </td>
+          <td style="box-shadow: inset 0 0 30px rgba(255,56,100,0.06);">
+            <div class="cell-content">
+              <div class="cell-main" style="color: var(--accent-red);">工具调用被取消</div>
+              <div class="cell-sub">stderr 传给 Claude，模型看到拒绝原因并调整</div>
+              <span class="flow-indicator flow-to-claude" style="background: rgba(255,56,100,0.12); color: var(--accent-red);">
+                → stderr → Claude (阻断)
+              </span>
+            </div>
+          </td>
+          <td style="box-shadow: inset 0 0 30px rgba(255,56,100,0.06);">
+            <div class="cell-content">
+              <div class="cell-main" style="color: var(--accent-red);">阻断后续流程</div>
+              <div class="cell-sub">操作被中止，错误信息进入模型上下文</div>
+              <span class="flow-indicator flow-to-claude" style="background: rgba(255,56,100,0.12); color: var(--accent-red);">
+                → stderr → Claude
+              </span>
+            </div>
+          </td>
+          <td style="box-shadow: inset 0 0 30px rgba(255,56,100,0.06);">
+            <div class="cell-content">
+              <div class="cell-main" style="color: var(--accent-red);">Claude 继续工作</div>
+              <div class="cell-sub">不是结束回答，而是让 Claude 越过停止点继续</div>
+              <span class="flow-indicator flow-to-claude" style="background: rgba(255,56,100,0.12); color: var(--accent-red);">
+                → 继续生成
+              </span>
+            </div>
+          </td>
+          <td class="permission-col" style="box-shadow: inset 0 0 30px rgba(255,56,100,0.06);">
+            <div class="cell-content">
+              <div class="cell-main" style="color: var(--accent-red);">拒绝权限请求</div>
+              <div class="cell-sub">替代手动确认，企业审批集成</div>
+              <div class="hook-specific" style="border-color: rgba(255,56,100,0.3); background: rgba(255,56,100,0.08);">
+                <span class="code-snippet" style="color: var(--accent-red);">{ decision: "deny" }</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr class="exit-other">
+          <td>
+            1 / 3 / 4...
+            <span class="exit-label">非阻断错误 / Error</span>
+          </td>
+          <td>
+            <div class="cell-content">
+              <div class="cell-main" style="color: var(--accent-yellow);">工具继续执行</div>
+              <div class="cell-sub">stderr 仅展示给用户，不影响工具调用</div>
+              <span class="flow-indicator flow-to-user">
+                → stderr → User (仅提示)
+              </span>
+            </div>
+          </td>
+          <td>
+            <div class="cell-content">
+              <div class="cell-main" style="color: var(--accent-yellow);">操作继续</div>
+              <div class="cell-sub">错误被记录或展示，流程不被打断</div>
+              <span class="flow-indicator flow-to-user">
+                → stderr → User
+              </span>
+            </div>
+          </td>
+          <td>
+            <div class="cell-content">
+              <div class="cell-main" style="color: var(--accent-yellow);">StopFailure</div>
+              <div class="cell-sub">fire-and-forget 模式，输出被忽略</div>
+              <span class="flow-indicator flow-forget">
+                → 忽略输出
+              </span>
+            </div>
+          </td>
+          <td class="permission-col">
+            <div class="cell-content">
+              <div class="cell-main" style="color: var(--accent-yellow);">按默认错误处理</div>
+              <div class="cell-sub">非预期退出码，通常回退到用户确认</div>
+              <span class="flow-indicator flow-to-user">
+                → 回退到用户
+              </span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <aside class="footnote">
+    <div class="footnote-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+      </svg>
+      Unix Convention · 设计渊源
+    </div>
+    <div class="footnote-content">
+      Claude Code 的退出码设计借鉴了 Unix 惯例：exit 0 表示成功，exit 1 表示命令自身错误，而 exit 2 专用于"用法错误 / 策略拒绝"（misuse / policy denial）。这正是 exit 2 作为"阻断"信号的反直觉之处——它不是普通错误，而是一个有意识的政策拦截。
+    </div>
+    <div class="unix-convention">
+      <div class="unix-item">
+        <span class="unix-code">0</span>
+        <span class="unix-desc">Success · 成功完成</span>
+      </div>
+      <div class="unix-item">
+        <span class="unix-code">1</span>
+        <span class="unix-desc">General error · 命令自身错误</span>
+      </div>
+      <div class="unix-item">
+        <span class="unix-code">2</span>
+        <span class="unix-desc">Misuse / Policy denial · 用法错误或策略拒绝</span>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+// Column hover highlight
+const table = document.querySelector('table');
+const cells = table.querySelectorAll('td, th');
+
+table.addEventListener('mouseover', (e) => {
+  const cell = e.target.closest('td, th');
+  if (!cell) return;
+  const index = cell.cellIndex;
+  if (index === undefined) return;
+  
+  cells.forEach(c => {
+    if (c.cellIndex === index) {
+      c.style.background = 'rgba(255, 255, 255, 0.04)';
+    }
+  });
+});
+
+table.addEventListener('mouseout', () => {
+  cells.forEach(c => {
+    c.style.background = '';
+  });
+  
+  // Restore row backgrounds
+  const rows = table.querySelectorAll('tbody tr');
+  rows.forEach((row, i) => {
+    row.querySelectorAll('td').forEach(td => {
+      td.style.background = '';
+    });
+  });
+});
+</script>
+</body>
+</html>

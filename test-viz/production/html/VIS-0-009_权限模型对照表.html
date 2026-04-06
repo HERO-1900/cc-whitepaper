@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>权限模型对照表 | Permission Model Comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;
+  --bg-elevated:#161b22;
+  --bg-overlay:#21262d;
+  --border:#30363d;
+  --border-highlight:#58a6ff;
+  --text-primary:#e6edf3;
+  --text-secondary:#8b949e;
+  --green:#3fb950;
+  --green-dim:rgba(63,185,80,0.15);
+  --yellow:#d29922;
+  --yellow-dim:rgba(210,153,34,0.15);
+  --red:#f85149;
+  --red-dim:rgba(248,81,73,0.15);
+  --accent:#58a6ff;
+  --font-display:'Space Grotesk', sans-serif;
+  --font-body:'Noto Sans SC', sans-serif;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+html,body{
+  height:100%;
+  background:var(--bg);
+  color:var(--text-primary);
+  font-family:var(--font-body);
+  line-height:1.6;
+}
+
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(88,166,255,0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(63,185,80,0.05), transparent),
+    repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(48,54,61,0.15) 1px, rgba(48,54,61,0.15) 2px),
+    var(--bg);
+  background-attachment:fixed;
+  padding: clamp(1rem, 3vw, 3rem);
+}
+
+.container{
+  max-width:1400px;
+  margin:0 auto;
+}
+
+header{
+  margin-bottom:2.5rem;
+  text-align:center;
+  position:relative;
+}
+
+header::before{
+  content:'';
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  width:200px;
+  height:200px;
+  background:radial-gradient(circle, rgba(88,166,255,0.12) 0%, transparent 70%);
+  filter:blur(40px);
+  z-index:-1;
+  pointer-events:none;
+}
+
+h1{
+  font-family:var(--font-display);
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight:700;
+  letter-spacing:-0.02em;
+  margin-bottom:0.5rem;
+  background:linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+.subtitle{
+  color:var(--text-secondary);
+  font-size:0.95rem;
+  font-weight:400;
+}
+
+.main-layout{
+  display:grid;
+  gap:2rem;
+  grid-template-columns:1fr;
+}
+
+@media (min-width:1200px){
+  .main-layout{
+    grid-template-columns:1fr 320px;
+  }
+}
+
+.table-wrap{
+  position:relative;
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  background:rgba(13,17,23,0.6);
+  backdrop-filter:blur(10px);
+  box-shadow:0 20px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.scroll-container{
+  overflow-x:auto;
+  max-height:70vh;
+  position:relative;
+}
+
+table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:0.9rem;
+  min-width:900px;
+}
+
+th,td{
+  padding:1rem 0.875rem;
+  border-bottom:1px solid var(--border);
+  border-right:1px solid var(--border);
+  text-align:center;
+  vertical-align:middle;
+  transition:background-color 0.15s ease;
+}
+
+th{
+  background:var(--bg-elevated);
+  font-family:var(--font-display);
+  font-weight:600;
+  position:sticky;
+  top:0;
+  z-index:10;
+  backdrop-filter:blur(4px);
+}
+
+th:first-child{
+  left:0;
+  z-index:20;
+  text-align:left;
+  min-width:180px;
+}
+
+tbody tr:last-child td{
+  border-bottom:none;
+}
+
+td:last-child,th:last-child{
+  border-right:none;
+}
+
+/* Sticky row header */
+td:first-child{
+  position:sticky;
+  left:0;
+  background:var(--bg-elevated);
+  text-align:left;
+  z-index:5;
+  font-weight:500;
+}
+
+/* Column hover highlight */
+.col-highlight th,
+.col-highlight td{
+  background:rgba(88,166,255,0.06);
+}
+
+tbody tr:hover td{
+  background:rgba(255,255,255,0.03);
+}
+
+tbody tr:hover td:first-child{
+  background:#1c2128;
+}
+
+/* Recommended column highlight */
+th.recommended,
+td.recommended{
+  border-left:2px solid var(--border-highlight);
+  border-right:2px solid var(--border-highlight);
+}
+
+th.recommended{
+  border-top:2px solid var(--border-highlight);
+  background:linear-gradient(180deg, rgba(88,166,255,0.12) 0%, var(--bg-elevated) 100%);
+}
+
+tbody tr:last-child td.recommended{
+  border-bottom:2px solid var(--border-highlight);
+}
+
+/* Cell statuses */
+td[data-status="allow"]{
+  background:var(--green-dim);
+  color:var(--green);
+  font-weight:600;
+}
+
+td[data-status="confirm"]{
+  background:var(--yellow-dim);
+  color:var(--yellow);
+  font-weight:600;
+}
+
+td[data-status="block"]{
+  background:var(--red-dim);
+  color:var(--red);
+  font-weight:600;
+}
+
+.cell-content{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0.4rem;
+  white-space:nowrap;
+}
+
+.icon{
+  font-size:1.1em;
+  line-height:1;
+}
+
+/* Headers styling */
+.mode-name{
+  font-size:1rem;
+  letter-spacing:-0.01em;
+}
+
+.mode-sub{
+  font-size:0.7rem;
+  color:var(--text-secondary);
+  font-weight:400;
+  display:block;
+  margin-top:0.15rem;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+}
+
+.tag{
+  display:inline-block;
+  font-size:0.65rem;
+  padding:0.15rem 0.45rem;
+  border-radius:999px;
+  margin-top:0.4rem;
+  font-weight:500;
+  text-transform:uppercase;
+  letter-spacing:0.03em;
+}
+
+.tag-scene{
+  background:rgba(88,166,255,0.12);
+  color:var(--accent);
+}
+
+.tag-risk-low{
+  background:var(--green-dim);
+  color:var(--green);
+}
+
+.tag-risk-med{
+  background:var(--yellow-dim);
+  color:var(--yellow);
+}
+
+.tag-risk-high{
+  background:var(--red-dim);
+  color:var(--red);
+}
+
+.tool-name{
+  display:block;
+  font-size:0.95rem;
+}
+
+.tool-sub{
+  display:block;
+  font-size:0.75rem;
+  color:var(--text-secondary);
+  font-weight:400;
+  margin-top:0.1rem;
+}
+
+.security-badge{
+  display:inline-block;
+  font-size:0.65rem;
+  padding:0.1rem 0.4rem;
+  border-radius:4px;
+  margin-top:0.35rem;
+  font-weight:500;
+  font-family:var(--font-display);
+  text-transform:uppercase;
+  letter-spacing:0.02em;
+  background:var(--bg-overlay);
+  color:var(--text-secondary);
+  border:1px solid var(--border);
+}
+
+/* Sort control */
+.controls{
+  display:flex;
+  gap:1rem;
+  margin-bottom:1rem;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.btn{
+  background:var(--bg-elevated);
+  border:1px solid var(--border);
+  color:var(--text-primary);
+  padding:0.5rem 1rem;
+  border-radius:6px;
+  cursor:pointer;
+  font-family:var(--font-body);
+  font-size:0.85rem;
+  transition:all 0.2s ease;
+}
+
+.btn:hover{
+  border-color:var(--accent);
+  background:var(--bg-overlay);
+}
+
+.btn.active{
+  border-color:var(--accent);
+  background:rgba(88,166,255,0.1);
+}
+
+/* Detail panel */
+.detail-panel{
+  background:var(--bg-elevated);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:1.5rem;
+  position:sticky;
+  top:1rem;
+  box-shadow:0 20px 60px rgba(0,0,0,0.3);
+}
+
+.detail-panel h3{
+  font-family:var(--font-display);
+  font-size:1.25rem;
+  margin-bottom:0.75rem;
+  display:flex;
+  align-items:center;
+  gap:0.5rem;
+}
+
+.detail-panel .risk{
+  font-size:0.75rem;
+  padding:0.2rem 0.6rem;
+  border-radius:999px;
+  font-weight:500;
+  text-transform:uppercase;
+}
+
+.detail-panel p{
+  color:var(--text-secondary);
+  font-size:0.9rem;
+  line-height:1.7;
+  margin-bottom:1rem;
+}
+
+.detail-meta{
+  border-top:1px solid var(--border);
+  padding-top:1rem;
+}
+
+.detail-meta dt{
+  font-size:0.75rem;
+  color:var(--text-secondary);
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  margin-bottom:0.25rem;
+  font-family:var(--font-display);
+}
+
+.detail-meta dd{
+  font-size:0.9rem;
+  color:var(--text-primary);
+  margin-bottom:0.75rem;
+}
+
+.detail-meta dd:last-child{
+  margin-bottom:0;
+}
+
+.footnote{
+  margin-top:1.5rem;
+  padding-top:1.5rem;
+  border-top:1px solid var(--border);
+  color:var(--text-secondary);
+  font-size:0.8rem;
+  line-height:1.8;
+}
+
+.footnote strong{
+  color:var(--text-primary);
+}
+
+kbd{
+  background:var(--bg-overlay);
+  border:1px solid var(--border);
+  border-radius:4px;
+  padding:0.1rem 0.35rem;
+  font-family:'SFMono-Regular', Consolas, monospace;
+  font-size:0.85em;
+  color:var(--accent);
+}
+
+/* Print styles */
+@media print{
+  body{
+    background:#fff;
+    color:#000;
+    padding:0;
+  }
+  .table-wrap,.detail-panel{
+    box-shadow:none;
+    border:1px solid #ccc;
+  }
+  th,td{
+    border-color:#ccc;
+  }
+  td[data-status="allow"]{background:#e8f5e9;color:#1b5e20;}
+  td[data-status="confirm"]{background:#fff3e0;color:#e65100;}
+  td[data-status="block"]{background:#ffebee;color:#b71c1c;}
+}
+
+/* Animations */
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(12px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+.container{
+  animation:fadeIn 0.6s ease-out;
+}
+
+td[data-status="allow"] .icon{animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{
+  0%,100%{opacity:1;}
+  50%{opacity:0.7;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>权限模型对照表</h1>
+    <p class="subtitle">Permission Model Comparison Matrix · 选择适合你的安全级别</p>
+  </header>
+
+  <div class="controls">
+    <span style="color:var(--text-secondary);font-size:0.85rem;">排序:</span>
+    <button class="btn active" onclick="sortRows('default')" id="btn-default">默认顺序</button>
+    <button class="btn" onclick="sortRows('security')" id="btn-security">按安全级别</button>
+  </div>
+
+  <div class="main-layout">
+    <div class="table-wrap">
+      <div class="scroll-container">
+        <table id="matrix">
+          <thead>
+            <tr>
+              <th>工具类别 <span class="mode-sub">Tool Category</span></th>
+              <th onclick="selectMode(0)" style="cursor:pointer;">
+                <span class="mode-name">plan</span>
+                <span class="mode-sub">Read-only Planning</span>
+                <span class="tag tag-scene">只读模式</span>
+              </th>
+              <th onclick="selectMode(1)" class="recommended" style="cursor:pointer;">
+                <span class="mode-name">default</span>
+                <span class="mode-sub">Standard Confirm</span>
+                <span class="tag tag-scene">日常推荐</span>
+              </th>
+              <th onclick="selectMode(2)" style="cursor:pointer;">
+                <span class="mode-name">acceptEdits</span>
+                <span class="mode-sub">Auto-Accept Edits</span>
+                <span class="tag tag-scene">信任编辑</span>
+              </th>
+              <th onclick="selectMode(3)" style="cursor:pointer;">
+                <span class="mode-name">autoAccept</span>
+                <span class="mode-sub">Auto / YOLO</span>
+                <span class="tag tag-scene">快速迭代</span>
+              </th>
+              <th onclick="selectMode(4)" style="cursor:pointer;">
+                <span class="mode-name">bypass</span>
+                <span class="mode-sub">Headless Bypass</span>
+                <span class="tag tag-risk-high">极高风险</span>
+              </th>
+              <th onclick="selectMode(5)" style="cursor:pointer;">
+                <span class="mode-name">dontAsk</span>
+                <span class="mode-sub">Safe Rejection</span>
+                <span class="tag tag-scene">安全自动化</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <tr data-security="1">
+              <td>
+                <span class="tool-name">Read / Glob / Grep</span>
+                <span class="tool-sub">Read-only Tools</span>
+                <span class="security-badge">安全 Safe</span>
+              </td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td class="recommended" data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+            </tr>
+            <tr data-security="2">
+              <td>
+                <span class="tool-name">Edit / Write</span>
+                <span class="tool-sub">File Write Operations</span>
+                <span class="security-badge">中等 Medium</span>
+              </td>
+              <td data-status="block"><span class="cell-content"><span class="icon">&#10007;</span> 禁止 Block</span></td>
+              <td class="recommended" data-status="confirm"><span class="cell-content"><span class="icon">&#9888;</span> 确认 Confirm</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="block"><span class="cell-content"><span class="icon">&#10007;</span> 禁止 Block</span></td>
+            </tr>
+            <tr data-security="2">
+              <td>
+                <span class="tool-name">NotebookEdit</span>
+                <span class="tool-sub">Notebook Cell Edit</span>
+                <span class="security-badge">中等 Medium</span>
+              </td>
+              <td data-status="block"><span class="cell-content"><span class="icon">&#10007;</span> 禁止 Block</span></td>
+              <td class="recommended" data-status="confirm"><span class="cell-content"><span class="icon">&#9888;</span> 确认 Confirm</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="block"><span class="cell-content"><span class="icon">&#10007;</span> 禁止 Block</span></td>
+            </tr>
+            <tr data-security="3">
+              <td>
+                <span class="tool-name">Agent</span>
+                <span class="tool-sub">Sub-agent Spawn</span>
+                <span class="security-badge">中等 Medium</span>
+              </td>
+              <td data-status="block"><span class="cell-content"><span class="icon">&#10007;</span> 禁止 Block</span></td>
+              <td class="recommended" data-status="confirm"><span class="cell-content"><span class="icon">&#9888;</span> 确认 Confirm</span></td>
+              <td data-status="confirm"><span class="cell-content"><span class="icon">&#9888;</span> 确认 Confirm</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="block"><span class="cell-content"><span class="icon">&#10007;</span> 禁止 Block</span></td>
+            </tr>
+            <tr data-security="3">
+              <td>
+                <span class="tool-name">MCP Tools</span>
+                <span class="tool-sub">External Tool Calls</span>
+                <span class="security-badge">中等 Medium</span>
+              </td>
+              <td data-status="block"><span class="cell-content"><span class="icon">&#10007;</span> 禁止 Block</span></td>
+              <td class="recommended" data-status="confirm"><span class="cell-content"><span class="icon">&#9888;</span> 确认 Confirm</span></td>
+              <td data-status="confirm"><span class="cell-content"><span class="icon">&#9888;</span> 确认 Confirm</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto*</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="block"><span class="cell-content"><span class="icon">&#10007;</span> 禁止 Block</span></td>
+            </tr>
+            <tr data-security="4">
+              <td>
+                <span class="tool-name">Bash</span>
+                <span class="tool-sub">Command Execution</span>
+                <span class="security-badge">高风险 High</span>
+              </td>
+              <td data-status="block"><span class="cell-content"><span class="icon">&#10007;</span> 禁止 Block</span></td>
+              <td class="recommended" data-status="confirm"><span class="cell-content"><span class="icon">&#9888;</span> 确认 Confirm</span></td>
+              <td data-status="confirm"><span class="cell-content"><span class="icon">&#9888;</span> 确认 Confirm</span></td>
+              <td data-status="confirm"><span class="cell-content"><span class="icon">&#9888;</span> 仅白名单*</span></td>
+              <td data-status="allow"><span class="cell-content"><span class="icon">&#10003;</span> 自动 Auto</span></td>
+              <td data-status="block"><span class="cell-content"><span class="icon">&#10007;</span> 禁止 Block</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="footnote">
+        <strong>特殊规则 Special Rules:</strong> 
+        <code>autoAccept</code> 模式下，Bash 仅对白名单命令自动执行；MCP 工具可通过 <kbd>allowedTools</kbd> 白名单覆盖默认确认行为。
+        Agent 子代理继承父代理的权限级别。In <code>autoAccept</code> mode, Bash only auto-executes whitelist commands; MCP tools can be overridden via <kbd>allowedTools</kbd> whitelist. Sub-agents inherit parent permission level.
+      </div>
+    </div>
+
+    <aside class="detail-panel" id="detail-panel">
+      <h3><span id="detail-icon">&#9733;</span> <span id="detail-title">default</span> <span class="risk" id="detail-risk" style="background:var(--yellow-dim);color:var(--yellow);">中等风险</span></h3>
+      <p id="detail-desc">日常开发推荐模式。所有读取操作自动执行，文件写入、命令执行等危险操作需用户确认。平衡效率与安全性。</p>
+      <dl class="detail-meta">
+        <dt>命令行参数 CLI Flag</dt>
+        <dd id="detail-cli"><kbd>--permission-mode default</kbd></dd>
+        <dt>推荐场景 Use Case</dt>
+        <dd id="detail-scene">日常开发、代码审查、一般性任务</dd>
+        <dt>风险等级 Risk Level</dt>
+        <dd id="detail-risk-text">Medium — 读自动，写需确认</dd>
+      </dl>
+    </aside>
+  </div>
+</div>
+
+<script>
+const modes = [
+  {
+    id:'plan',
+    name:'plan',
+    risk:'low',
+    riskColor:'bg:var(--green-dim);color:var(--green)',
+    desc:'只读规划模式。不允许任何修改操作，所有写入和执行类工具均被禁止。适合仅查看、分析、规划的场景。',
+    cli:'--permission-mode plan',
+    scene:'代码审查、安全审计、只读分析',
+    riskText:'Low — 只读，零修改风险'
+  },
+  {
+    id:'default',
+    name:'default',
+    risk:'medium',
+    riskColor:'bg:var(--yellow-dim);color:var(--yellow)',
+    desc:'日常开发推荐模式。所有读取操作自动执行，文件写入、命令执行等危险操作需用户确认。平衡效率与安全性。',
+    cli:'--permission-mode default',
+    scene:'日常开发、代码审查、一般性任务',
+    riskText:'Medium — 读自动，写需确认'
+  },
+  {
+    id:'acceptEdits',
+    name:'acceptEdits',
+    risk:'medium',
+    riskColor:'bg:var(--yellow-dim);color:var(--yellow)',
+    desc:'自动接受文件编辑操作，但 Bash 命令执行仍需确认。适合信任文件修改但警惕命令执行风险的场景。',
+    cli:'--permission-mode acceptEdits',
+    scene:'大量重构、格式化、批量编辑',
+    riskText:'Medium-High — 文件写入自动，命令仍需确认'
+  },
+  {
+    id:'autoAccept',
+    name:'autoAccept (yolo)',
+    risk:'high',
+    riskColor:'bg:var(--red-dim);color:var(--red)',
+    desc:'自动接受大多数操作，仅极危险操作（非白名单Bash）仍需确认。适合有经验用户进行快速迭代。',
+    cli:'--permission-mode autoAccept',
+    scene:'快速迭代、原型开发、有经验的用户',
+    riskText:'High — 大部分自动执行'
+  },
+  {
+    id:'bypass',
+    name:'bypass',
+    risk:'extreme',
+    riskColor:'bg:var(--red-dim);color:var(--red)',
+    desc:'跳过所有权限检查，所有工具自动执行。仅限 headless / CI 模式中使用。极高风险，请确保运行环境完全受控。',
+    cli:'--permission-mode bypass',
+    scene:'CI/CD 管道、自动化测试、受控环境',
+    riskText:'Extreme — 全部自动，无确认'
+  },
+  {
+    id:'dontAsk',
+    name:'dontAsk',
+    risk:'low',
+    riskColor:'bg:var(--green-dim);color:var(--green)',
+    desc:'拒绝任何需要确认的操作，只执行完全安全的自动操作。适合无人值守的安全自动化运行，避免挂起等待输入。',
+    cli:'--permission-mode dontAsk',
+    scene:'安全自动化、定时任务、无人值守脚本',
+    riskText:'Low — 不确认，直接拒绝风险操作'
+  }
+];
+
+function selectMode(index){
+  const m = modes[index];
+  document.getElementById('detail-title').textContent = m.name;
+  document.getElementById('detail-desc').textContent = m.desc;
+  document.getElementById('detail-cli').innerHTML = '<kbd>' + m.cli + '</kbd>';
+  document.getElementById('detail-scene').textContent = m.scene;
+  document.getElementById('detail-risk-text').textContent = m.riskText;
+  const r = document.getElementById('detail-risk');
+  r.style = m.riskColor;
+  r.textContent = m.risk === 'extreme' ? '极高风险' : (m.risk === 'high' ? '高风险' : (m.risk === 'medium' ? '中等风险' : '低风险'));
+}
+
+// Column hover highlighting
+const table = document.getElementById('matrix');
+table.addEventListener('mouseover', function(e){
+  const cell = e.target.closest('td,th');
+  if(!cell) return;
+  const index = cell.cellIndex;
+  if(index === undefined) return;
+  const rows = table.querySelectorAll('tr');
+  rows.forEach(row => {
+    const c = row.children[index];
+    if(c) c.classList.add('col-highlight');
+  });
+});
+table.addEventListener('mouseout', function(){
+  table.querySelectorAll('.col-highlight').forEach(el => el.classList.remove('col-highlight'));
+});
+
+let currentSort = 'default';
+function sortRows(type){
+  currentSort = type;
+  document.getElementById('btn-default').classList.toggle('active', type==='default');
+  document.getElementById('btn-security').classList.toggle('active', type==='security');
+  
+  const tbody = document.getElementById('table-body');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  
+  if(type === 'security'){
+    rows.sort((a,b) => {
+      const sa = parseInt(a.dataset.security);
+      const sb = parseInt(b.dataset.security);
+      return sa - sb;
+    });
+  } else {
+    // default order: Read, Edit, Notebook, Agent, MCP, Bash
+    const defaultOrder = ['Read','Edit','Notebook','Agent','MCP','Bash'];
+    rows.sort((a,b) => {
+      const ta = a.querySelector('.tool-name').textContent.trim();
+      const tb = b.querySelector('.tool-name').textContent.trim();
+      return defaultOrder.findIndex(x=>ta.startsWith(x)) - defaultOrder.findIndex(x=>tb.startsWith(x));
+    });
+  }
+  
+  rows.forEach(row => tbody.appendChild(row));
+}
+</script>
+</body>
+</html>

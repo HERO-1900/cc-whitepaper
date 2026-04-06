@@ -1,0 +1,31 @@
+总分: 17/20
+布局: 3/5 — 核心对齐整体规整，但 Phase 3 中步骤7→8→9→10 垂直间距过密导致重叠风险，双 lifelines 与各消息线的终点混用545/555略显随意
+信息: 4/5 — 四阶段分层清晰，双语标签增强可读性，Continue vs Spawn 决策表注位置恰当，但密集消息簇中主次层级有待加强
+美学: 5/5 — 配色体系协调（暗色背景+高饱和度 actor 色），渐变 actor box + 发光 hover 效果，噪点纹理与背板晕影显著提升质感
+完整: 5/5 — HTML 语法正确，Google Fonts CDN 可达，SVG markers/gradients 定义完整，动画时序逻辑正确，可直接浏览器运行
+
+---
+
+**缺陷（逐条）：**
+
+1. **Phase 3 垂直重叠** — `msg-step` 步骤7（y=420）、步骤8 box（y=435~465）、步骤9 arrow（y=475）、步骤10 arrow（y=520）间距仅 10~20px，内容过密且步骤8的 box 与步骤9的 CONTINUE badge 仅差10px，极易重叠
+
+2. **Coordinator 双 lifelines 终点混用** — 自定义双线在 x=545 和 x=555，但不同消息的 `x2` 有时用 545 有时用 555（如 Worker B reply 用 555，Worker A reply 用 545，Phase 4 合流用 545），应统一使用双线中央或明确选其一
+
+3. **步骤11与步骤10间距偏紧** — 步骤10在 y=520，步骤11 SPAWN box 下边缘在 y=561，间距仅41px，在 780px 视口高度限制下略显拥挤
+
+4. **self-processing 矩形 marker 问题** — 步骤2（`y=140, h=40`）和步骤13（`y=650, h=40`）的 `rect` 使用了 `active-region` 动画类，但作为矩形块而非箭头，`marker-end` 并不适用，逻辑上无错但语义上应改为单纯矩形背景色块更清晰
+
+5. **Scratchpad 左上角与 Worker C 重叠** — Scratchpad box 位于 `x=735~1075, y=635~705`，而 Worker C lifelines 经过 x=1020，且下方视口高度仅 780，Scratchpad 下半部分（y=680~705）接近图表下边界
+
+**修改建议（逐条）：**
+
+1. **压缩 Phase 3 间距**：将步骤7的 y 从 420 降至 395，步骤8从 435 降至 410，步骤9从 475 降至 450，步骤10从 520 降至 500，给步骤8 box 留出更多呼吸空间
+
+2. **统一 Coordinator 箭头终点**：定义一个逻辑中心点（如 x=550）作为所有与 Coordinator 交互消息的 x2，避免双线带来的歧义；或在代码注释中明确注明使用 x=545（左侧线）作为所有进入 Coordinator 消息的终点
+
+3. **调整步骤11的 y 坐标**：将步骤11整体上移 25px（y=545→y=520），增加与步骤10completion arrow 的间距
+
+4. **为 self-processing 添加说明文字**：在步骤2和步骤13的 rect 上添加简短中心文字（如 "Processing…"），使其作为独立的 Coordinator 活动区域而非暗示为消息箭头
+
+5. **移动 Scratchpad 位置**：将 Scratchpad 框左上角从 `x=735` 移至 `x=300`，y 从 635 降至 600，使框体完全处于视口范围内并向左偏移避免遮挡 Worker C lifelines

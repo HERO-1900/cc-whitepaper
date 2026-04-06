@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code 终端 UI 完整渲染管线 | VIS-2A-030</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-void:#050508;
+  --bg-panel:#0a0a0f;
+  --glass:rgba(255,255,255,0.03);
+  --border:rgba(255,255,255,0.08);
+  --txt-primary:#f1f5f9;
+  --txt-secondary:#94a3b8;
+  --txt-muted:#64748b;
+  --react:#3b82f6;
+  --reconciler:#8b5cf6;
+  --dom:#06b6d4;
+  --yoga:#22c55e;
+  --render:#eab308;
+  --screen:#f97316;
+  --logupdate:#ec4899;
+  --terminal:#f8fafc;
+  --coordinator:#a855f7;
+  --glow-opacity:0.15;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+html,body{
+  min-height:100vh;
+  background:var(--bg-void);
+  color:var(--txt-primary);
+  font-family:"Space Grotesk",sans-serif;
+  overflow-x:hidden;
+}
+
+body{
+  background-image:
+    radial-gradient(circle at 20% 30%,rgba(59,130,246,0.08) 0%,transparent 40%),
+    radial-gradient(circle at 80% 70%,rgba(236,72,153,0.06) 0%,transparent 40%),
+    linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);
+  background-size:100% 100%,100% 100%,40px 40px,40px 40px;
+}
+
+.container{
+  max-width:1400px;
+  margin:0 auto;
+  padding:60px 24px;
+  position:relative;
+}
+
+header{
+  text-align:center;
+  margin-bottom:48px;
+}
+
+.badge{
+  display:inline-block;
+  font-family:"JetBrains Mono",monospace;
+  font-size:11px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--txt-muted);
+  border:1px solid var(--border);
+  padding:6px 14px;
+  border-radius:999px;
+  margin-bottom:16px;
+  background:var(--glass);
+}
+
+h1{
+  font-size:clamp(28px,4.5vw,52px);
+  font-weight:700;
+  letter-spacing:-0.02em;
+  line-height:1.1;
+  margin-bottom:12px;
+  background:linear-gradient(180deg,var(--txt-primary) 0%,var(--txt-secondary) 100%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+.subtitle{
+  font-size:16px;
+  color:var(--txt-secondary);
+  max-width:600px;
+  margin:0 auto;
+  line-height:1.5;
+}
+
+.pipeline-wrapper{
+  position:relative;
+  margin:64px 0;
+}
+
+/* Top coordinator bar */
+.coordinator-bar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  background:linear-gradient(90deg,transparent,rgba(168,85,247,0.08) 20%,rgba(168,85,247,0.08) 80%,transparent);
+  border-top:1px dashed rgba(168,85,247,0.35);
+  border-bottom:1px dashed rgba(168,85,247,0.35);
+  padding:18px 24px;
+  margin-bottom:40px;
+  position:relative;
+}
+
+.coordinator-bar::before,
+.coordinator-bar::after{
+  content:"";
+  position:absolute;
+  top:50%;
+  width:8px;
+  height:8px;
+  background:var(--coordinator);
+  border-radius:50%;
+  transform:translateY(-50%);
+  box-shadow:0 0 12px var(--coordinator);
+}
+
+.coordinator-bar::before{left:12px;}
+.coordinator-bar::after{right:12px;}
+
+.coordinator-label{
+  font-family:"JetBrains Mono",monospace;
+  font-size:14px;
+  font-weight:600;
+  color:#c084fc;
+  letter-spacing:0.04em;
+}
+
+.coordinator-meta{
+  font-family:"JetBrains Mono",monospace;
+  font-size:12px;
+  color:var(--txt-muted);
+}
+
+/* SVG Pipeline */
+svg.pipeline{
+  width:100%;
+  height:auto;
+  display:block;
+  overflow:visible;
+}
+
+.stage-rect{
+  cursor:pointer;
+  transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+.stage-rect:hover{
+  filter:brightness(1.15);
+  transform:scale(1.02);
+  transform-origin:center;
+}
+
+.arrow-path{
+  fill:none;
+  stroke-width:3;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-dasharray:8 6;
+  animation:flowDash 1.2s linear infinite;
+}
+
+.arrow-head{
+  fill:none;
+  stroke-width:3;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+@keyframes flowDash{
+  to{stroke-dashoffset:-14;}
+}
+
+.pulse-circle{
+  opacity:0;
+  animation:pulseTravel 4s ease-in-out infinite;
+}
+
+@keyframes pulseTravel{
+  0%{opacity:0;}
+  10%{opacity:1;}
+  90%{opacity:1;}
+  100%{opacity:0;}
+}
+
+/* Detail card */
+.detail-card{
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%) scale(0.96);
+  width:min(560px,92vw);
+  background:rgba(10,10,15,0.95);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:32px;
+  opacity:0;
+  pointer-events:none;
+  transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+  z-index:100;
+  backdrop-filter:blur(20px);
+  box-shadow:0 24px 80px rgba(0,0,0,0.6);
+}
+
+.detail-card.active{
+  opacity:1;
+  pointer-events:auto;
+  transform:translate(-50%,-50%) scale(1);
+}
+
+.detail-header{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:20px;
+}
+
+.detail-dot{
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  flex-shrink:0;
+  box-shadow:0 0 16px currentColor;
+}
+
+.detail-title{
+  font-size:24px;
+  font-weight:700;
+  letter-spacing:-0.01em;
+}
+
+.detail-en{
+  font-size:13px;
+  color:var(--txt-muted);
+  font-family:"JetBrains Mono",monospace;
+  margin-top:2px;
+}
+
+.detail-body{
+  font-size:14px;
+  line-height:1.7;
+  color:var(--txt-secondary);
+}
+
+.detail-row{
+  display:flex;
+  gap:24px;
+  margin-top:20px;
+  padding-top:20px;
+  border-top:1px solid var(--border);
+}
+
+.detail-col{
+  flex:1;
+}
+
+.detail-col h4{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.1em;
+  color:var(--txt-muted);
+  margin-bottom:8px;
+  font-weight:600;
+}
+
+.detail-col p,
+.detail-col ul{
+  font-size:13px;
+  color:var(--txt-primary);
+  line-height:1.6;
+}
+
+.detail-col ul{
+  list-style:none;
+}
+
+.detail-col li{
+  padding-left:14px;
+  position:relative;
+}
+
+.detail-col li::before{
+  content:"›";
+  position:absolute;
+  left:0;
+  color:var(--txt-muted);
+}
+
+.overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.6);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.3s ease;
+  z-index:99;
+  backdrop-filter:blur(4px);
+}
+
+.overlay.active{
+  opacity:1;
+  pointer-events:auto;
+}
+
+.bottom-bar{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:32px;
+  margin-top:48px;
+  flex-wrap:wrap;
+}
+
+.stat-pill{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:var(--glass);
+  border:1px solid var(--border);
+  border-radius:999px;
+  padding:10px 20px;
+  font-family:"JetBrains Mono",monospace;
+  font-size:13px;
+  color:var(--txt-secondary);
+}
+
+.stat-pill strong{
+  color:var(--txt-primary);
+  font-weight:600;
+}
+
+/* Mobile vertical layout via CSS transform on SVG wrapper */
+@media(max-width:900px){
+  .pipeline-wrapper{
+    overflow-x:auto;
+    padding:0 12px;
+  }
+  /* Keep SVG horizontal but allow scroll on small screens */
+  svg.pipeline{
+    min-width:860px;
+  }
+}
+
+/* Close button */
+.close-btn{
+  position:absolute;
+  top:16px;
+  right:16px;
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  border:1px solid var(--border);
+  background:transparent;
+  color:var(--txt-secondary);
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+  transition:all 0.2s ease;
+}
+
+.close-btn:hover{
+  background:var(--glass);
+  color:var(--txt-primary);
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="badge">VIS-2A-030 · 12_终端UI.md</div>
+    <h1>完整渲染管线</h1>
+    <p class="subtitle">Claude Code 终端 UI 从 React 声明式状态到 ANSI 输出的完整八阶段之旅</p>
+  </header>
+
+  <div class="pipeline-wrapper">
+    <div class="coordinator-bar">
+      <span class="coordinator-label">ink.tsx</span>
+      <span class="coordinator-meta">1,722 行 — 协调中枢 / Coordinator</span>
+    </div>
+
+    <svg class="pipeline" viewBox="0 0 1280 320" preserveAspectRatio="xMidYMid meet" aria-labelledby="pipelineTitle">
+      <defs>
+        <!-- Glow filters -->
+        <filter id="glow-react" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-reconciler" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-dom" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-yoga" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-render" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-screen" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-logupdate" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-terminal" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+
+        <!-- Gradients -->
+        <linearGradient id="grad-react" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="rgba(59,130,246,0.25)"/>
+          <stop offset="100%" stop-color="rgba(59,130,246,0.05)"/>
+        </linearGradient>
+        <linearGradient id="grad-reconciler" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="rgba(139,92,246,0.25)"/>
+          <stop offset="100%" stop-color="rgba(139,92,246,0.05)"/>
+        </linearGradient>
+        <linearGradient id="grad-dom" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="rgba(6,182,212,0.25)"/>
+          <stop offset="100%" stop-color="rgba(6,182,212,0.05)"/>
+        </linearGradient>
+        <linearGradient id="grad-yoga" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="rgba(34,197,94,0.25)"/>
+          <stop offset="100%" stop-color="rgba(34,197,94,0.05)"/>
+        </linearGradient>
+        <linearGradient id="grad-render" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="rgba(234,179,8,0.25)"/>
+          <stop offset="100%" stop-color="rgba(234,179,8,0.05)"/>
+        </linearGradient>
+        <linearGradient id="grad-screen" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="rgba(249,115,22,0.25)"/>
+          <stop offset="100%" stop-color="rgba(249,115,22,0.05)"/>
+        </linearGradient>
+        <linearGradient id="grad-logupdate" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="rgba(236,72,153,0.25)"/>
+          <stop offset="100%" stop-color="rgba(236,72,153,0.05)"/>
+        </linearGradient>
+        <linearGradient id="grad-terminal" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="rgba(248,250,252,0.18)"/>
+          <stop offset="100%" stop-color="rgba(248,250,252,0.04)"/>
+        </linearGradient>
+
+        <!-- Arrow marker -->
+        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="#475569"/>
+        </marker>
+      </defs>
+
+      <!-- Connecting arrows (base lines) -->
+      <g id="arrows">
+        <!-- Arrow 1: React -> Reconciler -->
+        <path class="arrow-path" d="M145,160 L185,160" stroke="#475569" style="animation-delay:0s;"/>
+        <polygon points="182,154 195,160 182,166" fill="#475569"/>
+        <!-- Arrow 2: Reconciler -> DOM -->
+        <path class="arrow-path" d="M305,160 L345,160" stroke="#475569" style="animation-delay:0.5s;"/>
+        <polygon points="342,154 355,160 342,166" fill="#475569"/>
+        <!-- Arrow 3: DOM -> Yoga -->
+        <path class="arrow-path" d="M465,160 L505,160" stroke="#475569" style="animation-delay:1s;"/>
+        <polygon points="502,154 515,160 502,166" fill="#475569"/>
+        <!-- Arrow 4: Yoga -> Render -->
+        <path class="arrow-path" d="M625,160 L665,160" stroke="#475569" style="animation-delay:1.5s;"/>
+        <polygon points="662,154 675,160 662,166" fill="#475569"/>
+        <!-- Arrow 5: Render -> Screen (via output) -->
+        <path class="arrow-path" d="M785,160 L825,160" stroke="#475569" style="animation-delay:2s;"/>
+        <polygon points="822,154 835,160 822,166" fill="#475569"/>
+        <!-- Arrow 6: Screen -> LogUpdate -->
+        <path class="arrow-path" d="M945,160 L985,160" stroke="#475569" style="animation-delay:2.5s;"/>
+        <polygon points="982,154 995,160 982,166" fill="#475569"/>
+        <!-- Arrow 7: LogUpdate -> Terminal -->
+        <path class="arrow-path" d="M1105,160 L1145,160" stroke="#475569" style="animation-delay:3s;"/>
+        <polygon points="1142,154 1155,160 1142,166" fill="#475569"/>
+      </g>
+
+      <!-- Pulse dots traveling along arrows -->
+      <g id="pulses">
+        <circle class="pulse-circle" r="4" fill="#3b82f6" style="animation-delay:0s;offset-path:path('M145,160 L185,160');offset-rotate:0deg;"/>
+        <circle class="pulse-circle" r="4" fill="#8b5cf6" style="animation-delay:0.5s;offset-path:path('M305,160 L345,160');offset-rotate:0deg;"/>
+        <circle class="pulse-circle" r="4" fill="#06b6d4" style="animation-delay:1s;offset-path:path('M465,160 L505,160');offset-rotate:0deg;"/>
+        <circle class="pulse-circle" r="4" fill="#22c55e" style="animation-delay:1.5s;offset-path:path('M625,160 L665,160');offset-rotate:0deg;"/>
+        <circle class="pulse-circle" r="4" fill="#eab308" style="animation-delay:2s;offset-path:path('M785,160 L825,160');offset-rotate:0deg;"/>
+        <circle class="pulse-circle" r="4" fill="#f97316" style="animation-delay:2.5s;offset-path:path('M945,160 L985,160');offset-rotate:0deg;"/>
+        <circle class="pulse-circle" r="4" fill="#ec4899" style="animation-delay:3s;offset-path:path('M1105,160 L1145,160');offset-rotate:0deg;"/>
+      </g>
+
+      <!-- Arrow labels -->
+      <g font-family="'JetBrains Mono', monospace" font-size="10" fill="#64748b" text-anchor="middle" font-weight="500">
+        <text x="165" y="150">JSX → Fiber</text>
+        <text x="325" y="150">Fiber → DOM</text>
+        <text x="485" y="150">DOMElement</text>
+        <text x="645" y="150">Layout</text>
+        <text x="805" y="150">Output Ops</text>
+        <text x="965" y="150">Screen Buffer</text>
+        <text x="1125" y="150">ANSI Patch</text>
+      </g>
+
+      <!-- Stage 1: React -->
+      <g class="stage-group" data-stage="0" transform="translate(20,100)">
+        <rect class="stage-rect" x="0" y="0" width="125" height="120" rx="14" fill="url(#grad-react)" stroke="#3b82f6" stroke-width="1.5" filter="url(#glow-react)"/>
+        <text x="62.5" y="38" text-anchor="middle" font-size="18" font-weight="700" fill="#60a5fa" font-family="'Space Grotesk', sans-serif">React 19</text>
+        <text x="62.5" y="62" text-anchor="middle" font-size="10" fill="#93c5fd" font-family="'JetBrains Mono', monospace">Concurrent Root</text>
+        <text x="62.5" y="82" text-anchor="middle" font-size="10" fill="#93c5fd" font-family="'JetBrains Mono', monospace">setState / Fiber</text>
+        <text x="62.5" y="102" text-anchor="middle" font-size="9" fill="#64748b" font-family="'JetBrains Mono', monospace">用户交互 / API数据</text>
+      </g>
+
+      <!-- Stage 2: Reconciler -->
+      <g class="stage-group" data-stage="1" transform="translate(180,100)">
+        <rect class="stage-rect" x="0" y="0" width="125" height="120" rx="14" fill="url(#grad-reconciler)" stroke="#8b5cf6" stroke-width="1.5" filter="url(#glow-reconciler)"/>
+        <text x="62.5" y="38" text-anchor="middle" font-size="17" font-weight="700" fill="#a78bfa" font-family="'Space Grotesk', sans-serif">Reconciler</text>
+        <text x="62.5" y="62" text-anchor="middle" font-size="10" fill="#c4b5fd" font-family="'JetBrains Mono', monospace">createReconciler()</text>
+        <text x="62.5" y="82" text-anchor="middle" font-size="11" fill="#c4b5fd" font-family="'JetBrains Mono', monospace">512 行</text>
+        <text x="62.5" y="102" text-anchor="middle" font-size="9" fill="#64748b" font-family="'JetBrains Mono', monospace">创建 · 更新 · 删除</text>
+      </g>
+
+      <!-- Stage 3: DOM -->
+      <g class="stage-group" data-stage="2" transform="translate(340,100)">
+        <rect class="stage-rect" x="0" y="0" width="125" height="120" rx="14" fill="url(#grad-dom)" stroke="#06b6d4" stroke-width="1.5" filter="url(#glow-dom)"/>
+        <text x="62.5" y="38" text-anchor="middle" font-size="18" font-weight="700" fill="#22d3ee" font-family="'Space Grotesk', sans-serif">DOM</text>
+        <text x="62.5" y="62" text-anchor="middle" font-size="10" fill="#67e8f9" font-family="'JetBrains Mono', monospace">dom.ts</text>
+        <text x="62.5" y="82" text-anchor="middle" font-size="11" fill="#67e8f9" font-family="'JetBrains Mono', monospace">484 行</text>
+        <text x="62.5" y="102" text-anchor="middle" font-size="9" fill="#64748b" font-family="'JetBrains Mono', monospace">30+ 字段 · markDirty</text>
+      </g>
+
+      <!-- Stage 4: Yoga -->
+      <g class="stage-group" data-stage="3" transform="translate(500,100)">
+        <rect class="stage-rect" x="0" y="0" width="125" height="120" rx="14" fill="url(#grad-yoga)" stroke="#22c55e" stroke-width="1.5" filter="url(#glow-yoga)"/>
+        <text x="62.5" y="38" text-anchor="middle" font-size="18" font-weight="700" fill="#4ade80" font-family="'Space Grotesk', sans-serif">Yoga</text>
+        <text x="62.5" y="62" text-anchor="middle" font-size="10" fill="#86efac" font-family="'JetBrains Mono', monospace">纯 TS 布局引擎</text>
+        <text x="62.5" y="82" text-anchor="middle" font-size="10" fill="#86efac" font-family="'JetBrains Mono', monospace">calculateLayout</text>
+        <text x="62.5" y="102" text-anchor="middle" font-size="9" fill="#64748b" font-family="'JetBrains Mono', monospace">同步 · Flexbox</text>
+      </g>
+
+      <!-- Stage 5: renderNodeToOutput -->
+      <g class="stage-group" data-stage="4" transform="translate(660,100)">
+        <rect class="stage-rect" x="0" y="0" width="125" height="120" rx="14" fill="url(#grad-render)" stroke="#eab308" stroke-width="1.5" filter="url(#glow-render)"/>
+        <text x="62.5" y="32" text-anchor="middle" font-size="13" font-weight="700" fill="#facc15" font-family="'Space Grotesk', sans-serif">renderNode</text>
+        <text x="62.5" y="50" text-anchor="middle" font-size="13" font-weight="700" fill="#facc15" font-family="'Space Grotesk', sans-serif">ToOutput</text>
+        <text x="62.5" y="72" text-anchor="middle" font-size="10" fill="#fde047" font-family="'JetBrains Mono', monospace">1,462 行</text>
+        <text x="62.5" y="90" text-anchor="middle" font-size="9" fill="#fde047" font-family="'JetBrains Mono', monospace">递归遍历 + blit</text>
+        <text x="62.5" y="108" text-anchor="middle" font-size="9" fill="#64748b" font-family="'JetBrains Mono', monospace">DOM 树 → 操作队列</text>
+      </g>
+
+      <!-- Stage 6: Screen -->
+      <g class="stage-group" data-stage="5" transform="translate(820,100)">
+        <rect class="stage-rect" x="0" y="0" width="125" height="120" rx="14" fill="url(#grad-screen)" stroke="#f97316" stroke-width="1.5" filter="url(#glow-screen)"/>
+        <text x="62.5" y="38" text-anchor="middle" font-size="18" font-weight="700" fill="#fb923c" font-family="'Space Grotesk', sans-serif">Screen</text>
+        <text x="62.5" y="62" text-anchor="middle" font-size="10" fill="#fdba74" font-family="'JetBrains Mono', monospace">screen.ts · 1,486 行</text>
+        <text x="62.5" y="82" text-anchor="middle" font-size="10" fill="#fdba74" font-family="'JetBrains Mono', monospace">output.ts · 797 行</text>
+        <text x="62.5" y="102" text-anchor="middle" font-size="9" fill="#64748b" font-family="'JetBrains Mono', monospace">双缓冲写入</text>
+      </g>
+
+      <!-- Stage 7: LogUpdate -->
+      <g class="stage-group" data-stage="6" transform="translate(980,100)">
+        <rect class="stage-rect" x="0" y="0" width="125" height="120" rx="14" fill="url(#grad-logupdate)" stroke="#ec4899" stroke-width="1.5" filter="url(#glow-logupdate)"/>
+        <text x="62.5" y="38" text-anchor="middle" font-size="17" font-weight="700" fill="#f472b6" font-family="'Space Grotesk', sans-serif">LogUpdate</text>
+        <text x="62.5" y="62" text-anchor="middle" font-size="10" fill="#f9a8d4" font-family="'JetBrains Mono', monospace">log-update.ts</text>
+        <text x="62.5" y="82" text-anchor="middle" font-size="11" fill="#f9a8d4" font-family="'JetBrains Mono', monospace">773 行</text>
+        <text x="62.5" y="102" text-anchor="middle" font-size="9" fill="#64748b" font-family="'JetBrains Mono', monospace">diff → ANSI 补丁</text>
+      </g>
+
+      <!-- Stage 8: Terminal -->
+      <g class="stage-group" data-stage="7" transform="translate(1140,100)">
+        <rect class="stage-rect" x="0" y="0" width="125" height="120" rx="14" fill="url(#grad-terminal)" stroke="#f8fafc" stroke-width="1.5" filter="url(#glow-terminal)"/>
+        <text x="62.5" y="38" text-anchor="middle" font-size="18" font-weight="700" fill="#f8fafc" font-family="'Space Grotesk', sans-serif">Terminal</text>
+        <text x="62.5" y="62" text-anchor="middle" font-size="10" fill="#e2e8f0" font-family="'JetBrains Mono', monospace">stdout.write()</text>
+        <text x="62.5" y="82" text-anchor="middle" font-size="10" fill="#e2e8f0" font-family="'JetBrains Mono', monospace">ANSI 转义序列</text>
+        <text x="62.5" y="102" text-anchor="middle" font-size="9" fill="#64748b" font-family="'JetBrains Mono', monospace">最终输出</text>
+      </g>
+
+      <!-- Bottom annotation line inside SVG -->
+      <text x="640" y="275" text-anchor="middle" font-size="12" fill="#475569" font-family="'JetBrains Mono', monospace" font-weight="500">19,842 行总代码量  |  原版 Ink 的 5× 重写  |  帧间隔 16ms（60fps 节流）</text>
+    </svg>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="stat-pill"><span>阶段数</span><strong>8 Stages</strong></div>
+    <div class="stat-pill"><span>核心文件</span><strong>ink.tsx + 6 modules</strong></div>
+    <div class="stat-pill"><span>优化规则</span><strong>7 rules in optimizer.ts</strong></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="detail-card" id="detailCard" aria-hidden="true">
+  <button class="close-btn" id="closeBtn" aria-label="Close">×</button>
+  <div class="detail-header">
+    <div class="detail-dot" id="detailDot"></div>
+    <div>
+      <div class="detail-title" id="detailTitle">Stage Title</div>
+      <div class="detail-en" id="detailEn">English Subtitle</div>
+    </div>
+  </div>
+  <div class="detail-body" id="detailBody">
+    Description goes here.
+  </div>
+  <div class="detail-row">
+    <div class="detail-col">
+      <h4>关键职责 / Key Roles</h4>
+      <ul id="detailRoles"></ul>
+    </div>
+    <div class="detail-col">
+      <h4>性能特征 / Performance</h4>
+      <p id="detailPerf"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+const stages=[
+  {
+    title:"React 19",
+    en:"Concurrent Root & Fiber Scheduler",
+    color:"#3b82f6",
+    body:"用户交互或 API 数据变更触发 setState，React 19 的 Concurrent Root 启用时间切片调度，Fiber 节点携带更新优先级进入渲染队列。",
+    roles:["响应用户输入与异步数据","触发 Fiber 优先级调度","为 Reconciler 准备待更新的虚拟树"],
+    perf:"时间切片避免阻塞主线程，输入保持响应。/ Time-slicing keeps input responsive."
+  },
+  {
+    title:"Reconciler",
+    en:"createReconciler() · 512 lines",
+    color:"#8b5cf6",
+    body:"自定义 reconciler 适配器桥接 React Fiber 与终端虚拟 DOM。负责 DOMElement 的创建、更新与删除，处理组件生命周期与 props diff。",
+    roles:["createInstance / appendChild / removeChild","将 Fiber 变更映射为 DOM 操作","512 行自定义适配器"],
+    perf:"单次 reconcile 通常 < 1ms，直接决定 DOM 树规模。/ Directly determines DOM tree size."
+  },
+  {
+    title:"DOM",
+    en:"dom.ts · 484 lines · Virtual DOM",
+    color:"#06b6d4",
+    body:"484 行的虚拟 DOM 实现。DOMElement 定义 30+ 字段，维护父子关系与样式状态。markDirty 机制在属性变更时向父节点冒泡，标记需要重新布局。",
+    roles:["DOMElement 节点定义与管理","markDirty 冒泡追踪变更","为 Yoga 布局引擎提供输入树"],
+    perf:"Dirty 标记避免全量重算，仅变更子树参与后续阶段。/ Dirty marking skips unchanged subtrees."
+  },
+  {
+    title:"Yoga",
+    en:"Pure-TS Yoga Layout Engine",
+    color:"#22c55e",
+    body:"纯 TypeScript 实现的 Yoga 布局引擎。在 DOM resetAfterCommit 后同步调用 calculateLayout，执行完整的 CSS Flexbox 计算，生成每个节点的精确坐标与尺寸。",
+    roles:["同步 Flexbox 布局计算","计算 x/y/width/height","替代原生 Yoga C++ 绑定"],
+    perf:"同步执行，布局耗时与节点数成正比，通常 < 2ms。/ Synchronous; scales with node count."
+  },
+  {
+    title:"renderNodeToOutput",
+    en:"1,462 lines · DOM Tree → Output Queue",
+    color:"#eab308",
+    body:"1,462 行的递归渲染核心。遍历已布局的 DOM 树，将每个节点 blit 到输出操作队列。执行文本截断、背景填充、样式叠加等终端特有的光栅化逻辑。",
+    roles:["递归遍历 DOM 树","blit 优化减少重复绘制","生成输出操作队列 (Output Ops)"],
+    perf:"采用裁剪与缓存策略，避免屏幕外节点计算。/ Clipping and caching skip off-screen work."
+  },
+  {
+    title:"Screen",
+    en:"screen.ts · 1,486 lines | output.ts · 797 lines",
+    color:"#f97316",
+    body:"screen.ts 维护前后双缓冲帧（frontFrame / backFrame）。output.ts 将渲染操作翻译为屏幕缓冲区写指令，支持 z-index 叠加、裁剪与溢出处理。",
+    roles:["双缓冲帧管理 (frontFrame/backFrame)","z-index 与叠加合成","裁剪溢出内容"],
+    perf:"前台帧直接映射当前终端显示状态，后台帧准备下一帧。/ Double buffering eliminates flicker."
+  },
+  {
+    title:"LogUpdate",
+    en:"log-update.ts · 773 lines | 7 optimizer rules",
+    color:"#ec4899",
+    body:"对比前后两帧 Screen 缓冲区，计算出最小的 ANSI 转义序列补丁。optimizer.ts 内嵌 7 条优化规则，合并光标移动、减少不必要的颜色重置。",
+    roles:["双缓冲 diff 计算","生成最小 ANSI 补丁序列","optimizer.ts 7 条优化规则"],
+    perf:"diff 时间通常 < 1ms，输出字节数可减少 60-80%。/ Diff output reduces bytes by 60-80%."
+  },
+  {
+    title:"Terminal",
+    en:"stdout.write() · ANSI Escape Sequences",
+    color:"#f8fafc",
+    body:"最终阶段。将 ANSI 转义序列通过 process.stdout.write() 输出到终端模拟器，驱动光标移动、颜色设置与字符绘制，完成一帧的渲染闭环。",
+    roles:["写入 stdout","解析 ANSI 转义序列","终端模拟器最终呈现"],
+    perf:"I/O 瓶颈通常为 1-3ms，受终端模拟器实现影响。/ I/O bound; emulator-dependent."
+  }
+];
+
+const overlay=document.getElementById('overlay');
+const detailCard=document.getElementById('detailCard');
+const detailTitle=document.getElementById('detailTitle');
+const detailEn=document.getElementById('detailEn');
+const detailDot=document.getElementById('detailDot');
+const detailBody=document.getElementById('detailBody');
+const detailRoles=document.getElementById('detailRoles');
+const detailPerf=document.getElementById('detailPerf');
+const closeBtn=document.getElementById('closeBtn');
+
+function openDetail(idx){
+  const s=stages[idx];
+  detailTitle.textContent=s.title;
+  detailEn.textContent=s.en;
+  detailDot.style.background=s.color;
+  detailDot.style.boxShadow=`0 0 16px ${s.color}`;
+  detailBody.textContent=s.body;
+  detailRoles.innerHTML=s.roles.map(r=>`<li>${r}</li>`).join('');
+  detailPerf.textContent=s.perf;
+  overlay.classList.add('active');
+  detailCard.classList.add('active');
+  detailCard.setAttribute('aria-hidden','false');
+}
+
+function closeDetail(){
+  overlay.classList.remove('active');
+  detailCard.classList.remove('active');
+  detailCard.setAttribute('aria-hidden','true');
+}
+
+document.querySelectorAll('.stage-group').forEach((group,idx)=>{
+  group.addEventListener('click',()=>openDetail(idx));
+});
+
+overlay.addEventListener('click',closeDetail);
+closeBtn.addEventListener('click',closeDetail);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetail();});
+</script>
+</body>
+</html>

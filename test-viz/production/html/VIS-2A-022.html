@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code 信任边界图</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Noto+Serif+SC:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --trust-core: #f0f9ff;
+            --trust-high: #60a5fa;
+            --trust-medium: #4ade80;
+            --trust-low: #facc15;
+            --trust-untrusted: #fb923c;
+            --trust-zero: #f87171;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-glow: rgba(96, 165, 250, 0.3);
+        }
+
+        body {
+            font-family: 'Noto Serif SC', serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(96, 165, 250, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 50%, rgba(248, 113, 113, 0.05) 0%, transparent 50%),
+                repeating-linear-gradient(90deg, rgba(148, 163, 184, 0.03) 0px, rgba(148, 163, 184, 0.03) 1px, transparent 1px, transparent 60px),
+                repeating-linear-gradient(0deg, rgba(148, 163, 184, 0.03) 0px, rgba(148, 163, 184, 0.03) 1px, transparent 1px, transparent 60px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            background: linear-gradient(135deg, var(--trust-core) 0%, var(--trust-high) 50%, var(--trust-medium) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 40px;
+            align-items: start;
+        }
+
+        .diagram-container {
+            position: relative;
+            perspective: 1200px;
+        }
+
+        .trust-pyramid {
+            position: relative;
+            transform-style: preserve-3d;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotateX(5deg); }
+            50% { transform: translateY(-10px) rotateX(5deg); }
+        }
+
+        .trust-layer {
+            position: relative;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            padding: 24px 32px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .trust-layer::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            opacity: 0.15;
+            transition: opacity 0.3s;
+        }
+
+        .trust-layer:hover::before {
+            opacity: 0.25;
+        }
+
+        .trust-layer::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            transition: width 0.3s;
+        }
+
+        .trust-layer:hover::after {
+            width: 6px;
+        }
+
+        /* Layer 1: Fully Trusted */
+        .layer-1 {
+            background: linear-gradient(135deg, rgba(240, 249, 255, 0.12) 0%, rgba(240, 249, 255, 0.05) 100%);
+            border: 1px solid rgba(240, 249, 255, 0.3);
+            box-shadow: 0 0 40px rgba(240, 249, 255, 0.15), inset 0 1px 0 rgba(255,255,255,0.1);
+            width: 40%;
+            margin: 0 auto;
+            z-index: 6;
+        }
+        .layer-1::before { background: var(--trust-core); }
+        .layer-1::after { background: var(--trust-core); box-shadow: 0 0 20px var(--trust-core); }
+
+        /* Layer 2: High Trust */
+        .layer-2 {
+            background: linear-gradient(135deg, rgba(96, 165, 250, 0.12) 0%, rgba(96, 165, 250, 0.05) 100%);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            box-shadow: 0 0 30px rgba(96, 165, 250, 0.1), inset 0 1px 0 rgba(255,255,255,0.05);
+            width: 55%;
+            margin: 0 auto;
+            z-index: 5;
+        }
+        .layer-2::before { background: var(--trust-high); }
+        .layer-2::after { background: var(--trust-high); }
+
+        /* Layer 3: Medium Trust */
+        .layer-3 {
+            background: linear-gradient(135deg, rgba(74, 222, 128, 0.12) 0%, rgba(74, 222, 128, 0.05) 100%);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            box-shadow: 0 0 25px rgba(74, 222, 128, 0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+            width: 70%;
+            margin: 0 auto;
+            z-index: 4;
+        }
+        .layer-3::before { background: var(--trust-medium); }
+        .layer-3::after { background: var(--trust-medium); }
+
+        /* Layer 4: Low Trust */
+        .layer-4 {
+            background: linear-gradient(135deg, rgba(250, 204, 21, 0.12) 0%, rgba(250, 204, 21, 0.05) 100%);
+            border: 1px solid rgba(250, 204, 21, 0.3);
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+            width: 85%;
+            margin: 0 auto;
+            z-index: 3;
+        }
+        .layer-4::before { background: var(--trust-low); }
+        .layer-4::after { background: var(--trust-low); }
+
+        /* Layer 5: Untrusted */
+        .layer-5 {
+            background: linear-gradient(135deg, rgba(251, 146, 60, 0.12) 0%, rgba(251, 146, 60, 0.05) 100%);
+            border: 1px solid rgba(251, 146, 60, 0.3);
+            box-shadow: 0 0 20px rgba(251, 146, 60, 0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+            width: 95%;
+            margin: 0 auto;
+            z-index: 2;
+        }
+        .layer-5::before { background: var(--trust-untrusted); }
+        .layer-5::after { background: var(--trust-untrusted); }
+
+        /* Layer 6: Zero Trust */
+        .layer-6 {
+            background: linear-gradient(135deg, rgba(248, 113, 113, 0.12) 0%, rgba(248, 113, 113, 0.05) 100%);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            box-shadow: 0 0 20px rgba(248, 113, 113, 0.1), inset 0 1px 0 rgba(255,255,255,0.05);
+            width: 100%;
+            margin: 0 auto;
+            z-index: 1;
+        }
+        .layer-6::before { background: var(--trust-zero); }
+        .layer-6::after { background: var(--trust-zero); }
+
+        .layer-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .layer-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid currentColor;
+        }
+
+        .layer-1 .layer-icon { color: var(--trust-core); box-shadow: 0 0 20px rgba(240, 249, 255, 0.3); }
+        .layer-2 .layer-icon { color: var(--trust-high); }
+        .layer-3 .layer-icon { color: var(--trust-medium); }
+        .layer-4 .layer-icon { color: var(--trust-low); }
+        .layer-5 .layer-icon { color: var(--trust-untrusted); }
+        .layer-6 .layer-icon { color: var(--trust-zero); }
+
+        .layer-text h3 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            letter-spacing: 0.05em;
+        }
+
+        .layer-1 h3 { color: var(--trust-core); }
+        .layer-2 h3 { color: var(--trust-high); }
+        .layer-3 h3 { color: var(--trust-medium); }
+        .layer-4 h3 { color: var(--trust-low); }
+        .layer-5 h3 { color: var(--trust-untrusted); }
+        .layer-6 h3 { color: var(--trust-zero); }
+
+        .layer-text .en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            opacity: 0.7;
+        }
+
+        .layer-1 .en { color: var(--trust-core); }
+        .layer-2 .en { color: var(--trust-high); }
+        .layer-3 .en { color: var(--trust-medium); }
+        .layer-4 .en { color: var(--trust-low); }
+        .layer-5 .en { color: var(--trust-untrusted); }
+        .layer-6 .en { color: var(--trust-zero); }
+
+        .boundary {
+            position: relative;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 2px 0;
+        }
+
+        .boundary-line {
+            position: absolute;
+            width: 100%;
+            height: 1px;
+            background: repeating-linear-gradient(90deg, 
+                rgba(148, 163, 184, 0.5) 0px, 
+                rgba(148, 163, 184, 0.5) 8px, 
+                transparent 8px, 
+                transparent 16px
+            );
+        }
+
+        .boundary-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            background: var(--bg-primary);
+            padding: 4px 12px;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 12px;
+            position: relative;
+            z-index: 2;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .trust-indicator {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid currentColor;
+            opacity: 0.8;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: linear-gradient(180deg, rgba(18, 18, 26, 0.9) 0%, rgba(10, 10, 15, 0.95) 100%);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 12px;
+            padding: 28px;
+            backdrop-filter: blur(20px);
+            position: sticky;
+            top: 40px;
+        }
+
+        .sidebar h2 {
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .trust-scale {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .scale-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.85rem;
+        }
+
+        .scale-bar {
+            width: 60px;
+            height: 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .scale-item span {
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+
+        .info-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .info-section h3 {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .info-section p {
+            font-size: 0.85rem;
+            line-height: 1.8;
+            color: var(--text-primary);
+            opacity: 0.9;
+        }
+
+        .entity-list {
+            list-style: none;
+            margin-top: 12px;
+        }
+
+        .entity-list li {
+            padding: 8px 0;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .entity-list li::before {
+            content: '›';
+            color: var(--trust-high);
+            font-weight: bold;
+        }
+
+        /* Hover states */
+        .trust-layer:hover {
+            transform: translateX(8px) scale(1.02);
+        }
+
+        .trust-layer.active {
+            transform: translateX(8px) scale(1.02);
+        }
+
+        .layer-1.active { box-shadow: 0 0 60px rgba(240, 249, 255, 0.25), inset 0 1px 0 rgba(255,255,255,0.1); }
+        .layer-2.active { box-shadow: 0 0 50px rgba(96, 165, 250, 0.2), inset 0 1px 0 rgba(255,255,255,0.1); }
+        .layer-3.active { box-shadow: 0 0 50px rgba(74, 222, 128, 0.2), inset 0 1px 0 rgba(255,255,255,0.1); }
+        .layer-4.active { box-shadow: 0 0 50px rgba(250, 204, 21, 0.2), inset 0 1px 0 rgba(255,255,255,0.1); }
+        .layer-5.active { box-shadow: 0 0 50px rgba(251, 146, 60, 0.2), inset 0 1px 0 rgba(255,255,255,0.1); }
+        .layer-6.active { box-shadow: 0 0 50px rgba(248, 113, 113, 0.25), inset 0 1px 0 rgba(255,255,255,0.1); }
+
+        .arrows-container {
+            position: absolute;
+            left: -60px;
+            top: 0;
+            bottom: 0;
+            width: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .arrow-down {
+            width: 2px;
+            height: 40px;
+            background: linear-gradient(180deg, var(--trust-core) 0%, transparent 100%);
+            position: relative;
+            opacity: 0.4;
+        }
+
+        .arrow-down::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 6px solid currentColor;
+        }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 60px;
+            padding: 24px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            border-top: 1px solid rgba(148, 163, 184, 0.15);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .asymmetric-note {
+            display: inline-block;
+            padding: 12px 20px;
+            background: rgba(251, 146, 60, 0.1);
+            border: 1px solid rgba(251, 146, 60, 0.3);
+            border-radius: 6px;
+            margin-top: 12px;
+            font-size: 0.75rem;
+            max-width: 800px;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                position: static;
+            }
+            .trust-layer {
+                width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Trust Boundary Architecture</h1>
+            <div class="subtitle">Claude Code Security Model</div>
+        </header>
+
+        <div class="main-content">
+            <div class="diagram-container">
+                <div class="trust-pyramid">
+                    <!-- Layer 1: Fully Trusted -->
+                    <div class="trust-layer layer-1" data-layer="1">
+                        <div class="layer-content">
+                            <div class="layer-icon">⚡</div>
+                            <div class="layer-text">
+                                <h3>完全信任</h3>
+                                <div class="en">Fully Trusted — System Code</div>
+                            </div>
+                            <div class="trust-indicator">100%</div>
+                        </div>
+                    </div>
+
+                    <div class="boundary">
+                        <div class="boundary-line"></div>
+                        <div class="boundary-label">无验证 / No Validation</div>
+                    </div>
+
+                    <!-- Layer 2: High Trust -->
+                    <div class="trust-layer layer-2" data-layer="2">
+                        <div class="layer-content">
+                            <div class="layer-icon">🔒</div>
+                            <div class="layer-text">
+                                <h3>高信任</h3>
+                                <div class="en">High Trust — System Prompts</div>
+                            </div>
+                            <div class="trust-indicator">85%</div>
+                        </div>
+                    </div>
+
+                    <div class="boundary">
+                        <div class="boundary-line"></div>
+                        <div class="boundary-label">硬编码验证 / Hardcoded</div>
+                    </div>
+
+                    <!-- Layer 3: Medium Trust -->
+                    <div class="trust-layer layer-3" data-layer="3">
+                        <div class="layer-content">
+                            <div class="layer-icon">📋</div>
+                            <div class="layer-text">
+                                <h3>中信任</h3>
+                                <div class="en">Medium Trust — CLAUDE.md & Config</div>
+                            </div>
+                            <div class="trust-indicator">60%</div>
+                        </div>
+                    </div>
+
+                    <div class="boundary">
+                        <div class="boundary-line"></div>
+                        <div class="boundary-label">前缀检查 / Prefix Check</div>
+                    </div>
+
+                    <!-- Layer 4: Low Trust -->
+                    <div class="trust-layer layer-4" data-layer="4">
+                        <div class="layer-content">
+                            <div class="layer-icon">🤖</div>
+                            <div class="layer-text">
+                                <h3>低信任</h3>
+                                <div class="en">Low Trust — AI Model Output</div>
+                            </div>
+                            <div class="trust-indicator">40%</div>
+                        </div>
+                    </div>
+
+                    <div class="boundary">
+                        <div class="boundary-line"></div>
+                        <div class="boundary-label">权限系统 / Permission Check</div>
+                    </div>
+
+                    <!-- Layer 5: Untrusted -->
+                    <div class="trust-layer layer-5" data-layer="5">
+                        <div class="layer-content">
+                            <div class="layer-icon">🔌</div>
+                            <div class="layer-text">
+                                <h3>不信任</h3>
+                                <div class="en">Untrusted — MCP Server Returns</div>
+                            </div>
+                            <div class="trust-indicator">15%</div>
+                        </div>
+                    </div>
+
+                    <div class="boundary">
+                        <div class="boundary-line"></div>
+                        <div class="boundary-label">域名白名单 / Domain Whitelist</div>
+                    </div>
+
+                    <!-- Layer 6: Zero Trust -->
+                    <div class="trust-layer layer-6" data-layer="6">
+                        <div class="layer-content">
+                            <div class="layer-icon">🌐</div>
+                            <div class="layer-text">
+                                <h3>零信任</h3>
+                                <div class="en">Zero Trust — Web & User Files</div>
+                            </div>
+                            <div class="trust-indicator">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="sidebar">
+                <h2>Trust Scale</h2>
+                <div class="trust-scale">
+                    <div class="scale-item">
+                        <div class="scale-bar" style="background: var(--trust-core); box-shadow: 0 0 10px var(--trust-core);"></div>
+                        <span>Fully Trusted</span>
+                    </div>
+                    <div class="scale-item">
+                        <div class="scale-bar" style="background: var(--trust-high);"></div>
+                        <span>High Trust</span>
+                    </div>
+                    <div class="scale-item">
+                        <div class="scale-bar" style="background: var(--trust-medium);"></div>
+                        <span>Medium Trust</span>
+                    </div>
+                    <div class="scale-item">
+                        <div class="scale-bar" style="background: var(--trust-low);"></div>
+                        <span>Low Trust</span>
+                    </div>
+                    <div class="scale-item">
+                        <div class="scale-bar" style="background: var(--trust-untrusted);"></div>
+                        <span>Untrusted</span>
+                    </div>
+                    <div class="scale-item">
+                        <div class="scale-bar" style="background: var(--trust-zero);"></div>
+                        <span>Zero Trust</span>
+                    </div>
+                </div>
+
+                <div class="info-section" id="info-panel">
+                    <h3>Selected Zone</h3>
+                    <p id="zone-description">Hover over a trust zone to view details</p>
+                    <ul class="entity-list" id="entity-list"></ul>
+                </div>
+
+                <div class="info-section">
+                    <h3>Validation Flow</h3>
+                    <p style="font-size: 0.8rem; line-height: 1.8;">
+                        Trust decreases outward from the core. Each boundary crossing requires additional verification. The validation intensity is proportional to the trust gap.
+                    </p>
+                </div>
+            </aside>
+        </div>
+
+        <div class="footer-note">
+            <div>Trust Boundary Visualization — VIS-2A-022</div>
+            <div class="asymmetric-note">
+                <strong>关键不对称性 / Key Asymmetry:</strong> AI输出经权限检查后可执行工具调用，但执行结果中的外部内容仍保持不信任状态。信任由内向外单向递减，不可逆向传递。
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const layerData = {
+            1: {
+                description: "编译时确定的系统逻辑，运行时无需验证。最高特权级别，直接访问核心功能。",
+                entities: ["操作系统调用", "编译后二进制", "内核级权限", "硬件访问层"],
+                enDesc: "Compile-time determined logic with runtime verification"
+            },
+            2: {
+                description: "系统提示词和内置工具描述。信任但不可变，硬编码于系统内部。",
+                entities: ["系统提示词", "内置工具描述", "核心指令集", "安全策略定义"],
+                enDesc: "System prompts and built-in tool descriptions, immutable"
+            },
+            3: {
+                description: "用户编写的CLAUDE.md和配置文件。带有OVERRIDE前缀可修改默认行为。",
+                entities: ["CLAUDE.md", "用户配置文件", "项目设置", "自定义规则"],
+                enDesc: "User-written configs with OVERRIDE capabilities"
+            },
+            4: {
+                description: "AI模型的生成输出。需经过权限系统检查后方可执行工具调用。",
+                entities: ["模型响应", "生成代码", "推理结果", "决策输出"],
+                enDesc: "AI output requiring permission system validation"
+            },
+            5: {
+                description: "MCP服务器返回值。可能包含提示词注入，需域名白名单和企业策略控制。",
+                entities: ["MCP响应", "第三方API", "外部服务", "插件数据"],
+                enDesc: "External server returns with injection risk"
+            },
+            6: {
+                description: "网页内容和用户上传文件。被标记为潜在的提示词注入来源，最高警戒级别。",
+                entities: ["网页内容", "上传文件", "用户输入", "外部链接"],
+                enDesc: "Untrusted web content and user uploads"
+            }
+        };
+
+        const layers = document.querySelectorAll('.trust-layer');
+        const descEl = document.getElementById('zone-description');
+        const listEl = document.getElementById('entity-list');
+
+        layers.forEach(layer => {
+            layer.addEventListener('mouseenter', () => {
+                const data = layerData[layer.dataset.layer];
+                descEl.innerHTML = `<strong style="color: var(--trust-${getColorKey(layer.dataset.layer)})">${data.description}</strong><br><span style="opacity: 0.7; font-size: 0.85rem;">${data.enDesc}</span>`;
+                listEl.innerHTML = data.entities.map(e => `<li>${e}</li>`).join('');
+                layer.classList.add('active');
+            });
+
+            layer.addEventListener('mouseleave', () => {
+                layer.classList.remove('active');
+            });
+        });
+
+        function getColorKey(layer) {
+            const colors = ['core', 'high', 'medium', 'low', 'untrusted', 'zero'];
+            return colors[layer - 1];
+        }
+
+        // Default state
+        descEl.innerHTML = 'Hover over a trust zone to view details<br><span style="opacity: 0.6; font-size: 0.85rem;">Move cursor to explore validation requirements</span>';
+    </script>
+</body>
+</html>

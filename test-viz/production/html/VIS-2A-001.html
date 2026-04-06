@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代码库五区域分布图 | Codebase Architecture Map</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-grid: #111118;
+            --heart-color: #ff4d6d;
+            --heart-glow: #ff1744;
+            --limbs-color: #a855f7;
+            --limbs-glow: #d946ef;
+            --skin-color: #06b6d4;
+            --skin-glow: #22d3ee;
+            --skeleton-color: #3b82f6;
+            --skeleton-glow: #60a5fa;
+            --special-color: #22c55e;
+            --special-glow: #4ade80;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --line-color: rgba(148, 163, 184, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'Space Grotesk', sans-serif;
+            background: var(--bg-dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+            color: var(--text-primary);
+        }
+
+        .container {
+            width: 100%;
+            min-height: 100vh;
+            position: relative;
+            background: 
+                linear-gradient(rgba(17, 17, 24, 0.9), rgba(10, 10, 15, 0.95)),
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 40px,
+                    var(--line-color) 40px,
+                    var(--line-color) 41px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 40px,
+                    var(--line-color) 40px,
+                    var(--line-color) 41px
+                );
+        }
+
+        .noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            z-index: 1;
+        }
+
+        .header {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 50%, #818cf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 40px rgba(129, 140, 248, 0.3);
+        }
+
+        .header .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+        }
+
+        .viz-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+        }
+
+        .map-svg {
+            width: 100%;
+            height: 100%;
+            max-width: 1400px;
+        }
+
+        .zone {
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .zone:hover {
+            filter: brightness(1.15) drop-shadow(0 0 20px currentColor);
+        }
+
+        .zone-path {
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 2;
+            transition: all 0.3s ease;
+        }
+
+        .zone-label {
+            font-family: 'Noto Sans SC', sans-serif;
+            font-weight: 700;
+            font-size: 18px;
+            fill: var(--text-primary);
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        .zone-label-en {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 11px;
+            fill: var(--text-secondary);
+            text-anchor: middle;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+
+        .zone-stats {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            fill: var(--text-primary);
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        .zone-files {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 12px;
+            fill: var(--text-secondary);
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        .heart-zone {
+            animation: heartbeat 2s ease-in-out infinite;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        .heart-core {
+            fill: var(--heart-color);
+            filter: drop-shadow(0 0 30px var(--heart-glow));
+        }
+
+        .heart-ring {
+            fill: none;
+            stroke: var(--heart-color);
+            stroke-width: 2;
+            opacity: 0.4;
+            animation: pulse-ring 2s ease-out infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { r: 70; opacity: 0.6; }
+            100% { r: 120; opacity: 0; }
+        }
+
+        .connection-line {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.08);
+            stroke-width: 2;
+            stroke-dasharray: 8 4;
+            animation: flow 20s linear infinite;
+        }
+
+        @keyframes flow {
+            to { stroke-dashoffset: -200; }
+        }
+
+        .detail-item {
+            font-size: 10px;
+            fill: var(--text-secondary);
+        }
+
+        .tooltip {
+            position: fixed;
+            background: rgba(15, 15, 25, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            max-width: 320px;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-title {
+            font-family: 'Cinzel', serif;
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            letter-spacing: 0.1em;
+        }
+
+        .tooltip-content {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .tooltip-files {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .file-tag {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            font-size: 10px;
+            font-family: 'Space Grotesk', monospace;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            z-index: 10;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .stats-panel {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            text-align: right;
+            z-index: 10;
+        }
+
+        .total-files {
+            font-family: 'Cinzel', serif;
+            font-size: 48px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .total-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+        }
+
+        .glow-filter {
+            filter: drop-shadow(0 0 10px currentColor);
+        }
+
+        @media (max-width: 900px) {
+            .header h1 { font-size: 1.4rem; }
+            .zone-label { font-size: 14px; }
+            .zone-stats { font-size: 24px; }
+            .legend { bottom: 20px; left: 20px; }
+            .stats-panel { bottom: 20px; right: 20px; }
+            .total-files { font-size: 32px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="noise"></div>
+    <div class="container">
+        <div class="header">
+            <h1>代码库五区域分布图</h1>
+            <div class="subtitle">Claude Code Architecture Map</div>
+        </div>
+
+        <div class="viz-container">
+            <svg class="map-svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <radialGradient id="grad-limbs" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#a855f7" stop-opacity="0.3"/>
+                        <stop offset="100%" stop-color="#a855f7" stop-opacity="0.08"/>
+                    </radialGradient>
+                    <radialGradient id="grad-skin" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.3"/>
+                        <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.08"/>
+                    </radialGradient>
+                    <radialGradient id="grad-skeleton" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.3"/>
+                        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.08"/>
+                    </radialGradient>
+                    <radialGradient id="grad-special" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#22c55e" stop-opacity="0.3"/>
+                        <stop offset="100%" stop-color="#22c55e" stop-opacity="0.08"/>
+                    </radialGradient>
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+
+                <!-- Connection Lines -->
+                <line class="connection-line" x1="600" y1="400" x2="300" y2="200"/>
+                <line class="connection-line" x1="600" y1="400" x2="900" y2="200"/>
+                <line class="connection-line" x1="600" y1="400" x2="200" y2="550"/>
+                <line class="connection-line" x1="600" y1="400" x2="1000" y2="550"/>
+
+                <!-- Limbs Zone (Top Left) -->
+                <g class="zone" data-zone="limbs" style="color: #a855f7;">
+                    <path class="zone-path" d="M 150 80 L 500 80 L 550 350 L 350 380 L 150 320 Z" 
+                          fill="url(#grad-limbs)" stroke="#a855f7" stroke-width="1.5"/>
+                    <text x="325" y="180" class="zone-label" fill="#e9d5ff">手脚区</text>
+                    <text x="325" y="200" class="zone-label-en" fill="#c084fc">Limbs Zone</text>
+                    <text x="325" y="250" class="zone-stats" fill="#f3e8ff">515</text>
+                    <text x="325" y="275" class="zone-files" fill="#d8b4fe">files</text>
+                    <text x="200" y="310" class="detail-item">tools/ 184</text>
+                    <text x="200" y="325" class="detail-item">commands/ 189</text>
+                    <text x="200" y="340" class="detail-item">services/ 130</text>
+                    <text x="200" y="355" class="detail-item">tasks/ 12</text>
+                </g>
+
+                <!-- Skin Zone (Top Right) -->
+                <g class="zone" data-zone="skin" style="color: #06b6d4;">
+                    <path class="zone-path" d="M 700 80 L 1050 80 L 1050 320 L 850 380 L 650 350 Z" 
+                          fill="url(#grad-skin)" stroke="#06b6d4" stroke-width="1.5"/>
+                    <text x="850" y="180" class="zone-label" fill="#cffafe">皮肤区</text>
+                    <text x="850" y="200" class="zone-label-en" fill="#67e8f9">Skin Zone</text>
+                    <text x="850" y="250" class="zone-stats" fill="#ecfeff">502</text>
+                    <text x="850" y="275" class="zone-files" fill="#a5f3fc">files</text>
+                    <text x="900" y="310" class="detail-item">components/ 389</text>
+                    <text x="900" y="325" class="detail-item">ink/ 96</text>
+                    <text x="900" y="340" class="detail-item">screens/ 3 · keybindings/ 14</text>
+                </g>
+
+                <!-- Skeleton Zone (Bottom Left) - Largest -->
+                <g class="zone" data-zone="skeleton" style="color: #3b82f6;">
+                    <path class="zone-path" d="M 50 400 L 450 400 L 520 750 L 80 720 Z" 
+                          fill="url(#grad-skeleton)" stroke="#3b82f6" stroke-width="1.5"/>
+                    <text x="285" y="520" class="zone-label" fill="#dbeafe">骨骼区</text>
+                    <text x="285" y="540" class="zone-label-en" fill="#93c5fd">Skeleton Zone</text>
+                    <text x="285" y="600" class="zone-stats" fill="#eff6ff">707</text>
+                    <text x="285" y="625" class="zone-files" fill="#bfdbfe">files · 30% of total</text>
+                    <text x="120" y="670" class="detail-item">utils/ 564</text>
+                    <text x="120" y="685" class="detail-item">hooks/ 104 · constants/ 21</text>
+                    <text x="120" y="700" class="detail-item">types/ 11 · schemas/ 1 · state/ 6</text>
+                </g>
+
+                <!-- Special Zone (Bottom Right) -->
+                <g class="zone" data-zone="special" style="color: #22c55e;">
+                    <path class="zone-path" d="M 750 400 L 1150 400 L 1120 720 L 680 750 Z" 
+                          fill="url(#grad-special)" stroke="#22c55e" stroke-width="1.5"/>
+                    <text x="915" y="520" class="zone-label" fill="#dcfce7">特区</text>
+                    <text x="915" y="540" class="zone-label-en" fill="#86efac">Special Zone</text>
+                    <text x="915" y="600" class="zone-stats" fill="#f0fdf4">77+</text>
+                    <text x="915" y="625" class="zone-files" fill="#bbf7d0">files</text>
+                    <text x="780" y="670" class="detail-item">bridge/ 31 · coordinator/ 4</text>
+                    <text x="780" y="685" class="detail-item">buddy/ 6 · voice/ 1 · vim/ 5</text>
+                    <text x="780" y="700" class="detail-item">skills/ 20 · plugins/ 2 · memdir/ 8</text>
+                </g>
+
+                <!-- Heart Zone (Center) -->
+                <g class="heart-zone" transform="translate(600, 400)">
+                    <circle class="heart-ring" cx="0" cy="0"/>
+                    <circle class="heart-core" cx="0" cy="0" r="60"/>
+                    <path d="M 0 -20 C -30 -50 -70 -20 0 35 C 70 -20 30 -50 0 -20" 
+                          fill="#ff6b8a" opacity="0.6"/>
+                    <text y="-5" class="zone-label" fill="#fff" style="font-size: 16px;">心脏区</text>
+                    <text y="12" class="zone-label-en" fill="#fecdd3" style="font-size: 9px;">Heart Zone</text>
+                    <text y="35" class="zone-stats" fill="#fff" style="font-size: 28px;">7</text>
+                </g>
+
+                <!-- Core Files Labels around Heart -->
+                <g class="core-files" style="font-size: 9px; fill: #94a3b8; font-family: 'Space Grotesk', monospace;">
+                    <text x="600" y="300" text-anchor="middle">main.tsx</text>
+                    <text x="600" y="515" text-anchor="middle">commands.ts</text>
+                    <text x="500" y="400" text-anchor="end">QueryEngine.ts</text>
+                    <text x="700" y="400" text-anchor="start">context.ts</text>
+                    <text x="530" y="345" text-anchor="end">query.ts</text>
+                    <text x="670" y="345" text-anchor="start">Tool.ts</text>
+                    <text x="530" y="455" text-anchor="end">Task.ts</text>
+                </g>
+            </svg>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot" style="background: var(--heart-color);"></div>
+                <span>心脏区 · 核心引擎</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background: var(--limbs-color);"></div>
+                <span>手脚区 · 工具命令</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background: var(--skin-color);"></div>
+                <span>皮肤区 · UI渲染</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background: var(--skeleton-color);"></div>
+                <span>骨骼区 · 基础设施</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background: var(--special-color);"></div>
+                <span>特区 · 特殊模块</span>
+            </div>
+        </div>
+
+        <div class="stats-panel">
+            <div class="total-files">1,884</div>
+            <div class="total-label">TypeScript Files</div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-title" id="tooltip-title"></div>
+        <div class="tooltip-content" id="tooltip-content"></div>
+        <div class="tooltip-files" id="tooltip-files"></div>
+    </div>
+
+    <script>
+        const zoneData = {
+            heart: {
+                title: '心脏区 HEART ZONE',
+                content: 'Claude Code 的核心引擎，包含查询处理、工具调度和命令执行的核心逻辑。约 5,000 行代码。',
+                files: ['main.tsx', 'QueryEngine.ts', 'query.ts', 'Tool.ts', 'Task.ts', 'context.ts', 'commands.ts']
+            },
+            limbs: {
+                title: '手脚区 LIMBS ZONE',
+                content: '执行层模块，包含所有工具实现、命令定义、服务模块和任务管理。',
+                files: ['tools/ (184 files, 43 tools)', 'commands/ (189 files, 101 commands)', 'services/ (130 files, 30+ modules)', 'tasks/ (12 files)']
+            },
+            skin: {
+                title: '皮肤区 SKIN ZONE',
+                content: '用户界面层，包含 React 组件、Ink 渲染器、屏幕和键盘绑定。',
+                files: ['components/ (389 files)', 'ink/ (96 files)', 'screens/ (3 files)', 'keybindings/ (14 files)']
+            },
+            skeleton: {
+                title: '骨骼区 SKELETON ZONE',
+                content: '基础设施层，最大的代码区域，包含工具函数、Hooks、类型定义和状态管理。',
+                files: ['utils/ (564 files, 30%)', 'hooks/ (104 files)', 'constants/ (21 files)', 'types/ (11 files)', 'schemas/ · state/']
+            },
+            special: {
+                title: '特区 SPECIAL ZONE',
+                content: '特殊功能模块，提供桥接、协调、伙伴系统和插件扩展能力。',
+                files: ['bridge/ (31 files)', 'coordinator/ (4 files)', 'buddy/ (6 files)', 'skills/ (20 files)', 'vim/ · voice/ · memdir/ · plugins/']
+            }
+        };
+
+        const tooltip = document.getElementById('tooltip');
+        const tooltipTitle = document.getElementById('tooltip-title');
+        const tooltipContent = document.getElementById('tooltip-content');
+        const tooltipFiles = document.getElementById('tooltip-files');
+
+        document.querySelectorAll('.zone').forEach(zone => {
+            zone.addEventListener('mouseenter', (e) => {
+                const zoneKey = zone.dataset.zone;
+                const data = zoneData[zoneKey];
+                if (data) {
+                    tooltipTitle.textContent = data.title;
+                    tooltipContent.textContent = data.content;
+                    tooltipFiles.innerHTML = data.files.map(f => `<span class="file-tag">${f}</span>`).join('');
+                    tooltip.classList.add('visible');
+                }
+            });
+
+            zone.addEventListener('mousemove', (e) => {
+                tooltip.style.left = (e.clientX + 20) + 'px';
+                tooltip.style.top = (e.clientY - 20) + 'px';
+            });
+
+            zone.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+        });
+
+        // Heart zone tooltip
+        document.querySelector('.heart-zone').addEventListener('mouseenter', (e) => {
+            const data = zoneData.heart;
+            tooltipTitle.textContent = data.title;
+            tooltipContent.textContent = data.content;
+            tooltipFiles.innerHTML = data.files.map(f => `<span class="file-tag">${f}</span>`).join('');
+            tooltip.classList.add('visible');
+        });
+
+        document.querySelector('.heart-zone').addEventListener('mousemove', (e) => {
+            tooltip.style.left = (e.clientX + 20) + 'px';
+            tooltip.style.top = (e.clientY - 20) + 'px';
+        });
+
+        document.querySelector('.heart-zone').addEventListener('mouseleave', () => {
+            tooltip.classList.remove('visible');
+        });
+    </script>
+</body>
+</html>

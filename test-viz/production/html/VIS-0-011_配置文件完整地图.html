@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code 配置文件完整地图 | Configuration File Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --text-primary: #e6edf3;
+  --text-secondary: #7d8590;
+  --text-muted: #484f58;
+  --accent-blue: #58a6ff;
+  --accent-blue-glow: rgba(88, 166, 255, 0.15);
+  --accent-green: #3fb950;
+  --accent-green-glow: rgba(63, 185, 80, 0.15);
+  --accent-red: #f85149;
+  --accent-red-glow: rgba(248, 81, 73, 0.15);
+  --accent-amber: #d29922;
+  --border-default: #30363d;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+body {
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(88, 166, 255, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(63, 185, 80, 0.06) 0%, transparent 40%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 48px 32px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 40px;
+  animation: fadeInDown 0.8s ease both;
+}
+
+header h1 {
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #fff 0%, var(--accent-blue) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+
+header .subtitle {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.search-box {
+  max-width: 480px;
+  margin: 0 auto 40px;
+  position: relative;
+  animation: fadeInDown 0.8s ease 0.1s both;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 14px 20px 14px 48px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.search-box input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--accent-blue-glow);
+}
+
+.search-box svg {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-bottom: 48px;
+}
+
+@media (max-width: 960px) {
+  .main-grid {
+    grid-template-columns: 1fr;
+  }
+  header h1 {
+    font-size: 2rem;
+  }
+}
+
+.panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 16px;
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+  animation: fadeInUp 0.8s ease both;
+}
+
+.panel.global {
+  border-left: 4px solid var(--accent-blue);
+  box-shadow: 0 0 40px var(--accent-blue-glow);
+  animation-delay: 0.2s;
+}
+
+.panel.project {
+  border-left: 4px solid var(--accent-green);
+  box-shadow: 0 0 40px var(--accent-green-glow);
+  animation-delay: 0.3s;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, var(--panel-glow, transparent) 0%, transparent 70%);
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.panel.global::before {
+  --panel-glow: rgba(88, 166, 255, 0.4);
+}
+
+.panel.project::before {
+  --panel-glow: rgba(63, 185, 80, 0.4);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.panel-header h2 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.panel-header .path-badge {
+  font-size: 12px;
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.file-tree {
+  list-style: none;
+}
+
+.file-tree li {
+  position: relative;
+}
+
+.tree-node {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 2px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  position: relative;
+}
+
+.tree-node:hover, .tree-node.active {
+  background: var(--bg-tertiary);
+}
+
+.panel.global .tree-node:hover, .panel.global .tree-node.active {
+  box-shadow: inset 0 0 0 1px rgba(88, 166, 255, 0.2);
+}
+
+.panel.project .tree-node:hover, .panel.project .tree-node.active {
+  box-shadow: inset 0 0 0 1px rgba(63, 185, 80, 0.2);
+}
+
+.tree-node.sensitive {
+  border: 1px solid transparent;
+}
+
+.tree-node.sensitive:hover, .tree-node.sensitive.active {
+  background: rgba(248, 81, 73, 0.08);
+  border-color: rgba(248, 81, 73, 0.4);
+}
+
+.tree-node .icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tree-node .icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.tree-node .chevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+  color: var(--text-muted);
+}
+
+.tree-node.collapsed .chevron {
+  transform: rotate(-90deg);
+}
+
+.tree-node .label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.tree-node .meta {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+}
+
+.tree-node .lock {
+  width: 12px;
+  height: 12px;
+  color: var(--accent-red);
+  margin-left: 4px;
+}
+
+.nested {
+  list-style: none;
+  padding-left: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.nested::before {
+  content: "";
+  position: absolute;
+  left: 20px;
+  top: 0;
+  bottom: 12px;
+  width: 1px;
+  background: var(--border-default);
+}
+
+.nested li::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 18px;
+  width: 12px;
+  height: 1px;
+  background: var(--border-default);
+}
+
+.file-tree > li > .nested {
+  padding-left: 20px;
+}
+
+.file-tree > li > .nested::before {
+  left: 16px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.grayscale {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.detail-card {
+  position: fixed;
+  top: 50%;
+  right: 32px;
+  transform: translateY(-50%) translateX(20px);
+  width: 380px;
+  max-height: 80vh;
+  background: rgba(22, 27, 34, 0.98);
+  border: 1px solid var(--border-default);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  backdrop-filter: blur(12px);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.detail-card.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) translateX(0);
+}
+
+@media (max-width: 1200px) {
+  .detail-card {
+    right: 16px;
+    width: 320px;
+  }
+}
+
+@media (max-width: 960px) {
+  .detail-card {
+    position: fixed;
+    top: auto;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    transform: translateY(20px);
+    max-height: 50vh;
+  }
+  .detail-card.visible {
+    transform: translateY(0);
+  }
+}
+
+.detail-card .card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.detail-card .card-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.detail-card .card-badge {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.detail-card .card-badge.json { background: rgba(88, 166, 255, 0.15); color: var(--accent-blue); }
+.detail-card .card-badge.md { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); }
+.detail-card .card-badge.toml { background: rgba(210, 153, 34, 0.15); color: var(--accent-amber); }
+
+.detail-card .section {
+  margin-bottom: 18px;
+}
+
+.detail-card .section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.detail-card .section-text {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.detail-card .priority-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-top: 4px;
+}
+
+.detail-card pre {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 14px;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.detail-card code {
+  font-family: var(--font-mono);
+}
+
+.priority-chain {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 16px;
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  animation: fadeInUp 0.8s ease 0.4s both;
+}
+
+.priority-chain .chain-label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  margin-right: 16px;
+  color: var(--text-primary);
+}
+
+.chain-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.chain-item.high { border-color: rgba(248, 81, 73, 0.4); background: rgba(248, 81, 73, 0.08); color: #ff9e9e; }
+.chain-item.med-high { border-color: rgba(210, 153, 34, 0.4); background: rgba(210, 153, 34, 0.08); color: #e3b341; }
+.chain-item.med { border-color: rgba(88, 166, 255, 0.4); background: rgba(88, 166, 255, 0.08); color: #79c0ff; }
+.chain-item.low { border-color: rgba(63, 185, 80, 0.4); background: rgba(63, 185, 80, 0.08); color: #7ee787; }
+.chain-item.default { border-color: var(--border-default); color: var(--text-secondary); }
+
+.chain-arrow {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.syntax-key { color: #7ee787; }
+.syntax-string { color: #a5d6ff; }
+.syntax-number { color: #79c0ff; }
+.syntax-bool { color: #ff7b72; }
+.syntax-comment { color: #8b949e; font-style: italic; }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 99;
+}
+
+.overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.panel-title-en {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-left: auto;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>配置文件完整地图</h1>
+    <div class="subtitle">Configuration File Map — Understand where configs live and how they interact</div>
+  </header>
+
+  <div class="search-box">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="searchInput" placeholder="搜索文件 / Search files...">
+  </div>
+
+  <div class="main-grid">
+    <!-- Global Config Panel -->
+    <div class="panel global">
+      <div class="panel-header">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <h2>全局配置</h2>
+        <span class="path-badge">~/.claude/</span>
+        <span class="panel-title-en">Global</span>
+      </div>
+      <ul class="file-tree" id="globalTree">
+        <li>
+          <div class="tree-node" data-id="global-settings">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></span>
+            <span class="label">settings.json</span>
+            <span class="meta">JSON</span>
+          </div>
+        </li>
+        <li>
+          <div class="tree-node" data-id="global-keybindings">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></span>
+            <span class="label">keybindings.json</span>
+            <span class="meta">JSON</span>
+          </div>
+        </li>
+        <li>
+          <div class="tree-node sensitive" data-id="global-credentials">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-red)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+            <span class="label">credentials.json</span>
+            <span class="meta">JSON</span>
+            <span class="lock"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg></span>
+          </div>
+        </li>
+        <li>
+          <div class="tree-node" data-id="global-memory">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+            <span class="label">memory/</span>
+          </div>
+          <ul class="nested">
+            <li>
+              <div class="tree-node" data-id="global-memory-md">
+                <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+                <span class="label">MEMORY.md</span>
+                <span class="meta">MD</span>
+              </div>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <div class="tree-node has-children" data-id="global-projects">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+            <span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span>
+            <span class="label">projects/</span>
+          </div>
+          <ul class="nested">
+            <li>
+              <div class="tree-node" data-id="global-projects-sub">
+                <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+                <span class="label">&lt;project-path&gt;.json</span>
+                <span class="meta">JSON</span>
+              </div>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <div class="tree-node" data-id="global-todos">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+            <span class="label">todos/</span>
+          </div>
+        </li>
+        <li>
+          <div class="tree-node" data-id="global-statsig">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+            <span class="label">statsig/</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Project Config Panel -->
+    <div class="panel project">
+      <div class="panel-header">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+        <h2>项目配置</h2>
+        <span class="path-badge">.claude/</span>
+        <span class="panel-title-en">Project</span>
+      </div>
+      <ul class="file-tree" id="projectTree">
+        <li>
+          <div class="tree-node" data-id="project-settings">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></span>
+            <span class="label">settings.json</span>
+            <span class="meta">JSON</span>
+          </div>
+        </li>
+        <li>
+          <div class="tree-node" data-id="project-settings-local">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></span>
+            <span class="label">settings.local.json</span>
+            <span class="meta">JSON</span>
+          </div>
+        </li>
+        <li>
+          <div class="tree-node has-children" data-id="project-commands">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+            <span class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></span>
+            <span class="label">commands/</span>
+          </div>
+          <ul class="nested">
+            <li>
+              <div class="tree-node" data-id="project-commands-md">
+                <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+                <span class="label">*.md</span>
+                <span class="meta">MD</span>
+              </div>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <div class="tree-node" data-id="project-claude-md">
+            <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+            <span class="label">CLAUDE.md</span>
+            <span class="meta">MD</span>
+          </div>
+        </li>
+      </ul>
+
+      <div style="margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border-default);">
+        <div class="panel-header" style="margin-bottom: 16px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <h2 style="font-size: 1.05rem;">工作区配置</h2>
+          <span class="panel-title-en">Workspace</span>
+        </div>
+        <ul class="file-tree">
+          <li>
+            <div class="tree-node" data-id="workspace-claude-md">
+              <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+              <span class="label">&lt;dir&gt;/CLAUDE.md</span>
+              <span class="meta">MD</span>
+            </div>
+          </li>
+          <li>
+            <div class="tree-node" data-id="workspace-ignore">
+              <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></span>
+              <span class="label">.claudeignore</span>
+              <span class="meta">TEXT</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Priority Chain -->
+  <div class="priority-chain">
+    <span class="chain-label">优先级链 Priority Chain</span>
+    <div class="chain-item high">目录 CLAUDE.md</div>
+    <div class="chain-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+    <div class="chain-item med-high">项目 CLAUDE.md</div>
+    <div class="chain-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+    <div class="chain-item med">项目 Settings</div>
+    <div class="chain-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+    <div class="chain-item low">全局 Settings</div>
+    <div class="chain-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+    <div class="chain-item default">默认值 Defaults</div>
+  </div>
+</div>
+
+<!-- Detail Card -->
+<div class="overlay" id="overlay"></div>
+<div class="detail-card" id="detailCard">
+  <div class="card-header">
+    <span class="icon" id="cardIcon"></span>
+    <span class="card-title" id="cardTitle">Filename</span>
+    <span class="card-badge" id="cardBadge">JSON</span>
+  </div>
+  <div class="section">
+    <div class="section-label">用途 Description</div>
+    <div class="section-text" id="cardDesc">...</div>
+  </div>
+  <div class="section">
+    <div class="section-label">优先级 Priority</div>
+    <div class="priority-tag" id="cardPriority">...</div>
+  </div>
+  <div class="section">
+    <div class="section-label">示例片段 Example</div>
+    <pre><code id="cardCode">...</code></pre>
+  </div>
+  <div class="section hidden" id="cardWarning">
+    <div class="section-label">安全提醒 Security</div>
+    <div class="section-text" style="color: var(--accent-red);">此文件包含敏感信息，请勿提交到 Git 仓库。</div>
+  </div>
+</div>
+
+<script>
+const fileData = {
+  'global-settings': {
+    title: 'settings.json',
+    badge: 'JSON',
+    desc: '全局默认行为配置。定义权限模式、API 密钥、默认模型、钩子行为等所有未指定项目设置时的回退值。Global default behavior: permissions, API keys, default model, hooks.',
+    priority: '低优先级 → 被项目配置覆盖 / Low (overridden by project)',
+    code: `<span class="syntax-key">"model"</span>: <span class="syntax-string">"claude-sonnet-4-6"</span>,
+<span class="syntax-key">"permissionMode"</span>: <span class="syntax-string">"ask"</span>,
+<span class="syntax-key">"hooks"</span>: {
+  <span class="syntax-key">"beforeRead"</span>: <span class="syntax-string">"echo 'reading...'"</span>
+}`
+  },
+  'global-keybindings': {
+    title: 'keybindings.json',
+    badge: 'JSON',
+    desc: '自定义键绑定配置。覆盖或扩展 Claude Code 的默认快捷键，支持组合键和和弦键序列。Custom keyboard shortcuts and chord bindings.',
+    priority: '全局生效 / Global scope',
+    code: `<span class="syntax-key">"submit"</span>: <span class="syntax-string">"cmd+enter"</span>,
+<span class="syntax-key">"escape"</span>: <span class="syntax-string">"escape"</span>,
+<span class="syntax-key">"custom"</span>: [
+  { <span class="syntax-key">"key"</span>: <span class="syntax-string">"ctrl+s"</span>, <span class="syntax-key">"command"</span>: <span class="syntax-string">"/simplify"</span> }
+]`
+  },
+  'global-credentials': {
+    title: 'credentials.json',
+    badge: 'JSON',
+    desc: '存储认证凭据，包括 OAuth 令牌和手动设置的 API 密钥。由认证流程自动写入。Stores auth credentials and API tokens, written by OAuth flows.',
+    priority: '安全最高优先级读取 / Security-critical',
+    code: `<span class="syntax-comment">// 自动管理，请勿手动编辑</span>
+{
+  <span class="syntax-key">"anthropic_api_key"</span>: <span class="syntax-string">"sk-ant-..."</span>,
+  <span class="syntax-key">"oauth_token"</span>: <span class="syntax-string">"..."</span>
+}`,
+    sensitive: true
+  },
+  'global-memory': {
+    title: 'memory/',
+    badge: 'DIR',
+    desc: '自动记忆存储目录。保存跨对话的项目记忆、用户偏好和长期上下文。Persists automatic memories, user preferences, and long-term context.',
+    priority: '持久化存储 / Persistent storage',
+    code: `memory/
+├── user_preferences.md
+├── project_context.md
+└── feedback_notes.md`
+  },
+  'global-memory-md': {
+    title: 'MEMORY.md',
+    badge: 'MD',
+    desc: '全局自动记忆的索引文件。记录用户角色、偏好和跨项目的反馈指南。Index of automatic memories for user role and preferences.',
+    priority: '全局记忆 / Global memory',
+    code: `---
+name: user_role
+type: user
+---
+User is a senior frontend engineer...`
+  },
+  'global-projects': {
+    title: 'projects/',
+    badge: 'DIR',
+    desc: '按项目路径存储的项目级设置缓存目录。每项子目录或文件对应一个工作区的本地项目配置副本。Project-specific settings indexed by workspace path.',
+    priority: '项目隔离 / Per-project isolation',
+    code: `projects/
+├── Users-hero-web.json
+└── Users-hero-api.json`
+  },
+  'global-projects-sub': {
+    title: '<project>.json',
+    badge: 'JSON',
+    desc: '单个项目的缓存设置。文件名为项目路径的规范化版本。Cached settings for a specific workspace path.',
+    priority: '项目隔离 / Per-project isolation',
+    code: `<span class="syntax-key">"settings"</span>: {
+  <span class="syntax-key">"CLAUDE.md"</span>: <span class="syntax-string">"/path/to/CLAUDE.md"</span>
+}`
+  },
+  'global-todos': {
+    title: 'todos/',
+    badge: 'DIR',
+    desc: '待办事项持久化存储目录。保存跨会话的任务列表和进度状态。Stores persisted todo lists across sessions.',
+    priority: '持久化存储 / Persistent storage',
+    code: `todos/
+├── session_2026-04-04.json
+└── active_tasks.json`
+  },
+  'global-statsig': {
+    title: 'statsig/',
+    badge: 'DIR',
+    desc: 'A/B 测试和特性开关配置的本地缓存目录。用于离线时保持实验分组一致性。Cached A/B test and feature flag configs.',
+    priority: '本地缓存 / Local cache',
+    code: `statsig/
+├── config.json
+└── layers.json`
+  },
+  'project-settings': {
+    title: 'settings.json',
+    badge: 'JSON',
+    desc: '项目级设置文件。覆盖全局 settings.json 中的同名键，定义该仓库特定的模型行为、权限和钩子。Project-level overrides for global settings.',
+    priority: '中优先级 → 覆盖全局 / Medium (overrides global)',
+    code: `<span class="syntax-key">"model"</span>: <span class="syntax-string">"claude-opus-4-6"</span>,
+<span class="syntax-key">"permissionMode"</span>: <span class="syntax-string">"auto"</span>,
+<span class="syntax-key">"ignoredFiles"</span>: [<span class="syntax-string">"dist/"</span>, <span class="syntax-string">"*.log"</span>]`
+  },
+  'project-settings-local': {
+    title: 'settings.local.json',
+    badge: 'JSON',
+    desc: '本地开发调试专用配置。不会被提交到 Git，用于本地临时覆盖项目设置。Local-only overrides, excluded from version control.',
+    priority: '高优先级 → 覆盖项目设置 / High (overrides project)',
+    code: `<span class="syntax-key">"debug"</span>: <span class="syntax-bool">true</span>,
+<span class="syntax-key">"apiKey"</span>: <span class="syntax-string">"sk-local-test-..."</span>,
+<span class="syntax-key">"logLevel"</span>: <span class="syntax-string">"verbose"</span>`
+  },
+  'project-commands': {
+    title: 'commands/',
+    badge: 'DIR',
+    desc: '自定义斜杠命令目录。每个 Markdown 文件都会注册为一个可执行的 /commandName 命令。Custom slash command definitions.',
+    priority: '命令注册 / Command registry',
+    code: `commands/
+├── simplify.md
+├── test.md
+└── deploy.md`
+  },
+  'project-commands-md': {
+    title: '*.md',
+    badge: 'MD',
+    desc: '单个斜杠命令定义文件。文件名为命令名，内容描述命令的行为和输出格式。Slash command definition: filename becomes /commandName.',
+    priority: '命令注册 / Command registry',
+    code: `---
+name: simplify
+description: Review changed code for quality
+---
+Review the diff for DRY violations...`
+  },
+  'project-claude-md': {
+    title: 'CLAUDE.md',
+    badge: 'MD',
+    desc: '项目级 AI 行为指导文件。内容注入到系统提示词中，直接影响模型在该项目中的推理和编码风格。Project-level system prompt injection.',
+    priority: '高语义优先级 / High semantic priority',
+    code: `You are working in a TypeScript monorepo.
+- Prefer explicit types over inference.
+- Use functional React components.
+- Test files should use MSW for mocks.`
+  },
+  'workspace-claude-md': {
+    title: '<dir>/CLAUDE.md',
+    badge: 'MD',
+    desc: '目录级 CLAUDE.md 覆盖文件。作用于特定子目录及其后代，优先级高于项目级 CLAUDE.md。Directory-scoped behavior override.',
+    priority: '最高语义优先级 / Highest semantic priority',
+    code: `This directory contains API route handlers.
+- All endpoints must validate with Zod.
+- Return typed JSON responses.
+- Handle errors with a unified wrapper.`
+  },
+  'workspace-ignore': {
+    title: '.claudeignore',
+    badge: 'TEXT',
+    desc: '文件排除规则，类似 .gitignore。控制 Glob/Grep/Read 等工具在搜索时忽略哪些文件和目录。Exclusion rules for AI tool file searches.',
+    priority: '工具过滤层 / Tool filter layer',
+    code: `node_modules/
+dist/
+*.min.js
+coverage/
+.env*`
+  }
+};
+
+const searchInput = document.getElementById('searchInput');
+const detailCard = document.getElementById('detailCard');
+const overlay = document.getElementById('overlay');
+
+function highlightSyntax(code) {
+  return code;
+}
+
+function showCard(id) {
+  const data = fileData[id];
+  if (!data) return;
+  document.getElementById('cardTitle').textContent = data.title;
+  document.getElementById('cardBadge').textContent = data.badge;
+  document.getElementById('cardBadge').className = 'card-badge ' + data.badge.toLowerCase();
+  document.getElementById('cardDesc').innerHTML = data.desc;
+  document.getElementById('cardPriority').textContent = data.priority;
+  document.getElementById('cardCode').innerHTML = data.code;
+  const warning = document.getElementById('cardWarning');
+  warning.classList.toggle('hidden', !data.sensitive);
+  detailCard.classList.add('visible');
+  overlay.classList.add('visible');
+}
+
+function hideCard() {
+  detailCard.classList.remove('visible');
+  overlay.classList.remove('visible');
+  document.querySelectorAll('.tree-node.active').forEach(n => n.classList.remove('active'));
+}
+
+document.querySelectorAll('.tree-node').forEach(node => {
+  node.addEventListener('mouseenter', () => {
+    const id = node.dataset.id;
+    if (id && fileData[id]) {
+      document.querySelectorAll('.tree-node.active').forEach(n => n.classList.remove('active'));
+      node.classList.add('active');
+      showCard(id);
+    }
+  });
+
+  node.addEventListener('click', (e) => {
+    const id = node.dataset.id;
+    if (node.classList.contains('has-children')) {
+      const nested = node.nextElementSibling;
+      if (nested && nested.classList.contains('nested')) {
+        node.classList.toggle('collapsed');
+        if (node.classList.contains('collapsed')) {
+          nested.style.maxHeight = '0px';
+          nested.style.opacity = '0';
+        } else {
+          nested.style.maxHeight = nested.scrollHeight + 'px';
+          nested.style.opacity = '1';
+        }
+      }
+    } else if (id && fileData[id]) {
+      showCard(id);
+    }
+  });
+});
+
+overlay.addEventListener('click', hideCard);
+
+searchInput.addEventListener('input', (e) => {
+  const term = e.target.value.toLowerCase().trim();
+  document.querySelectorAll('.tree-node').forEach(node => {
+    const text = node.textContent.toLowerCase();
+    const li = node.closest('li');
+    if (!term || text.includes(term)) {
+      node.classList.remove('grayscale');
+      li.classList.remove('hidden');
+      const parentUl = li.closest('.nested');
+      if (parentUl) {
+        parentUl.style.maxHeight = parentUl.scrollHeight + 'px';
+        parentUl.style.opacity = '1';
+        const parentNode = parentUl.previousElementSibling;
+        if (parentNode && parentNode.classList.contains('collapsed')) {
+          parentNode.classList.remove('collapsed');
+        }
+      }
+    } else {
+      node.classList.add('grayscale');
+      li.classList.add('hidden');
+    }
+  });
+});
+
+document.querySelectorAll('.has-children').forEach(node => {
+  const nested = node.nextElementSibling;
+  if (nested && nested.classList.contains('nested')) {
+    nested.style.maxHeight = nested.scrollHeight + 'px';
+    nested.style.opacity = '1';
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') hideCard();
+});
+</script>
+
+</body>
+</html>

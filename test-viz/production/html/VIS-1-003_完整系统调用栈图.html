@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>完整系统调用栈图 - Claude Code Architecture</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --bg-dark: #0a0e1a;
+      --bg-panel: #111827;
+      --ui-pink: #e88dff;
+      --engine-blue: #00d4ff;
+      --api-yellow: #ffd93d;
+      --tool-green: #48bb78;
+      --return-purple: #7b61ff;
+      --text-primary: #f0f4f8;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --line-number: #1e293b;
+    }
+    
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg-dark);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      color: var(--text-primary);
+    }
+    
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      text-align: center;
+      letter-spacing: -0.5px;
+    }
+    
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 40px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .stack-container {
+      position: relative;
+      width: 900px;
+      padding-left: 60px;
+    }
+    
+    .stack-layer {
+      position: relative;
+      display: flex;
+      align-items: center;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+      border-radius: 12px;
+      border-left: 4px solid;
+      background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .stack-layer:hover {
+      transform: translateX(8px);
+      background: linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+    }
+    
+    .stack-layer.active {
+      box-shadow: 0 0 30px rgba(255,255,255,0.1);
+    }
+    
+    .layer-number {
+      position: absolute;
+      left: -50px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--bg-dark);
+      background: var(--layer-color);
+      box-shadow: 0 0 20px var(--layer-glow);
+    }
+    
+    .layer-content {
+      flex: 1;
+    }
+    
+    .layer-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--layer-color);
+    }
+    
+    .layer-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    
+    .layer-file {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: rgba(0,0,0,0.3);
+      padding: 6px 12px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    
+    /* Layer specific colors */
+    .layer-1 { --layer-color: var(--ui-pink); --layer-glow: rgba(232,141,255,0.4); border-color: var(--ui-pink); }
+    .layer-2 { --layer-color: var(--ui-pink); --layer-glow: rgba(232,141,255,0.3); border-color: var(--ui-pink); }
+    .layer-3 { --layer-color: var(--engine-blue); --layer-glow: rgba(0,212,255,0.4); border-color: var(--engine-blue); }
+    .layer-4 { --layer-color: var(--engine-blue); --layer-glow: rgba(0,212,255,0.3); border-color: var(--engine-blue); }
+    .layer-5 { --layer-color: var(--api-yellow); --layer-glow: rgba(255,217,61,0.4); border-color: var(--api-yellow); }
+    .layer-6 { --layer-color: var(--api-yellow); --layer-glow: rgba(255,217,61,0.3); border-color: var(--api-yellow); }
+    .layer-7 { --layer-color: var(--tool-green); --layer-glow: rgba(72,187,120,0.4); border-color: var(--tool-green); }
+    .layer-8 { --layer-color: var(--return-purple); --layer-glow: rgba(123,97,255,0.4); border-color: var(--return-purple); }
+    
+    /* Arrow between layers */
+    .arrow-down {
+      position: absolute;
+      left: 50%;
+      bottom: -20px;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 20px;
+      background: linear-gradient(180deg, var(--layer-color) 0%, var(--next-color) 100%);
+      z-index: 1;
+    }
+    
+    .arrow-down::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 8px solid var(--next-color);
+    }
+    
+    /* Return loop arrow */
+    .return-loop {
+      position: absolute;
+      left: -30px;
+      top: 0;
+      bottom: 200px;
+      width: 40px;
+    }
+    
+    .return-label {
+      position: absolute;
+      left: -80px;
+      top: 50%;
+      transform: translateY(-50%) rotate(-90deg);
+      font-size: 11px;
+      color: var(--return-purple);
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      letter-spacing: 1px;
+    }
+    
+    .legend {
+      display: flex;
+      gap: 24px;
+      margin-top: 40px;
+      padding: 16px 24px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+    
+    .dot-ui { background: var(--ui-pink); }
+    .dot-engine { background: var(--engine-blue); }
+    .dot-api { background: var(--api-yellow); }
+    .dot-tool { background: var(--tool-green); }
+    .dot-return { background: var(--return-purple); }
+    
+    .flow-indicator {
+      position: absolute;
+      right: -40px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 20px;
+      opacity: 0.3;
+    }
+    
+    .code-detail {
+      display: none;
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-secondary);
+      border-left: 2px solid var(--layer-color);
+    }
+    
+    .stack-layer.active .code-detail {
+      display: block;
+    }
+    
+    .comment {
+      color: var(--text-muted);
+    }
+    
+    .keyword {
+      color: var(--engine-blue);
+    }
+    
+    .function {
+      color: var(--tool-green);
+    }
+    
+    .string {
+      color: var(--api-yellow);
+    }
+  </style>
+</head>
+<body>
+  <h1 class="title">完整系统调用栈图</h1>
+  <p class="subtitle">Complete System Call Stack Visualization</p>
+  
+  <div class="stack-container">
+    <svg class="return-loop" viewBox="0 0 40 400" preserveAspectRatio="none">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#7b61ff" />
+        </marker>
+      </defs>
+      <path d="M 35 20 C 5 20, 5 380, 35 380" 
+            fill="none" 
+            stroke="#7b61ff" 
+            stroke-width="2" 
+            stroke-dasharray="6,4"
+            marker-end="url(#arrowhead)" />
+    </svg>
+    <span class="return-label">Tool Loop → queryLoop()</span>
+    
+    <!-- Layer 1: Terminal UI -->
+    <div class="stack-layer layer-1 active" onclick="this.classList.toggle('active')">
+      <span class="layer-number">1</span>
+      <div class="layer-content">
+        <div class="layer-title">终端UI层 Terminal UI</div>
+        <div class="layer-desc">React/Ink 渲染，用户按 Enter 提交消息</div>
+        <div class="code-detail">
+          <span class="comment">// screens/Chat.tsx</span><br>
+          <span class="keyword">const</span> <span class="function">onSubmit</span> = <span class="keyword">async</span> (input: <span class="keyword">string</span>) => {<br>
+          &nbsp;&nbsp;<span class="keyword">await</span> processUserInput(input);<br>
+          }
+        </div>
+      </div>
+      <code class="layer-file">screens/Chat.tsx → onSubmit()</code>
+      <div class="arrow-down" style="--next-color: #e88dff;"></div>
+    </div>
+    
+    <!-- Layer 2: Message Processing -->
+    <div class="stack-layer layer-2" onclick="this.classList.toggle('active')">
+      <span class="layer-number">2</span>
+      <div class="layer-content">
+        <div class="layer-title">消息处理层 Message Processing</div>
+        <div class="layer-desc">构建消息对象，添加到消息历史数组</div>
+        <div class="code-detail">
+          <span class="comment">// 构建 HumanMessage 对象</span><br>
+          <span class="keyword">const</span> msg = <span class="keyword">new</span> HumanMessage({ content: input });<br>
+          messages.<span class="function">push</span>(msg);
+        </div>
+      </div>
+      <code class="layer-file">processUserInput() → messages[]</code>
+      <div class="arrow-down" style="--next-color: #00d4ff;"></div>
+    </div>
+    
+    <!-- Layer 3: QueryEngine -->
+    <div class="stack-layer layer-3" onclick="this.classList.toggle('active')">
+      <span class="layer-number">3</span>
+      <div class="layer-content">
+        <div class="layer-title">QueryEngine 调度层 Query Engine</div>
+        <div class="layer-desc">启动查询循环，协调整个请求流程</div>
+        <div class="code-detail">
+          <span class="comment">// QueryEngine.ts</span><br>
+          <span class="keyword">async</span> <span class="function">query</span>(messages) {<br>
+          &nbsp;&nbsp;<span class="keyword">return</span> <span class="keyword">this</span>.<span class="function">queryLoop</span>(messages);<br>
+          }
+        </div>
+      </div>
+      <code class="layer-file">QueryEngine.ts → query()</code>
+      <div class="arrow-down" style="--next-color: #00d4ff;"></div>
+    </div>
+    
+    <!-- Layer 4: System Prompt -->
+    <div class="stack-layer layer-4" onclick="this.classList.toggle('active')">
+      <span class="layer-number">4</span>
+      <div class="layer-content">
+        <div class="layer-title">System Prompt 组装层 System Prompt</div>
+        <div class="layer-desc">动态拼装系统提示词，15K-34K tokens</div>
+        <div class="code-detail">
+          <span class="comment">// 组装完整系统提示</span><br>
+          <span class="keyword">const</span> systemPrompt = <span class="function">getSystemPrompt</span>();<br>
+          <span class="comment">// 包含工具定义、项目上下文、规则等</span>
+        </div>
+      </div>
+      <code class="layer-file">getSystemPrompt() → 15K-34K tokens</code>
+      <div class="arrow-down" style="--next-color: #ffd93d;"></div>
+    </div>
+    
+    <!-- Layer 5: API Call -->
+    <div class="stack-layer layer-5" onclick="this.classList.toggle('active')">
+      <span class="layer-number">5</span>
+      <div class="layer-content">
+        <div class="layer-title">API 调用层 API Call</div>
+        <div class="layer-desc">发送 HTTP 流式请求到 Anthropic API</div>
+        <div class="code-detail">
+          <span class="comment">// query.ts - 流式请求</span><br>
+          <span class="keyword">async</span> <span class="keyword">function</span>* <span class="function">queryLoop</span>() {<br>
+          &nbsp;&nbsp;<span class="keyword">const</span> stream = <span class="keyword">await</span> anthropic.messages.<span class="function">create</span>({...});
+        </div>
+      </div>
+      <code class="layer-file">query.ts → queryLoop() → streaming</code>
+      <div class="arrow-down" style="--next-color: #ffd93d;"></div>
+    </div>
+    
+    <!-- Layer 6: Stream Parsing -->
+    <div class="stack-layer layer-6" onclick="this.classList.toggle('active')">
+      <span class="layer-number">6</span>
+      <div class="layer-content">
+        <div class="layer-title">流式响应解析层 Stream Parser</div>
+        <div class="layer-desc">解析 SSE 事件：content_block_start / delta / tool_use</div>
+        <div class="code-detail">
+          <span class="keyword">for await</span> (<span class="keyword">const</span> event <span class="keyword">of</span> stream) {<br>
+          &nbsp;&nbsp;<span class="keyword">if</span> (event.type === <span class="string">'tool_use'</span>) {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">yield</span> { type: <span class="string">'tool'</span>, ... };
+        </div>
+      </div>
+      <code class="layer-file">SSE Parser → content_block_delta</code>
+      <div class="arrow-down" style="--next-color: #48bb78;"></div>
+    </div>
+    
+    <!-- Layer 7: Tool Execution -->
+    <div class="stack-layer layer-7" onclick="this.classList.toggle('active')">
+      <span class="layer-number">7</span>
+      <div class="layer-content">
+        <div class="layer-title">Tool 执行层 Tool Executor</div>
+        <div class="layer-desc">StreamingToolExecutor：9步权限检查 → 执行 → 格式化结果</div>
+        <div class="code-detail">
+          <span class="keyword">class</span> StreamingToolExecutor {<br>
+          &nbsp;&nbsp;<span class="keyword">async</span> <span class="function">execute</span>(tool) {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">await</span> <span class="function">checkPermissions</span>(tool); <span class="comment">// 9 steps</span>
+        </div>
+      </div>
+      <code class="layer-file">StreamingToolExecutor → Permission Chain</code>
+      <div class="arrow-down" style="--next-color: #7b61ff;"></div>
+    </div>
+    
+    <!-- Layer 8: Result Return -->
+    <div class="stack-layer layer-8" onclick="this.classList.toggle('active')">
+      <span class="layer-number">8</span>
+      <div class="layer-content">
+        <div class="layer-title">结果回传层 Result Return</div>
+        <div class="layer-desc">tool_result 追加到消息历史，回到第5层继续循环</div>
+        <div class="code-detail">
+          messages.<span class="function">push</span>({<br>
+          &nbsp;&nbsp;role: <span class="string">'user'</span>,<br>
+          &nbsp;&nbsp;content: toolResult<br>
+          }); <span class="comment">// 回到 queryLoop 继续</span>
+        </div>
+      </div>
+      <code class="layer-file">tool_result → messages[] → loop</code>
+    </div>
+    
+    <!-- Final Output -->
+    <div style="text-align: center; margin-top: 24px; padding: 16px; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.1);">
+      <div style="font-size: 14px; color: var(--text-primary); font-weight: 500;">
+        ↓ 最终渲染到终端 ↓
+      </div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+        shouldContinue() → false → Render to Terminal
+      </div>
+    </div>
+  </div>
+  
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot dot-ui"></div>
+      <span>UI Layer</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot dot-engine"></div>
+      <span>Engine Layer</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot dot-api"></div>
+      <span>API Layer</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot dot-tool"></div>
+      <span>Tool Layer</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot dot-return"></div>
+      <span>Return Loop</span>
+    </div>
+  </div>
+</body>
+</html>

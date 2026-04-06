@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>九步权限检查流程图 | Permission Check Flow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a25;
+            --accent-blue: #3b82f6;
+            --accent-blue-glow: rgba(59, 130, 246, 0.4);
+            --allow-green: #10b981;
+            --allow-green-glow: rgba(16, 185, 129, 0.4);
+            --deny-red: #ef4444;
+            --deny-red-glow: rgba(239, 68, 68, 0.4);
+            --continue-yellow: #f59e0b;
+            --continue-yellow-glow: rgba(245, 158, 11, 0.4);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border-subtle: rgba(148, 163, 184, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Serif SC', 'Crimson Pro', serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-mesh {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            background:
+                radial-gradient(ellipse 80% 50% at 20% 40%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse 50% 30% at 50% 80%, rgba(239, 68, 68, 0.05) 0%, transparent 50%),
+                var(--bg-primary);
+        }
+
+        .bg-noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 20px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header .subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            letter-spacing: 0.1em;
+        }
+
+        .header .subtitle span {
+            color: var(--deny-red);
+            font-weight: 700;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            display: flex;
+            gap: 40px;
+            align-items: flex-start;
+        }
+
+        .flowchart-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .legend {
+            position: fixed;
+            top: 140px;
+            right: 30px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 180px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
+
+        .legend h3 {
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 0.8rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        .legend-color.allow { background: var(--allow-green); box-shadow: 0 0 8px var(--allow-green-glow); }
+        .legend-color.deny { background: var(--deny-red); box-shadow: 0 0 8px var(--deny-red-glow); }
+        .legend-color.continue { background: var(--continue-yellow); box-shadow: 0 0 8px var(--continue-yellow-glow); }
+        .legend-color.decision {
+            width: 12px;
+            height: 12px;
+            transform: rotate(45deg);
+            background: var(--accent-blue);
+            box-shadow: 0 0 8px var(--accent-blue-glow);
+        }
+
+        .flowchart-svg {
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 0 20px rgba(0,0,0,0.5));
+        }
+
+        .info-panel {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            right: 320px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .info-panel.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .info-panel h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .info-panel .en-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .info-panel .description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .info-panel .data-source {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-subtle);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .info-panel .data-source span {
+            color: var(--accent-blue);
+        }
+
+        .default-info {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 20px 24px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            z-index: 99;
+        }
+
+        .sim-controls {
+            position: fixed;
+            top: 140px;
+            left: 30px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 200px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
+
+        .sim-controls h3 {
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .sim-btn {
+            display: block;
+            width: 100%;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+
+        .sim-btn:hover {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .sim-btn.active {
+            background: var(--allow-green);
+            border-color: var(--allow-green);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes flow {
+            0% { stroke-dashoffset: 100; }
+            100% { stroke-dashoffset: 0; }
+        }
+
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 3px currentColor); }
+            50% { filter: drop-shadow(0 0 10px currentColor); }
+        }
+
+        .node-group {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .node-group:hover .node-shape {
+            filter: drop-shadow(0 0 15px var(--accent-blue-glow));
+            transform: scale(1.02);
+        }
+
+        .node-group.bypass-immune .node-shape {
+            stroke: var(--deny-red);
+            stroke-width: 3;
+        }
+
+        .node-group.bypass-immune:hover .node-shape {
+            filter: drop-shadow(0 0 15px var(--deny-red-glow));
+        }
+
+        .path-line {
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            transition: all 0.3s ease;
+        }
+
+        .path-line.allow {
+            stroke: var(--allow-green);
+            stroke-dasharray: 5,5;
+        }
+
+        .path-line.deny {
+            stroke: var(--deny-red);
+            stroke-dasharray: 5,5;
+        }
+
+        .path-line.continue {
+            stroke: var(--continue-yellow);
+        }
+
+        .path-line.active {
+            stroke-width: 4;
+            animation: flow 1s linear infinite;
+        }
+
+        .packet {
+            fill: var(--text-primary);
+            filter: drop-shadow(0 0 8px currentColor);
+            opacity: 0;
+        }
+
+        .packet.animating {
+            opacity: 1;
+            animation: packetFlow 3s ease-in-out forwards;
+        }
+
+        @keyframes packetFlow {
+            0% { offset-distance: 0%; }
+            100% { offset-distance: 100%; }
+        }
+
+        .step-label {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 13px;
+            font-weight: 600;
+            fill: var(--text-primary);
+            text-anchor: middle;
+        }
+
+        .step-label-en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            fill: var(--text-muted);
+            text-anchor: middle;
+        }
+
+        .branch-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .result-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .iron-gate-icon {
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        .mode-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            text-anchor: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-mesh"></div>
+    <div class="bg-noise"></div>
+
+    <header class="header">
+        <h1>九步权限检查流程</h1>
+        <p class="subtitle">PERMISSION CHECK FLOW <span>||</span> canUseTool() SECURITY CHAIN</p>
+    </header>
+
+    <div class="container">
+        <div class="flowchart-wrapper">
+            <svg class="flowchart-svg" viewBox="0 0 1000 1600" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.3" />
+                        <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:0.1" />
+                    </linearGradient>
+                    <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#ef4444;stop-opacity:0.3" />
+                        <stop offset="100%" style="stop-color:#dc2626;stop-opacity:0.1" />
+                    </linearGradient>
+                    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.3" />
+                        <stop offset="100%" style="stop-color:#059669;stop-opacity:0.1" />
+                    </linearGradient>
+                    <linearGradient id="yellowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:0.3" />
+                        <stop offset="100%" style="stop-color:#d97706;stop-opacity:0.1" />
+                    </linearGradient>
+
+                    <filter id="glowBlue" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+
+                <g transform="translate(500, 40)">
+                    <rect x="-80" y="-25" width="160" height="50" rx="8" fill="var(--bg-tertiary)" stroke="var(--text-muted)" stroke-width="1"/>
+                    <text x="0" y="-5" class="step-label" style="font-size:12px;">工具调用请求</text>
+                    <text x="0" y="12" class="step-label-en">Tool Request</text>
+                </g>
+
+                <line x1="500" y1="65" x2="500" y2="100" class="path-line continue" id="path-input-1"/>
+
+                <g class="node-group bypass-immune" transform="translate(500, 150)" data-step="1">
+                    <polygon points="0,-45 90,0 0,45 -90,0" class="node-shape" fill="url(#redGrad)" stroke="var(--deny-red)" stroke-width="3"/>
+                    <text x="0" y="-5" class="step-label">bypass-immune 规则</text>
+                    <text x="0" y="12" class="step-label-en">Step 1: Constitutional</text>
+                    <text x="0" y="65" class="step-label-en" style="fill:var(--deny-red);font-size:8px;">不可绕过 / UNBYPASSABLE</text>
+                </g>
+
+                <path d="M 410,150 L 200,150 L 200,750" class="path-line deny" id="path-1-deny"/>
+                <text x="280" y="140" class="branch-label" fill="var(--deny-red)">匹配 / Match</text>
+                <polygon points="195,140 205,140 200,150" fill="var(--deny-red)"/>
+
+                <line x1="500" y1="195" x2="500" y2="240" class="path-line continue" id="path-1-continue"/>
+                <text x="520" y="220" class="branch-label" fill="var(--continue-yellow)">通过 / Pass</text>
+
+                <g class="node-group" transform="translate(500, 290)" data-step="2">
+                    <polygon points="0,-45 90,0 0,45 -90,0" class="node-shape" fill="url(#blueGrad)" stroke="var(--accent-blue)" stroke-width="2"/>
+                    <text x="0" y="-5" class="step-label">PreToolUse Hooks</text>
+                    <text x="0" y="12" class="step-label-en">Step 2: User Hooks</text>
+                </g>
+
+                <path d="M 410,290 L 280,290 L 280,750" class="path-line deny" id="path-2-deny"/>
+                <text x="330" y="280" class="branch-label" fill="var(--deny-red)">Deny</text>
+
+                <path d="M 500,335 L 500,360 L 750,360 L 750,750" class="path-line allow" id="path-2-allow"/>
+                <text x="600" y="350" class="branch-label" fill="var(--allow-green)">Allow → 执行</text>
+
+                <line x1="500" y1="335" x2="500" y2="380" class="path-line continue" id="path-2-continue"/>
+                <text x="520" y="365" class="branch-label" fill="var(--continue-yellow)">Pass</text>
+
+                <g class="node-group" transform="translate(500, 430)" data-step="3">
+                    <polygon points="0,-45 90,0 0,45 -90,0" class="node-shape" fill="url(#blueGrad)" stroke="var(--accent-blue)" stroke-width="2"/>
+                    <text x="0" y="-5" class="step-label">已缓存的决策</text>
+                    <text x="0" y="12" class="step-label-en">Step 3: Cached</text>
+                </g>
+
+                <path d="M 590,430 L 700,430 L 700,750" class="path-line allow" id="path-3-allow"/>
+                <text x="640" y="420" class="branch-label" fill="var(--allow-green)">命中 / Hit</text>
+
+                <line x1="500" y1="475" x2="500" y2="520" class="path-line continue" id="path-3-continue"/>
+                <text x="520" y="505" class="branch-label" fill="var(--continue-yellow)">未命中</text>
+
+                <g class="node-group" transform="translate(500, 570)" data-step="4">
+                    <polygon points="0,-45 90,0 0,45 -90,0" class="node-shape" fill="url(#blueGrad)" stroke="var(--accent-blue)" stroke-width="2"/>
+                    <text x="0" y="-5" class="step-label">自动批准规则</text>
+                    <text x="0" y="12" class="step-label-en">Step 4: Auto Rules</text>
+                </g>
+
+                <path d="M 590,570 L 650,570 L 650,750" class="path-line allow" id="path-4-allow"/>
+                <text x="610" y="560" class="branch-label" fill="var(--allow-green)">匹配</text>
+
+                <line x1="500" y1="615" x2="500" y2="660" class="path-line continue" id="path-4-continue"/>
+
+                <g class="node-group bypass-immune" transform="translate(500, 710)" data-step="5">
+                    <polygon points="0,-45 90,0 0,45 -90,0" class="node-shape" fill="url(#redGrad)" stroke="var(--deny-red)" stroke-width="3"/>
+                    <text x="0" y="-5" class="step-label">细分不可绕过规则</text>
+                    <text x="0" y="12" class="step-label-en">Step 5: Detailed</text>
+                    <text x="0" y="65" class="step-label-en" style="fill:var(--deny-red);font-size:8px;">不可绕过 / UNBYPASSABLE</text>
+                </g>
+
+                <path d="M 410,710 L 320,710 L 320,750 L 250,750" class="path-line deny" id="path-5-deny"/>
+                <text x="350" y="700" class="branch-label" fill="var(--deny-red)">匹配</text>
+
+                <line x1="500" y1="755" x2="500" y2="800" class="path-line continue" id="path-5-continue"/>
+
+                <g class="node-group" transform="translate(500, 850)" data-step="6">
+                    <polygon points="0,-45 90,0 0,45 -90,0" class="node-shape" fill="url(#blueGrad)" stroke="var(--accent-blue)" stroke-width="2"/>
+                    <text x="0" y="-5" class="step-label">沙箱判断</text>
+                    <text x="0" y="12" class="step-label-en">Step 6: Sandbox</text>
+                </g>
+
+                <path d="M 590,850 L 680,850 L 680,1100" class="path-line allow" id="path-6-allow"/>
+                <text x="630" y="840" class="branch-label" fill="var(--allow-green)">沙箱内 / In Sandbox</text>
+
+                <line x1="500" y1="895" x2="500" y2="940" class="path-line continue" id="path-6-continue"/>
+                <text x="520" y="925" class="branch-label" fill="var(--continue-yellow)">非沙箱</text>
+
+                <g class="node-group" transform="translate(500, 990)" data-step="7">
+                    <polygon points="0,-55 100,0 0,55 -100,0" class="node-shape" fill="url(#blueGrad)" stroke="var(--accent-blue)" stroke-width="2"/>
+                    <text x="0" y="-8" class="step-label">权限模式判断</text>
+                    <text x="0" y="12" class="step-label-en">Step 7: Mode</text>
+                </g>
+
+                <path d="M 400,990 L 300,990 L 300,1100" class="path-line deny" id="path-7-plan"/>
+                <rect x="270" y="970" width="60" height="18" rx="4" fill="var(--deny-red)" opacity="0.2"/>
+                <text x="300" y="983" class="mode-badge" fill="var(--deny-red)">plan-mode</text>
+
+                <line x1="500" y1="1045" x2="500" y2="1100" class="path-line continue" id="path-7-normal"/>
+                <rect x="470" y="1055" width="60" height="18" rx="4" fill="var(--continue-yellow)" opacity="0.2"/>
+                <text x="500" y="1068" class="mode-badge" fill="var(--continue-yellow)">normal</text>
+
+                <path d="M 600,990 L 750,990 L 750,1100" class="path-line allow" id="path-7-auto"/>
+                <rect x="630" y="970" width="60" height="18" rx="4" fill="var(--allow-green)" opacity="0.2"/>
+                <text x="660" y="983" class="mode-badge" fill="var(--allow-green)">auto-mode</text>
+
+                <g transform="translate(700, 1030)" class="iron-gate-icon">
+                    <rect x="-15" y="-20" width="30" height="40" rx="2" fill="none" stroke="var(--allow-green)" stroke-width="2"/>
+                    <line x1="-5" y1="-20" x2="-5" y2="20" stroke="var(--allow-green)" stroke-width="2"/>
+                    <line x1="5" y1="-20" x2="5" y2="20" stroke="var(--allow-green)" stroke-width="2"/>
+                    <circle cx="8" cy="0" r="3" fill="var(--allow-green)"/>
+                    <text x="0" y="32" class="step-label-en" style="font-size:7px;fill:var(--allow-green);">Iron Gate</text>
+                </g>
+
+                <path d="M 700,1050 L 700,1080" stroke="var(--allow-green)" stroke-width="1" stroke-dasharray="3,3"/>
+                <text x="720" y="1070" class="step-label-en" style="font-size:8px;fill:var(--text-muted);text-anchor:start;">连续拒绝→强制人工</text>
+
+                <g class="node-group" transform="translate(500, 1170)" data-step="8">
+                    <polygon points="0,-45 90,0 0,45 -90,0" class="node-shape" fill="url(#blueGrad)" stroke="var(--accent-blue)" stroke-width="2"/>
+                    <text x="0" y="-5" class="step-label">用户确认</text>
+                    <text x="0" y="12" class="step-label-en">Step 8: UI Dialog</text>
+                </g>
+
+                <g transform="translate(650, 1170)">
+                    <rect x="0" y="-35" width="100" height="70" rx="6" fill="var(--bg-tertiary)" stroke="var(--text-muted)" stroke-width="1"/>
+                    <rect x="0" y="-35" width="100" height="18" rx="6" fill="var(--bg-tertiary)"/>
+                    <rect x="0" y="-17" width="100" height="1" fill="var(--border-subtle)"/>
+                    <circle cx="10" cy="-26" r="3" fill="var(--deny-red)"/>
+                    <circle cx="20" cy="-26" r="3" fill="var(--continue-yellow)"/>
+                    <circle cx="30" cy="-26" r="3" fill="var(--allow-green)"/>
+                    <text x="50" y="-5" class="step-label-en" style="font-size:7px;">Allow this?</text>
+                    <rect x="8" y="10" width="35" height="14" rx="3" fill="var(--allow-green)" opacity="0.3"/>
+                    <text x="25" y="20" class="step-label-en" style="font-size:6px;fill:var(--allow-green);">Allow</text>
+                    <rect x="55" y="10" width="35" height="14" rx="3" fill="var(--deny-red)" opacity="0.3"/>
+                    <text x="72" y="20" class="step-label-en" style="font-size:6px;fill:var(--deny-red);">Deny</text>
+                </g>
+
+                <line x1="500" y1="1215" x2="500" y2="1280" class="path-line continue" id="path-8-9"/>
+
+                <g class="node-group" transform="translate(500, 1330)" data-step="9">
+                    <polygon points="0,-45 90,0 0,45 -90,0" class="node-shape" fill="url(#blueGrad)" stroke="var(--accent-blue)" stroke-width="2"/>
+                    <text x="0" y="-5" class="step-label">结果缓存</text>
+                    <text x="0" y="12" class="step-label-en">Step 9: Cache</text>
+                </g>
+
+                <g transform="translate(200, 1200)">
+                    <rect x="-60" y="-30" width="120" height="60" rx="8" fill="var(--deny-red)" opacity="0.15" stroke="var(--deny-red)" stroke-width="2"/>
+                    <text x="0" y="5" class="result-badge" fill="var(--deny-red)" text-anchor="middle">DENY</text>
+                    <text x="0" y="50" class="step-label-en" style="fill:var(--deny-red);">拒绝执行</text>
+                </g>
+
+                <g transform="translate(750, 1200)">
+                    <rect x="-60" y="-30" width="120" height="60" rx="8" fill="var(--allow-green)" opacity="0.15" stroke="var(--allow-green)" stroke-width="2"/>
+                    <text x="0" y="5" class="result-badge" fill="var(--allow-green)" text-anchor="middle">ALLOW</text>
+                    <text x="0" y="50" class="step-label-en" style="fill:var(--allow-green);">执行工具</text>
+                </g>
+
+                <path d="M 200,750 L 200,1170" class="path-line deny" id="path-to-deny"/>
+                <path d="M 750,750 L 750,1170" class="path-line allow" id="path-to-allow"/>
+                <path d="M 500,1375 L 500,1450" class="path-line continue" id="path-9-end"/>
+
+                <g transform="translate(500, 1480)">
+                    <circle r="25" fill="var(--bg-tertiary)" stroke="var(--accent-blue)" stroke-width="2"/>
+                    <text x="0" y="5" class="step-label-en" style="font-size:10px;">END</text>
+                </g>
+
+                <circle r="6" class="packet" id="data-packet">
+                    <animateMotion dur="3s" repeatCount="indefinite" path="M 500,65 L 500,150 L 500,290 L 500,430 L 500,570 L 500,710 L 500,850 L 500,990 L 500,1170 L 500,1330 L 500,1450"/>
+                </circle>
+            </svg>
+        </div>
+    </div>
+
+    <div class="legend">
+        <h3>图例 / Legend</h3>
+        <div class="legend-item">
+            <div class="legend-color decision"></div>
+            <span>判断节点 / Decision</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color allow"></div>
+            <span>Allow 路径 / 批准</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color deny"></div>
+            <span>Deny 路径 / 拒绝</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color continue"></div>
+            <span>继续 / Continue</span>
+        </div>
+    </div>
+
+    <div class="sim-controls">
+        <h3>模拟场景 / Simulate</h3>
+        <button class="sim-btn" onclick="simulatePath('normal-allow')">Normal Mode → Allow</button>
+        <button class="sim-btn" onclick="simulatePath('normal-deny')">Normal Mode → Deny</button>
+        <button class="sim-btn" onclick="simulatePath('auto')">Auto Mode</button>
+        <button class="sim-btn" onclick="simulatePath('plan')">Plan Mode</button>
+        <button class="sim-btn" onclick="simulatePath('hook-deny')">Hook Deny</button>
+        <button class="sim-btn" onclick="simulatePath('cached')">Cached Result</button>
+    </div>
+
+    <div class="info-panel" id="info-panel">
+        <h3 id="info-title">步骤标题</h3>
+        <div class="en-title" id="info-en">Step Title</div>
+        <div class="description" id="info-desc">步骤描述内容...</div>
+        <div class="data-source">数据来源: <span id="info-source">source code</span></div>
+    </div>
+
+    <div class="default-info" id="default-info">
+        悬停节点查看详细信息 / Hover nodes for details
+    </div>
+
+    <script>
+        const stepData = {
+            1: {
+                title: "bypass-immune 规则检查",
+                en: "Step 1: Constitutional Rules",
+                desc: "特定操作无论如何不能执行（如删除系统文件），不可被任何模式绕过。这是安全架构的'宪法条款'，具有最高优先级。",
+                source: "bypass_immune_rules.json / security/constitutional.ts:45"
+            },
+            2: {
+                title: "PreToolUse Hooks",
+                en: "Step 2: User-Defined Hooks",
+                desc: "用户自定义前置检查，返回 Allow/Deny/Pass。Allow=跳到执行，Deny=拒绝，Pass=继续后续检查。支持用户注入自定义安全逻辑。",
+                source: "hooks/preToolUse.ts / user_config.ts:128"
+            },
+            3: {
+                title: "已缓存的决策",
+                en: "Step 3: Cached Decisions",
+                desc: "用户之前对同类操作的决定（'记住这个选择'）。命中缓存则直接使用之前的结果，避免重复询问。缓存基于工具名+参数哈希。",
+                source: "cache/decision_store.ts / canUseTool():89"
+            },
+            4: {
+                title: "自动批准规则",
+                en: "Step 4: Auto-Allow Rules",
+                desc: "规则模式匹配，如 Bash(git *)→Allow。预定义的安全操作模式，匹配成功后自动批准无需人工确认。支持 glob 和正则匹配。",
+                source: "rules/auto_allow.yaml / matcher.ts:203"
+            },
+            5: {
+                title: "细分不可绕过规则",
+                en: "Step 5: Detailed Bypass-Immune",
+                desc: "更细粒度的不可绕过限制，针对特定参数组合的检查。即使通过了前面所有检查，如果触碰到这些红线也会被拒绝。",
+                source: "bypass_immune_detailed.json / security/constitutional.ts:112"
+            },
+            6: {
+                title: "沙箱判断",
+                en: "Step 6: Sandbox Detection",
+                desc: "autoAllowBashIfSandboxed: 在沙箱环境中的 Bash 命令自动批准。沙箱提供了额外的隔离层，允许更宽松的安全策略。",
+                source: "sandbox/detector.ts / canUseTool():156"
+            },
+            7: {
+                title: "权限模式判断",
+                en: "Step 7: Permission Mode",
+                desc: "三种模式分支: plan-mode→默认Deny（最保守），auto-mode→自动Allow但受Iron Gate保护，normal-mode→继续到用户确认。",
+                source: "mode/resolver.ts / config.permission_mode"
+            },
+            8: {
+                title: "用户确认",
+                en: "Step 8: User Confirmation",
+                desc: "弹出UI对话框'允许这个操作吗？'，用户选择 Allow/Deny/Always Allow。这是最后一道人工审核防线，确保用户对敏感操作有完全控制。",
+                source: "ui/permission_dialog.tsx / dialog.show():78"
+            },
+            9: {
+                title: "结果缓存",
+                en: "Step 9: Cache Result",
+                desc: "用户决定被缓存，相同操作不再询问。支持设置缓存过期时间和范围（项目级/全局）。用户可随时在设置中清除缓存。",
+                source: "cache/decision_store.ts / cache.write():45"
+            }
+        };
+
+        document.querySelectorAll('.node-group').forEach(node => {
+            node.addEventListener('mouseenter', function() {
+                const step = this.dataset.step;
+                const data = stepData[step];
+                if (data) {
+                    document.getElementById('info-title').textContent = data.title;
+                    document.getElementById('info-en').textContent = data.en;
+                    document.getElementById('info-desc').textContent = data.desc;
+                    document.getElementById('info-source').textContent = data.source;
+                    document.getElementById('info-panel').classList.add('active');
+                    document.getElementById('default-info').style.display = 'none';
+                }
+            });
+
+            node.addEventListener('mouseleave', function() {
+                document.getElementById('info-panel').classList.remove('active');
+                document.getElementById('default-info').style.display = 'block';
+            });
+        });
+
+        function resetPaths() {
+            document.querySelectorAll('.path-line').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.sim-btn').forEach(b => b.classList.remove('active'));
+        }
+
+        function highlightPath(pathIds) {
+            pathIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('active');
+            });
+        }
+
+        function simulatePath(scenario) {
+            resetPaths();
+            event.target.classList.add('active');
+
+            const basePaths = ['path-input-1'];
+
+            switch(scenario) {
+                case 'normal-allow':
+                    highlightPath([...basePaths, 'path-1-continue', 'path-2-continue', 'path-3-continue',
+                        'path-4-continue', 'path-5-continue', 'path-6-continue', 'path-7-normal',
+                        'path-8-9', 'path-9-end']);
+                    break;
+                case 'normal-deny':
+                    highlightPath([...basePaths, 'path-1-continue', 'path-2-continue', 'path-3-continue',
+                        'path-4-continue', 'path-5-continue', 'path-6-continue', 'path-7-normal']);
+                    break;
+                case 'auto':
+                    highlightPath([...basePaths, 'path-1-continue', 'path-2-continue', 'path-3-continue',
+                        'path-4-continue', 'path-5-continue', 'path-6-continue', 'path-7-auto', 'path-to-allow']);
+                    break;
+                case 'plan':
+                    highlightPath([...basePaths, 'path-1-continue', 'path-2-continue', 'path-3-continue',
+                        'path-4-continue', 'path-5-continue', 'path-6-continue', 'path-7-plan', 'path-to-deny']);
+                    break;
+                case 'hook-deny':
+                    highlightPath([...basePaths, 'path-1-continue', 'path-2-deny', 'path-to-deny']);
+                    break;
+                case 'cached':
+                    highlightPath([...basePaths, 'path-1-continue', 'path-2-continue', 'path-3-allow', 'path-to-allow']);
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>

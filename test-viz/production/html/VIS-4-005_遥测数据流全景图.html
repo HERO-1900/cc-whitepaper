@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遥测数据流全景图 | Telemetry Data Flow</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-gradient-1: #0f0f23;
+            --bg-gradient-2: #1a1a3e;
+            --data-source: #00d4ff;
+            --span-process: #7b61ff;
+            --sentry: #ff6b6b;
+            --statsig: #48bb78;
+            --otlp: #ffa94d;
+            --consumer: #e0e0e0;
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0a0;
+            --glow-blue: rgba(0, 212, 255, 0.4);
+            --glow-purple: rgba(123, 97, 255, 0.4);
+            --glow-red: rgba(255, 107, 107, 0.4);
+            --glow-green: rgba(72, 187, 120, 0.4);
+            --glow-orange: rgba(255, 169, 77, 0.4);
+        }
+        
+        body {
+            font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-primary) 50%, var(--bg-gradient-2) 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .banner {
+            background: linear-gradient(90deg, rgba(123, 97, 255, 0.15) 0%, rgba(0, 212, 255, 0.15) 50%, rgba(123, 97, 255, 0.15) 100%);
+            border: 1px solid rgba(123, 97, 255, 0.4);
+            border-radius: 16px;
+            padding: 20px 48px;
+            margin-bottom: 30px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shimmer 4s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { left: -100%; }
+            50%, 100% { left: 100%; }
+        }
+        
+        .banner h1 {
+            color: var(--text-primary);
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+        
+        .banner .subtitle {
+            color: var(--span-process);
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+        
+        .diagram-container {
+            width: 100%;
+            max-width: 1400px;
+            background: rgba(22, 33, 62, 0.4);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+        }
+        
+        svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .node:hover .node-rect {
+            filter: brightness(1.2);
+            transform: scale(1.02);
+        }
+        
+        .node-rect {
+            transition: all 0.3s ease;
+            transform-origin: center;
+        }
+        
+        .data-source-node .node-rect {
+            fill: rgba(0, 212, 255, 0.12);
+            stroke: var(--data-source);
+            stroke-width: 2;
+        }
+        
+        .span-node .node-rect {
+            fill: rgba(123, 97, 255, 0.15);
+            stroke: var(--span-process);
+            stroke-width: 3;
+        }
+        
+        .sentry-node .node-rect {
+            fill: rgba(255, 107, 107, 0.12);
+            stroke: var(--sentry);
+            stroke-width: 2;
+        }
+        
+        .statsig-node .node-rect {
+            fill: rgba(72, 187, 120, 0.12);
+            stroke: var(--statsig);
+            stroke-width: 2;
+        }
+        
+        .otlp-node .node-rect {
+            fill: rgba(255, 169, 77, 0.12);
+            stroke: var(--otlp);
+            stroke-width: 2;
+        }
+        
+        .consumer-node .node-rect {
+            fill: rgba(224, 224, 224, 0.08);
+            stroke: var(--consumer);
+            stroke-width: 2;
+        }
+        
+        .node-text {
+            fill: var(--text-primary);
+            font-size: 13px;
+            font-weight: 600;
+            text-anchor: middle;
+        }
+        
+        .node-text-en {
+            fill: var(--text-secondary);
+            font-size: 10px;
+            font-weight: 400;
+            text-anchor: middle;
+        }
+        
+        .node-icon {
+            fill: none;
+            stroke-width: 1.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        
+        .data-source-node .node-icon {
+            stroke: var(--data-source);
+        }
+        
+        .span-node .node-icon {
+            stroke: var(--span-process);
+        }
+        
+        .sentry-node .node-icon {
+            stroke: var(--sentry);
+        }
+        
+        .statsig-node .node-icon {
+            stroke: var(--statsig);
+        }
+        
+        .otlp-node .node-icon {
+            stroke: var(--otlp);
+        }
+        
+        .consumer-node .node-icon {
+            stroke: var(--consumer);
+        }
+        
+        .flow-path {
+            fill: none;
+            stroke-width: 2;
+            opacity: 0.6;
+        }
+        
+        .flow-path-source {
+            stroke: var(--data-source);
+        }
+        
+        .flow-path-sentry {
+            stroke: var(--sentry);
+            stroke-width: 3;
+        }
+        
+        .flow-path-statsig {
+            stroke: var(--statsig);
+            stroke-width: 4;
+        }
+        
+        .flow-path-otlp {
+            stroke: var(--otlp);
+            stroke-width: 2.5;
+        }
+        
+        .flow-path-consumer {
+            stroke: var(--consumer);
+            stroke-width: 1.5;
+            opacity: 0.4;
+        }
+        
+        .flow-particle {
+            fill: var(--data-source);
+            filter: drop-shadow(0 0 6px var(--data-source));
+        }
+        
+        .particle-sentry {
+            fill: var(--sentry);
+            filter: drop-shadow(0 0 6px var(--sentry));
+        }
+        
+        .particle-statsig {
+            fill: var(--statsig);
+            filter: drop-shadow(0 0 6px var(--statsig));
+        }
+        
+        .particle-otlp {
+            fill: var(--otlp);
+            filter: drop-shadow(0 0 6px var(--otlp));
+        }
+        
+        .gear {
+            fill: none;
+            stroke: var(--span-process);
+            stroke-width: 2;
+            animation: rotate 20s linear infinite;
+            transform-origin: 480px 300px;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .pulse-ring {
+            fill: none;
+            stroke: var(--span-process);
+            stroke-width: 1;
+            opacity: 0;
+            animation: pulse 2s ease-out infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                r: 60;
+                opacity: 0.6;
+            }
+            100% {
+                r: 90;
+                opacity: 0;
+            }
+        }
+        
+        .label-column {
+            fill: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-anchor: middle;
+        }
+        
+        .dimmed {
+            opacity: 0.2;
+        }
+        
+        @media (max-width: 900px) {
+            .diagram-container {
+                padding: 20px;
+            }
+            .banner {
+                padding: 16px 24px;
+            }
+            .banner h1 {
+                font-size: 1.1rem;
+            }
+            .banner .subtitle {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="banner">
+        <h1>遥测是内建的第一类公民</h1>
+        <div class="subtitle">BUILT-IN, NOT BOLTED-ON — Telemetry as First-Class Citizen</div>
+    </div>
+    
+    <div class="diagram-container">
+        <svg viewBox="0 0 1200 620" preserveAspectRatio="xMidYMid meet">
+            <defs>
+                <filter id="glow-blue" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+                <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+                <linearGradient id="grad-source" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:0.3" />
+                    <stop offset="100%" style="stop-color:#00d4ff;stop-opacity:0" />
+                </linearGradient>
+                <linearGradient id="grad-sentry" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:0.3" />
+                    <stop offset="100%" style="stop-color:#ff6b6b;stop-opacity:0" />
+                </linearGradient>
+                <linearGradient id="grad-statsig" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#48bb78;stop-opacity:0.3" />
+                    <stop offset="100%" style="stop-color:#48bb78;stop-opacity:0" />
+                </linearGradient>
+                <linearGradient id="grad-otlp" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#ffa94d;stop-opacity:0.3" />
+                    <stop offset="100%" style="stop-color:#ffa94d;stop-opacity:0" />
+                </linearGradient>
+            </defs>
+            
+            <!-- Column Labels -->
+            <text class="label-column" x="120" y="40">数据源 DATA SOURCES</text>
+            <text class="label-column" x="480" y="40">SPAN处理 PROCESSING</text>
+            <text class="label-column" x="820" y="40">导出路径 EXPORTERS</text>
+            <text class="label-column" x="1080" y="40">消费场景 CONSUMERS</text>
+            
+            <!-- Flow Paths from Data Sources to Span Processor -->
+            <path id="path1" class="flow-path flow-path-source" d="M 240 130 Q 360 130 400 260" />
+            <path id="path2" class="flow-path flow-path-source" d="M 240 190 Q 350 190 390 270" />
+            <path id="path3" class="flow-path flow-path-source" d="M 240 250 Q 340 250 390 285" />
+            <path id="path4" class="flow-path flow-path-source" d="M 240 310 Q 350 310 390 315" />
+            <path id="path5" class="flow-path flow-path-source" d="M 240 370 Q 360 370 400 340" />
+            
+            <!-- Flow Paths from Span Processor to Exporters -->
+            <path id="path-sentry" class="flow-path flow-path-sentry" d="M 560 270 Q 650 210 720 180" />
+            <path id="path-statsig" class="flow-path flow-path-statsig" d="M 560 300 Q 640 300 720 300" />
+            <path id="path-otlp" class="flow-path flow-path-otlp" d="M 560 330 Q 650 390 720 420" />
+            
+            <!-- Flow Paths from Exporters to Consumers -->
+            <path id="path-cons1" class="flow-path flow-path-consumer" d="M 840 180 Q 920 140 1000 130" />
+            <path id="path-cons2" class="flow-path flow-path-consumer" d="M 840 300 Q 920 250 1000 250" />
+            <path id="path-cons3" class="flow-path flow-path-consumer" d="M 840 420 Q 920 380 1000 370" />
+            
+            <!-- Cross connections -->
+            <path id="path-cons1b" class="flow-path flow-path-consumer" d="M 840 180 Q 920 180 1000 250" />
+            <path id="path-cons2b" class="flow-path flow-path-consumer" d="M 840 300 Q 920 320 1000 370" />
+            
+            <!-- Animated Particles -->
+            <circle r="4" class="flow-particle">
+                <animateMotion dur="1.5s" repeatCount="indefinite">
+                    <mpath href="#path1"/>
+                </animateMotion>
+            </circle>
+            <circle r="4" class="flow-particle">
+                <animateMotion dur="1.5s" begin="0.3s" repeatCount="indefinite">
+                    <mpath href="#path2"/>
+                </animateMotion>
+            </circle>
+            <circle r="4" class="flow-particle">
+                <animateMotion dur="1.5s" begin="0.6s" repeatCount="indefinite">
+                    <mpath href="#path3"/>
+                </animateMotion>
+            </circle>
+            <circle r="4" class="flow-particle">
+                <animateMotion dur="1.5s" begin="0.9s" repeatCount="indefinite">
+                    <mpath href="#path4"/>
+                </animateMotion>
+            </circle>
+            <circle r="4" class="flow-particle">
+                <animateMotion dur="1.5s" begin="1.2s" repeatCount="indefinite">
+                    <mpath href="#path5"/>
+                </animateMotion>
+            </circle>
+            
+            <circle r="5" class="flow-particle particle-sentry">
+                <animateMotion dur="1.2s" repeatCount="indefinite">
+                    <mpath href="#path-sentry"/>
+                </animateMotion>
+            </circle>
+            <circle r="6" class="flow-particle particle-statsig">
+                <animateMotion dur="1s" repeatCount="indefinite">
+                    <mpath href="#path-statsig"/>
+                </animateMotion>
+            </circle>
+            <circle r="4" class="flow-particle particle-otlp">
+                <animateMotion dur="1.4s" repeatCount="indefinite">
+                    <mpath href="#path-otlp"/>
+                </animateMotion>
+            </circle>
+            
+            <!-- Data Source Nodes -->
+            <g class="node data-source-node" data-path="source">
+                <rect class="node-rect" x="60" y="100" width="180" height="60" rx="8" filter="url(#glow-blue)"/>
+                <text class="node-text" x="150" y="128">queryLoop每轮迭代</text>
+                <text class="node-text-en" x="150" y="146">Query Loop Iteration</text>
+                <text x="82" y="132" font-size="14" fill="#00d4ff">⚡</text>
+            </g>
+            
+            <g class="node data-source-node" data-path="source">
+                <rect class="node-rect" x="60" y="160" width="180" height="60" rx="8" filter="url(#glow-blue)"/>
+                <text class="node-text" x="150" y="188">工具执行</text>
+                <text class="node-text-en" x="150" y="206">Tool Execution</text>
+                <text x="82" y="192" font-size="14" fill="#00d4ff">🔧</text>
+            </g>
+            
+            <g class="node data-source-node" data-path="source">
+                <rect class="node-rect" x="60" y="220" width="180" height="60" rx="8" filter="url(#glow-blue)"/>
+                <text class="node-text" x="150" y="248">权限检查</text>
+                <text class="node-text-en" x="150" y="266">Permission Check</text>
+                <text x="82" y="252" font-size="14" fill="#00d4ff">🔒</text>
+            </g>
+            
+            <g class="node data-source-node" data-path="source">
+                <rect class="node-rect" x="60" y="280" width="180" height="60" rx="8" filter="url(#glow-blue)"/>
+                <text class="node-text" x="150" y="308">API调用</text>
+                <text class="node-text-en" x="150" y="326">API Call</text>
+                <text x="82" y="312" font-size="14" fill="#00d4ff">🌐</text>
+            </g>
+            
+            <g class="node data-source-node" data-path="source">
+                <rect class="node-rect" x="60" y="340" width="180" height="60" rx="8" filter="url(#glow-blue)"/>
+                <text class="node-text" x="150" y="368">用户操作</text>
+                <text class="node-text-en" x="150" y="386">User Action</text>
+                <text x="82" y="372" font-size="14" fill="#00d4ff">👤</text>
+            </g>
+            
+            <!-- Span Processor Node -->
+            <g class="node span-node" data-path="span">
+                <circle class="pulse-ring" cx="480" cy="300" r="60"/>
+                <circle class="pulse-ring" cx="480" cy="300" r="60" style="animation-delay: 1s"/>
+                <rect class="node-rect" x="400" y="240" width="160" height="120" rx="16" filter="url(#glow-purple)"/>
+                <text class="node-text" x="480" y="285">OpenTelemetry</text>
+                <text class="node-text" x="480" y="305">Span处理</text>
+                <text class="node-text-en" x="480" y="325">Span Processing</text>
+                <!-- Gear Icon -->
+                <g class="gear">
+                    <path d="M480 255 L480 260 M480 340 L480 345 M435 300 L440 300 M520 300 L525 300 M447 267 L451 271 M509 329 L513 333 M447 333 L451 329 M509 271 L513 267" />
+                    <circle cx="480" cy="300" r="20" stroke-width="2"/>
+                    <circle cx="480" cy="300" r="12" stroke-width="2" stroke-dasharray="4 4"/>
+                </g>
+            </g>
+            
+            <!-- Exporter Nodes -->
+            <g class="node sentry-node" data-path="sentry">
+                <rect class="node-rect" x="720" y="150" width="120" height="60" rx="8"/>
+                <text class="node-text" x="780" y="178">Sentry</text>
+                <text class="node-text-en" x="780" y="196">Error Tracking</text>
+            </g>
+            
+            <g class="node statsig-node" data-path="statsig">
+                <rect class="node-rect" x="720" y="270" width="120" height="60" rx="8"/>
+                <text class="node-text" x="780" y="298">Statsig</text>
+                <text class="node-text-en" x="780" y="316">Analytics</text>
+            </g>
+            
+            <g class="node otlp-node" data-path="otlp">
+                <rect class="node-rect" x="720" y="390" width="120" height="60" rx="8"/>
+                <text class="node-text" x="780" y="418">OTLP</text>
+                <text class="node-text-en" x="780" y="436">Standard Export</text>
+            </g>
+            
+            <!-- Consumer Nodes -->
+            <g class="node consumer-node" data-path="consumer">
+                <rect class="node-rect" x="1000" y="100" width="140" height="60" rx="8"/>
+                <text class="node-text" x="1070" y="128">实时仪表盘</text>
+                <text class="node-text-en" x="1070" y="146">Dashboard</text>
+                <text x="1020" y="132" font-size="14" fill="#e0e0e0">📊</text>
+            </g>
+            
+            <g class="node consumer-node" data-path="consumer">
+                <rect class="node-rect" x="1000" y="220" width="140" height="60" rx="8"/>
+                <text class="node-text" x="1070" y="248">告警系统</text>
+                <text class="node-text-en" x="1070" y="266">Alert System</text>
+                <text x="1020" y="252" font-size="14" fill="#e0e0e0">🚨</text>
+            </g>
+            
+            <g class="node consumer-node" data-path="consumer">
+                <rect class="node-rect" x="1000" y="340" width="140" height="60" rx="8"/>
+                <text class="node-text" x="1070" y="368">事后分析</text>
+                <text class="node-text-en" x="1070" y="386">Trace Analysis</text>
+                <text x="1020" y="372" font-size="14" fill="#e0e0e0">🔍</text>
+            </g>
+            
+            <!-- Legend -->
+            <g transform="translate(60, 520)">
+                <rect x="0" y="0" width="1080" height="70" rx="8" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.1)"/>
+                <text x="20" y="25" fill="#888" font-size="11" font-weight="600">LEGEND / 图例</text>
+                
+                <line x1="20" y1="45" x2="50" y2="45" stroke="#00d4ff" stroke-width="3"/>
+                <text x="60" y="50" fill="#aaa" font-size="11">高数据量 Heavy Flow</text>
+                
+                <line x1="200" y1="45" x2="230" y2="45" stroke="#48bb78" stroke-width="4"/>
+                <text x="240" y="50" fill="#aaa" font-size="11">最高数据量 Max Flow</text>
+                
+                <line x1="400" y1="45" x2="430" y2="45" stroke="#ffa94d" stroke-width="2"/>
+                <text x="440" y="50" fill="#aaa" font-size="11">标准数据量 Standard</text>
+                
+                <circle cx="620" cy="45" r="4" fill="#00d4ff"/>
+                <text x="635" y="50" fill="#aaa" font-size="11">数据流 Data Flow</text>
+                
+                <circle cx="780" cy="45" r="8" fill="none" stroke="#7b61ff" stroke-width="1" opacity="0.5"/>
+                <text x="800" y="50" fill="#aaa" font-size="11">处理中 Processing</text>
+            </g>
+        </svg>
+    </div>
+    
+    <script>
+        // Interactive hover effects
+        document.querySelectorAll('.node').forEach(node => {
+            node.addEventListener('mouseenter', function() {
+                const pathType = this.getAttribute('data-path');
+                const allNodes = document.querySelectorAll('.node');
+                const allPaths = document.querySelectorAll('.flow-path');
+                
+                allNodes.forEach(n => {
+                    if (n !== this && !isConnected(n, this, pathType)) {
+                        n.classList.add('dimmed');
+                    }
+                });
+                
+                allPaths.forEach(p => {
+                    if (!isPathConnected(p, pathType, this)) {
+                        p.style.opacity = '0.1';
+                    } else {
+                        p.style.opacity = '1';
+                        p.style.filter = 'drop-shadow(0 0 8px currentColor)';
+                    }
+                });
+            });
+            
+            node.addEventListener('mouseleave', function() {
+                document.querySelectorAll('.node').forEach(n => n.classList.remove('dimmed'));
+                document.querySelectorAll('.flow-path').forEach(p => {
+                    p.style.opacity = '';
+                    p.style.filter = '';
+                });
+            });
+        });
+        
+        function isConnected(node1, node2, pathType) {
+            // Simplified connection logic based on data-path
+            const path1 = node1.getAttribute('data-path');
+            const path2 = node2.getAttribute('data-path');
+            if (path1 === path2) return true;
+            if (path1 === 'source' && path2 === 'span') return true;
+            if (path1 === 'span' && path2 === 'source') return true;
+            if (path1 === 'span' && (path2 === 'sentry' || path2 === 'statsig' || path2 === 'otlp')) return true;
+            if ((path1 === 'sentry' || path1 === 'statsig' || path1 === 'otlp') && path2 === 'span') return true;
+            if ((path1 === 'sentry' || path1 === 'statsig' || path1 === 'otlp') && path2 === 'consumer') return true;
+            if (path1 === 'consumer' && (path2 === 'sentry' || path2 === 'statsig' || path2 === 'otlp')) return true;
+            return false;
+        }
+        
+        function isPathConnected(path, pathType, hoveredNode) {
+            // Keep all paths visible but dimmed, highlight relevant ones
+            return true;
+        }
+    </script>
+</body>
+</html>

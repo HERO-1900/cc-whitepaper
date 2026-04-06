@@ -1,0 +1,113 @@
+我来严格审查这份图表代码。
+
+**总分: 13/20**
+
+---
+
+**布局: 2/5** — SVG节点与连接线存在多处断连，决策树底部两行叶子节点横向间距严重不均
+
+**信息: 4/5** — 核心逻辑清晰，层次分明，但Remote HTTP分支只展示了2个叶子（共应有http/sse两类），sse叶子缺失对应的http叶子
+
+**美学: 4/5** — 配色体系完整且和谐，深色背景+高对比度标识色，整体精致；SSE节点颜色偏暗与背景融合度低
+
+**完整: 3/5** — 主体可运行，Google Fonts依赖外部CDN，交互逻辑完整，但hover联动存在边界情况
+
+---
+
+### 缺陷明细
+
+**布局类**
+
+1. **叶子节点横向间距严重不均（SVG lines 195-222）**
+   - 第一排 (stdio, ws, sdk, claudeai-proxy): x=100, 420, 740, 860 → 间距320/320/120
+   - stdio的x=100, ws的x=420间距320px，但claudeai-proxy在x=860而sdk在x=740仅差120px
+   - ws叶子(345, 460)和sdk叶子(665, 460)几乎贴着右侧，但claudeai-proxy的叶子(785, 460)又很远
+
+2. **category节点与连接线端点断连（SVG lines 134-145）**
+   - 6个category rect的y=170, height=40 → 底部y=210
+   - 6条路径终止于y=170（rect顶部），而非穿过rect中心
+   - `d="M450,90 C450,130 100,130 100,170"` → 端点(100,170)是rect的top edge而非center
+
+3. **sub-diamond到叶子路径断裂（SVG lines 148-161）**
+   - remote http sub-diamond: y=290到y=380，中心y=335
+   - 到叶子路径 `d="M260,380 C260,420 200,420 200,460"` → 起点(260,380)是diamond底部
+   - leaf rect的y=520/460，路径端点y=460是正确的，但路径起点从sub-diamond底部(380)出发，中间有140px空白区域没有中间节点过渡
+
+**信息类**
+
+4. **Remote HTTP分支逻辑缺失（SVG lines 148-149）**
+   - "需要流式？" sub-diamond有两个出口："是→http" / "否→sse"
+   - 但sse叶子(245, 520)存在，http叶子(125, 520)也正确
+   - 标签只标注了 "是 / Yes" 和 "否 / No"，但没有指明 Yes→http, No→sse 的对应关系
+   - 对照IDE sub-diamond的标注(SSE/WS)，Remote HTTP应该也标注 Yes→http, No→sse
+
+5. **叶子描述文字字号偏小（SVG lines 197-222）**
+   - 叶子内 subtitle 如 "Streamable HTTP (现代)" font-size=9
+   - 中文语境下9px过小，中老年用户阅读困难
+
+**美学类**
+
+6. **sse节点颜色过暗（CSS line 15）**
+   - `--sse:#ff9f43` 橙色的12%透明度 fill → `rgba(255,159,67,.12)` 背景极淡
+   - stroke也是12% → `rgba(255,159,67,.12)`，几乎与背景融为一体
+   - 对比其他节点如stdio的 `rgba(0,212,255,.12)` 和ws的 `rgba(123,97,255,.12)`，sse明显更暗
+
+7. **IDE sub-diamond分支标签遮挡路径（SVG lines 223-224）**
+   - 标签 `x="500" y="430"` 和 `x="620" y="430"` 落在连接线弯曲区域
+   - 路径 `M580,380 C580,420 520,420 520,460` 的控制点和标签y=430重叠
+
+**代码完整类**
+
+8. **config-priority pill一行过长（HTML line ~290）**
+   - 8个pill + 7个arrow，超出容器宽度时无滚动保护
+   - 移动端(max-width:960px)虽然切单列，但960px以上仍可能溢出
+
+---
+
+### 修改建议
+
+1. **统一叶子节点x坐标等差分布**
+   ```
+   stdio:     x=100   (rect x=25)
+   ws:        x=300   (rect x=225)
+   sdk:       x=500   (rect x=425)
+   claudeai:  x=700   (rect x=625)
+   http:      x=200   (rect x=125)
+   sse:       x=400   (rect x=325)
+   sse-ide:   x=600   (rect x=525)
+   ws-ide:    x=800   (rect x=725)
+   ```
+   或采用grid布局自动对齐
+
+2. **路径端点接入节点中心**
+   - category rect y=170, height=40 → 中心y=190
+   - 路径应改为 `M450,90 C450,125 100,125 100,190`
+   - sub-diamond到leaf同理，路径起点从diamond侧边引出而非底部
+
+3. **Remote HTTP分支标签补全**
+   ```svg
+   <text x="200" y="400" fill="var(--http)" font-size="10" font-weight="600">http</text>
+   <text x="340" y="400" fill="var(--sse)" font-size="10" font-weight="600">sse</text>
+   ```
+
+4. **sse节点颜色加强**
+   ```css
+   --sse:#ff9f43; → --sse:#ffab5c; /* 提高明度 */
+   ```
+   或 fill改为`.18`透明度
+
+5. **IDE分支标签位置偏移**
+   ```svg
+   <text x="500" y="408" ...>SSE</text>
+   <text x="620" y="408" ...>WS</text>
+   ```
+   避开路径弯曲区域
+
+6. **config-priority响应式处理**
+   ```css
+   .config-priority {
+     overflow-x: auto;
+     justify-content: flex-start;
+     padding-bottom: .5rem;
+   }
+   ```

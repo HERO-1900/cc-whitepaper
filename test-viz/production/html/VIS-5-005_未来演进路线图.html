@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code 未来演进路线图</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            overflow-x: auto;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1600px;
+        }
+        
+        .title-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00d4ff 0%, #7b61ff 50%, #e056a0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: #6b7280;
+            font-size: 0.95rem;
+            font-weight: 400;
+        }
+        
+        .roadmap-wrapper {
+            position: relative;
+            background: linear-gradient(180deg, #16162a 0%, #1a1a2e 100%);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 
+                0 0 0 1px rgba(255,255,255,0.05),
+                0 40px 80px -20px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        
+        .roadmap-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(0, 212, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(224, 86, 160, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        
+        svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .phase-bg {
+            opacity: 0.08;
+        }
+        
+        .phase-near { fill: #00d4ff; }
+        .phase-mid { fill: #7b61ff; }
+        .phase-far { fill: #e056a0; }
+        
+        .timeline-axis {
+            stroke: #2d2d44;
+            stroke-width: 2;
+        }
+        
+        .phase-divider {
+            stroke: #3d3d5c;
+            stroke-width: 1;
+            stroke-dasharray: 5,5;
+        }
+        
+        .phase-label {
+            font-size: 14px;
+            font-weight: 600;
+            text-anchor: middle;
+        }
+        
+        .phase-label-near { fill: #00d4ff; }
+        .phase-label-mid { fill: #7b61ff; }
+        .phase-label-far { fill: #e056a0; }
+        
+        .phase-desc {
+            font-size: 11px;
+            fill: #6b7280;
+            text-anchor: middle;
+        }
+        
+        .track-bg {
+            fill: rgba(255,255,255,0.02);
+        }
+        
+        .track-line {
+            stroke-width: 3;
+            stroke-linecap: round;
+            fill: none;
+        }
+        
+        .track-ai { stroke: #48bb78; }
+        .track-tool { stroke: #ffa94d; }
+        .track-context { stroke: #00d4ff; }
+        .track-security { stroke: #ff6b6b; }
+        .track-deploy { stroke: #ffd93d; }
+        
+        .track-label {
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .track-label-ai { fill: #48bb78; }
+        .track-label-tool { fill: #ffa94d; }
+        .track-label-context { fill: #00d4ff; }
+        .track-label-security { fill: #ff6b6b; }
+        .track-label-deploy { fill: #ffd93d; }
+        
+        .track-desc {
+            font-size: 10px;
+            fill: #6b7280;
+        }
+        
+        .milestone {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .milestone-near {
+            fill-opacity: 1;
+        }
+        
+        .milestone-mid {
+            fill-opacity: 0.6;
+        }
+        
+        .milestone-far {
+            fill: none;
+            stroke-width: 2;
+        }
+        
+        .milestone-star {
+            fill: #ffd700;
+            filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5));
+        }
+        
+        .milestone-label {
+            font-size: 10px;
+            font-weight: 500;
+            fill: #e5e7eb;
+        }
+        
+        .milestone-bg {
+            fill: #1a1a2e;
+        }
+        
+        .fade-overlay {
+            fill: url(#fadeGradient);
+        }
+        
+        .time-pulse {
+            fill: #00d4ff;
+            filter: drop-shadow(0 0 10px #00d4ff);
+            animation: pulseMove 8s ease-in-out infinite;
+        }
+        
+        @keyframes pulseMove {
+            0%, 100% { transform: translateX(0); opacity: 0.3; }
+            50% { transform: translateX(1100px); opacity: 1; }
+        }
+        
+        .connection-line {
+            stroke: #3d3d5c;
+            stroke-width: 1;
+            stroke-dasharray: 3,3;
+            opacity: 0.4;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(26, 26, 46, 0.98);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 16px 20px;
+            max-width: 320px;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: all 0.2s ease;
+            z-index: 100;
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
+        }
+        
+        .tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .tooltip-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+        
+        .tooltip-content {
+            font-size: 12px;
+            color: #9ca3af;
+            line-height: 1.6;
+        }
+        
+        .tooltip-phase {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .tooltip-phase-near { background: rgba(0, 212, 255, 0.2); color: #00d4ff; }
+        .tooltip-phase-mid { background: rgba(123, 97, 255, 0.2); color: #7b61ff; }
+        .tooltip-phase-far { background: rgba(224, 86, 160, 0.2); color: #e056a0; }
+        
+        .disclaimer {
+            text-align: center;
+            margin-top: 24px;
+            padding: 16px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .disclaimer p {
+            color: #6b7280;
+            font-size: 12px;
+        }
+        
+        .disclaimer strong {
+            color: #9ca3af;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+        
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .legend-near { background: #00d4ff; }
+        .legend-mid { background: #7b61ff; opacity: 0.6; }
+        .legend-far { 
+            background: transparent; 
+            border: 2px dashed #e056a0; 
+            width: 12px;
+            height: 12px;
+        }
+        .legend-star {
+            color: #ffd700;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8rem; }
+            .roadmap-wrapper { padding: 20px; overflow-x: auto; }
+            svg { min-width: 1200px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title-section">
+            <h1>Claude Code 未来演进路线图</h1>
+            <p class="subtitle">Future Evolution Roadmap · 2024-2026+</p>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot legend-near"></div>
+                <span>近期 (已有迹象 / Near Term)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot legend-mid"></div>
+                <span>中期 (架构趋势 / Mid Term)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot legend-far"></div>
+                <span>远期 (推测方向 / Long Term)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-star">★</span>
+                <span>关键里程碑 / Key Milestone</span>
+            </div>
+        </div>
+        
+        <div class="roadmap-wrapper">
+            <svg viewBox="0 0 1400 680" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <linearGradient id="fadeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#1a1a2e" stop-opacity="0"/>
+                        <stop offset="100%" stop-color="#1a1a2e" stop-opacity="1"/>
+                    </linearGradient>
+                    
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                    
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#3d3d5c" opacity="0.5"/>
+                    </marker>
+                </defs>
+                
+                <!-- Phase Backgrounds -->
+                <rect class="phase-bg phase-near" x="150" y="80" width="400" height="520" rx="12"/>
+                <rect class="phase-bg phase-mid" x="550" y="80" width="400" height="520" rx="12"/>
+                <rect class="phase-bg phase-far" x="950" y="80" width="350" height="520" rx="12"/>
+                
+                <!-- Timeline Axis -->
+                <line class="timeline-axis" x1="150" y1="60" x2="1300" y2="60"/>
+                
+                <!-- Phase Dividers -->
+                <line class="phase-divider" x1="550" y1="60" x2="550" y2="600"/>
+                <line class="phase-divider" x1="950" y1="60" x2="950" y2="600"/>
+                
+                <!-- Phase Labels -->
+                <text class="phase-label phase-label-near" x="350" y="45">近期 · NEAR TERM</text>
+                <text class="phase-desc" x="350" y="58">已有代码迹象 / Code Visible</text>
+                
+                <text class="phase-label phase-label-mid" x="750" y="45">中期 · MID TERM</text>
+                <text class="phase-desc" x="750" y="58">架构趋势 / Architecture Trends</text>
+                
+                <text class="phase-label phase-label-far" x="1125" y="45">远期 · LONG TERM</text>
+                <text class="phase-desc" x="1125" y="58">推测方向 / Speculative</text>
+                
+                <!-- Time Pulse Animation -->
+                <circle class="time-pulse" cx="150" cy="60" r="6"/>
+                
+                <!-- Track Backgrounds -->
+                <rect class="track-bg" x="150" y="110" width="1150" height="80" rx="8"/>
+                <rect class="track-bg" x="150" y="210" width="1150" height="80" rx="8"/>
+                <rect class="track-bg" x="150" y="310" width="1150" height="80" rx="8"/>
+                <rect class="track-bg" x="150" y="410" width="1150" height="80" rx="8"/>
+                <rect class="track-bg" x="150" y="510" width="1150" height="80" rx="8"/>
+                
+                <!-- Track 1: AI Collaboration -->
+                <text class="track-label track-label-ai" x="30" y="145">AI 协作</text>
+                <text class="track-desc" x="30" y="162">Collaboration</text>
+                <line class="track-line track-ai" x1="150" y1="150" x2="1300" y2="150"/>
+                
+                <!-- Track 2: Tool Ecosystem -->
+                <text class="track-label track-label-tool" x="30" y="245">工具生态</text>
+                <text class="track-desc" x="30" y="262">Ecosystem</text>
+                <line class="track-line track-tool" x1="150" y1="250" x2="1300" y2="250"/>
+                
+                <!-- Track 3: Context Management -->
+                <text class="track-label track-label-context" x="30" y="345">上下文</text>
+                <text class="track-desc" x="30" y="362">Context</text>
+                <line class="track-line track-context" x1="150" y1="350" x2="1300" y2="350"/>
+                
+                <!-- Track 4: Security -->
+                <text class="track-label track-label-security" x="30" y="445">安全权限</text>
+                <text class="track-desc" x="30" y="462">Security</text>
+                <line class="track-line track-security" x1="150" y1="450" x2="1300" y2="450"/>
+                
+                <!-- Track 5: Deployment -->
+                <text class="track-label track-label-deploy" x="30" y="545">部署形态</text>
+                <text class="track-desc" x="30" y="562">Deploy</text>
+                <line class="track-line track-deploy" x1="150" y1="550" x2="1300" y2="550"/>
+                
+                <!-- Connection Lines Between Tracks -->
+                <line class="connection-line" x1="450" y1="150" x2="480" y2="250"/>
+                <line class="connection-line" x1="750" y1="250" x2="780" y2="350"/>
+                <line class="connection-line" x1="600" y1="350" x2="620" y2="450"/>
+                <line class="connection-line" x1="900" y1="450" x2="920" y2="550"/>
+                
+                <!-- Track 1: AI Collaboration Milestones -->
+                <!-- Now marker -->
+                <circle cx="180" cy="150" r="8" fill="#48bb78"/>
+                <text class="milestone-label" x="180" y="175" text-anchor="middle">单 Agent</text>
+                
+                <!-- Near: Coordinator (Star) -->
+                <g class="milestone" data-title="Multi-Agent Coordinator" data-phase="near" data-desc="370行系统提示词，四阶段工作流已落地。核心规则：'Never hand off understanding'，确保Agent协作时上下文不丢失。">
+                    <polygon class="milestone-star" points="400,145 403,153 412,153 405,159 408,168 400,162 392,168 395,159 388,153 397,153"/>
+                    <text class="milestone-label" x="400" y="138" text-anchor="middle">Coordinator</text>
+                </g>
+                
+                <!-- Mid: Agent DAG -->
+                <circle class="milestone milestone-mid track-ai" cx="700" cy="150" r="10"/>
+                <text class="milestone-label" x="700" y="138" text-anchor="middle">Agent协作图</text>
+                <text class="milestone-label" x="700" y="175" text-anchor="middle" fill="#6b7280">DAG可视化</text>
+                
+                <!-- Far: Autonomous -->
+                <circle class="milestone milestone-far track-ai" cx="1100" cy="150" r="10"/>
+                <text class="milestone-label" x="1100" y="138" text-anchor="middle">自主Agent</text>
+                <text class="milestone-label" x="1100" y="175" text-anchor="middle" fill="#6b7280">无人值守</text>
+                
+                <!-- Track 2: Tool Ecosystem Milestones -->
+                <!-- Now -->
+                <circle cx="180" cy="250" r="8" fill="#ffa94d"/>
+                <text class="milestone-label" x="180" y="235" text-anchor="middle">内置工具</text>
+                
+                <!-- Near: MCP -->
+                <g class="milestone" data-title="MCP 生态扩展" data-phase="near" data-desc="Model Context Protocol支持已落地，Computer Use集成，Remote/Teleport正式化(CCR沙箱, Git Bundle三级降级)。">
+                    <circle class="milestone milestone-near track-tool" cx="420" cy="250" r="10"/>
+                    <text class="milestone-label" x="420" y="235" text-anchor="middle">MCP生态</text>
+                    <text class="milestone-label" x="420" y="272" text-anchor="middle" fill="#6b7280">Teleport</text>
+                </g>
+                
+                <!-- Mid: Ultraplan -->
+                <circle class="milestone milestone-mid track-tool" cx="720" cy="250" r="10"/>
+                <text class="milestone-label" x="720" y="235" text-anchor="middle">Ultraplan</text>
+                <text class="milestone-label" x="720" y="272" text-anchor="middle" fill="#6b7280">自动规划</text>
+                
+                <!-- Far: Marketplace -->
+                <circle class="milestone milestone-far track-tool" cx="1150" cy="250" r="10"/>
+                <text class="milestone-label" x="1150" y="235" text-anchor="middle">工具市场</text>
+                <text class="milestone-label" x="1150" y="272" text-anchor="middle" fill="#6b7280">社区生态</text>
+                
+                <!-- Track 3: Context Management Milestones -->
+                <!-- Now -->
+                <circle cx="180" cy="350" r="8" fill="#00d4ff"/>
+                <text class="milestone-label" x="180" y="335" text-anchor="middle">手动截断</text>
+                
+                <!-- Near: 6-layer compression -->
+                <circle class="milestone milestone-near track-context" cx="380" cy="350" r="10"/>
+                <text class="milestone-label" x="380" y="335" text-anchor="middle">智能压缩</text>
+                <text class="milestone-label" x="380" y="372" text-anchor="middle" fill="#6b7280">6层系统</text>
+                
+                <!-- Mid: User-controlled compression (Star) -->
+                <g class="milestone" data-title="用户可控压缩" data-phase="mid" data-desc="从无感压缩到可见摘要+重要标记。用户参与上下文压缩决策，关键信息标记保留。">
+                    <polygon class="milestone-star" points="680,345 683,353 692,353 685,359 688,368 680,362 672,368 675,359 668,353 677,353"/>
+                    <text class="milestone-label" x="680" y="335" text-anchor="middle">用户可控</text>
+                    <text class="milestone-label" x="680" y="372" text-anchor="middle" fill="#6b7280">重要标记</text>
+                </g>
+                
+                <!-- Far: Infinite context -->
+                <circle class="milestone milestone-far track-context" cx="1080" cy="350" r="10"/>
+                <text class="milestone-label" x="1080" y="335" text-anchor="middle">无限上下文</text>
+                <text class="milestone-label" x="1080" y="372" text-anchor="middle" fill="#6b7280">检索增强</text>
+                
+                <!-- Track 4: Security Milestones -->
+                <!-- Now -->
+                <circle cx="180" cy="450" r="8" fill="#ff6b6b"/>
+                <text class="milestone-label" x="180" y="435" text-anchor="middle">基本权限</text>
+                
+                <!-- Near: 9-step state machine -->
+                <circle class="milestone milestone-near track-security" cx="360" cy="450" r="10"/>
+                <text class="milestone-label" x="360" y="435" text-anchor="middle">9步状态机</text>
+                
+                <!-- Mid: CacheSafeParams (Star) -->
+                <g class="milestone" data-title="CacheSafeParams 类型安全" data-phase="mid" data-desc="45倍成本事故催化的改进：Token预算显式化，从注释约束变为类型系统，编译时检查。">
+                    <polygon class="milestone-star" points="620,445 623,453 632,453 625,459 628,468 620,462 612,468 615,459 608,453 617,453"/>
+                    <text class="milestone-label" x="620" y="435" text-anchor="middle">类型系统</text>
+                    <text class="milestone-label" x="620" y="472" text-anchor="middle" fill="#6b7280">45x成本</text>
+                </g>
+                
+                <!-- Mid: Hooks sandbox -->
+                <circle class="milestone milestone-mid track-security" cx="820" cy="450" r="10"/>
+                <text class="milestone-label" x="820" y="435" text-anchor="middle">Hooks沙箱</text>
+                <text class="milestone-label" x="820" y="472" text-anchor="middle" fill="#6b7280">能力声明</text>
+                
+                <!-- Far: Zero trust -->
+                <circle class="milestone milestone-far track-security" cx="1120" cy="450" r="10"/>
+                <text class="milestone-label" x="1120" y="435" text-anchor="middle">零信任</text>
+                <text class="milestone-label" x="1120" y="472" text-anchor="middle" fill="#6b7280">细粒度</text>
+                
+                <!-- Track 5: Deployment Milestones -->
+                <!-- Now -->
+                <circle cx="180" cy="550" r="8" fill="#ffd93d"/>
+                <text class="milestone-label" x="180" y="535" text-anchor="middle">本地CLI</text>
+                
+                <!-- Near: Remote/Teleport -->
+                <g class="milestone" data-title="远程开发支持" data-phase="near" data-desc="Teleport功能正式化，支持CCR沙箱环境，Git Bundle三级降级策略，远程Agent执行。">
+                    <circle class="milestone milestone-near track-deploy" cx="400" cy="550" r="10"/>
+                    <text class="milestone-label" x="400" y="535" text-anchor="middle">CLI+远程</text>
+                    <text class="milestone-label" x="400" y="572" text-anchor="middle" fill="#6b7280">Teleport</text>
+                </g>
+                
+                <!-- Mid: ant-only opening (Star) -->
+                <g class="milestone" data-title="ant-only 功能开放" data-phase="mid" data-desc="投机执行等功能从内部专用逐步向公共开放，降低使用门槛。">
+                    <polygon class="milestone-star" points="600,545 603,553 612,553 605,559 608,568 600,562 592,568 595,559 588,553 597,553"/>
+                    <text class="milestone-label" x="600" y="535" text-anchor="middle">ant-only开放</text>
+                    <text class="milestone-label" x="600" y="572" text-anchor="middle" fill="#6b7280">投机执行</text>
+                </g>
+                
+                <!-- Mid: Hybrid cloud -->
+                <circle class="milestone milestone-mid track-deploy" cx="850" cy="550" r="10"/>
+                <text class="milestone-label" x="850" y="535" text-anchor="middle">混合云</text>
+                <text class="milestone-label" x="850" y="572" text-anchor="middle" fill="#6b7280">BYOC</text>
+                
+                <!-- Far: Adaptive -->
+                <circle class="milestone milestone-far track-deploy" cx="1180" cy="550" r="10"/>
+                <text class="milestone-label" x="1180" y="535" text-anchor="middle">自适应</text>
+                <text class="milestone-label" x="1180" y="572" text-anchor="middle" fill="#6b7280">任意环境</text>
+                
+                <!-- Additional Mid-term items -->
+                <circle class="milestone milestone-mid track-context" cx="550" cy="350" r="8"/>
+                <text class="milestone-label" x="550" y="395" text-anchor="middle" fill="#6b7280">CLAUDE.md版本化</text>
+                
+                <circle class="milestone milestone-mid track-ai" cx="800" cy="150" r="8"/>
+                <text class="milestone-label" x="800" y="125" text-anchor="middle" fill="#6b7280">知识图谱</text>
+                
+                <circle class="milestone milestone-mid track-security" cx="720" cy="450" r="8"/>
+                <text class="milestone-label" x="720" y="495" text-anchor="middle" fill="#6b7280">DAG拓扑</text>
+                
+                <!-- Fade out overlay -->
+                <rect class="fade-overlay" x="1200" y="80" width="200" height="520"/>
+                
+                <!-- Now marker line -->
+                <line x1="180" y1="60" x2="180" y2="600" stroke="#48bb78" stroke-width="1" stroke-dasharray="4,4" opacity="0.3"/>
+                <text x="180" y="620" text-anchor="middle" fill="#48bb78" font-size="11" font-weight="600">NOW</text>
+            </svg>
+            
+            <div class="tooltip" id="tooltip">
+                <div class="tooltip-phase" id="tooltip-phase">近期</div>
+                <div class="tooltip-title" id="tooltip-title">Title</div>
+                <div class="tooltip-content" id="tooltip-content">Description</div>
+            </div>
+        </div>
+        
+        <div class="disclaimer">
+            <p><strong>免责声明 / Disclaimer:</strong> 本路线图基于代码分析的推测，非官方路线图 · Based on code analysis, not an official roadmap</p>
+        </div>
+    </div>
+    
+    <script>
+        const tooltip = document.getElementById('tooltip');
+        const tooltipPhase = document.getElementById('tooltip-phase');
+        const tooltipTitle = document.getElementById('tooltip-title');
+        const tooltipContent = document.getElementById('tooltip-content');
+        
+        const phaseClasses = {
+            'near': 'tooltip-phase-near',
+            'mid': 'tooltip-phase-mid',
+            'far': 'tooltip-phase-far'
+        };
+        
+        const phaseNames = {
+            'near': '近期 · NEAR TERM',
+            'mid': '中期 · MID TERM',
+            'far': '远期 · LONG TERM'
+        };
+        
+        document.querySelectorAll('.milestone').forEach(milestone => {
+            milestone.addEventListener('mouseenter', (e) => {
+                const title = milestone.dataset.title;
+                const phase = milestone.dataset.phase;
+                const desc = milestone.dataset.desc;
+                
+                if (title && desc) {
+                    tooltipTitle.textContent = title;
+                    tooltipContent.textContent = desc;
+                    tooltipPhase.textContent = phaseNames[phase] || phase;
+                    tooltipPhase.className = 'tooltip-phase ' + (phaseClasses[phase] || '');
+                    
+                    const rect = milestone.getBoundingClientRect();
+                    const wrapperRect = document.querySelector('.roadmap-wrapper').getBoundingClientRect();
+                    
+                    tooltip.style.left = (rect.left - wrapperRect.left + rect.width / 2 - 160) + 'px';
+                    tooltip.style.top = (rect.top - wrapperRect.top - 100) + 'px';
+                    tooltip.classList.add('visible');
+                }
+            });
+            
+            milestone.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+        });
+    </script>
+</body>
+</html>

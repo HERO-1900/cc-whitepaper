@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heartbeat Sequence Diagram - Query Loop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050508;
+            --systole-start: #ff2a6d;
+            --systole-end: #ff8c42;
+            --diastole-start: #05d9e8;
+            --diastole-end: #7b2cbf;
+            --compression-color: #4a5568;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --grid-line: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 300;
+        }
+
+        .diagram-wrapper {
+            position: relative;
+            background: linear-gradient(180deg, rgba(255,42,109,0.03) 0%, rgba(5,217,232,0.03) 100%);
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .ekg-line {
+            fill: none;
+            stroke: var(--systole-start);
+            stroke-width: 2;
+            opacity: 0.3;
+            filter: drop-shadow(0 0 4px var(--systole-start));
+        }
+
+        .phase-label {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+
+        .phase-label.systole {
+            fill: var(--systole-start);
+        }
+
+        .phase-label.diastole {
+            fill: var(--diastole-start);
+        }
+
+        .node-circle {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .node-circle:hover {
+            filter: drop-shadow(0 0 12px currentColor);
+            transform: scale(1.1);
+        }
+
+        .node-label {
+            font-size: 12px;
+            font-weight: 500;
+            fill: var(--text-primary);
+        }
+
+        .node-sublabel {
+            font-size: 9px;
+            fill: var(--text-secondary);
+            font-weight: 300;
+        }
+
+        .connector {
+            stroke-dasharray: 4 4;
+            animation: flow 20s linear infinite;
+        }
+
+        @keyframes flow {
+            to {
+                stroke-dashoffset: -100;
+            }
+        }
+
+        .loop-arrow {
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .exit-badge {
+            font-size: 10px;
+            fill: var(--text-secondary);
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            max-width: 280px;
+            z-index: 100;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .tooltip.active {
+            opacity: 1;
+        }
+
+        .tooltip h4 {
+            color: var(--systole-start);
+            margin-bottom: 0.5rem;
+            font-size: 14px;
+        }
+
+        .tooltip p {
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .time-badge {
+            font-size: 10px;
+            font-weight: 300;
+            fill: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>心跳时序图 / Heartbeat Sequence</h1>
+        <p>Query Loop 单次迭代完整生命周期 / Complete Lifecycle of Single Iteration</p>
+    </div>
+
+    <div class="diagram-wrapper">
+        <svg viewBox="0 0 900 1000" preserveAspectRatio="xMidYMid meet" id="mainSvg">
+            <defs>
+                <!-- Gradients -->
+                <linearGradient id="systoleGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:var(--systole-start);stop-opacity:0.2" />
+                    <stop offset="100%" style="stop-color:var(--systole-end);stop-opacity:0.1" />
+                </linearGradient>
+                <linearGradient id="diastoleGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:var(--diastole-start);stop-opacity:0.2" />
+                    <stop offset="100%" style="stop-color:var(--diastole-end);stop-opacity:0.1" />
+                </linearGradient>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="var(--text-secondary)" />
+                </marker>
+            </defs>
+
+            <!-- Background EKG Waveform -->
+            <path class="ekg-line" d="M 50 100 L 50 150 L 55 130 L 60 170 L 65 140 L 70 160 L 75 150 L 75 200 
+                                     L 75 250 L 80 230 L 85 270 L 90 240 L 95 260 L 100 250 L 100 300
+                                     L 100 350 L 105 330 L 110 370 L 115 340 L 120 360 L 125 350 L 125 400
+                                     L 125 450 L 130 430 L 135 470 L 140 440 L 145 460 L 150 450 L 150 500
+                                     L 150 550 L 155 530 L 160 570 L 165 540 L 170 560 L 175 550 L 175 600
+                                     L 175 650 L 180 630 L 185 670 L 190 640 L 195 660 L 200 650 L 200 700
+                                     L 200 750 L 205 730 L 210 770 L 215 740 L 220 760 L 225 750 L 225 800
+                                     L 225 850 L 230 830 L 235 870 L 240 840 L 245 860 L 250 850 L 250 900" />
+
+            <!-- Phase Backgrounds -->
+            <!-- Systole Area -->
+            <rect x="100" y="120" width="600" height="320" rx="16" fill="url(#systoleGradient)" opacity="0.3" />
+            <text x="130" y="150" class="phase-label systole" filter="url(#glow)">SYSTOLE 收缩期</text>
+            
+            <!-- Diastole Area -->
+            <rect x="100" y="460" width="600" height="360" rx="16" fill="url(#diastoleGradient)" opacity="0.3" />
+            <text x="130" y="490" class="phase-label diastole" filter="url(#glow)">DIASTOLE 舒张期</text>
+
+            <!-- Nodes and Flow -->
+            
+            <!-- 1. Pre-processing (Compression) -->
+            <g class="node-group" data-info="5+1层上下文压缩处理">
+                <circle cx="400" cy="180" r="25" fill="#2d3748" stroke="var(--compression-color)" stroke-width="2" class="node-circle" />
+                <text x="400" y="175" text-anchor="middle" class="node-label" fill="#fff">上下文压缩</text>
+                <text x="400" y="188" text-anchor="middle" class="node-sublabel">Compression (5+1)</text>
+                <!-- Sub-steps mini visualization -->
+                <line x1="380" y1="170" x2="370" y2="160" stroke="var(--compression-color)" stroke-width="1" opacity="0.5"/>
+                <line x1="390" y1="165" x2="380" y2="155" stroke="var(--compression-color)" stroke-width="1" opacity="0.5"/>
+                <text x="360" y="158" font-size="8" fill="var(--text-secondary)">snip→micro→auto</text>
+            </g>
+
+            <!-- 2. Token Budget -->
+            <g class="node-group" data-info="Token预算检查: 超出硬限制将触发blocking_limit终止">
+                <circle cx="400" cy="260" r="25" fill="#2d3748" stroke="#ffd700" stroke-width="2" class="node-circle" />
+                <text x="400" y="255" text-anchor="middle" class="node-label">Token预算</text>
+                <text x="400" y="268" text-anchor="middle" class="node-sublabel">Budget Check</text>
+                <text x="445" y="263" class="time-badge">Limit</text>
+            </g>
+
+            <!-- Arrow: Budget -> API -->
+            <line x1="400" y1="285" x2="400" y2="330" stroke="var(--systole-start)" stroke-width="2" class="connector" opacity="0.6"/>
+
+            <!-- 3. API Call (Streaming) -->
+            <g class="node-group" data-info="callModel() → Anthropic API流式请求开始">
+                <circle cx="400" cy="355" r="30" fill="rgba(255,42,109,0.2)" stroke="var(--systole-start)" stroke-width="3" filter="url(#glow)" class="node-circle" />
+                <text x="400" y="350" text-anchor="middle" class="node-label" fill="#fff">API调用</text>
+                <text x="400" y="363" text-anchor="middle" class="node-sublabel">Streaming Start</text>
+                <text x="445" y="358" class="time-badge" fill="var(--systole-start)">~500ms</text>
+            </g>
+
+            <!-- Stream Details -->
+            <g transform="translate(480, 340)">
+                <rect x="0" y="0" width="140" height="30" rx="4" fill="rgba(255,140,66,0.1)" stroke="var(--systole-end)" stroke-width="1"/>
+                <text x="70" y="12" text-anchor="middle" font-size="9" fill="var(--systole-end)">text_delta → UI</text>
+                <text x="70" y="24" text-anchor="middle" font-size="8" fill="var(--text-secondary)">tool_use → Queue</text>
+            </g>
+            <line x1="430" y1="355" x2="480" y2="355" stroke="var(--systole-end)" stroke-width="1" stroke-dasharray="2 2"/>
+
+            <!-- Arrow: Stream -> Post-sampling -->
+            <line x1="400" y1="385" x2="400" y2="420" stroke="var(--systole-start)" stroke-width="2" class="connector" opacity="0.6"/>
+
+            <!-- 4. Post-sampling Hooks -->
+            <g class="node-group" data-info="executePostSamplingHooks() 后采样处理">
+                <circle cx="400" cy="445" r="20" fill="rgba(255,42,109,0.1)" stroke="var(--systole-start)" stroke-width="1.5" class="node-circle" />
+                <text x="400" y="440" text-anchor="middle" class="node-label" font-size="10">后采样Hooks</text>
+                <text x="400" y="452" text-anchor="middle" class="node-sublabel" font-size="8">Post-sampling</text>
+            </g>
+
+            <!-- Transition Line between phases -->
+            <line x1="400" y1="465" x2="400" y2="485" stroke="#fff" stroke-width="2" stroke-dasharray="5 5" opacity="0.3"/>
+
+            <!-- 5. Tool Execution Start -->
+            <g class="node-group" data-info="runTools() → 舒张期开始，工具执行阶段">
+                <circle cx="400" cy="520" r="30" fill="rgba(5,217,232,0.2)" stroke="var(--diastole-start)" stroke-width="3" filter="url(#glow)" class="node-circle" />
+                <text x="400" y="515" text-anchor="middle" class="node-label" fill="#fff">工具执行</text>
+                <text x="400" y="528" text-anchor="middle" class="node-sublabel">runTools()</text>
+                <text x="445" y="523" class="time-badge" fill="var(--diastole-start)">~200ms</text>
+            </g>
+
+            <!-- 6. Permission Check (9 steps) -->
+            <g class="node-group" data-info="canUseTool() 九步权限检查流程">
+                <circle cx="400" cy="600" r="25" fill="rgba(123,44,191,0.2)" stroke="var(--diastole-end)" stroke-width="2" class="node-circle" />
+                <text x="400" y="595" text-anchor="middle" class="node-label">权限检查</text>
+                <text x="400" y="608" text-anchor="middle" class="node-sublabel">9-Step Check</text>
+            </g>
+
+            <!-- Parallel execution visual -->
+            <g transform="translate(480, 580)">
+                <rect x="0" y="0" width="140" height="40" rx="4" fill="rgba(123,44,191,0.1)" stroke="var(--diastole-end)" stroke-width="1"/>
+                <text x="70" y="15" text-anchor="middle" font-size="9" fill="var(--diastole-end)">tool.call() 并行</text>
+                <text x="70" y="30" text-anchor="middle" font-size="8" fill="var(--text-secondary)">StreamingToolExecutor</text>
+            </g>
+            <line x1="425" y1="600" x2="480" y2="600" stroke="var(--diastole-end)" stroke-width="1" stroke-dasharray="2 2"/>
+
+            <!-- 7. Post-Tool Hooks & Serialization -->
+            <g class="node-group" data-info="PostToolUse Hooks → 结果序列化">
+                <circle cx="400" cy="680" r="20" fill="rgba(123,44,191,0.1)" stroke="var(--diastole-end)" stroke-width="1.5" class="node-circle" />
+                <text x="400" y="675" text-anchor="middle" class="node-label" font-size="10">后处理Hooks</text>
+                <text x="400" y="687" text-anchor="middle" class="node-sublabel" font-size="8">Serialize</text>
+            </g>
+
+            <!-- 8. Result Injection -->
+            <g class="node-group" data-info="结果注入消息历史，成为新的UserMessage">
+                <circle cx="400" cy="760" r="25" fill="rgba(5,217,232,0.2)" stroke="var(--diastole-start)" stroke-width="2" class="node-circle" />
+                <text x="400" y="755" text-anchor="middle" class="node-label">结果注入</text>
+                <text x="400" y="768" text-anchor="middle" class="node-sublabel">Inject Result</text>
+            </g>
+
+            <!-- Stop Hooks -->
+            <g transform="translate(320, 740)">
+                <rect x="0" y="0" width="60" height="30" rx="4" fill="rgba(5,217,232,0.05)" stroke="var(--diastole-start)" stroke-width="1"/>
+                <text x="30" y="12" text-anchor="middle" font-size="8" fill="var(--diastole-start)">Stop Hooks</text>
+                <text x="30" y="22" text-anchor="middle" font-size="7" fill="var(--text-secondary)">终止检查</text>
+            </g>
+            <line x1="380" y1="755" x2="350" y2="755" stroke="var(--diastole-start)" stroke-width="1" stroke-dasharray="2 2"/>
+
+            <!-- Loop Arrow -->
+            <path d="M 400 785 Q 400 820 320 820 Q 150 820 150 500 Q 150 180 320 180 Q 380 180 400 155" 
+                  fill="none" stroke="var(--text-secondary)" stroke-width="2" 
+                  marker-end="url(#arrowhead)" class="loop-arrow" opacity="0.4"/>
+            
+            <text x="140" y="500" text-anchor="middle" font-size="11" fill="var(--text-secondary)" opacity="0.6" transform="rotate(-90 140 500)">Next Heartbeat / 下一次心跳</text>
+
+            <!-- Exit Conditions (Right Side) -->
+            <g transform="translate(740, 200)">
+                <text x="0" y="0" font-size="12" font-weight="700" fill="var(--text-secondary)">EXIT CONDITIONS / 终止条件</text>
+                
+                <g transform="translate(0, 25)">
+                    <rect x="0" y="0" width="120" height="22" rx="11" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" />
+                    <text x="60" y="14" text-anchor="middle" class="exit-badge">stop</text>
+                </g>
+                <g transform="translate(0, 52)">
+                    <rect x="0" y="0" width="120" height="22" rx="11" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" />
+                    <text x="60" y="14" text-anchor="middle" class="exit-badge">max_turns</text>
+                </g>
+                <g transform="translate(0, 79)">
+                    <rect x="0" y="0" width="120" height="22" rx="11" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" />
+                    <text x="60" y="14" text-anchor="middle" class="exit-badge">aborted_streaming</text>
+                </g>
+                <g transform="translate(0, 106)">
+                    <rect x="0" y="0" width="120" height="22" rx="11" fill="rgba(255,215,0,0.1)" stroke="rgba(255,215,0,0.3)" />
+                    <text x="60" y="14" text-anchor="middle" class="exit-badge" fill="#ffd700">blocking_limit</text>
+                </g>
+                <g transform="translate(0, 133)">
+                    <rect x="0" y="0" width="120" height="22" rx="11" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" />
+                    <text x="60" y="14" text-anchor="middle" class="exit-badge">model_error</text>
+                </g>
+                <g transform="translate(0, 160)">
+                    <rect x="0" y="0" width="120" height="22" rx="11" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" />
+                    <text x="60" y="14" text-anchor="middle" class="exit-badge">image_error</text>
+                </g>
+            </g>
+
+            <!-- Metrics Annotation -->
+            <g transform="translate(740, 600)">
+                <text x="0" y="0" font-size="12" font-weight="700" fill="var(--text-secondary)">METRICS / 性能指标</text>
+                <text x="0" y="30" font-size="11" fill="var(--systole-start)">Systole Time: API等待</text>
+                <text x="0" y="45" font-size="10" fill="var(--text-secondary)">Network latency + TTFB</text>
+                <line x1="0" y1="55" x2="100" y2="55" stroke="var(--systole-start)" stroke-width="3"/>
+                
+                <text x="0" y="85" font-size="11" fill="var(--diastole-start)">Diastole Time: 执行</text>
+                <text x="0" y="100" font-size="10" fill="var(--text-secondary)">Tool exec + Serialization</text>
+                <line x1="0" y1="110" x2="60" y2="110" stroke="var(--diastole-start)" stroke-width="3"/>
+            </g>
+        </svg>
+
+        <div class="tooltip" id="tooltip">
+            <h4>Details</h4>
+            <p>Hover over nodes to see details</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const tooltip = document.getElementById('tooltip');
+    const nodes = document.querySelectorAll('.node-group');
+    const wrapper = document.querySelector('.diagram-wrapper');
+
+    nodes.forEach(node => {
+        node.addEventListener('mouseenter', (e) => {
+            const info = node.getAttribute('data-info');
+            const title = node.querySelector('.node-label').textContent;
+            
+            tooltip.innerHTML = `
+                <h4>${title}</h4>
+                <p>${info}</p>
+            `;
+            tooltip.classList.add('active');
+        });
+
+        node.addEventListener('mousemove', (e) => {
+            const rect = wrapper.getBoundingClientRect();
+            const x = e.clientX - rect.left + 20;
+            const y = e.clientY - rect.top - 40;
+            
+            tooltip.style.left = `${x}px`;
+            tooltip.style.top = `${y}px`;
+        });
+
+        node.addEventListener('mouseleave', () => {
+            tooltip.classList.remove('active');
+        });
+    });
+
+    // Animate EKG line
+    const ekgPath = document.querySelector('.ekg-line');
+    let offset = 0;
+    function animateEKG() {
+        offset -= 2;
+        ekgPath.style.strokeDashoffset = offset;
+        requestAnimationFrame(animateEKG);
+    }
+    ekgPath.style.strokeDasharray = '10 5';
+    animateEKG();
+</script>
+
+</body>
+</html>

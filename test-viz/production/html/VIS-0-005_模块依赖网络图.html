@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module Dependency Network - 模块依赖网络图</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-gradient-outer: #010409;
+  --line-default: #30363d;
+  --line-highlight: #ffffff;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --accent-tool: #58a6ff;
+  --accent-cmd: #3fb950;
+  --accent-api: #bc8cff;
+  --accent-mcp: #f0883e;
+  --accent-config: #d29922;
+  --accent-utils: #8b949e;
+  --accent-cycle: #f85149;
+  --glow-tool: rgba(88, 166, 255, 0.45);
+  --glow-cmd: rgba(63, 185, 80, 0.45);
+  --glow-api: rgba(188, 140, 255, 0.45);
+  --glow-mcp: rgba(240, 136, 62, 0.45);
+  --glow-config: rgba(210, 153, 34, 0.45);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 30% 20%, #1b2028 0%, var(--bg-primary) 50%, var(--bg-gradient-outer) 100%);
+  font-family: 'JetBrains Mono', 'Crimson Pro', monospace;
+  color: var(--text-primary);
+}
+
+#container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+svg {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+svg:active {
+  cursor: grabbing;
+}
+
+#title-card {
+  position: absolute;
+  top: 28px;
+  left: 32px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#title-card h1 {
+  font-family: 'Crimson Pro', serif;
+  font-size: 2.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+#title-card p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.panel {
+  position: absolute;
+  right: 28px;
+  top: 28px;
+  width: 260px;
+  background: rgba(13, 17, 23, 0.72);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(48, 54, 61, 0.6);
+  border-radius: 14px;
+  padding: 18px 20px;
+  z-index: 10;
+}
+
+.panel h3 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+  font-weight: 500;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 0.78rem;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-item span.cn {
+  color: var(--text-primary);
+}
+
+.legend-item span.en {
+  color: var(--text-secondary);
+  margin-left: auto;
+  font-size: 0.7rem;
+}
+
+.hub-info {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(48, 54, 61, 0.5);
+}
+
+.hub-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  margin-bottom: 6px;
+}
+
+.hub-name {
+  color: var(--text-primary);
+}
+
+.hub-val {
+  color: var(--text-secondary);
+}
+
+#detail-panel {
+  position: absolute;
+  left: 32px;
+  bottom: 32px;
+  width: 300px;
+  background: rgba(13, 17, 23, 0.78);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(48, 54, 61, 0.6);
+  border-radius: 16px;
+  padding: 22px 24px;
+  z-index: 10;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+#detail-panel.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+#detail-panel h2 {
+  font-family: 'Crimson Pro', serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+#detail-panel .meta {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 14px;
+}
+
+#detail-panel .stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  margin-bottom: 6px;
+}
+
+.cluster-label {
+  font-family: 'Crimson Pro', serif;
+  font-size: 2.6rem;
+  font-weight: 600;
+  fill: rgba(255,255,255,0.04);
+  pointer-events: none;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  letter-spacing: 0.04em;
+}
+
+.link {
+  stroke: var(--line-default);
+  transition: stroke 0.25s ease, stroke-width 0.25s ease, stroke-opacity 0.25s ease;
+}
+
+.link.highlight {
+  stroke: var(--line-highlight);
+  stroke-opacity: 0.9 !important;
+}
+
+.link.dim {
+  stroke-opacity: 0.04 !important;
+}
+
+.link.cycle {
+  stroke: var(--accent-cycle);
+  stroke-dasharray: 4 3;
+}
+
+.node-circle {
+  stroke: rgba(255,255,255,0.08);
+  stroke-width: 1px;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.node-circle:hover {
+  stroke: rgba(255,255,255,0.6);
+  stroke-width: 2px;
+}
+
+.node-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  fill: var(--text-primary);
+  pointer-events: none;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  dominant-baseline: middle;
+}
+
+.node-label.hub {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.node-group.dim {
+  opacity: 0.18;
+}
+
+.node-group.highlight {
+  opacity: 1;
+}
+
+.glow-circle {
+  pointer-events: none;
+  fill: none;
+  stroke-width: 0;
+}
+
+.warning-icon {
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.warning-icon.visible {
+  opacity: 1;
+}
+
+.controls {
+  position: absolute;
+  bottom: 28px;
+  right: 28px;
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+}
+
+.controls button {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(48, 54, 61, 0.6);
+  background: rgba(13, 17, 23, 0.72);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+}
+
+.controls button:hover {
+  background: rgba(48, 54, 61, 0.5);
+  border-color: rgba(139, 148, 158, 0.5);
+}
+
+</style>
+</head>
+<body>
+<div id="container">
+  <div id="title-card">
+    <h1>模块依赖网络图</h1>
+    <p>Module Dependency Network</p>
+  </div>
+
+  <div class="panel">
+    <h3>子系统图例 / Legend</h3>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-tool)"></div><span class="cn">工具集群</span><span class="en">Tools</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-cmd)"></div><span class="cn">命令集群</span><span class="en">Commands</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-api)"></div><span class="cn">API集群</span><span class="en">API</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-mcp)"></div><span class="cn">MCP集群</span><span class="en">MCP</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-config)"></div><span class="cn">配置集群</span><span class="en">Config</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-utils)"></div><span class="cn">工具类集群</span><span class="en">Utils</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-cycle);border:1px dashed var(--accent-cycle);background:transparent;"></div><span class="cn">循环依赖</span><span class="en">Cycle</span></div>
+    <div class="hub-info">
+      <div class="hub-row"><span class="hub-name">Tool.ts</span><span class="hub-val">inDegree 43</span></div>
+      <div class="hub-row"><span class="hub-name">queryLoop.ts</span><span class="hub-val">inDegree 12</span></div>
+      <div class="hub-row"><span class="hub-name">settings.ts</span><span class="hub-val">inDegree 28</span></div>
+    </div>
+  </div>
+
+  <div id="detail-panel">
+    <h2 id="dp-name">Tool.ts</h2>
+    <div class="meta" id="dp-group">工具集群 / Tools</div>
+    <div class="stat-row"><span>入度 In-degree</span><span id="dp-in">43</span></div>
+    <div class="stat-row"><span>出度 Out-degree</span><span id="dp-out">4</span></div>
+    <div class="stat-row"><span>权重 Weight</span><span id="dp-weight">高 / High</span></div>
+  </div>
+
+  <div class="controls">
+    <button id="zoom-in" title="Zoom In">+</button>
+    <button id="zoom-out" title="Zoom Out">−</button>
+    <button id="reset" title="Reset">⟲</button>
+  </div>
+</div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+const width = window.innerWidth;
+const height = window.innerHeight;
+
+const colorMap = {
+  tool: '#58a6ff',
+  cmd: '#3fb950',
+  api: '#bc8cff',
+  mcp: '#f0883e',
+  config: '#d29922',
+  utils: '#8b949e',
+  hooks: '#ff7b72'
+};
+
+const glowMap = {
+  tool: 'rgba(88,166,255,0.45)',
+  cmd: 'rgba(63,185,80,0.45)',
+  api: 'rgba(188,140,255,0.45)',
+  mcp: 'rgba(240,136,62,0.45)',
+  config: 'rgba(210,153,34,0.45)',
+  utils: 'rgba(139,148,158,0.45)',
+  hooks: 'rgba(255,123,114,0.45)'
+};
+
+const groupNames = {
+  tool: '工具集群 / Tools',
+  cmd: '命令集群 / Commands',
+  api: 'API集群 / API',
+  mcp: 'MCP集群 / MCP',
+  config: '配置集群 / Config',
+  utils: '工具类集群 / Utils',
+  hooks: 'Hooks集群 / Hooks'
+};
+
+const clusterCenters = {
+  tool: {x: width * 0.25, y: height * 0.35},
+  cmd: {x: width * 0.72, y: height * 0.28},
+  api: {x: width * 0.68, y: height * 0.65},
+  mcp: {x: width * 0.35, y: height * 0.72},
+  config: {x: width * 0.15, y: height * 0.62},
+  utils: {x: width * 0.5, y: height * 0.48},
+  hooks: {x: width * 0.82, y: height * 0.45}
+};
+
+const clusterLabels = [
+  {text: '工具集群', sub: 'TOOLS', x: clusterCenters.tool.x, y: clusterCenters.tool.y},
+  {text: '命令集群', sub: 'COMMANDS', x: clusterCenters.cmd.x, y: clusterCenters.cmd.y},
+  {text: 'API集群', sub: 'API', x: clusterCenters.api.x, y: clusterCenters.api.y},
+  {text: 'MCP集群', sub: 'MCP', x: clusterCenters.mcp.x, y: clusterCenters.mcp.y},
+  {text: '配置集群', sub: 'CONFIG', x: clusterCenters.config.x, y: clusterCenters.config.y},
+  {text: '工具类', sub: 'UTILS', x: clusterCenters.utils.x, y: clusterCenters.utils.y}
+];
+
+const nodes = [
+  // Hubs
+  {id: 'Tool.ts', group: 'tool', inDegree: 43},
+  {id: 'queryLoop.ts', group: 'api', inDegree: 12},
+  {id: 'settings.ts', group: 'config', inDegree: 28},
+  {id: 'permissions.ts', group: 'config', inDegree: 9},
+  {id: 'messages.ts', group: 'api', inDegree: 8},
+  // Entry / core
+  {id: 'index.ts', group: 'cmd', inDegree: 2},
+  {id: 'cli.ts', group: 'cmd', inDegree: 3},
+  {id: 'commands/index.ts', group: 'cmd', inDegree: 7},
+  // API cluster
+  {id: 'api-client.ts', group: 'api', inDegree: 6},
+  {id: 'stream-processor.ts', group: 'api', inDegree: 4},
+  {id: 'retry.ts', group: 'api', inDegree: 5},
+  {id: 'cache.ts', group: 'api', inDegree: 3},
+  // MCP cluster
+  {id: 'mcp-client.ts', group: 'mcp', inDegree: 4},
+  {id: 'mcp-server.ts', group: 'mcp', inDegree: 3},
+  {id: 'transports/sse.ts', group: 'mcp', inDegree: 2},
+  {id: 'transports/stdio.ts', group: 'mcp', inDegree: 2},
+  // Hooks cluster
+  {id: 'hooks-engine.ts', group: 'hooks', inDegree: 4},
+  {id: 'hook-events.ts', group: 'hooks', inDegree: 3},
+  {id: 'hook-runner.ts', group: 'hooks', inDegree: 3},
+  // Config cluster
+  {id: 'config.ts', group: 'config', inDegree: 5},
+  {id: 'claude-md.ts', group: 'config', inDegree: 3},
+  {id: 'env.ts', group: 'config', inDegree: 4},
+  // Utils cluster
+  {id: 'utils/logger.ts', group: 'utils', inDegree: 6},
+  {id: 'utils/fs.ts', group: 'utils', inDegree: 5},
+  {id: 'utils/path.ts', group: 'utils', inDegree: 4},
+  {id: 'utils/time.ts', group: 'utils', inDegree: 3},
+  {id: 'utils/errors.ts', group: 'utils', inDegree: 4},
+  {id: 'utils/validators.ts', group: 'utils', inDegree: 3},
+  {id: 'utils/format.ts', group: 'utils', inDegree: 2},
+  // Tools cluster (43 tools around Tool.ts, represented as subset for visual clarity)
+  {id: 'tools/BashTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/ReadTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/WriteTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/EditTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/GrepTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/GlobTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/AgentTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/AskTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/WebSearchTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/WebFetchTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/NotebookEditTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/TodoTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/SkillTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/ChatTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/ResponseTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/ContextTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/MemoryTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/PlanTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/ScheduleTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/LoopTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/HookTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/PermissionTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/ConfigTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/DeployTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/TestTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/BuildTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/DebugTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/AnalyzeTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/FormatTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/LintTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/TypeTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/DocsTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/SearchTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/ReplaceTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/EvalTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/ParseTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/RenderTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/ExportTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/ImportTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/TransformTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/ValidateTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/NotifyTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/ReportTool.ts', group: 'tool', inDegree: 1},
+  {id: 'tools/MonitorTool.ts', group: 'tool', inDegree: 1},
+  {id: 'commands/init.ts', group: 'cmd', inDegree: 2},
+  {id: 'commands/run.ts', group: 'cmd', inDegree: 2},
+  {id: 'commands/build.ts', group: 'cmd', inDegree: 2},
+  {id: 'commands/test.ts', group: 'cmd', inDegree: 2},
+  {id: 'commands/deploy.ts', group: 'cmd', inDegree: 2},
+  {id: 'commands/lint.ts', group: 'cmd', inDegree: 1},
+  {id: 'commands/format.ts', group: 'cmd', inDegree: 1}
+];
+
+const links = [
+  // Tool.ts star topology
+  ...nodes.filter(n => n.group === 'tool' && n.id !== 'Tool.ts').map(n => ({source: n.id, target: 'Tool.ts', weight: 1})),
+  // queryLoop.ts imports
+  {source: 'queryLoop.ts', target: 'Tool.ts', weight: 1},
+  {source: 'queryLoop.ts', target: 'api-client.ts', weight: 2},
+  {source: 'queryLoop.ts', target: 'permissions.ts', weight: 1},
+  {source: 'queryLoop.ts', target: 'messages.ts', weight: 2},
+  {source: 'queryLoop.ts', target: 'settings.ts', weight: 1},
+  // settings.ts global provider
+  ...nodes.filter(n => n.id !== 'settings.ts' && ['tool','cmd','api','mcp','hooks','utils'].includes(n.group)).slice(0, 26).map(n => ({source: n.id, target: 'settings.ts', weight: 1})),
+  // permissions
+  {source: 'queryLoop.ts', target: 'permissions.ts', weight: 1},
+  {source: 'api-client.ts', target: 'permissions.ts', weight: 1},
+  ...nodes.filter(n => n.group === 'tool' && n.id !== 'Tool.ts').slice(0, 6).map(n => ({source: n.id, target: 'permissions.ts', weight: 1})),
+  // messages
+  {source: 'api-client.ts', target: 'messages.ts', weight: 2},
+  {source: 'stream-processor.ts', target: 'messages.ts', weight: 1},
+  // index.ts entry
+  {source: 'index.ts', target: 'queryLoop.ts', weight: 2},
+  {source: 'index.ts', target: 'commands/index.ts', weight: 1},
+  {source: 'index.ts', target: 'cli.ts', weight: 1},
+  // cli.ts
+  {source: 'cli.ts', target: 'settings.ts', weight: 1},
+  {source: 'cli.ts', target: 'commands/index.ts', weight: 1},
+  // commands
+  {source: 'commands/init.ts', target: 'commands/index.ts', weight: 1},
+  {source: 'commands/run.ts', target: 'commands/index.ts', weight: 1},
+  {source: 'commands/build.ts', target: 'commands/index.ts', weight: 1},
+  {source: 'commands/test.ts', target: 'commands/index.ts', weight: 1},
+  {source: 'commands/deploy.ts', target: 'commands/index.ts', weight: 1},
+  {source: 'commands/lint.ts', target: 'commands/index.ts', weight: 1},
+  {source: 'commands/format.ts', target: 'commands/index.ts', weight: 1},
+  // API cluster interlinks
+  {source: 'api-client.ts', target: 'retry.ts', weight: 2},
+  {source: 'api-client.ts', target: 'cache.ts', weight: 1},
+  {source: 'stream-processor.ts', target: 'api-client.ts', weight: 1},
+  {source: 'stream-processor.ts', target: 'cache.ts', weight: 1},
+  // MCP cluster
+  {source: 'mcp-client.ts', target: 'mcp-server.ts', weight: 1},
+  {source: 'mcp-server.ts', target: 'transports/sse.ts', weight: 1},
+  {source: 'mcp-server.ts', target: 'transports/stdio.ts', weight: 1},
+  {source: 'mcp-client.ts', target: 'api-client.ts', weight: 1},
+  // Hooks cluster
+  {source: 'hooks-engine.ts', target: 'hook-events.ts', weight: 2},
+  {source: 'hook-runner.ts', target: 'hooks-engine.ts', weight: 1},
+  {source: 'hook-runner.ts', target: 'hook-events.ts', weight: 1},
+  // Utils cluster
+  {source: 'utils/logger.ts', target: 'utils/fs.ts', weight: 1},
+  {source: 'utils/fs.ts', target: 'utils/path.ts', weight: 1},
+  {source: 'utils/errors.ts', target: 'utils/logger.ts', weight: 1},
+  {source: 'utils/validators.ts', target: 'utils/format.ts', weight: 1},
+  {source: 'utils/time.ts', target: 'utils/logger.ts', weight: 1},
+  // Tool.ts to utils
+  {source: 'Tool.ts', target: 'utils/logger.ts', weight: 1},
+  {source: 'Tool.ts', target: 'utils/errors.ts', weight: 1},
+  // Config cluster
+  {source: 'config.ts', target: 'settings.ts', weight: 2},
+  {source: 'claude-md.ts', target: 'settings.ts', weight: 1},
+  {source: 'env.ts', target: 'settings.ts', weight: 1},
+  {source: 'config.ts', target: 'env.ts', weight: 1},
+  // Additional tool file dependencies
+  {source: 'tools/BashTool.ts', target: 'utils/fs.ts', weight: 1},
+  {source: 'tools/ReadTool.ts', target: 'utils/fs.ts', weight: 1},
+  {source: 'tools/WriteTool.ts', target: 'utils/path.ts', weight: 1},
+  {source: 'tools/AgentTool.ts', target: 'api-client.ts', weight: 1},
+  {source: 'tools/WebSearchTool.ts', target: 'cache.ts', weight: 1},
+  {source: 'tools/WebFetchTool.ts', target: 'cache.ts', weight: 1},
+  {source: 'tools/SkillTool.ts', target: 'messages.ts', weight: 1},
+  {source: 'tools/NotebookEditTool.ts', target: 'utils/format.ts', weight: 1},
+];
+
+// cycle dependencies
+const cycles = [
+  {source: 'hooks-engine.ts', target: 'hook-runner.ts'},
+  {source: 'utils/fs.ts', target: 'utils/path.ts'},
+  {source: 'api-client.ts', target: 'stream-processor.ts'}
+];
+
+const cycleLinks = cycles.map(c => {
+  const existing = links.find(l => l.source === c.source && l.target === c.target);
+  if (!existing) links.push({...c, weight: 1});
+  return {source: c.source, target: c.target};
+});
+
+const svg = d3.select("#container").append("svg")
+  .attr("viewBox", [0, 0, width, height]);
+
+const g = svg.append("g");
+
+// zoom
+const zoom = d3.zoom()
+  .scaleExtent([0.2, 4])
+  .on("zoom", (event) => g.attr("transform", event.transform));
+
+svg.call(zoom);
+
+// defs for glow
+const defs = svg.append("defs");
+Object.entries(glowMap).forEach(([key, color]) => {
+  const filter = defs.append("filter")
+    .attr("id", `glow-${key}`)
+    .attr("x", "-50%")
+    .attr("y", "-50%")
+    .attr("width", "200%")
+    .attr("height", "200%");
+  filter.append("feGaussianBlur")
+    .attr("stdDeviation", "4")
+    .attr("result", "coloredBlur");
+  const merge = filter.append("feMerge");
+  merge.append("feMergeNode").attr("in", "coloredBlur");
+  merge.append("feMergeNode").attr("in", "SourceGraphic");
+});
+
+// force simulation
+const simulation = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links).id(d => d.id).distance(d => 80 + (3 - d.weight) * 20))
+  .force("charge", d3.forceManyBody().strength(d => d.inDegree > 10 ? -600 : -280))
+  .force("center", d3.forceCenter(width / 2, height / 2))
+  .force("collide", d3.forceCollide().radius(d => Math.sqrt(d.inDegree) * 4 + 10).iterations(2))
+  .force("x", d3.forceX(d => clusterCenters[d.group] ? clusterCenters[d.group].x : width/2).strength(0.06))
+  .force("y", d3.forceY(d => clusterCenters[d.group] ? clusterCenters[d.group].y : height/2).strength(0.06));
+
+// cluster labels
+g.selectAll(".cluster-label")
+  .data(clusterLabels)
+  .enter()
+  .append("text")
+  .attr("class", "cluster-label")
+  .attr("x", d => d.x)
+  .attr("y", d => d.y)
+  .text(d => d.text)
+  .append("tspan")
+  .attr("x", d => d.x)
+  .attr("dy", "1.2em")
+  .attr("font-size", "0.5em")
+  .text(d => d.sub);
+
+const link = g.append("g")
+  .attr("class", "links")
+  .selectAll("line")
+  .data(links)
+  .enter()
+  .append("line")
+  .attr("class", d => {
+    const isCycle = cycleLinks.some(c => (c.source === d.source.id && c.target === d.target.id) || (c.source === d.source && c.target === d.target));
+    return `link ${isCycle ? 'cycle' : ''}`;
+  })
+  .attr("stroke-width", d => Math.max(1, d.weight * 1.2))
+  .attr("stroke-opacity", d => 0.12 + d.weight * 0.08);
+
+const nodeGroup = g.append("g")
+  .attr("class", "nodes")
+  .selectAll("g")
+  .data(nodes)
+  .enter()
+  .append("g")
+  .attr("class", "node-group");
+
+// glow for hubs
+nodeGroup.filter(d => d.inDegree > 8)
+  .append("circle")
+  .attr("class", "glow-circle")
+  .attr("r", d => Math.sqrt(d.inDegree) * 4 + 6)
+  .style("fill", d => glowMap[d.group])
+  .style("filter", d => `url(#glow-${d.group})`);
+
+const nodeCircle = nodeGroup.append("circle")
+  .attr("class", "node-circle")
+  .attr("r", d => Math.max(5, Math.sqrt(d.inDegree) * 3.8))
+  .attr("fill", d => colorMap[d.group]);
+
+const nodeLabel = nodeGroup.append("text")
+  .attr("class", d => `node-label ${d.inDegree > 8 ? 'hub' : ''}`)
+  .attr("dx", d => Math.max(5, Math.sqrt(d.inDegree) * 3.8) + 6)
+  .attr("dy", 1)
+  .style("opacity", d => d.inDegree > 2 ? 1 : 0)
+  .text(d => d.id);
+
+// warning icons on cycle links (positioned in tick)
+const warningGroup = g.append("g").attr("class", "warning-icons");
+const warnings = warningGroup.selectAll("g")
+  .data(cycleLinks)
+  .enter()
+  .append("g")
+  .attr("class", "warning-icon");
+
+warnings.append("circle")
+  .attr("r", 7)
+  .attr("fill", "#f85149")
+  .attr("stroke", "#0d1117")
+  .attr("stroke-width", 1.5);
+
+warnings.append("text")
+  .attr("text-anchor", "middle")
+  .attr("dominant-baseline", "central")
+  .attr("fill", "#fff")
+  .attr("font-size", "9px")
+  .attr("font-weight", "700")
+  .attr("dy", "0.5px")
+  .text("!");
+
+// drag
+nodeGroup.call(d3.drag()
+  .on("start", (event, d) => {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x; d.fy = d.y;
+  })
+  .on("drag", (event, d) => {
+    d.fx = event.x; d.fy = event.y;
+  })
+  .on("end", (event, d) => {
+    if (!event.active) simulation.alphaTarget(0);
+    d.fx = null; d.fy = null;
+  }));
+
+// hover & click
+let lockedNode = null;
+
+function showDetail(d) {
+  const panel = document.getElementById('detail-panel');
+  document.getElementById('dp-name').textContent = d.id;
+  document.getElementById('dp-group').textContent = groupNames[d.group] || d.group;
+  document.getElementById('dp-in').textContent = d.inDegree;
+  const outDeg = links.filter(l => (l.source.id || l.source) === d.id).length;
+  document.getElementById('dp-out').textContent = outDeg;
+  document.getElementById('dp-weight').textContent = d.inDegree > 15 ? '极高 / Critical' : d.inDegree > 8 ? '高 / High' : d.inDegree > 3 ? '中 / Medium' : '低 / Low';
+  panel.classList.add('visible');
+}
+
+function hideDetail() {
+  if (!lockedNode) document.getElementById('detail-panel').classList.remove('visible');
+}
+
+function setHighlight(d) {
+  const connected = new Set();
+  connected.add(d.id);
+  links.forEach(l => {
+    const s = l.source.id || l.source;
+    const t = l.target.id || l.target;
+    if (s === d.id) connected.add(t);
+    if (t === d.id) connected.add(s);
+  });
+
+  nodeGroup.classed("dim", n => !connected.has(n.id));
+  nodeGroup.classed("highlight", n => connected.has(n.id));
+  link.classed("dim", l => (l.source.id || l.source) !== d.id && (l.target.id || l.target) !== d.id);
+  link.classed("highlight", l => (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id);
+}
+
+function clearHighlight() {
+  if (lockedNode) return;
+  nodeGroup.classed("dim", false).classed("highlight", false);
+  link.classed("dim", false).classed("highlight", false);
+}
+
+nodeGroup
+  .on("mouseenter", (event, d) => { showDetail(d); setHighlight(d); })
+  .on("mouseleave", () => { hideDetail(); clearHighlight(); })
+  .on("click", (event, d) => {
+    event.stopPropagation();
+    lockedNode = lockedNode === d ? null : d;
+    if (lockedNode) { showDetail(d); setHighlight(d); }
+    else { hideDetail(); clearHighlight(); }
+  });
+
+svg.on("click", () => {
+  lockedNode = null;
+  hideDetail();
+  clearHighlight();
+});
+
+simulation.on("tick", () => {
+  link
+    .attr("x1", d => d.source.x)
+    .attr("y1", d => d.source.y)
+    .attr("x2", d => d.target.x)
+    .attr("y2", d => d.target.y);
+
+  nodeGroup.attr("transform", d => `translate(${d.x},${d.y})`);
+
+  warnings.attr("transform", d => {
+    const s = nodes.find(n => n.id === (d.source.id || d.source));
+    const t = nodes.find(n => n.id === (d.target.id || d.target));
+    if (!s || !t) return "translate(0,0)";
+    const mx = (s.x + t.x) / 2;
+    const my = (s.y + t.y) / 2;
+    return `translate(${mx},${my})`;
+  });
+  warnings.classed("visible", d => {
+    const s = nodes.find(n => n.id === (d.source.id || d.source));
+    const t = nodes.find(n => n.id === (d.target.id || d.target));
+    if (!s || !t) return false;
+    const dx = s.x - t.x, dy = s.y - t.y;
+    return Math.sqrt(dx*dx + dy*dy) > 30;
+  });
+});
+
+// controls
+document.getElementById('zoom-in').addEventListener('click', () => {
+  svg.transition().call(zoom.scaleBy, 1.3);
+});
+document.getElementById('zoom-out').addEventListener('click', () => {
+  svg.transition().call(zoom.scaleBy, 1 / 1.3);
+});
+document.getElementById('reset').addEventListener('click', () => {
+  svg.transition().call(zoom.transform, d3.zoomIdentity);
+});
+</script>
+</body>
+</html>

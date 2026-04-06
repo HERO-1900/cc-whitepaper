@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本书阅读路径图 | Reading Roadmap</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: #1a1f2e;
+            --text-primary: #f0f4f8;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            --part-0: #a0aec0;
+            --part-1: #00d4ff;
+            --part-2: #48bb78;
+            --part-3: #ffd93d;
+            --part-4: #7b61ff;
+            --part-5: #e88dff;
+            --part-6: #ff6b6b;
+            
+            --path-quick: #00d4ff;
+            --path-system: #48bb78;
+            --path-deep: #7b61ff;
+            --path-practical: #ff9f43;
+            
+            --glow-quick: rgba(0, 212, 255, 0.4);
+            --glow-system: rgba(72, 187, 120, 0.4);
+            --glow-deep: rgba(123, 97, 255, 0.4);
+            --glow-practical: rgba(255, 159, 67, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Serif SC', 'Space Grotesk', serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-pattern {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(0, 212, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(123, 97, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(255, 217, 61, 0.02) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .constellation {
+            position: fixed;
+            inset: 0;
+            opacity: 0.15;
+            pointer-events: none;
+            background-image: 
+                radial-gradient(2px 2px at 10% 20%, rgba(255,255,255,0.6) 1px, transparent 0),
+                radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4) 1px, transparent 0),
+                radial-gradient(2px 2px at 70% 40%, rgba(255,255,255,0.5) 1px, transparent 0),
+                radial-gradient(1px 1px at 85% 15%, rgba(255,255,255,0.3) 1px, transparent 0),
+                radial-gradient(2px 2px at 15% 85%, rgba(255,255,255,0.4) 1px, transparent 0),
+                radial-gradient(1px 1px at 55% 75%, rgba(255,255,255,0.5) 1px, transparent 0),
+                radial-gradient(2px 2px at 90% 90%, rgba(255,255,255,0.3) 1px, transparent 0),
+                radial-gradient(1px 1px at 40% 10%, rgba(255,255,255,0.4) 1px, transparent 0);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--part-1) 50%, var(--part-4) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .path-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .path-tab {
+            padding: 12px 24px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .path-tab:hover {
+            border-color: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+
+        .path-tab.active {
+            color: var(--bg-primary);
+            font-weight: 600;
+        }
+
+        .path-tab[data-path="quick"].active { background: var(--path-quick); border-color: var(--path-quick); }
+        .path-tab[data-path="system"].active { background: var(--path-system); border-color: var(--path-system); }
+        .path-tab[data-path="deep"].active { background: var(--path-deep); border-color: var(--path-deep); }
+        .path-tab[data-path="practical"].active { background: var(--path-practical); border-color: var(--path-practical); }
+        .path-tab[data-path="all"].active { background: var(--text-primary); border-color: var(--text-primary); }
+
+        .path-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .path-tab[data-path="quick"] .path-indicator { background: var(--path-quick); box-shadow: 0 0 10px var(--glow-quick); }
+        .path-tab[data-path="system"] .path-indicator { background: var(--path-system); box-shadow: 0 0 10px var(--glow-system); }
+        .path-tab[data-path="deep"] .path-indicator { background: var(--path-deep); box-shadow: 0 0 10px var(--glow-deep); }
+        .path-tab[data-path="practical"] .path-indicator { background: var(--path-practical); box-shadow: 0 0 10px var(--glow-practical); }
+        .path-tab[data-path="all"] .path-indicator { background: var(--text-secondary); }
+
+        .path-tab.active .path-indicator {
+            background: var(--bg-primary);
+            box-shadow: none;
+        }
+
+        .roadmap-container {
+            position: relative;
+            background: var(--bg-card);
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 60px 40px;
+            overflow: hidden;
+        }
+
+        .roadmap-svg {
+            width: 100%;
+            height: 500px;
+        }
+
+        .part-node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .part-node:hover {
+            filter: brightness(1.2);
+        }
+
+        .part-rect {
+            fill: var(--bg-secondary);
+            stroke-width: 2;
+            rx: 12;
+            transition: all 0.3s ease;
+        }
+
+        .part-node:hover .part-rect {
+            filter: drop-shadow(0 0 20px currentColor);
+        }
+
+        .part-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            fill: currentColor;
+            text-anchor: middle;
+        }
+
+        .part-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 12px;
+            font-weight: 600;
+            fill: currentColor;
+            text-anchor: middle;
+        }
+
+        .part-subtitle {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 9px;
+            fill: var(--text-muted);
+            text-anchor: middle;
+        }
+
+        .part-time {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 10px;
+            fill: var(--text-secondary);
+            text-anchor: middle;
+        }
+
+        .stars {
+            font-size: 10px;
+            fill: #ffd93d;
+        }
+
+        .path-line {
+            fill: none;
+            stroke-width: 3;
+            stroke-linecap: round;
+            opacity: 0.3;
+            transition: all 0.4s ease;
+        }
+
+        .path-line.active {
+            opacity: 1;
+            stroke-width: 4;
+            filter: drop-shadow(0 0 8px currentColor);
+            animation: dash 30s linear infinite;
+        }
+
+        .path-line-bg {
+            fill: none;
+            stroke: rgba(255,255,255,0.05);
+            stroke-width: 3;
+            stroke-linecap: round;
+        }
+
+        @keyframes dash {
+            to { stroke-dashoffset: -1000; }
+        }
+
+        .reader-badge {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .reader-badge:hover {
+            transform: scale(1.05);
+        }
+
+        .reader-bg {
+            fill: var(--bg-primary);
+            stroke-width: 2;
+            rx: 20;
+        }
+
+        .reader-label {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 10px;
+            font-weight: 600;
+            fill: currentColor;
+            text-anchor: middle;
+        }
+
+        .reader-time {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 9px;
+            fill: var(--text-muted);
+            text-anchor: middle;
+        }
+
+        .selectable-badge {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 8px;
+            fill: var(--bg-primary);
+            text-anchor: middle;
+            font-weight: 600;
+        }
+
+        .selectable-bg {
+            fill: #ffd93d;
+            rx: 4;
+        }
+
+        .connection-line {
+            fill: none;
+            stroke: rgba(255,255,255,0.1);
+            stroke-width: 1;
+            stroke-dasharray: 4 4;
+        }
+
+        .cross-ref-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 8px;
+            fill: var(--text-muted);
+            text-anchor: middle;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .part-detail {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(120%);
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 24px 32px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 100;
+        }
+
+        .part-detail.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .part-detail-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .part-detail-color {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--bg-primary);
+        }
+
+        .part-detail-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .part-detail-chapters {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .part-detail-paths {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .path-tag {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .path-tag.quick { background: rgba(0, 212, 255, 0.2); color: var(--path-quick); }
+        .path-tag.system { background: rgba(72, 187, 120, 0.2); color: var(--path-system); }
+        .path-tag.deep { background: rgba(123, 97, 255, 0.2); color: var(--path-deep); }
+        .path-tag.practical { background: rgba(255, 159, 67, 0.2); color: var(--path-practical); }
+
+        .close-detail {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-detail:hover {
+            color: var(--text-primary);
+        }
+
+        @media (max-width: 768px) {
+            .roadmap-container {
+                padding: 30px 20px;
+                overflow-x: auto;
+            }
+            
+            .roadmap-svg {
+                min-width: 1000px;
+                height: 450px;
+            }
+            
+            .legend {
+                gap: 15px;
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    <div class="constellation"></div>
+
+    <div class="container">
+        <header>
+            <h1>本书阅读路径图</h1>
+            <p class="subtitle">Reading Roadmap — 为不同目标读者设计的阅读指南</p>
+        </header>
+
+        <div class="path-tabs">
+            <div class="path-tab active" data-path="all">
+                <span class="path-indicator"></span>
+                全部路径 All Paths
+            </div>
+            <div class="path-tab" data-path="quick">
+                <span class="path-indicator"></span>
+                快速入门 Quick Start
+            </div>
+            <div class="path-tab" data-path="system">
+                <span class="path-indicator"></span>
+                系统学习 Systematic
+            </div>
+            <div class="path-tab" data-path="deep">
+                <span class="path-indicator"></span>
+                深度研究 Deep Research
+            </div>
+            <div class="path-tab" data-path="practical">
+                <span class="path-indicator"></span>
+                实践导向 Practical
+            </div>
+        </div>
+
+        <div class="roadmap-container">
+            <svg class="roadmap-svg" viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <filter id="glow-quick" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                    <filter id="glow-system" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                    <filter id="glow-deep" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                    <filter id="glow-practical" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                    
+                    <marker id="arrow-quick" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L0,6 L9,3 z" fill="var(--path-quick)"/>
+                    </marker>
+                    <marker id="arrow-system" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L0,6 L9,3 z" fill="var(--path-system)"/>
+                    </marker>
+                    <marker id="arrow-deep" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L0,6 L9,3 z" fill="var(--path-deep)"/>
+                    </marker>
+                    <marker id="arrow-practical" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L0,6 L9,3 z" fill="var(--path-practical)"/>
+                    </marker>
+                </defs>
+
+                <!-- Background paths (dotted) -->
+                <path class="path-line-bg" d="M 100,250 C 200,250 250,180 350,180" />
+                <path class="path-line-bg" d="M 350,180 C 450,180 500,220 600,220" />
+                <path class="path-line-bg" d="M 600,220 C 700,220 750,160 850,160" />
+                <path class="path-line-bg" d="M 850,160 C 950,160 1000,200 1100,200" />
+                <path class="path-line-bg" d="M 600,220 C 700,220 750,280 850,280" />
+                <path class="path-line-bg" d="M 850,280 C 950,280 1000,320 1100,320" />
+                <path class="path-line-bg" d="M 350,180 C 450,180 500,120 600,120" />
+
+                <!-- Cross-reference lines -->
+                <line class="connection-line" x1="640" y1="240" x2="740" y2="180" />
+                <line class="connection-line" x1="640" y1="260" x2="740" y2="300" />
+                <line class="connection-line" x1="890" y1="180" x2="890" y2="300" />
+                <line class="connection-line" x1="910" y1="180" x2="910" y2="300" />
+
+                <!-- Quick Start Path (Blue) - P0->P1->P5 -->
+                <path id="path-quick" class="path-line" stroke="var(--path-quick)" 
+                      d="M 70,350 C 150,350 180,250 220,250 S 280,150 350,150 S 420,200 450,200 S 520,120 580,120 S 650,160 720,160 S 790,120 850,120 S 920,200 1000,200"
+                      stroke-dasharray="8 4" marker-end="url(#arrow-quick)" />
+
+                <!-- Systematic Path (Green) - P0->P1->P2->P5->P6 -->
+                <path id="path-system" class="path-line" stroke="var(--path-system)"
+                      d="M 70,380 C 150,380 180,280 220,280 S 280,220 350,220 S 420,240 500,240 S 580,260 660,260 S 740,280 820,280 S 900,320 1000,320"
+                      stroke-dasharray="12 6" marker-end="url(#arrow-system)" />
+
+                <!-- Deep Research Path (Purple) - All parts -->
+                <path id="path-deep" class="path-line" stroke="var(--path-deep)"
+                      d="M 70,410 C 150,410 180,320 220,320 S 280,280 350,280 S 420,300 500,300 S 580,280 660,280 S 740,240 820,240 S 900,280 980,280 S 1060,320 1120,320"
+                      stroke-dasharray="1000" marker-end="url(#arrow-deep)" />
+
+                <!-- Practical Path (Orange) - Selective -->
+                <path id="path-practical" class="path-line" stroke="var(--path-practical)"
+                      d="M 70,440 C 150,440 200,380 350,380 S 480,340 580,340 S 700,380 820,380 S 940,380 1060,380"
+                      stroke-dasharray="4 8" marker-end="url(#arrow-practical)" />
+
+                <!-- Reader Badges -->
+                <g class="reader-badge" data-path="quick" transform="translate(20, 340)">
+                    <rect class="reader-bg" width="100" height="60" stroke="var(--path-quick)" />
+                    <text class="reader-label" x="50" y="25" fill="var(--path-quick)">快速入门者</text>
+                    <text class="reader-time" x="50" y="42">~1.5h</text>
+                </g>
+
+                <g class="reader-badge" data-path="system" transform="translate(20, 370)">
+                    <rect class="reader-bg" width="100" height="60" stroke="var(--path-system)" />
+                    <text class="reader-label" x="50" y="25" fill="var(--path-system)">系统学习者</text>
+                    <text class="reader-time" x="50" y="42">~5h</text>
+                </g>
+
+                <g class="reader-badge" data-path="deep" transform="translate(20, 400)">
+                    <rect class="reader-bg" width="100" height="60" stroke="var(--path-deep)" />
+                    <text class="reader-label" x="50" y="25" fill="var(--path-deep)">深度研究者</text>
+                    <text class="reader-time" x="50" y="42">~15h+</text>
+                </g>
+
+                <g class="reader-badge" data-path="practical" transform="translate(20, 430)">
+                    <rect class="reader-bg" width="100" height="60" stroke="var(--path-practical)" />
+                    <text class="reader-label" x="50" y="25" fill="var(--path-practical)">实践导向者</text>
+                    <text class="reader-time" x="50" y="42">~6h</text>
+                </g>
+
+                <!-- Part 0: Prologue -->
+                <g class="part-node" data-part="0" data-paths="quick,system,deep,practical" transform="translate(220, 250)">
+                    <rect class="part-rect" x="-40" y="-50" width="80" height="100" stroke="var(--part-0)" />
+                    <text class="part-label" y="-28" fill="var(--part-0)">Part 0</text>
+                    <text class="part-title" y="-5">序章</text>
+                    <text class="part-subtitle" y="12">Prologue</text>
+                    <text class="stars" y="32">★☆☆</text>
+                    <text class="part-time" x="0" y="-65">1章 · ~5分钟</text>
+                </g>
+
+                <!-- Part 1: Understanding -->
+                <g class="part-node" data-part="1" data-paths="quick,system,deep,practical" transform="translate(380, 200)">
+                    <rect class="part-rect" x="-55" y="-60" width="110" height="120" stroke="var(--part-1)" />
+                    <text class="part-label" y="-38" fill="var(--part-1)">Part 1</text>
+                    <text class="part-title" y="-10">认识这个系统</text>
+                    <text class="part-subtitle" y="10">Understanding</text>
+                    <text class="stars" y="32">★☆☆</text>
+                    <text class="part-time" x="0" y="-75">4章 · ~30分钟</text>
+                </g>
+
+                <!-- Part 2: Architecture -->
+                <g class="part-node" data-part="2" data-paths="system,deep,practical" transform="translate(540, 240)">
+                    <rect class="part-rect" x="-70" y="-75" width="140" height="150" stroke="var(--part-2)" />
+                    <text class="part-label" y="-50" fill="var(--part-2)">Part 2</text>
+                    <text class="part-title" y="-20">代码架构</text>
+                    <text class="part-title" y="-2">完全解构</text>
+                    <text class="part-subtitle" y="22">Architecture</text>
+                    <text class="stars" y="48">★★☆</text>
+                    <text class="part-time" x="0" y="-90">13章 · ~3小时</text>
+                </g>
+
+                <!-- Part 3: Q&A -->
+                <g class="part-node" data-part="3" data-paths="deep" transform="translate(720, 160)">
+                    <rect class="part-rect" x="-85" y="-85" width="170" height="170" stroke="var(--part-3)" />
+                    <text class="part-label" y="-60" fill="var(--part-3)">Part 3</text>
+                    <text class="part-title" y="-30">好奇心驱动的</text>
+                    <text class="part-title" y="-10">深度问答</text>
+                    <text class="part-subtitle" y="15">Deep Dive Q&A</text>
+                    <text class="stars" y="42">★★☆</text>
+                    <text class="part-time" x="0" y="-100">25章 · ~4小时</text>
+                    <rect class="selectable-bg" x="-35" y="55" width="70" height="18" />
+                    <text class="selectable-badge" y="67">可挑选阅读</text>
+                </g>
+
+                <!-- Part 4: Subsystems -->
+                <g class="part-node" data-part="4" data-paths="deep" transform="translate(720, 340)">
+                    <rect class="part-rect" x="-85" y="-85" width="170" height="170" stroke="var(--part-4)" />
+                    <text class="part-label" y="-60" fill="var(--part-4)">Part 4</text>
+                    <text class="part-title" y="-30">子系统</text>
+                    <text class="part-title" y="-10">完全解析</text>
+                    <text class="part-subtitle" y="15">Subsystems</text>
+                    <text class="stars" y="42">★★★</text>
+                    <text class="part-time" x="0" y="-100">23章 · ~6小时</text>
+                    <rect class="selectable-bg" x="-35" y="55" width="70" height="18" />
+                    <text class="selectable-badge" y="67">可挑选阅读</text>
+                </g>
+
+                <!-- Part 5: Philosophy -->
+                <g class="part-node" data-part="5" data-paths="quick,system,deep" transform="translate(900, 200)">
+                    <rect class="part-rect" x="-60" y="-65" width="120" height="130" stroke="var(--part-5)" />
+                    <text class="part-label" y="-40" fill="var(--part-5)">Part 5</text>
+                    <text class="part-title" y="-10">工程哲学</text>
+                    <text class="part-subtitle" y="12">Philosophy</text>
+                    <text class="stars" y="38">★★☆</text>
+                    <text class="part-time" x="0" y="-80">5章 · ~1小时</text>
+                </g>
+
+                <!-- Part 6: Critique -->
+                <g class="part-node" data-part="6" data-paths="system,deep,practical" transform="translate(1060, 320)">
+                    <rect class="part-rect" x="-60" y="-65" width="120" height="130" stroke="var(--part-6)" />
+                    <text class="part-label" y="-40" fill="var(--part-6)">Part 6</text>
+                    <text class="part-title" y="-10">批判与超越</text>
+                    <text class="part-subtitle" y="12">Critique</text>
+                    <text class="stars" y="38">★★☆</text>
+                    <text class="part-time" x="0" y="-80">3章 · ~45分钟</text>
+                    <rect x="-5" y="-82" width="10" height="10" fill="var(--path-practical)" rx="2" class="pulse" />
+                </g>
+
+                <!-- Cross-reference labels -->
+                <text class="cross-ref-label" x="690" y="205">深化</text>
+                <text class="cross-ref-label" x="690" y="270">对应</text>
+                <text class="cross-ref-label" x="900" y="245">互为补充</text>
+            </svg>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--part-0)"></div>
+                <span>Part 0 序章</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--part-1)"></div>
+                <span>Part 1 认识系统</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--part-2)"></div>
+                <span>Part 2 代码架构</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--part-3)"></div>
+                <span>Part 3 深度问答</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--part-4)"></div>
+                <span>Part 4 子系统解析</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--part-5)"></div>
+                <span>Part 5 工程哲学</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--part-6)"></div>
+                <span>Part 6 批判与超越</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="part-detail" id="partDetail">
+        <button class="close-detail" onclick="closeDetail()">×</button>
+        <div class="part-detail-header">
+            <div class="part-detail-color" id="detailColor">P0</div>
+            <div class="part-detail-title" id="detailTitle">序章 Prologue</div>
+        </div>
+        <div class="part-detail-chapters" id="detailChapters">1章 · 难度 ★☆☆ · 约5分钟</div>
+        <div class="part-detail-desc" id="detailDesc" style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 12px;"></div>
+        <div class="part-detail-paths" id="detailPaths"></div>
+    </div>
+
+    <script>
+        const partData = {
+            0: {
+                title: '序章 Prologue',
+                chapters: '1章',
+                difficulty: '★☆☆',
+                time: '约5分钟',
+                desc: '全书入口，介绍写作初衷与阅读建议',
+                paths: ['quick', 'system', 'deep', 'practical'],
+                color: '#a0aec0'
+            },
+            1: {
+                title: '认识这个系统 Understanding',
+                chapters: '4章',
+                difficulty: '★☆☆',
+                time: '约30分钟',
+                desc: '建立对 Claude Code 的整体认知框架',
+                paths: ['quick', 'system', 'deep', 'practical'],
+                color: '#00d4ff'
+            },
+            2: {
+                title: '代码架构完全解构 Architecture',
+                chapters: '13章',
+                difficulty: '★★☆',
+                time: '约3小时',
+                desc: '深入代码层面，完全拆解系统架构',
+                paths: ['system', 'deep', 'practical'],
+                color: '#48bb78'
+            },
+            3: {
+                title: '好奇心驱动的深度问答 Deep Dive Q&A',
+                chapters: '25章',
+                difficulty: '★★☆',
+                time: '约4小时（可挑选）',
+                desc: 'Part 2 各章的深化问答，按需选读',
+                paths: ['deep'],
+                color: '#ffd93d'
+            },
+            4: {
+                title: '子系统完全解析 Subsystems',
+                chapters: '23章',
+                difficulty: '★★★',
+                time: '约6小时（可挑选）',
+                desc: 'Part 2 特定子系统的极致深入',
+                paths: ['deep'],
+                color: '#7b61ff'
+            },
+            5: {
+                title: '工程哲学 Philosophy',
+                chapters: '5章',
+                difficulty: '★★☆',
+                time: '约1小时',
+                desc: '从实现到思想，工程实践的智慧总结',
+                paths: ['quick', 'system', 'deep'],
+                color: '#e88dff'
+            },
+            6: {
+                title: '批判与超越 Critique',
+                chapters: '3章',
+                difficulty: '★★☆',
+                time: '约45分钟',
+                desc: '批判性思考与将思想应用于实践',
+                paths: ['system', 'deep', 'practical'],
+                color: '#ff6b6b',
+                isEndpoint: true
+            }
+        };
+
+        const pathNames = {
+            quick: '快速入门',
+            system: '系统学习',
+            deep: '深度研究',
+            practical: '实践导向'
+        };
+
+        let currentPath = 'all';
+
+        function updatePaths(pathType) {
+            currentPath = pathType;
+            
+            // Update tab styles
+            document.querySelectorAll('.path-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.path === pathType);
+            });
+
+            // Update path lines
+            const paths = ['quick', 'system', 'deep', 'practical'];
+            paths.forEach(path => {
+                const line = document.getElementById(`path-${path}`);
+                if (pathType === 'all') {
+                    line.classList.add('active');
+                    line.style.opacity = '0.6';
+                } else if (pathType === path) {
+                    line.classList.add('active');
+                    line.style.opacity = '1';
+                } else {
+                    line.classList.remove('active');
+                    line.style.opacity = '0.1';
+                }
+            });
+
+            // Update nodes
+            document.querySelectorAll('.part-node').forEach(node => {
+                const partPaths = node.dataset.paths.split(',');
+                const rect = node.querySelector('.part-rect');
+                
+                if (pathType === 'all' || partPaths.includes(pathType)) {
+                    node.style.opacity = '1';
+                    rect.style.filter = '';
+                } else {
+                    node.style.opacity = '0.3';
+                    rect.style.filter = 'grayscale(0.8)';
+                }
+            });
+        }
+
+        function showPartDetail(partNum) {
+            const data = partData[partNum];
+            const detail = document.getElementById('partDetail');
+            
+            document.getElementById('detailColor').textContent = `P${partNum}`;
+            document.getElementById('detailColor').style.background = data.color;
+            document.getElementById('detailTitle').textContent = data.title;
+            document.getElementById('detailChapters').textContent = `${data.chapters} · 难度 ${data.difficulty} · ${data.time}`;
+            document.getElementById('detailDesc').textContent = data.desc;
+            
+            const pathsContainer = document.getElementById('detailPaths');
+            pathsContainer.innerHTML = '';
+            data.paths.forEach(path => {
+                const tag = document.createElement('span');
+                tag.className = `path-tag ${path}`;
+                tag.textContent = pathNames[path];
+                pathsContainer.appendChild(tag);
+            });
+
+            if (data.isEndpoint) {
+                const endpoint = document.createElement('span');
+                endpoint.className = 'path-tag practical';
+                endpoint.textContent = '实践终点';
+                pathsContainer.appendChild(endpoint);
+            }
+            
+            detail.classList.add('show');
+        }
+
+        function closeDetail() {
+            document.getElementById('partDetail').classList.remove('show');
+        }
+
+        // Event listeners
+        document.querySelectorAll('.path-tab').forEach(tab => {
+            tab.addEventListener('click', () => updatePaths(tab.dataset.path));
+        });
+
+        document.querySelectorAll('.part-node').forEach(node => {
+            node.addEventListener('click', () => showPartDetail(node.dataset.part));
+        });
+
+        document.querySelectorAll('.reader-badge').forEach(badge => {
+            badge.addEventListener('click', () => {
+                const path = badge.dataset.path;
+                updatePaths(path);
+            });
+        });
+
+        // Initialize
+        updatePaths('all');
+    </script>
+</body>
+</html>

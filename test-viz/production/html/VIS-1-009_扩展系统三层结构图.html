@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code 扩展系统三层结构图</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+--bg-deep: #0a0f1a;
+--bg-panel: rgba(15, 23, 42, 0.7);
+--mcp: #48bb78;
+--mcp-glow: rgba(72, 187, 120, 0.3);
+--hooks: #ffa500;
+--hooks-glow: rgba(255, 165, 0, 0.3);
+--plugins: #63b3ed;
+--plugins-glow: rgba(99, 179, 237, 0.3);
+--security: #ff6b6b;
+--text-main: #e2e8f0;
+--text-sub: #94a3b8;
+--glass: rgba(255, 255, 255, 0.03);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow-x: hidden; }
+body {
+background: var(--bg-deep);
+color: var(--text-main);
+font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+min-height: 100vh;
+position: relative;
+}
+
+.bg-circuit {
+position: fixed; inset: 0;
+background-image:
+radial-gradient(circle at 20% 30%, rgba(72, 187, 120, 0.08) 0%, transparent 40%),
+radial-gradient(circle at 80% 20%, rgba(255, 107, 107, 0.06) 0%, transparent 35%),
+radial-gradient(circle at 60% 80%, rgba(99, 179, 237, 0.08) 0%, transparent 45%),
+linear-gradient(rgba(15, 23, 42, 0.9), rgba(10, 15, 26, 0.95)),
+url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 30h60v60H30z' fill='none' stroke='%231e293b' stroke-width='0.5'/%3E%3Ccircle cx='30' cy='30' r='2' fill='%231e293b'/%3E%3Ccircle cx='90' cy='30' r='2' fill='%231e293b'/%3E%3Ccircle cx='30' cy='90' r='2' fill='%231e293b'/%3E%3Ccircle cx='90' cy='90' r='2' fill='%231e293b'/%3E%3C/svg%3E");
+z-index: -2;
+}
+
+.noise {
+position: fixed; inset: 0;
+opacity: 0.04;
+z-index: -1;
+pointer-events: none;
+background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.container {
+max-width: 1400px;
+margin: 0 auto;
+padding: 40px 20px;
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+}
+
+header {
+text-align: center;
+margin-bottom: 30px;
+position: relative;
+}
+
+header h1 {
+font-size: clamp(1.8rem, 4vw, 2.8rem);
+font-weight: 700;
+letter-spacing: -0.02em;
+background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+margin-bottom: 8px;
+}
+
+header .subtitle {
+font-size: 0.95rem;
+color: var(--text-sub);
+font-weight: 400;
+}
+
+.id-badge {
+display: inline-block;
+font-family: 'JetBrains Mono', monospace;
+font-size: 0.75rem;
+color: var(--text-sub);
+border: 1px solid rgba(148, 163, 184, 0.3);
+padding: 4px 12px;
+border-radius: 20px;
+margin-bottom: 16px;
+backdrop-filter: blur(4px);
+}
+
+.diagram-wrapper {
+flex: 1;
+display: flex;
+align-items: center;
+justify-content: center;
+position: relative;
+}
+
+svg {
+width: 100%;
+height: auto;
+max-width: 1200px;
+display: block;
+}
+
+.column-rect {
+fill: var(--glass);
+stroke-width: 1.5;
+backdrop-filter: blur(8px);
+transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+cursor: pointer;
+}
+
+.column-mcp { stroke: var(--mcp); }
+.column-hooks { stroke: var(--hooks); }
+.column-plugins { stroke: var(--plugins); }
+
+.column-rect:hover {
+fill: rgba(255, 255, 255, 0.06);
+}
+
+.title-main {
+font-size: 22px;
+font-weight: 700;
+fill: #f1f5f9;
+}
+.title-sub {
+font-size: 12px;
+font-weight: 500;
+fill: var(--text-sub);
+}
+.title-metaphor {
+font-size: 14px;
+font-weight: 600;
+}
+
+.node-box {
+fill: rgba(15, 23, 42, 0.85);
+stroke-width: 1;
+rx: 6;
+transition: all 0.3s ease;
+}
+.node-box:hover {
+fill: rgba(30, 41, 59, 0.95);
+}
+
+.node-text {
+font-size: 11px;
+fill: #e2e8f0;
+font-weight: 500;
+}
+.node-text-small {
+font-size: 9px;
+fill: var(--text-sub);
+}
+
+.protocol-icon {
+fill: none;
+stroke-width: 1.5;
+stroke-linecap: round;
+stroke-linejoin: round;
+}
+
+.arrow-path {
+fill: none;
+stroke-width: 1.5;
+stroke-dasharray: 4 3;
+opacity: 0.7;
+marker-end: url(#arrowhead);
+}
+
+.security-bar {
+filter: drop-shadow(0 0 8px rgba(255, 107, 107, 0.4));
+}
+
+.pulse-circle {
+animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+0%, 100% { opacity: 0.4; transform: scale(1); }
+50% { opacity: 0.8; transform: scale(1.1); }
+}
+
+.float-anim {
+animation: float 4s ease-in-out infinite;
+}
+.float-anim-delay {
+animation: float 4s ease-in-out infinite;
+animation-delay: 1.3s;
+}
+.float-anim-delay2 {
+animation: float 4s ease-in-out infinite;
+animation-delay: 2.6s;
+}
+
+@keyframes float {
+0%, 100% { transform: translateY(0); }
+50% { transform: translateY(-4px); }
+}
+
+.detail-popup {
+position: absolute;
+background: rgba(15, 23, 42, 0.95);
+border: 1px solid rgba(148, 163, 184, 0.2);
+border-radius: 12px;
+padding: 16px 20px;
+max-width: 280px;
+pointer-events: none;
+opacity: 0;
+transform: translateY(10px);
+transition: all 0.3s ease;
+backdrop-filter: blur(12px);
+box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+z-index: 100;
+}
+
+.detail-popup.visible {
+opacity: 1;
+transform: translateY(0);
+}
+
+.detail-popup h3 {
+font-size: 1rem;
+margin-bottom: 8px;
+color: #f8fafc;
+}
+
+.detail-popup p {
+font-size: 0.85rem;
+color: var(--text-sub);
+line-height: 1.5;
+}
+
+.detail-popup .tag {
+display: inline-block;
+font-size: 0.7rem;
+padding: 2px 8px;
+border-radius: 4px;
+margin-top: 8px;
+font-family: 'JetBrains Mono', monospace;
+}
+
+.tag-mcp { background: rgba(72, 187, 120, 0.15); color: var(--mcp); }
+.tag-hooks { background: rgba(255, 165, 0, 0.15); color: var(--hooks); }
+.tag-plugins { background: rgba(99, 179, 237, 0.15); color: var(--plugins); }
+
+@media (max-width: 768px) {
+.container { padding: 20px 12px; }
+header h1 { font-size: 1.5rem; }
+}
+</style>
+</head>
+<body>
+<div class="bg-circuit"></div>
+<div class="noise"></div>
+
+<div class="container">
+<header>
+<div class="id-badge">VIS-1-009 · 扩展系统三层结构图</div>
+<h1>Claude Code 扩展系统三层结构</h1>
+<p class="subtitle">Three-Tier Extension Architecture</p>
+</header>
+
+<div class="diagram-wrapper">
+<svg viewBox="0 0 1100 720" xmlns="http://www.w3.org/2000/svg" id="archSvg">
+<defs>
+<linearGradient id="gradSecurity" x1="0%" y1="0%" x2="100%" y2="0%">
+<stop offset="0%" stop-color="#48bb78"/>
+<stop offset="50%" stop-color="#ffa500"/>
+<stop offset="100%" stop-color="#ff6b6b"/>
+</linearGradient>
+<filter id="glowMcp"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#48bb78" flood-opacity="0.3"/></filter>
+<filter id="glowHooks"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#ffa500" flood-opacity="0.3"/></filter>
+<filter id="glowPlugins"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#63b3ed" flood-opacity="0.3"/></filter>
+<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+<polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+</marker>
+<marker id="arrowheadMcp" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+<polygon points="0 0, 10 3.5, 0 7" fill="#48bb78"/>
+</marker>
+<marker id="arrowheadHooks" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+<polygon points="0 0, 10 3.5, 0 7" fill="#ffa500"/>
+</marker>
+<marker id="arrowheadPlugins" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+<polygon points="0 0, 10 3.5, 0 7" fill="#63b3ed"/>
+</marker>
+</defs>
+
+<!-- External World Clouds -->
+<g class="float-anim">
+<ellipse cx="200" cy="65" rx="55" ry="22" fill="rgba(148,163,184,0.08)" stroke="#475569" stroke-width="1"/>
+<text x="200" y="70" text-anchor="middle" class="title-sub">外部服务 · External Services</text>
+</g>
+<g class="float-anim-delay">
+<ellipse cx="550" cy="55" rx="45" ry="18" fill="rgba(148,163,184,0.08)" stroke="#475569" stroke-width="1"/>
+<text x="550" y="58" text-anchor="middle" class="title-sub">生命周期 · Lifecycle</text>
+</g>
+<g class="float-anim-delay2">
+<ellipse cx="900" cy="65" rx="55" ry="22" fill="rgba(148,163,184,0.08)" stroke="#475569" stroke-width="1"/>
+<text x="900" y="70" text-anchor="middle" class="title-sub">第三方扩展 · Third-party</text>
+</g>
+
+<!-- External Service Icons -->
+<g transform="translate(85,110)">
+<rect x="0" y="0" width="50" height="34" rx="6" fill="rgba(72,187,120,0.08)" stroke="#48bb78" stroke-width="1"/>
+<text x="25" y="21" text-anchor="middle" class="node-text" fill="#48bb78" font-size="10">Slack</text>
+</g>
+<g transform="translate(150,110)">
+<rect x="0" y="0" width="50" height="34" rx="6" fill="rgba(72,187,120,0.08)" stroke="#48bb78" stroke-width="1"/>
+<text x="25" y="21" text-anchor="middle" class="node-text" fill="#48bb78" font-size="10">GitHub</text>
+</g>
+<g transform="translate(215,110)">
+<rect x="0" y="0" width="50" height="34" rx="6" fill="rgba(72,187,120,0.08)" stroke="#48bb78" stroke-width="1"/>
+<text x="25" y="21" text-anchor="middle" class="node-text" fill="#48bb78" font-size="10">DB</text>
+</g>
+
+<!-- Columns -->
+<rect x="50" y="160" width="300" height="460" rx="16" class="column-rect column-mcp" filter="url(#glowMcp)"/>
+<rect x="400" y="160" width="300" height="460" rx="16" class="column-rect column-hooks" filter="url(#glowHooks)"/>
+<rect x="750" y="160" width="300" height="460" rx="16" class="column-rect column-plugins" filter="url(#glowPlugins)"/>
+
+<!-- MCP Column Content -->
+<text x="200" y="205" text-anchor="middle" class="title-main" fill="#48bb78">MCP</text>
+<text x="200" y="225" text-anchor="middle" class="title-metaphor" fill="#48bb78">大使馆 · Embassy</text>
+
+<!-- Globe Icon -->
+<g transform="translate(185,245)" class="pulse-circle">
+<circle cx="15" cy="15" r="18" fill="rgba(72,187,120,0.12)" stroke="#48bb78" stroke-width="1.5"/>
+<path d="M15 3c4 0 7 5.4 7 12s-3 12-7 12-7-5.4-7-12 3-12 7-12z" fill="none" stroke="#48bb78" stroke-width="1"/>
+<path d="M5 15h20M15 3v24" fill="none" stroke="#48bb78" stroke-width="1"/>
+</g>
+
+<!-- MCP Nodes -->
+<g transform="translate(85,285)" data-col="mcp" data-title="传输协议 Transports" data-desc="stdio, SSE, streamable-http, Docker等8种协议，连接外部服务与Claude Code。">
+<rect x="0" y="0" width="230" height="56" rx="8" class="node-box" stroke="#48bb78"/>
+<text x="115" y="22" text-anchor="middle" class="node-text">8 种传输协议</text>
+<text x="115" y="40" text-anchor="middle" class="node-text-small">stdio · sse · streamable-http · docker ...</text>
+</g>
+
+<g transform="translate(85,355)" data-col="mcp" data-title="动态工具注册 Tool Registry" data-desc="MCP服务器将外部能力动态注册到43个内置工具列表，实现无缝扩展。">
+<rect x="0" y="0" width="230" height="46" rx="8" class="node-box" stroke="#48bb78"/>
+<text x="115" y="20" text-anchor="middle" class="node-text">动态工具注册</text>
+<text x="115" y="36" text-anchor="middle" class="node-text-small">加入 43 个内置工具列表 · Dynamic Registry</text>
+</g>
+
+<g transform="translate(85,415)" data-col="mcp" data-title="安全标记 Security Tag" data-desc="DANGEROUS_uncachedSystemPromptSection标记确保敏感内容受控处理。">
+<rect x="0" y="0" width="230" height="46" rx="8" class="node-box" stroke="#48bb78"/>
+<text x="115" y="20" text-anchor="middle" class="node-text">安全标记</text>
+<text x="115" y="36" text-anchor="middle" class="node-text-small">DANGEROUS_uncachedSystemPromptSection</text>
+</g>
+
+<!-- Hooks Column Content -->
+<text x="550" y="205" text-anchor="middle" class="title-main" fill="#ffa500">Hooks</text>
+<text x="550" y="225" text-anchor="middle" class="title-metaphor" fill="#ffa500">收费站 · Toll Gate</text>
+
+<!-- Barrier Icon -->
+<g transform="translate(535,245)" class="pulse-circle">
+<rect x="0" y="22" width="30" height="4" rx="2" fill="#ffa500"/>
+<rect x="0" y="10" width="4" height="16" rx="1" fill="#ffa500"/>
+<rect x="26" y="10" width="4" height="16" rx="1" fill="#ffa500"/>
+<rect x="6" y="6" width="18" height="3" rx="1" fill="#ffa500" transform="rotate(-15 15 7.5)"/>
+</g>
+
+<!-- Hooks Nodes -->
+<g transform="translate(435,285)" data-col="hooks" data-title="27 种 Hook 事件" data-desc="PreToolUse, PostToolUse, Notification等27个生命周期拦截点，精准控制每个关键节点。">
+<rect x="0" y="0" width="230" height="56" rx="8" class="node-box" stroke="#ffa500"/>
+<text x="115" y="22" text-anchor="middle" class="node-text">27 种 Hook 事件</text>
+<text x="115" y="40" text-anchor="middle" class="node-text-small">PreToolUse · PostToolUse · Notification ...</text>
+</g>
+
+<g transform="translate(435,355)" data-col="hooks" data-title="Exit Code 双轨决策" data-desc="0=放行执行，2=阻止并返回反馈，其他=错误处理。Shell脚本在Claude Code进程外独立运行。">
+<rect x="0" y="0" width="230" height="56" rx="8" class="node-box" stroke="#ffa500"/>
+<text x="115" y="22" text-anchor="middle" class="node-text">Exit Code 双轨决策</text>
+<text x="115" y="40" text-anchor="middle" class="node-text-small">0=放行 · 2=阻止+反馈 · 其他=错误</text>
+</g>
+
+<g transform="translate(435,425)" data-col="hooks" data-title="进程外执行 Isolated Execution" data-desc="Hook以Shell脚本形式在Claude Code主进程外运行，确保核心稳定性。">
+<rect x="0" y="0" width="230" height="46" rx="8" class="node-box" stroke="#ffa500"/>
+<text x="115" y="20" text-anchor="middle" class="node-text">进程外执行</text>
+<text x="115" y="36" text-anchor="middle" class="node-text-small">Shell 脚本 · 独立进程隔离运行</text>
+</g>
+
+<!-- Plugins Column Content -->
+<text x="900" y="205" text-anchor="middle" class="title-main" fill="#63b3ed">Plugins + Skills</text>
+<text x="900" y="225" text-anchor="middle" class="title-metaphor" fill="#63b3ed">特许经营商 · Franchise</text>
+
+<!-- Lock Icon -->
+<g transform="translate(885,245)" class="pulse-circle">
+<rect x="6" y="14" width="18" height="16" rx="2" fill="rgba(99,179,237,0.2)" stroke="#63b3ed" stroke-width="1.5"/>
+<path d="M10 14v-4a5 5 0 0 1 10 0v4" fill="none" stroke="#63b3ed" stroke-width="1.5"/>
+<circle cx="15" cy="22" r="2" fill="#63b3ed"/>
+</g>
+
+<!-- Plugins Nodes -->
+<g transform="translate(785,285)" data-col="plugins" data-title="Plugins 三重安全" data-desc="白名单+正则匹配+homoglyph检测三重安全机制，最严格的扩展准入标准。">
+<rect x="0" y="0" width="230" height="56" rx="8" class="node-box" stroke="#63b3ed"/>
+<text x="115" y="22" text-anchor="middle" class="node-text">Plugins 三重安全</text>
+<text x="115" y="40" text-anchor="middle" class="node-text-small">白名单 · 正则匹配 · Homoglyph 检测</text>
+</g>
+
+<g transform="translate(785,355)" data-col="plugins" data-title="Skills 语义匹配" data-desc="whenToUse语义描述匹配用户意图，按需延迟加载，精准触发所需能力。">
+<rect x="0" y="0" width="230" height="46" rx="8" class="node-box" stroke="#63b3ed"/>
+<text x="115" y="20" text-anchor="middle" class="node-text">Skills 语义匹配</text>
+<text x="115" y="36" text-anchor="middle" class="node-text-small">whenToUse 延迟加载 · 按需触发</text>
+</g>
+
+<g transform="translate(785,415)" data-col="plugins" data-title="MCP & Hook 配置" data-desc="Plugin包可内含MCP服务器配置和Hook配置，是最高级的扩展聚合单元。">
+<rect x="0" y="0" width="230" height="46" rx="8" class="node-box" stroke="#63b3ed"/>
+<text x="115" y="20" text-anchor="middle" class="node-text">聚合配置能力</text>
+<text x="115" y="36" text-anchor="middle" class="node-text-small">可包含 MCP 配置 · Hook 配置 · Skill</text>
+</g>
+
+<!-- Inter-column connections -->
+<path d="M315 380 C360 380, 390 360, 435 365" class="arrow-path" stroke="#ffa500" marker-end="url(#arrowheadHooks)"/>
+<text x="375" y="350" text-anchor="middle" class="node-text-small" fill="#ffa500">MCP工具受Hooks拦截</text>
+
+<path d="M650 390 C695 390, 740 380, 785 385" class="arrow-path" stroke="#63b3ed" marker-end="url(#arrowheadPlugins)"/>
+<text x="715" y="370" text-anchor="middle" class="node-text-small" fill="#63b3ed">Hooks可由Plugins配置</text>
+
+<path d="M785 330 C720 330, 690 300, 650 295" class="arrow-path" stroke="#63b3ed" marker-end="url(#arrowheadPlugins)"/>
+<text x="715" y="315" text-anchor="middle" class="node-text-small" fill="#63b3ed">Plugins注册MCP</text>
+
+<!-- Security Shield (all extensions) -->
+<g transform="translate(500,520)">
+<rect x="0" y="0" width="100" height="80" rx="10" fill="rgba(255,107,107,0.08)" stroke="#ff6b6b" stroke-width="1.5" class="security-bar"/>
+<path d="M50 15 L50 25 M50 35 L50 65" stroke="#ff6b6b" stroke-width="2" stroke-linecap="round"/>
+<circle cx="50" cy="30" r="3" fill="#ff6b6b"/>
+<text x="50" y="100" text-anchor="middle" class="node-text" fill="#ff6b6b">安全屏障</text>
+<text x="50" y="115" text-anchor="middle" class="node-text-small" fill="#ff6b6b">Security Barrier</text>
+</g>
+
+<!-- Tool Registry at bottom -->
+<g transform="translate(400,490)">
+<rect x="0" y="0" width="300" height="50" rx="10" fill="rgba(30,41,59,0.9)" stroke="#475569" stroke-width="1.5"/>
+<text x="150" y="22" text-anchor="middle" class="node-text" fill="#e2e8f0">Tool Registry · 工具注册中心</text>
+<text x="150" y="38" text-anchor="middle" class="node-text-small">43 Built-in + Dynamic MCP Tools</text>
+</g>
+
+<!-- Lines to Tool Registry -->
+<line x1="200" y1="461" x2="200" y2="490" stroke="#48bb78" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>
+<line x1="550" y1="471" x2="550" y2="490" stroke="#ffa500" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>
+<line x1="900" y1="461" x2="900" y2="490" stroke="#63b3ed" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>
+
+<!-- Security Gradient Arrow -->
+<g transform="translate(100,640)">
+<defs>
+<linearGradient id="secGrad" x1="0" x2="1" y1="0" y2="0">
+<stop offset="0%" stop-color="#48bb78"/>
+<stop offset="50%" stop-color="#ffa500"/>
+<stop offset="100%" stop-color="#ff6b6b"/>
+</linearGradient>
+</defs>
+<rect x="0" y="8" width="900" height="8" rx="4" fill="url(#secGrad)" opacity="0.85"/>
+<polygon points="900 0, 920 12, 900 24" fill="#ff6b6b"/>
+<text x="460" y="45" text-anchor="middle" class="node-text" fill="#e2e8f0">安全等级递增 · Security Level Increasing</text>
+<text x="80" y="45" text-anchor="middle" class="node-text-small" fill="#48bb78">最开放 Most Open</text>
+<text x="820" y="45" text-anchor="middle" class="node-text-small" fill="#ff6b6b">最严格 Strictest</text>
+</g>
+
+<!-- Security icons around plugins -->
+<g transform="translate(770,470)">
+<circle cx="10" cy="10" r="8" fill="none" stroke="#ff6b6b" stroke-width="1" opacity="0.6"/>
+<path d="M6 10h8M10 6v8" stroke="#ff6b6b" stroke-width="1" opacity="0.6"/>
+</g>
+<g transform="translate(1050,470)">
+<circle cx="10" cy="10" r="8" fill="none" stroke="#ff6b6b" stroke-width="1" opacity="0.6"/>
+<path d="M7 10l4 4 4-8" stroke="#ff6b6b" stroke-width="1" opacity="0.6" fill="none"/>
+</g>
+</svg>
+
+<div class="detail-popup" id="popup">
+<h3 id="popupTitle"></h3>
+<p id="popupDesc"></p>
+<span class="tag" id="popupTag"></span>
+</div>
+</div>
+</div>
+
+<script>
+const popup = document.getElementById('popup');
+const popupTitle = document.getElementById('popupTitle');
+const popupDesc = document.getElementById('popupDesc');
+const popupTag = document.getElementById('popupTag');
+const nodes = document.querySelectorAll('[data-col]');
+
+nodes.forEach(node => {
+node.addEventListener('mouseenter', (e) => {
+const col = node.dataset.col;
+const title = node.dataset.title;
+const desc = node.dataset.desc;
+popupTitle.textContent = title;
+popupDesc.textContent = desc;
+popupTag.className = 'tag tag-' + col;
+popupTag.textContent = col.toUpperCase();
+
+const rect = node.getBoundingClientRect();
+const containerRect = document.querySelector('.diagram-wrapper').getBoundingClientRect();
+
+let left = rect.left + rect.width / 2 - 140;
+let top = rect.top - containerRect.top - 110;
+
+if (left < 10) left = 10;
+if (left + 280 > containerRect.width) left = containerRect.width - 290;
+
+popup.style.left = left + 'px';
+popup.style.top = top + 'px';
+popup.classList.add('visible');
+});
+
+node.addEventListener('mouseleave', () => {
+popup.classList.remove('visible');
+});
+});
+</script>
+</body>
+</html>

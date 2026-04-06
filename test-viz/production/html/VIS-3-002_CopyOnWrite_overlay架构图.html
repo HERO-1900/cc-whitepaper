@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copy-on-Write Overlay Architecture</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+:root {
+  --bg-deep: #0f0f1a;
+  --bg-layer: #1a1a2e;
+  --overlay-blue: #00d4ff;
+  --overlay-glow: rgba(0, 212, 255, 0.3);
+  --main-gray: #8b92a8;
+  --read-green: #48bb78;
+  --write-orange: #ff9f43;
+  --reject-red: #ff6b6b;
+  --bash-yellow: #ffd93d;
+  --text-primary: #f0f0f5;
+  --text-secondary: #a0a8c0;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg-deep);
+  font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  position: relative;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.title h1 {
+  color: var(--text-primary);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.title p {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-top: 6px;
+  letter-spacing: 1px;
+}
+
+.diagram-wrapper {
+  background: linear-gradient(180deg, #161625 0%, #0d0d18 100%);
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 20px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.diagram-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: 
+    radial-gradient(ellipse 60% 40% at 20% 30%, rgba(0,212,255,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 60% at 80% 70%, rgba(255,107,107,0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.layer-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.file-label {
+  font-size: 9px;
+  fill: var(--text-secondary);
+}
+
+.path-label {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.decision-text {
+  font-size: 8px;
+  fill: var(--text-primary);
+  text-anchor: middle;
+}
+
+.boundary-label {
+  font-size: 9px;
+  fill: var(--reject-red);
+  font-weight: 600;
+}
+
+/* Hover interactions */
+.hover-zone { cursor: pointer; }
+.hover-zone:hover { filter: brightness(1.3); }
+
+.request-read:hover ~ .path-read,
+.request-write:hover ~ .path-write,
+.request-bash:hover ~ .path-bash,
+.request-other:hover ~ .path-other {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.cow-arrow {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.flow-particle {
+  animation: flow 3s linear infinite;
+}
+
+@keyframes flow {
+  0% { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.accept-glow {
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from { filter: drop-shadow(0 0 5px var(--read-green)); }
+  to { filter: drop-shadow(0 0 15px var(--read-green)); }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="title">
+    <h1>Copy-on-Write Overlay Architecture</h1>
+    <p>投机执行文件系统 / Speculative Execution Filesystem</p>
+  </div>
+  <div class="diagram-wrapper">
+    <svg viewBox="0 0 1000 650" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Markers -->
+        <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#48bb78"/>
+        </marker>
+        <marker id="arrow-orange" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#ff9f43"/>
+        </marker>
+        <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#00d4ff"/>
+        </marker>
+        <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#ff6b6b"/>
+        </marker>
+        <marker id="arrow-yellow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#ffd93d"/>
+        </marker>
+        <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#8b92a8"/>
+        </marker>
+        
+        <!-- Glow filters -->
+        <filter id="glow-blue" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-green" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        
+        <!-- Gradients -->
+        <linearGradient id="grad-overlay" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="rgba(0,212,255,0.2)"/>
+          <stop offset="100%" stop-color="rgba(0,212,255,0.08)"/>
+        </linearGradient>
+        <linearGradient id="grad-main" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#252538"/>
+          <stop offset="100%" stop-color="#1a1a28"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Background grid -->
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+      </pattern>
+      <rect width="1000" height="650" fill="url(#grid)"/>
+
+      <!-- ============ MAIN DIRECTORY LAYER (Bottom) ============ -->
+      <g transform="translate(200, 320)">
+        <!-- Layer background -->
+        <rect x="0" y="0" width="600" height="160" rx="8" fill="url(#grad-main)" stroke="#4a4a60" stroke-width="2"/>
+        
+        <!-- Layer label -->
+        <text x="20" y="25" class="layer-label" fill="#8b92a8">Main Directory Layer</text>
+        <text x="20" y="42" class="file-label" fill="#6a7080">主目录层 (项目 CWD)</text>
+        
+        <!-- Directory path -->
+        <text x="580" y="25" class="file-label" text-anchor="end" fill="#5a6080">~/project/</text>
+        
+        <!-- Files in main directory -->
+        <g transform="translate(60, 70)">
+          <rect x="0" y="0" width="80" height="50" rx="4" fill="#2a2a40" stroke="#4a4a60" stroke-width="1"/>
+          <text x="40" y="20" class="file-label" text-anchor="middle" fill="#a0a8c0">src/</text>
+          <text x="40" y="36" class="file-label" text-anchor="middle" fill="#6a7080" font-size="8">utils.js</text>
+        </g>
+        
+        <g transform="translate(180, 70)">
+          <rect x="0" y="0" width="80" height="50" rx="4" fill="#2a2a40" stroke="#4a4a60" stroke-width="1"/>
+          <text x="40" y="20" class="file-label" text-anchor="middle" fill="#a0a8c0">config/</text>
+          <text x="40" y="36" class="file-label" text-anchor="middle" fill="#6a7080" font-size="8">settings.json</text>
+        </g>
+        
+        <g transform="translate(300, 70)">
+          <rect x="0" y="0" width="80" height="50" rx="4" fill="#2a2a40" stroke="#4a4a60" stroke-width="1"/>
+          <text x="40" y="20" class="file-label" text-anchor="middle" fill="#a0a8c0">README.md</text>
+          <text x="40" y="36" class="file-label" text-anchor="middle" fill="#6a7080" font-size="8">original</text>
+        </g>
+        
+        <g transform="translate(420, 70)">
+          <rect x="0" y="0" width="80" height="50" rx="4" fill="#2a2a40" stroke="#4a4a60" stroke-width="1"/>
+          <text x="40" y="20" class="file-label" text-anchor="middle" fill="#a0a8c0">package.json</text>
+          <text x="40" y="36" class="file-label" text-anchor="middle" fill="#6a7080" font-size="8">original</text>
+        </g>
+      </g>
+
+      <!-- ============ OVERLAY LAYER (Top - Semi-transparent) ============ -->
+      <g transform="translate(200, 100)">
+        <!-- Layer background with transparency -->
+        <rect x="0" y="0" width="600" height="180" rx="8" fill="url(#grad-overlay)" stroke="#00d4ff" stroke-width="2" stroke-dasharray="8,4" filter="url(#glow-blue)"/>
+        
+        <!-- Layer label -->
+        <text x="20" y="28" class="layer-label" fill="#00d4ff">Overlay Layer</text>
+        <text x="20" y="45" class="file-label" fill="#6a98a8">覆盖层 (临时写入)</text>
+        
+        <!-- Directory path -->
+        <text x="580" y="28" class="file-label" text-anchor="end" fill="#4a8898">~/.claude/tmp/speculation/&lt;PID&gt;/&lt;UUID&gt;/</text>
+        
+        <!-- Files in overlay (some modified) -->
+        <g transform="translate(60, 80)">
+          <rect x="0" y="0" width="80" height="55" rx="4" fill="rgba(0,212,255,0.15)" stroke="#00d4ff" stroke-width="1.5" filter="url(#glow-blue)"/>
+          <text x="40" y="22" class="file-label" text-anchor="middle" fill="#00d4ff">src/</text>
+          <text x="40" y="40" class="file-label" text-anchor="middle" fill="#8ac8d8" font-size="8">utils.js ✎</text>
+        </g>
+        
+        <g transform="translate(420, 80)">
+          <rect x="0" y="0" width="80" height="55" rx="4" fill="rgba(0,212,255,0.15)" stroke="#00d4ff" stroke-width="1.5" filter="url(#glow-blue)"/>
+          <text x="40" y="22" class="file-label" text-anchor="middle" fill="#00d4ff">README.md</text>
+          <text x="40" y="40" class="file-label" text-anchor="middle" fill="#8ac8d8" font-size="8">modified ✎</text>
+        </g>
+        
+        <!-- Written paths tracker -->
+        <g transform="translate(520, 130)">
+          <rect x="0" y="0" width="60" height="40" rx="4" fill="rgba(72,187,120,0.15)" stroke="#48bb78" stroke-width="1"/>
+          <text x="30" y="16" class="file-label" text-anchor="middle" fill="#48bb78" font-size="7">writtenPaths</text>
+          <text x="30" y="30" class="file-label" text-anchor="middle" fill="#6ac090" font-size="7">Set{2}</text>
+        </g>
+      </g>
+
+      <!-- ============ COW COPY ARROWS (Dashed, from main to overlay) ============ -->
+      <g class="cow-arrow">
+        <!-- COW: src/utils.js -->
+        <path d="M 320 390 Q 280 350 280 280" fill="none" stroke="#00d4ff" stroke-width="2" stroke-dasharray="6,3" opacity="0.7" marker-end="url(#arrow-blue)"/>
+        <text x="290" y="335" class="file-label" fill="#00d4ff" font-size="8">COW copy</text>
+        
+        <!-- COW: README.md -->
+        <path d="M 540 390 Q 500 350 500 280" fill="none" stroke="#00d4ff" stroke-width="2" stroke-dasharray="6,3" opacity="0.7" marker-end="url(#arrow-blue)"/>
+      </g>
+
+      <!-- ============ LEFT SIDE: REQUEST ENTRANCE ============ -->
+      <g transform="translate(30, 50)">
+        <!-- Section label -->
+        <text x="0" y="0" class="layer-label" fill="#6a7080">Request Entry</text>
+        <text x="0" y="15" class="file-label" fill="#5a6080">请求入口 (canUseTool)</text>
+        
+        <!-- Read Request -->
+        <g transform="translate(0, 40)" class="hover-zone request-read">
+          <rect x="0" y="0" width="100" height="45" rx="6" fill="rgba(72,187,120,0.15)" stroke="#48bb78" stroke-width="2"/>
+          <text x="50" y="20" class="path-label" text-anchor="middle" fill="#48bb78">Read</text>
+          <text x="50" y="35" class="file-label" text-anchor="middle" fill="#6ac090" font-size="9">读请求</text>
+        </g>
+        
+        <!-- Write Request -->
+        <g transform="translate(0, 100)" class="hover-zone request-write">
+          <rect x="0" y="0" width="100" height="45" rx="6" fill="rgba(255,159,67,0.15)" stroke="#ff9f43" stroke-width="2"/>
+          <text x="50" y="20" class="path-label" text-anchor="middle" fill="#ff9f43">Write</text>
+          <text x="50" y="35" class="file-label" text-anchor="middle" fill="#ffb070" font-size="9">写请求</text>
+        </g>
+        
+        <!-- Bash Request -->
+        <g transform="translate(0, 160)" class="hover-zone request-bash">
+          <rect x="0" y="0" width="100" height="45" rx="6" fill="rgba(255,217,61,0.15)" stroke="#ffd93d" stroke-width="2"/>
+          <text x="50" y="20" class="path-label" text-anchor="middle" fill="#ffd93d">Bash</text>
+          <text x="50" y="35" class="file-label" text-anchor="middle" fill="#ffe570" font-size="9">命令执行</text>
+        </g>
+        
+        <!-- Other Tools -->
+        <g transform="translate(0, 220)" class="hover-zone request-other">
+          <rect x="0" y="0" width="100" height="45" rx="6" fill="rgba(255,107,107,0.15)" stroke="#ff6b6b" stroke-width="2"/>
+          <text x="50" y="20" class="path-label" text-anchor="middle" fill="#ff6b6b">Other</text>
+          <text x="50" y="35" class="file-label" text-anchor="middle" fill="#ff9090" font-size="9">其他工具</text>
+        </g>
+      </g>
+
+      <!-- ============ READ PATH (Green) ============ -->
+      <!-- Read arrow to overlay -->
+      <path class="path-read" d="M 130 100 L 200 160" fill="none" stroke="#48bb78" stroke-width="3" marker-end="url(#arrow-green)"/>
+      
+      <!-- Decision diamond: hit? -->
+      <g transform="translate(260, 180)">
+        <polygon points="0,-20 30,0 0,20 -30,0" fill="#1a2a25" stroke="#48bb78" stroke-width="2"/>
+        <text x="0" y="4" class="decision-text">in writtenPaths?</text>
+      </g>
+      
+      <!-- Hit path: read from overlay -->
+      <path d="M 290 180 L 380 180" fill="none" stroke="#48bb78" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+      <text x="335" y="170" class="file-label" fill="#48bb78">HIT → read overlay</text>
+      <text x="335" y="195" class="file-label" fill="#6ac090" font-size="8">命中读取覆盖层</text>
+      
+      <!-- Miss path: penetrate to main -->
+      <path d="M 260 200 L 260 320" fill="none" stroke="#48bb78" stroke-width="2.5" stroke-dasharray="4,2" marker-end="url(#arrow-green)"/>
+      <text x="220" y="265" class="file-label" fill="#48bb78">MISS</text>
+      <text x="200" y="278" class="file-label" fill="#6ac090" font-size="8">穿透读取原版</text>
+
+      <!-- ============ WRITE PATH (Orange) ============ -->
+      <!-- Write arrow to overlay only -->
+      <path class="path-write" d="M 130 155 L 210 190" fill="none" stroke="#ff9f43" stroke-width="3" marker-end="url(#arrow-orange)"/>
+      
+      <!-- Permission check -->
+      <g transform="translate(240, 240)">
+        <rect x="0" y="0" width="100" height="35" rx="4" fill="#2a2015" stroke="#ff9f43" stroke-width="1.5"/>
+        <text x="50" y="15" class="file-label" text-anchor="middle" fill="#ff9f43" font-size="8">Permission Check</text>
+        <text x="50" y="28" class="file-label" text-anchor="middle" fill="#ffb070" font-size="7">acceptEdits?</text>
+      </g>
+      
+      <!-- Path validation warning -->
+      <g transform="translate(360, 240)">
+        <polygon points="15,0 30,30 0,30" fill="#2a1515" stroke="#ff6b6b" stroke-width="1.5"/>
+        <text x="15" y="22" class="decision-text" fill="#ff6b6b">!</text>
+        <text x="35" y="25" class="boundary-label" font-size="8">path validation</text>
+        <text x="35" y="38" class="file-label" fill="#ff9090" font-size="7">!startsWith('..')</text>
+      </g>
+      
+      <!-- Write to overlay -->
+      <path d="M 340 257 L 420 230" fill="none" stroke="#ff9f43" stroke-width="2.5" marker-end="url(#arrow-orange)"/>
+      <text x="370" y="220" class="file-label" fill="#ff9f43" font-size="8">write to overlay</text>
+      <text x="370" y="232" class="file-label" fill="#ffb070" font-size="7">仅写入覆盖层</text>
+
+      <!-- ============ BASH PATH (Yellow) ============ -->
+      <!-- Bash arrow -->
+      <path class="path-bash" d="M 130 210 L 180 380" fill="none" stroke="#ffd93d" stroke-width="3" marker-end="url(#arrow-yellow)"/>
+      
+      <!-- Read-only check diamond -->
+      <g transform="translate(200, 400)">
+        <polygon points="0,-25 35,0 0,25 -35,0" fill="#2a2515" stroke="#ffd93d" stroke-width="2"/>
+        <text x="0" y="-5" class="decision-text" fill="#ffd93d">read-only?</text>
+        <text x="0" y="10" class="decision-text" fill="#ffe570" font-size="7">checkReadOnly</text>
+      </g>
+      
+      <!-- Read-only allowed -->
+      <path d="M 235 400 L 320 400" fill="none" stroke="#48bb78" stroke-width="2" marker-end="url(#arrow-green)"/>
+      <text x="275" y="390" class="file-label" fill="#48bb78" font-size="8">YES → allow</text>
+      <text x="275" y="415" class="file-label" fill="#6ac090" font-size="7">只读允许</text>
+      
+      <!-- Non-readonly: boundary abort -->
+      <path d="M 200 425 L 200 480" fill="none" stroke="#ff6b6b" stroke-width="2.5" marker-end="url(#arrow-red)"/>
+      
+      <!-- Non-readonly X mark -->
+      <g transform="translate(185, 495)">
+        <circle cx="15" cy="15" r="15" fill="#2a1515" stroke="#ff6b6b" stroke-width="2"/>
+        <path d="M 7,7 L 23,23 M 23,7 L 7,23" stroke="#ff6b6b" stroke-width="2.5"/>
+      </g>
+      <text x="215" y="515" class="boundary-label">boundary: bash_non_readonly</text>
+
+      <!-- ============ OTHER TOOLS PATH (Red) ============ -->
+      <!-- Direct reject -->
+      <path class="path-other" d="M 130 265 L 180 450" fill="none" stroke="#ff6b6b" stroke-width="3" marker-end="url(#arrow-red)"/>
+      
+      <!-- X mark for other tools -->
+      <g transform="translate(165, 465)">
+        <circle cx="15" cy="15" r="15" fill="#2a1515" stroke="#ff6b6b" stroke-width="2"/>
+        <path d="M 7,7 L 23,23 M 23,7 L 7,23" stroke="#ff6b6b" stroke-width="2.5"/>
+      </g>
+      <text x="200" y="485" class="boundary-label">boundary: denied_tool</text>
+
+      <!-- ============ RIGHT SIDE: ACCEPT / REJECT ============ -->
+      <g transform="translate(820, 100)">
+        <!-- Section label -->
+        <text x="60" y="0" class="layer-label" fill="#6a7080" text-anchor="middle">Resolution</text>
+        <text x="60" y="15" class="file-label" fill="#5a6080" text-anchor="middle">决议阶段</text>
+        
+        <!-- ACCEPT -->
+        <g transform="translate(10, 40)">
+          <rect x="0" y="0" width="100" height="70" rx="8" fill="rgba(72,187,120,0.15)" stroke="#48bb78" stroke-width="2.5" class="accept-glow"/>
+          <text x="50" y="28" class="path-label" text-anchor="middle" fill="#48bb78">ACCEPT</text>
+          <text x="50" y="48" class="file-label" text-anchor="middle" fill="#6ac090" font-size="9">接受</text>
+          <text x="50" y="62" class="file-label" text-anchor="middle" fill="#8ac0a0" font-size="7">接受投机</text>
+        </g>
+        
+        <!-- Accept arrow down -->
+        <path d="M 60 110 L 60 200" fill="none" stroke="#48bb78" stroke-width="3" marker-end="url(#arrow-green)"/>
+        <text x="70" y="160" class="file-label" fill="#48bb78">copyOverlayToMain()</text>
+        
+        <!-- Copy action -->
+        <g transform="translate(-30, 210)">
+          <rect x="0" y="0" width="140" height="50" rx="4" fill="#1a3020" stroke="#48bb78" stroke-width="1.5"/>
+          <text x="70" y="20" class="file-label" text-anchor="middle" fill="#48bb78">逐文件复制回主目录</text>
+          <text x="70" y="38" class="file-label" text-anchor="middle" fill="#6ac090" font-size="8">非原子操作 / non-atomic</text>
+        </g>
+        
+        <!-- Arrow to main -->
+        <path d="M 60 260 L -100 300" fill="none" stroke="#48bb78" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+        
+        <!-- REJECT -->
+        <g transform="translate(10, 340)">
+          <rect x="0" y="0" width="100" height="70" rx="8" fill="rgba(255,107,107,0.15)" stroke="#ff6b6b" stroke-width="2.5"/>
+          <text x="50" y="28" class="path-label" text-anchor="middle" fill="#ff6b6b">REJECT</text>
+          <text x="50" y="48" class="file-label" text-anchor="middle" fill="#ff9090" font-size="9">拒绝</text>
+          <text x="50" y="62" class="file-label" text-anchor="middle" fill="#b07070" font-size="7">拒绝投机</text>
+        </g>
+        
+        <!-- Reject arrow -->
+        <path d="M 60 410 L 60 480" fill="none" stroke="#ff6b6b" stroke-width="3" marker-end="url(#arrow-red)"/>
+        <text x="70" y="450" class="file-label" fill="#ff6b6b">safeRemoveOverlay()</text>
+        
+        <!-- Delete action -->
+        <g transform="translate(-30, 490)">
+          <rect x="0" y="0" width="140" height="50" rx="4" fill="#301a1a" stroke="#ff6b6b" stroke-width="1.5"/>
+          <text x="70" y="20" class="file-label" text-anchor="middle" fill="#ff6b6b">删除整个overlay目录</text>
+          <text x="70" y="38" class="file-label" text-anchor="middle" fill="#ff9090" font-size="8">maxRetries=3 / 100ms</text>
+        </g>
+        
+        <!-- Delete X -->
+        <g transform="translate(30, 560)">
+          <circle cx="20" cy="20" r="18" fill="#2a1515" stroke="#ff6b6b" stroke-width="2"/>
+          <path d="M 10,10 L 30,30 M 30,10 L 10,30" stroke="#ff6b6b" stroke-width="3"/>
+        </g>
+      </g>
+
+      <!-- ============ ADDITIONAL BOUNDARIES ============ -->
+      <!-- Edit boundary marker -->
+      <g transform="translate(650, 520)">
+        <circle cx="15" cy="15" r="12" fill="#2a1515" stroke="#ff6b6b" stroke-width="1.5"/>
+        <text x="15" y="20" class="decision-text" fill="#ff6b6b">X</text>
+        <text x="35" y="20" class="boundary-label" font-size="9">edit boundary</text>
+      </g>
+      
+      <!-- Complete boundary marker -->
+      <g transform="translate(750, 520)">
+        <circle cx="15" cy="15" r="12" fill="#2a1515" stroke="#48bb78" stroke-width="1.5"/>
+        <text x="15" y="20" class="decision-text" fill="#48bb78">✓</text>
+        <text x="35" y="20" class="file-label" fill="#6ac090" font-size="9">complete</text>
+      </g>
+
+      <!-- Legend -->
+      <g transform="translate(30, 580)">
+        <text x="0" y="0" class="file-label" fill="#5a6080" font-size="9">图例 Legend:</text>
+        <line x1="60" y1="-4" x2="90" y2="-4" stroke="#48bb78" stroke-width="3" marker-end="url(#arrow-green)"/>
+        <text x="100" y="0" class="file-label" fill="#6ac090" font-size="8">读路径 Read</text>
+        
+        <line x1="190" y1="-4" x2="220" y2="-4" stroke="#ff9f43" stroke-width="3" marker-end="url(#arrow-orange)"/>
+        <text x="230" y="0" class="file-label" fill="#ffb070" font-size="8">写路径 Write</text>
+        
+        <line x1="310" y1="-4" x2="340" y2="-4" stroke="#00d4ff" stroke-width="2" stroke-dasharray="4,2" marker-end="url(#arrow-blue)"/>
+        <text x="350" y="0" class="file-label" fill="#00d4ff" font-size="8">COW Copy</text>
+        
+        <line x1="430" y1="-4" x2="460" y2="-4" stroke="#ff6b6b" stroke-width="3" marker-end="url(#arrow-red)"/>
+        <text x="470" y="0" class="file-label" fill="#ff9090" font-size="8">拒绝/边界 Reject</text>
+      </g>
+
+    </svg>
+  </div>
+</div>
+</body>
+</html>

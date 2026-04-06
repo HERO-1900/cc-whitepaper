@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三条导出路径并行架构图</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Noto Sans SC', sans-serif;
+            padding: 20px;
+            background-image: 
+                radial-gradient(ellipse at 20% 30%, rgba(0, 212, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(123, 97, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(72, 187, 120, 0.03) 0%, transparent 70%);
+        }
+        
+        .container {
+            width: 1100px;
+            max-width: 100%;
+            background: rgba(20, 20, 35, 0.8);
+            border-radius: 24px;
+            padding: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+            backdrop-filter: blur(20px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #fff;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+        
+        .header .subtitle {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 13px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        svg {
+            width: 100%;
+            height: auto;
+            overflow: visible;
+        }
+        
+        .path-line {
+            fill: none;
+            stroke-width: 4;
+            stroke-linecap: round;
+            opacity: 0.6;
+        }
+        
+        .path-line.otlp {
+            stroke: #00d4ff;
+        }
+        
+        .path-line.bigquery {
+            stroke: #48bb78;
+        }
+        
+        .path-line.beta {
+            stroke: #7b61ff;
+        }
+        
+        .path-line.perfetto {
+            stroke: #e056a0;
+            stroke-width: 2;
+            stroke-dasharray: 8, 6;
+        }
+        
+        .path-glow {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            opacity: 0.15;
+            filter: blur(4px);
+        }
+        
+        .flow-particle {
+            fill: none;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-dasharray: 20, 100;
+            animation: flow 3s linear infinite;
+        }
+        
+        @keyframes flow {
+            to {
+                stroke-dashoffset: -120;
+            }
+        }
+        
+        .node {
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .node:hover {
+            transform: scale(1.05);
+        }
+        
+        .node-bg {
+            fill: rgba(30, 30, 50, 0.9);
+            stroke-width: 2;
+            rx: 16;
+        }
+        
+        .node-bg.entry {
+            stroke: #ffd93d;
+            fill: rgba(255, 217, 61, 0.1);
+        }
+        
+        .node-bg.otlp {
+            stroke: #00d4ff;
+            fill: rgba(0, 212, 255, 0.1);
+        }
+        
+        .node-bg.bigquery {
+            stroke: #48bb78;
+            fill: rgba(72, 187, 120, 0.1);
+        }
+        
+        .node-bg.beta {
+            stroke: #7b61ff;
+            fill: rgba(123, 97, 255, 0.1);
+        }
+        
+        .node-bg.perfetto {
+            stroke: #e056a0;
+            fill: rgba(224, 86, 160, 0.1);
+        }
+        
+        .node-label {
+            fill: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+        
+        .node-label-small {
+            fill: rgba(255, 255, 255, 0.6);
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+        
+        .condition-box {
+            fill: rgba(20, 20, 35, 0.95);
+            stroke-width: 1;
+            rx: 8;
+        }
+        
+        .condition-box.otlp {
+            stroke: #00d4ff;
+        }
+        
+        .condition-box.bigquery {
+            stroke: #48bb78;
+        }
+        
+        .condition-box.beta {
+            stroke: #7b61ff;
+        }
+        
+        .condition-text {
+            fill: rgba(255, 255, 255, 0.85);
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .interval-badge {
+            fill: rgba(255, 255, 255, 0.1);
+            stroke: rgba(255, 255, 255, 0.2);
+            stroke-width: 1;
+            rx: 4;
+        }
+        
+        .interval-text {
+            fill: rgba(255, 255, 255, 0.7);
+            font-size: 9px;
+            font-family: 'JetBrains Mono', monospace;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+        
+        .audience-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .audience-label.otlp {
+            fill: #00d4ff;
+        }
+        
+        .audience-label.bigquery {
+            fill: #48bb78;
+        }
+        
+        .audience-label.beta {
+            fill: #7b61ff;
+        }
+        
+        .icon-target {
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        }
+        
+        .counter-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .counter-title {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 16px;
+            text-align: center;
+            letter-spacing: 0.1em;
+        }
+        
+        .counter-grid {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .counter-item {
+            background: rgba(30, 30, 50, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px 16px;
+            min-width: 110px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .counter-item:hover {
+            transform: translateY(-2px);
+            border-color: #ffd93d;
+            background: rgba(255, 217, 61, 0.05);
+        }
+        
+        .counter-name {
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .counter-desc {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(20, 20, 35, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 16px 20px;
+            max-width: 320px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: translateY(10px);
+            z-index: 100;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        .tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .tooltip-title {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tooltip-content {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        
+        .tooltip-content code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: #ffd93d;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .legend-dot.otlp { background: #00d4ff; }
+        .legend-dot.bigquery { background: #48bb78; }
+        .legend-dot.beta { background: #7b61ff; }
+        .legend-dot.perfetto { background: #e056a0; }
+        
+        .fiber-effect {
+            filter: blur(20px);
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>遥测导出路径架构</h1>
+            <div class="subtitle">Telemetry Export Paths Architecture</div>
+        </div>
+        
+        <svg viewBox="0 0 1020 520" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="glow-otlp" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#00d4ff" stop-opacity="0"/>
+                    <stop offset="50%" stop-color="#00d4ff" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#00d4ff" stop-opacity="0"/>
+                </linearGradient>
+                <linearGradient id="glow-bigquery" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#48bb78" stop-opacity="0"/>
+                    <stop offset="50%" stop-color="#48bb78" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#48bb78" stop-opacity="0"/>
+                </linearGradient>
+                <linearGradient id="glow-beta" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#7b61ff" stop-opacity="0"/>
+                    <stop offset="50%" stop-color="#7b61ff" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="#7b61ff" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+            
+            <!-- Background fiber optic effects -->
+            <path d="M 180 260 Q 400 120 920 100" stroke="url(#glow-otlp)" stroke-width="40" fill="none" class="fiber-effect"/>
+            <path d="M 180 260 Q 500 260 920 260" stroke="url(#glow-bigquery)" stroke-width="35" fill="none" class="fiber-effect"/>
+            <path d="M 180 260 Q 400 400 920 420" stroke="url(#glow-beta)" stroke-width="30" fill="none" class="fiber-effect"/>
+            
+            <!-- Path 1: OTLP (Top) -->
+            <path d="M 180 260 C 350 260 450 100 880 100" class="path-line otlp" id="path-otlp"/>
+            <path d="M 180 260 C 350 260 450 100 880 100" class="path-glow otlp"/>
+            <path d="M 180 260 C 350 260 450 100 880 100" class="flow-particle otlp" style="animation-delay: 0s;"/>
+            
+            <!-- Path 2: BigQuery (Middle) -->
+            <path d="M 180 260 C 380 260 550 260 880 260" class="path-line bigquery" id="path-bigquery"/>
+            <path d="M 180 260 C 380 260 550 260 880 260" class="path-glow bigquery"/>
+            <path d="M 180 260 C 380 260 550 260 880 260" class="flow-particle bigquery" style="animation-delay: 1s;"/>
+            
+            <!-- Path 3: Beta Tracing (Bottom) -->
+            <path d="M 180 260 C 350 260 450 420 880 420" class="path-line beta" id="path-beta"/>
+            <path d="M 180 260 C 350 260 450 420 880 420" class="path-glow beta"/>
+            <path d="M 180 260 C 350 260 450 420 880 420" class="flow-particle beta" style="animation-delay: 2s;"/>
+            
+            <!-- Perfetto branch from Beta -->
+            <path d="M 600 340 Q 720 340 920 480" class="path-line perfetto" id="path-perfetto"/>
+            <path d="M 600 340 Q 720 340 920 480" class="flow-particle perfetto" style="stroke: #e056a0; animation-duration: 4s;"/>
+            
+            <!-- Entry Node -->
+            <g class="node" data-type="entry">
+                <rect x="60" y="220" width="120" height="80" class="node-bg entry"/>
+                <text x="120" y="248" class="node-label">initializeTelemetry()</text>
+                <text x="120" y="268" class="node-label-small">instrumentation.ts:421-701</text>
+            </g>
+            
+            <!-- OTLP Node -->
+            <g class="node" data-type="otlp">
+                <rect x="780" y="60" width="140" height="80" class="node-bg otlp"/>
+                <text x="850" y="88" class="node-label">OTLP Exporters</text>
+                <text x="850" y="108" class="node-label-small">企业OTLP端点</text>
+                <!-- Enterprise Building Icon -->
+                <g transform="translate(930, 70)" class="icon-target">
+                    <rect x="0" y="15" width="20" height="20" fill="#00d4ff" opacity="0.8"/>
+                    <rect x="4" y="20" width="4" height="4" fill="#1a1a2e"/>
+                    <rect x="12" y="20" width="4" height="4" fill="#1a1a2e"/>
+                    <rect x="4" y="28" width="4" height="4" fill="#1a1a2e"/>
+                    <rect x="12" y="28" width="4" height="4" fill="#1a1a2e"/>
+                    <rect x="6" y="10" width="8" height="8" fill="#00d4ff" opacity="0.6"/>
+                </g>
+            </g>
+            
+            <!-- BigQuery Node -->
+            <g class="node" data-type="bigquery">
+                <rect x="780" y="220" width="140" height="80" class="node-bg bigquery"/>
+                <text x="850" y="248" class="node-label">BigQuery Metrics</text>
+                <text x="850" y="268" class="node-label-small">Anthropic BigQuery</text>
+                <!-- Database Icon -->
+                <g transform="translate(930, 230)" class="icon-target">
+                    <ellipse cx="10" cy="5" rx="10" ry="4" fill="#48bb78" opacity="0.8"/>
+                    <rect x="0" y="5" width="20" height="20" rx="2" fill="#48bb78" opacity="0.6"/>
+                    <ellipse cx="10" cy="25" rx="10" ry="4" fill="#48bb78" opacity="0.8"/>
+                    <line x1="0" y1="5" x2="0" y2="25" stroke="#1a1a2e" stroke-width="1"/>
+                    <line x1="20" y1="5" x2="20" y2="25" stroke="#1a1a2e" stroke-width="1"/>
+                </g>
+            </g>
+            
+            <!-- Beta Tracing Node -->
+            <g class="node" data-type="beta">
+                <rect x="780" y="380" width="140" height="80" class="node-bg beta"/>
+                <text x="850" y="408" class="node-label">Beta Detailed Tracing</text>
+                <text x="850" y="428" class="node-label-small">Honeycomb</text>
+                <!-- Honeycomb Icon -->
+                <g transform="translate(935, 390)" class="icon-target">
+                    <polygon points="8,0 16,4 16,12 8,16 0,12 0,4" fill="#7b61ff" opacity="0.8"/>
+                    <polygon points="8,5 12,7 12,11 8,13 4,11 4,7" fill="none" stroke="#1a1a2e" stroke-width="0.5"/>
+                </g>
+            </g>
+            
+            <!-- Perfetto Node -->
+            <g class="node" data-type="perfetto">
+                <rect x="900" y="440" width="100" height="60" class="node-bg perfetto"/>
+                <text x="950" y="465" class="node-label" style="font-size: 11px;">Perfetto</text>
+                <text x="950" y="482" class="node-label-small">Chrome Trace</text>
+            </g>
+            
+            <!-- Condition Labels - OTLP -->
+            <g transform="translate(320, 70)">
+                <rect x="0" y="0" width="200" height="50" class="condition-box otlp"/>
+                <text x="10" y="18" class="condition-text" fill="#00d4ff">启用条件:</text>
+                <text x="10" y="35" class="condition-text">CLAUDE_CODE_ENABLE_TELEMETRY</text>
+            </g>
+            
+            <!-- Interval - OTLP -->
+            <g transform="translate(520, 75)">
+                <rect x="0" y="0" width="120" height="40" class="interval-badge"/>
+                <text x="60" y="15" class="interval-text">Metrics: 60s</text>
+                <text x="60" y="30" class="interval-text">Logs/Traces: 5s</text>
+            </g>
+            
+            <!-- Audience - OTLP -->
+            <g transform="translate(520, 125)">
+                <text x="0" y="0" class="audience-label otlp">面向: 企业用户</text>
+            </g>
+            
+            <!-- Condition Labels - BigQuery -->
+            <g transform="translate(350, 200)">
+                <rect x="0" y="0" width="220" height="50" class="condition-box bigquery"/>
+                <text x="10" y="18" class="condition-text" fill="#48bb78">启用条件:</text>
+                <text x="10" y="35" class="condition-text">1P API / C4E / Teams</text>
+            </g>
+            
+            <!-- Interval - BigQuery -->
+            <g transform="translate(580, 210)">
+                <rect x="0" y="0" width="80" height="25" class="interval-badge"/>
+                <text x="40" y="17" class="interval-text">5分钟</text>
+            </g>
+            
+            <!-- Audience - BigQuery -->
+            <g transform="translate(580, 245)">
+                <text x="0" y="0" class="audience-label bigquery">面向: Anthropic产品团队</text>
+            </g>
+            
+            <!-- Condition Labels - Beta -->
+            <g transform="translate(320, 370)">
+                <rect x="0" y="0" width="240" height="65" class="condition-box beta"/>
+                <text x="10" y="18" class="condition-text" fill="#7b61ff">启用条件:</text>
+                <text x="10" y="35" class="condition-text">ENABLE_BETA_TRACING_DETAILED=1</text>
+                <text x="10" y="52" class="condition-text">+ endpoint + org白名单</text>
+            </g>
+            
+            <!-- Interval - Beta -->
+            <g transform="translate(580, 385)">
+                <rect x="0" y="0" width="90" height="25" class="interval-badge"/>
+                <text x="45" y="17" class="interval-text">实时流</text>
+            </g>
+            
+            <!-- Audience - Beta -->
+            <g transform="translate(580, 420)">
+                <text x="0" y="0" class="audience-label beta">面向: 内部调试团队</text>
+            </g>
+            
+            <!-- Special Features - Beta -->
+            <g transform="translate(580, 440)">
+                <text x="0" y="0" style="font-size: 9px; fill: rgba(123, 97, 255, 0.7); font-family: 'JetBrains Mono', monospace;">sp_&lt;hash&gt; 60KB截断 ant-only</text>
+            </g>
+        </svg>
+        
+        <!-- 8 Counters Section -->
+        <div class="counter-section">
+            <div class="counter-title">8 OTel Counters → BigQuery 核心产品指标</div>
+            <div class="counter-grid">
+                <div class="counter-item">
+                    <div class="counter-name">session</div>
+                    <div class="counter-desc">会话计数</div>
+                </div>
+                <div class="counter-item">
+                    <div class="counter-name">loc</div>
+                    <div class="counter-desc">代码行数</div>
+                </div>
+                <div class="counter-item">
+                    <div class="counter-name">pr</div>
+                    <div class="counter-desc">PR操作</div>
+                </div>
+                <div class="counter-item">
+                    <div class="counter-name">commit</div>
+                    <div class="counter-desc">提交次数</div>
+                </div>
+                <div class="counter-item">
+                    <div class="counter-name">cost</div>
+                    <div class="counter-desc">API成本</div>
+                </div>
+                <div class="counter-item">
+                    <div class="counter-name">token</div>
+                    <div class="counter-desc">令牌用量</div>
+                </div>
+                <div class="counter-item">
+                    <div class="counter-name">codeEditTool</div>
+                    <div class="counter-desc">工具决策</div>
+                </div>
+                <div class="counter-item">
+                    <div class="counter-name">activeTime</div>
+                    <div class="counter-desc">活跃时长</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot otlp"></div>
+                <span>OTLP Exporters (mTLS/CA/Proxy/Headers)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot bigquery"></div>
+                <span>BigQuery Metrics (产品分析)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot beta"></div>
+                <span>Beta Tracing (调试追踪)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot perfetto"></div>
+                <span>Perfetto Chrome Trace</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-title" id="tooltip-title"></div>
+        <div class="tooltip-content" id="tooltip-content"></div>
+    </div>
+    
+    <script>
+        const tooltip = document.getElementById('tooltip');
+        const tooltipTitle = document.getElementById('tooltip-title');
+        const tooltipContent = document.getElementById('tooltip-content');
+        
+        const nodeData = {
+            entry: {
+                title: 'initializeTelemetry()',
+                content: '遥测系统统一入口点<br>instrumentation.ts:421-701<br>所有导出路径的共同起点'
+            },
+            otlp: {
+                title: 'OTLP Exporters',
+                content: '面向企业用户的遥测导出<br><br><b>信号类型:</b> Metrics / Logs / Traces<br><b>安全特性:</b> mTLS, CA证书链, HTTP代理<br><b>动态配置:</b> otelHeadersHelper 支持运行时Headers'
+            },
+            bigquery: {
+                title: 'BigQuery Metrics',
+                content: '面向Anthropic产品团队的数据分析<br><br><b>核心指标:</b> 8个OTel Counter<br>• session, loc, pr, commit<br>• cost, token, codeEditToolDecision, activeTime<br><br>用于分析使用模式和产品优化'
+            },
+            beta: {
+                title: 'Beta Detailed Tracing',
+                content: '面向内部调试团队的详细追踪<br><br><b>特殊处理:</b><br>• hashSystemPrompt() - 系统提示词SHA256哈希<br>• sp_&lt;12字符&gt; 去重标识<br>• 60KB截断限制<br>• ant-only thinking 记录'
+            },
+            perfetto: {
+                title: 'Perfetto Chrome Trace',
+                content: 'ant-only的Agent层级可视化<br><br>将Agent层级映射为进程/线程ID<br>支持Chrome DevTools直接打开分析'
+            }
+        };
+        
+        document.querySelectorAll('.node').forEach(node => {
+            node.addEventListener('mouseenter', (e) => {
+                const type = node.dataset.type;
+                const data = nodeData[type];
+                if (data) {
+                    tooltipTitle.innerHTML = data.title;
+                    tooltipContent.innerHTML = data.content;
+                    tooltip.classList.add('visible');
+                }
+            });
+            
+            node.addEventListener('mousemove', (e) => {
+                tooltip.style.left = (e.pageX + 20) + 'px';
+                tooltip.style.top = (e.pageY + 20) + 'px';
+            });
+            
+            node.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+        });
+        
+        // Path hover effects
+        const paths = ['otlp', 'bigquery', 'beta', 'perfetto'];
+        paths.forEach(pathType => {
+            const pathElement = document.getElementById(`path-${pathType}`);
+            if (pathElement) {
+                pathElement.addEventListener('mouseenter', () => {
+                    pathElement.style.opacity = '1';
+                    pathElement.style.strokeWidth = '6';
+                });
+                pathElement.addEventListener('mouseleave', () => {
+                    pathElement.style.opacity = '0.6';
+                    pathElement.style.strokeWidth = pathType === 'perfetto' ? '2' : '4';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

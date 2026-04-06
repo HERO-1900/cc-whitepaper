@@ -1,0 +1,22 @@
+
+总分: 14/20
+
+布局: 3/5 — 表格结构基本对齐，但旋转列标题的左偏移导致跨列显示，角落单元格宽度不一致
+信息: 4/5 — 依赖关系类型清晰，统计数字直观，但旋转-45°的列标题阅读效率低
+美学: 4/5 — 配色方案和谐统一，品牌色贯穿始终，但对角线×符号垂直未居中
+完整: 3/5 — 代码可运行且功能完整，但存在语义错误和元素定位问题
+
+缺陷:
+1. **第136-144行**: stat-row 使用 `<tr>` + `<td>` 而非 `<th>`，应与 thead 中的 `<th>` 保持语义一致
+2. **第39行**: `.col-header-inner` 的 `transform-origin: left bottom` 配合 `padding-left: 10px`，导致长标题向左延伸可能与角落单元格重叠
+3. **第68-75行**: `.diagonal::after` 伪元素使用默认 `position: relative` + `display: inline`（从 `content: '×'` 推断），无法控制垂直居中，应显式设置 `position: absolute` + `top: 50%` + `transform: translateY(-50%)`
+4. **第78-89行**: `.dep-strong/medium/weak` 定义了 `width/height` 但 `::after` 伪元素不继承这些尺寸
+5. **第137行**: stat-row 的角落单元格 `<td class="corner-cell">` 与 thead 的 `<th class="corner-cell">` 宽度定义重复（都是 `width: 160px`），且位置不对称
+6. **第180行**: `.stat-row` 缺少 `class="cell diagonal"` 的最后一个单元格内容（对角线×）
+
+修改建议:
+1. 将 stat-row 的 `<tr>` 改为 `<tr class="stat-row">` 并在第一格使用 `<th class="corner-cell">`
+2. 列标题 transform-origin 改为 `bottom center`，并减少 padding-left 或改用 SVG/Canvas 绘制旋转文字
+3. `.diagonal::after` 改为 `position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);`
+4. 对角线统计单元格应添加 `class="cell diagonal"` 或移除该格子
+5. 统一角落单元格：thead 用 `<th scope="row">`，stat-row 用 `<th>` 或确保宽度完全一致

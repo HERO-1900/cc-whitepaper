@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配置生效诊断流程 | Config Troubleshooting Guide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-red: #f85149;
+            --accent-orange: #f0883e;
+            --accent-yellow: #d29922;
+            --accent-green: #3fb950;
+            --accent-blue: #58a6ff;
+            --accent-cyan: #39c5cf;
+            --accent-purple: #a371f7;
+            --border-color: #30363d;
+            --glow-red: rgba(248, 81, 73, 0.4);
+            --glow-green: rgba(63, 185, 80, 0.4);
+            --glow-blue: rgba(88, 166, 255, 0.4);
+            --glow-yellow: rgba(210, 153, 34, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Animated grid background */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(88, 166, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(88, 166, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-grid::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at 50% 0%, rgba(88, 166, 255, 0.08) 0%, transparent 50%);
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            letter-spacing: 0.05em;
+        }
+
+        /* Flowchart container */
+        .flowchart-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            padding: 20px 0;
+        }
+
+        /* Start node - problem statement */
+        .start-node {
+            background: linear-gradient(135deg, rgba(248, 81, 73, 0.15) 0%, rgba(240, 136, 62, 0.15) 100%);
+            border: 2px solid var(--accent-red);
+            border-radius: 50%;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 0 40px var(--glow-red), inset 0 0 40px rgba(248, 81, 73, 0.1);
+            animation: pulse-red 2s ease-in-out infinite;
+            margin-bottom: 30px;
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 40px var(--glow-red), inset 0 0 40px rgba(248, 81, 73, 0.1); }
+            50% { box-shadow: 0 0 60px var(--glow-red), inset 0 0 50px rgba(248, 81, 73, 0.15); }
+        }
+
+        .start-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .start-text {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent-red);
+            padding: 0 20px;
+            line-height: 1.4;
+        }
+
+        .start-text-en {
+            font-size: 0.75rem;
+            color: var(--accent-orange);
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+
+        /* Connector line */
+        .connector {
+            width: 2px;
+            height: 40px;
+            background: linear-gradient(to bottom, var(--accent-red), var(--accent-blue));
+            position: relative;
+        }
+
+        .connector::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid var(--accent-blue);
+        }
+
+        /* Step nodes */
+        .step-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 30px;
+            width: 100%;
+            max-width: 1000px;
+            position: relative;
+        }
+
+        .step-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Diamond decision node */
+        .decision-node {
+            width: 180px;
+            height: 180px;
+            background: linear-gradient(135deg, rgba(88, 166, 255, 0.1) 0%, rgba(57, 197, 207, 0.1) 100%);
+            border: 2px solid var(--accent-blue);
+            transform: rotate(45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 0 30px var(--glow-blue);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .decision-node:hover {
+            box-shadow: 0 0 50px var(--glow-blue);
+            transform: rotate(45deg) scale(1.05);
+        }
+
+        .decision-node.warning {
+            border-color: var(--accent-yellow);
+            background: linear-gradient(135deg, rgba(210, 153, 34, 0.15) 0%, rgba(240, 136, 62, 0.1) 100%);
+            box-shadow: 0 0 30px var(--glow-yellow);
+        }
+
+        .decision-node.warning:hover {
+            box-shadow: 0 0 50px var(--glow-yellow);
+        }
+
+        .decision-content {
+            transform: rotate(-45deg);
+            text-align: center;
+            width: 140%;
+            padding: 10px;
+        }
+
+        .step-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            margin-bottom: 5px;
+            letter-spacing: 0.1em;
+        }
+
+        .decision-node.warning .step-number {
+            color: var(--accent-yellow);
+        }
+
+        .decision-text {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+
+        .decision-text-en {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 3px;
+        }
+
+        /* Warning badge for steps 4-5 */
+        .warning-badge {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            background: var(--accent-yellow);
+            color: var(--bg-primary);
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transform: rotate(-45deg);
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        /* Branch labels */
+        .branches {
+            display: flex;
+            width: 100%;
+            margin-top: 60px;
+            position: relative;
+        }
+
+        .branch-yes, .branch-no {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .branch-yes {
+            margin-right: 90px;
+        }
+
+        .branch-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 6px 16px;
+            border-radius: 20px;
+            margin-bottom: 15px;
+        }
+
+        .branch-yes .branch-label {
+            background: rgba(63, 185, 80, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+
+        .branch-no .branch-label {
+            background: rgba(139, 148, 158, 0.2);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Solution box */
+        .solution-box {
+            background: linear-gradient(135deg, rgba(63, 185, 80, 0.1) 0%, rgba(63, 185, 80, 0.05) 100%);
+            border: 1px solid var(--accent-green);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 320px;
+            box-shadow: 0 0 20px var(--glow-green);
+        }
+
+        .solution-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 0.95rem;
+            color: var(--accent-green);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .solution-content {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .solution-content p {
+            margin-bottom: 8px;
+        }
+
+        .code-block {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            background: var(--bg-tertiary);
+            padding: 10px;
+            border-radius: 6px;
+            margin: 8px 0;
+            color: var(--accent-cyan);
+            border-left: 3px solid var(--accent-green);
+            overflow-x: auto;
+        }
+
+        /* Continue arrow */
+        .continue-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-secondary);
+        }
+
+        .continue-arrow svg {
+            width: 30px;
+            height: 60px;
+        }
+
+        .continue-text {
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+
+        /* Next connector */
+        .next-connector {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .next-connector .connector {
+            height: 60px;
+        }
+
+        /* End node */
+        .end-node {
+            background: linear-gradient(135deg, rgba(163, 113, 247, 0.15) 0%, rgba(88, 166, 255, 0.15) 100%);
+            border: 2px solid var(--accent-purple);
+            border-radius: 16px;
+            padding: 30px 40px;
+            text-align: center;
+            margin-top: 20px;
+            box-shadow: 0 0 30px rgba(163, 113, 247, 0.3);
+            max-width: 600px;
+        }
+
+        .end-title {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 1.2rem;
+            color: var(--accent-purple);
+            margin-bottom: 15px;
+        }
+
+        .end-content {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.8;
+        }
+
+        .end-content code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-tertiary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: var(--accent-cyan);
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 50px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .legend-dot.start { background: var(--accent-red); }
+        .legend-dot.decision { background: var(--accent-blue); }
+        .legend-dot.warning { background: var(--accent-yellow); }
+        .legend-dot.solution { background: var(--accent-green); }
+
+        /* SVG arrows */
+        .arrow-svg {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .step-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .branches {
+                flex-direction: column;
+                gap: 30px;
+            }
+
+            .branch-yes, .branch-no {
+                margin: 0;
+            }
+
+            .solution-box {
+                max-width: 100%;
+                width: 100%;
+            }
+
+            .decision-node {
+                width: 150px;
+                height: 150px;
+            }
+
+            .decision-content {
+                width: 120%;
+            }
+
+            .decision-text {
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Flow animation */
+        .flow-particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        @keyframes flowDown {
+            0% { opacity: 0; transform: translateY(0); }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(100px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    
+    <div class="container">
+        <header>
+            <h1>配置生效诊断流程</h1>
+            <p class="subtitle">Configuration Troubleshooting Flowchart</p>
+        </header>
+
+        <div class="flowchart-wrapper">
+            <!-- Start Node -->
+            <div class="start-node">
+                <div class="start-icon">⚠️</div>
+                <div class="start-text">我改了配置，<br>但没生效！</div>
+                <div class="start-text-en">Config not working!</div>
+            </div>
+
+            <div class="connector"></div>
+
+            <!-- Step 1 -->
+            <div class="step-container">
+                <div class="step-main">
+                    <div class="decision-node" onclick="toggleDetail('step1')">
+                        <div class="decision-content">
+                            <div class="step-number">STEP 01</div>
+                            <div class="decision-text">文件路径<br>是否正确？</div>
+                            <div class="decision-text-en">Correct file path?</div>
+                        </div>
+                    </div>
+                    
+                    <div class="branches">
+                        <div class="branch-yes">
+                            <span class="branch-label">✓ 找到问题</span>
+                            <div class="solution-box">
+                                <div class="solution-title">
+                                    <span>🎯</span> 修复方案 / Fix
+                                </div>
+                                <div class="solution-content">
+                                    <p>确认配置文件位置：</p>
+                                    <div class="code-block"># 项目级配置<br>.claude/settings.json<br><br># 用户级配置<br>~/.claude/settings.json</div>
+                                    <p>检查当前工作目录是否正确</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="branch-no">
+                            <span class="branch-label">✗ 继续排查</span>
+                            <div class="continue-arrow">
+                                <svg viewBox="0 0 30 60">
+                                    <path d="M15 0 L15 50 M5 40 L15 55 L25 40" stroke="#8b949e" stroke-width="2" fill="none"/>
+                                </svg>
+                                <span class="continue-text">Not this</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="next-connector">
+                        <div class="connector"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step-container">
+                <div class="step-main">
+                    <div class="decision-node" onclick="toggleDetail('step2')">
+                        <div class="decision-content">
+                            <div class="step-number">STEP 02</div>
+                            <div class="decision-text">JSON 语法<br>是否合法？</div>
+                            <div class="decision-text-en">Valid JSON syntax?</div>
+                        </div>
+                    </div>
+                    
+                    <div class="branches">
+                        <div class="branch-yes">
+                            <span class="branch-label">✓ 找到问题</span>
+                            <div class="solution-box">
+                                <div class="solution-title">
+                                    <span>🎯</span> 修复方案 / Fix
+                                </div>
+                                <div class="solution-content">
+                                    <p>检查常见语法错误：</p>
+                                    <div class="code-block"># 检查尾逗号<br>{
+  "key": "value",  // ← 错误！
+}<br><br># 验证 JSON<br>jq . settings.json</div>
+                                    <p>使用在线 JSON Validator</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="branch-no">
+                            <span class="branch-label">✗ 继续排查</span>
+                            <div class="continue-arrow">
+                                <svg viewBox="0 0 30 60">
+                                    <path d="M15 0 L15 50 M5 40 L15 55 L25 40" stroke="#8b949e" stroke-width="2" fill="none"/>
+                                </svg>
+                                <span class="continue-text">Not this</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="next-connector">
+                        <div class="connector"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step-container">
+                <div class="step-main">
+                    <div class="decision-node" onclick="toggleDetail('step3')">
+                        <div class="decision-content">
+                            <div class="step-number">STEP 03</div>
+                            <div class="decision-text">无效规则<br>被过滤？</div>
+                            <div class="decision-text-en">filterInvalidPermissionRules?</div>
+                        </div>
+                    </div>
+                    
+                    <div class="branches">
+                        <div class="branch-yes">
+                            <span class="branch-label">✓ 找到问题</span>
+                            <div class="solution-box">
+                                <div class="solution-title">
+                                    <span>🎯</span> 修复方案 / Fix
+                                </div>
+                                <div class="solution-content">
+                                    <p>检查权限规则格式：</p>
+                                    <div class="code-block"># 确认规则包含必要字段<br>{
+  "pattern": ".*\\.md$",
+  "permission": "read"  // 或 "edit"
+}<br><br># 检查正则是否合法</div>
+                                    <p>无效规则会被静默丢弃</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="branch-no">
+                            <span class="branch-label">✗ 继续排查</span>
+                            <div class="continue-arrow">
+                                <svg viewBox="0 0 30 60">
+                                    <path d="M15 0 L15 50 M5 40 L15 55 L25 40" stroke="#8b949e" stroke-width="2" fill="none"/>
+                                </svg>
+                                <span class="continue-text">Not this</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="next-connector">
+                        <div class="connector"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4 - Warning -->
+            <div class="step-container">
+                <div class="step-main">
+                    <div class="decision-node warning" onclick="toggleDetail('step4')">
+                        <div class="warning-badge">⚠️ 最易忽视</div>
+                        <div class="decision-content">
+                            <div class="step-number">STEP 04</div>
+                            <div class="decision-text">被高优先级<br>来源覆盖？</div>
+                            <div class="decision-text-en">Priority override?</div>
+                        </div>
+                    </div>
+                    
+                    <div class="branches">
+                        <div class="branch-yes">
+                            <span class="branch-label">✓ 找到问题</span>
+                            <div class="solution-box">
+                                <div class="solution-title">
+                                    <span>🎯</span> 修复方案 / Fix
+                                </div>
+                                <div class="solution-content">
+                                    <p>优先级链（高→低）：</p>
+                                    <div class="code-block">Policy > Project > Local > User > Default</div>
+                                    <p>检查上层来源是否已定义相同配置键</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="branch-no">
+                            <span class="branch-label">✗ 继续排查</span>
+                            <div class="continue-arrow">
+                                <svg viewBox="0 0 30 60">
+                                    <path d="M15 0 L15 50 M5 40 L15 55 L25 40" stroke="#8b949e" stroke-width="2" fill="none"/>
+                                </svg>
+                                <span class="continue-text">Not this</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="next-connector">
+                        <div class="connector"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5 - Warning -->
+            <div class="step-container">
+                <div class="step-main">
+                    <div class="decision-node warning" onclick="toggleDetail('step5')">
+                        <div class="warning-badge">⚠️ 最易忽视</div>
+                        <div class="decision-content">
+                            <div class="step-number">STEP 05</div>
+                            <div class="decision-text">企业策略<br>强制锁定？</div>
+                            <div class="decision-text-en">Policy Settings locked?</div>
+                        </div>
+                    </div>
+                    
+                    <div class="branches">
+                        <div class="branch-yes">
+                            <span class="branch-label">✓ 找到问题</span>
+                            <div class="solution-box">
+                                <div class="solution-title">
+                                    <span>🎯</span> 修复方案 / Fix
+                                </div>
+                                <div class="solution-content">
+                                    <p>检查策略配置位置：</p>
+                                    <div class="code-block"># 系统级策略<br>/etc/claude/settings.json<br><br># MDM 配置<br>检查设备管理配置文件<br><br># 联系 IT 管理员</div>
+                                    <p>策略覆盖是静默的，无警告！</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="branch-no">
+                            <span class="branch-label">✗ 继续排查</span>
+                            <div class="continue-arrow">
+                                <svg viewBox="0 0 30 60">
+                                    <path d="M15 0 L15 50 M5 40 L15 55 L25 40" stroke="#8b949e" stroke-width="2" fill="none"/>
+                                </svg>
+                                <span class="continue-text">Not this</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="next-connector">
+                        <div class="connector"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 6 -->
+            <div class="step-container">
+                <div class="step-main">
+                    <div class="decision-node" onclick="toggleDetail('step6')">
+                        <div class="decision-content">
+                            <div class="step-number">STEP 06</div>
+                            <div class="decision-text">数组合并<br>行为正确？</div>
+                            <div class="decision-text-en">Array merge behavior?</div>
+                        </div>
+                    </div>
+                    
+                    <div class="branches">
+                        <div class="branch-yes">
+                            <span class="branch-label">✓ 找到问题</span>
+                            <div class="solution-box">
+                                <div class="solution-title">
+                                    <span>🎯</span> 修复方案 / Fix
+                                </div>
+                                <div class="solution-content">
+                                    <p>理解合并规则：</p>
+                                    <div class="code-block"># 跨来源：拼接/合并<br>User + Project = 合并数组<br><br># 同来源：后者替换前者<br>同一文件内后面的覆盖</div>
+                                    <p>检查是否有意外拼接的项</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="branch-no">
+                            <span class="branch-label">✗ 继续排查</span>
+                            <div class="continue-arrow">
+                                <svg viewBox="0 0 30 60">
+                                    <path d="M15 0 L15 50 M5 40 L15 55 L25 40" stroke="#8b949e" stroke-width="2" fill="none"/>
+                                </svg>
+                                <span class="continue-text">Not this</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="next-connector">
+                        <div class="connector"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 7 -->
+            <div class="step-container">
+                <div class="step-main">
+                    <div class="decision-node" onclick="toggleDetail('step7')">
+                        <div class="decision-content">
+                            <div class="step-number">STEP 07</div>
+                            <div class="decision-text">配置键名<br>拼写正确？</div>
+                            <div class="decision-text-en">Correct key name?</div>
+                        </div>
+                    </div>
+                    
+                    <div class="branches">
+                        <div class="branch-yes">
+                            <span class="branch-label">✓ 找到问题</span>
+                            <div class="solution-box">
+                                <div class="solution-title">
+                                    <span>🎯</span> 修复方案 / Fix
+                                </div>
+                                <div class="solution-content">
+                                    <p>检查键名拼写：</p>
+                                    <div class="code-block"># 常见错误<br>"permissionRules" ≠ "permissionsRules"<br>"autoUpdate" ≠ "auto-update"<br><br># 检查嵌套路径<br>parent.child vs parent.child[0]</div>
+                                    <p>拼写错误不报错，配置被静默忽略</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="branch-no">
+                            <span class="branch-label">✗ 继续排查</span>
+                            <div class="continue-arrow">
+                                <svg viewBox="0 0 30 60">
+                                    <path d="M15 0 L15 50 M5 40 L15 55 L25 40" stroke="#8b949e" stroke-width="2" fill="none"/>
+                                </svg>
+                                <span class="continue-text">Not this</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="next-connector">
+                        <div class="connector"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 8 -->
+            <div class="step-container">
+                <div class="step-main">
+                    <div class="decision-node" onclick="toggleDetail('step8')">
+                        <div class="decision-content">
+                            <div class="step-number">STEP 08</div>
+                            <div class="decision-text">需要重启<br>才能生效？</div>
+                            <div class="decision-text-en">Restart required?</div>
+                        </div>
+                    </div>
+                    
+                    <div class="branches">
+                        <div class="branch-yes">
+                            <span class="branch-label">✓ 找到问题</span>
+                            <div class="solution-box">
+                                <div class="solution-title">
+                                    <span>🎯</span> 修复方案 / Fix
+                                </div>
+                                <div class="solution-content">
+                                    <p>某些配置启动时读取：</p>
+                                    <div class="code-block"># 完全重启 Claude Code<br>Cmd/Ctrl + Shift + P<br>→ "Developer: Reload Window"<br><br># 或彻底关闭再打开</div>
+                                    <p>检查配置文档中的重启要求</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="branch-no">
+                            <span class="branch-label">✗ 仍未解决</span>
+                            <div class="continue-arrow">
+                                <svg viewBox="0 0 30 60">
+                                    <path d="M15 0 L15 50 M5 40 L15 55 L25 40" stroke="#8b949e" stroke-width="2" fill="none"/>
+                                </svg>
+                                <span class="continue-text">Continue</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- End Node -->
+            <div class="end-node">
+                <div class="end-title">🔍 仍然无法解决？</div>
+                <div class="end-content">
+                    <p>If none of the above worked...</p>
+                    <p>运行诊断命令：<code>claude config --debug</code> 查看配置加载日志</p>
+                    <p>检查 <code>~/.claude/logs/</code> 目录下的最新日志文件</p>
+                    <p>向支持团队提供：配置文件的完整路径、文件内容（脱敏后）、Claude Code 版本</p>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-dot start"></div>
+                    <span>问题起点 Problem</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot decision"></div>
+                    <span>检查节点 Check Point</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot warning"></div>
+                    <span>高优先级检查 Priority</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot solution"></div>
+                    <span>修复方案 Solution</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add flow animation particles
+        function createFlowParticle() {
+            const connectors = document.querySelectorAll('.connector');
+            if (connectors.length === 0) return;
+            
+            const connector = connectors[Math.floor(Math.random() * connectors.length)];
+            const particle = document.createElement('div');
+            particle.className = 'flow-particle';
+            particle.style.left = '50%';
+            particle.style.top = '0';
+            particle.style.transform = 'translateX(-50%)';
+            particle.style.animation = 'flowDown 1.5s ease-in-out forwards';
+            
+            connector.appendChild(particle);
+            
+            setTimeout(() => particle.remove(), 1500);
+        }
+
+        setInterval(createFlowParticle, 800);
+
+        // Toggle detail view
+        function toggleDetail(stepId) {
+            const node = document.querySelector(`[onclick="toggleDetail('${stepId}')"]`);
+            if (node) {
+                node.style.transform = node.classList.contains('warning') 
+                    ? 'rotate(45deg) scale(0.95)' 
+                    : 'rotate(45deg) scale(0.95)';
+                setTimeout(() => {
+                    node.style.transform = node.classList.contains('warning')
+                        ? 'rotate(45deg) scale(1.05)'
+                        : 'rotate(45deg) scale(1.05)';
+                }, 150);
+                setTimeout(() => {
+                    node.style.transform = 'rotate(45deg)';
+                }, 300);
+            }
+        }
+    </script>
+</body>
+</html>

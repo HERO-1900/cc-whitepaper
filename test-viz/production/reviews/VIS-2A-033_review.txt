@@ -1,0 +1,43 @@
+总分: 15/20
+
+**布局: 3/5** — 层叠关系基本正确，但右侧机制标签(-200px)超出容器导致水平溢出，响应式缩放未能完全解决
+
+**信息: 4/5** — 漏斗递减逻辑清晰(四层: 1000+→5-10→3-10→50-100B)，色彩编码分层有效，但缺少层间数据流转的视觉引导
+
+**美学: 4/5** — 配色和谐(蓝→紫→橙→绿渐变)、字体搭配得当、clip-path梯形设计精致；粒子动画细节加分
+
+**完整: 4/5** — 语法正确，可直接运行；粒子动画有轻微内存泄漏隐患(未清理interval)
+
+---
+
+**缺陷:**
+
+1. **水平溢出** — `.mechanism-label` 设置 `right: -200px`，结合 funnel 600px 宽度，总宽度达800px；`.reduction-badge` 又额外增加80px，在 1200px max-width 容器内会溢出
+   - 位置: CSS line ~220 `.mechanism-label`
+   
+2. **箭头颜色逻辑错误** — `.arrow-vertical` 使用 `border-bottom: var(--layer1)` 和 `border-top: var(--layer4)`，但箭头指向应该与数据流向一致(上→下过滤，箭头应向下指)   
+   - 位置: CSS line ~270
+
+3. **Scale Bar 高度不匹配** — scale-bar height: 520px，但实际内容高度(Layer1 top:0 到 final-output bottom:445)约445px，底部留白过多
+
+4. **Filter Icon 位置偏差** — filter-1 top:108px、filter-2 top:228px、filter-3 top:333px，但层层间距15px导致图标更贴近下一层顶部而非居中于间隙
+
+5. **Tooltip 边界溢出** — 当鼠标移到右侧层(如Layer4)时，tooltip 可能超出视口右侧
+
+6. **粒子动画未清理** — setInterval 每800ms创建粒子但仅通过setTimeout移除，未在合适时机停止interval
+
+---
+
+**修改建议:**
+
+1. 将右侧标签区域收紧: `right: -140px`，mechanism-label `max-width: 120px`，或改用浮动气泡替代固定定位
+
+2. 修正箭头: 上箭头用 `border-bottom: var(--layer4)` (最终输出色)，下箭头用 `border-top: var(--layer1)` (输入色)，或统一用渐变
+
+3. 调整scale-bar高度为480px以匹配内容，或增加一层scale-label
+
+4. Filter icon位置调整为层间隙居中: filter-1 top:(110+125)/2=117.5 ≈ 118px，filter-2 top:(225+240)/2=232.5 ≈ 233px，filter-3 top:(330+345)/2=337.5 ≈ 338px
+
+5. Tooltip添加边界检测: `if (e.clientX + 340 > window.innerWidth) tooltip.style.left = e.clientX - 340 + 'px'`
+
+6. 粒子动画改用有限数量(如10个)循环复用，或在unload时清理interval

@@ -1,0 +1,46 @@
+我来严格审查这份代码复杂度热力图图表代码。
+
+总分: 13/20
+
+**布局: 3/5** — 整体结构清晰，但图例定位和统计数据样式存在不一致
+**信息: 3/5** — 核心指标展示直观，但Top5函数区域为硬编码，数据不同步
+**美学: 4/5** — 深色主题配色和谐，字体搭配专业，动画细节到位
+**完整: 3/5** — HTML语法正确，可直接运行，但存在逻辑缺陷
+
+---
+
+**缺陷:**
+
+1. **第163-174行** — Top 5函数列表硬编码，与`modules`数据源无关联，若数据变更图表与列表会不一致
+
+2. **第107行** — `.stats-bar`中`~15K`使用`~`近似值，但其他数字精确显示，风格不统一
+
+3. **第110行** — `style="color:#ff2020"`内联样式直接写色值，与CSS变量体系(`var(--color-high)`)不一致
+
+4. **第196行** — 图例`.legend`绝对定位在`#treemap-container`内，容器`overflow:hidden`可能导致图例被裁剪
+
+5. **第260行** — tooltip鼠标位置计算`event.clientX - containerRect.left`在SVG坐标系下可能不准确（SVG有viewBox缩放）
+
+6. **第268-275行** — 标签过滤条件`(d.x1 - d.x0) > 80 && (d.y1 - d.y0) > 85`下，复杂模块名可能仍无法完整显示（queryLoop系统等中文名较长）
+
+7. **缺少** — 未处理窗口resize事件，treemap不会响应式调整
+
+8. **第244行** — `d3.treemap().size([width, height])`treemap布局在SVG有viewBox情况下可能产生缩放异常
+
+---
+
+**修改建议:**
+
+1. 将Top 5函数改为从`modules`数据动态计算排序生成，保持数据一致性
+
+2. 统一使用CSS变量`var(--color-high)`替代内联色值
+
+3. 将图例移出`overflow:hidden`容器，或改为`overflow:visible`
+
+4. tooltip定位改用`d3.pointer(event, document.body)`获取相对于body的坐标再计算偏移
+
+5. 调整中文标签的宽度阈值，或限制模块名最大字符数
+
+6. 添加`ResizeObserver`监听容器尺寸变化，重新调用treemap布局
+
+7. SVG viewBox与实际像素尺寸的映射需统一，建议使用百分比或固定像素尺寸而非viewBox缩放

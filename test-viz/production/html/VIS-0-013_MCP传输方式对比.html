@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP传输方式对比矩阵</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --accent-gold: #ffd700;
+            
+            --color-stdio: #ff6b6b;
+            --color-sse: #4ecdc4;
+            --color-streamable: #45b7d1;
+            --color-websocket: #96ceb4;
+            --color-http: #feca57;
+            --color-grpc: #ff9ff3;
+            --color-unix: #54a0ff;
+            --color-pipe: #5f27cd;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .noise-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.03;
+            pointer-events: none;
+            z-index: 1;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        .gradient-mesh {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background: 
+                radial-gradient(ellipse 80% 50% at 20% 40%, rgba(78, 205, 196, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(255, 107, 107, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse 50% 30% at 50% 90%, rgba(84, 160, 255, 0.05) 0%, transparent 50%);
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, #8b949e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .viz-wrapper {
+            display: grid;
+            gap: 40px;
+        }
+
+        .radar-section {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 32px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .radar-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(78, 205, 196, 0.5), transparent);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(180deg, var(--color-sse), var(--color-stdio));
+            border-radius: 2px;
+        }
+
+        .radar-container {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 32px;
+            align-items: start;
+        }
+
+        .radar-chart-wrapper {
+            position: relative;
+            aspect-ratio: 1;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        #radarChart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .radar-grid {
+            fill: none;
+            stroke: var(--border-color);
+            stroke-width: 1;
+        }
+
+        .radar-axis {
+            stroke: var(--border-color);
+            stroke-width: 1;
+        }
+
+        .radar-axis-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 12px;
+            fill: var(--text-secondary);
+            font-weight: 500;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        .radar-polygon {
+            fill-opacity: 0.15;
+            stroke-width: 2;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .radar-polygon:hover {
+            fill-opacity: 0.35;
+            stroke-width: 3;
+        }
+
+        .radar-polygon.dimmed {
+            fill-opacity: 0.05;
+            stroke-opacity: 0.2;
+        }
+
+        .radar-point {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .radar-point:hover {
+            r: 6;
+        }
+
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .legend-item:hover {
+            background: var(--bg-primary);
+            border-color: var(--border-color);
+            transform: translateX(4px);
+        }
+
+        .legend-item.hidden {
+            opacity: 0.4;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .legend-text {
+            flex: 1;
+        }
+
+        .legend-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+
+        .legend-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .legend-star {
+            color: var(--accent-gold);
+            font-size: 0.875rem;
+        }
+
+        .table-section {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 32px;
+            overflow: hidden;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin: 0 -16px;
+            padding: 0 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.875rem;
+            min-width: 900px;
+        }
+
+        thead th {
+            background: var(--bg-tertiary);
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-primary);
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s ease;
+            white-space: nowrap;
+        }
+
+        thead th:hover {
+            background: var(--border-color);
+        }
+
+        thead th:first-child {
+            border-radius: 8px 0 0 8px;
+        }
+
+        thead th:last-child {
+            border-radius: 0 8px 8px 0;
+        }
+
+        thead th .sort-icon {
+            margin-left: 6px;
+            opacity: 0.5;
+            font-size: 0.75rem;
+        }
+
+        thead th.sort-asc .sort-icon::after {
+            content: '▲';
+            opacity: 1;
+        }
+
+        thead th.sort-desc .sort-icon::after {
+            content: '▼';
+            opacity: 1;
+        }
+
+        thead th:not(.sort-asc):not(.sort-desc) .sort-icon::after {
+            content: '⇅';
+        }
+
+        tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        tbody tr.recommended {
+            border-left: 3px solid var(--accent-gold);
+        }
+
+        tbody td {
+            padding: 16px 12px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        .transport-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .transport-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .transport-star {
+            color: var(--accent-gold);
+            font-size: 0.75rem;
+        }
+
+        .metric-cell {
+            min-width: 100px;
+        }
+
+        .metric-bar {
+            height: 6px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .metric-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .scenario-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .scenario-tag {
+            padding: 4px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        .scenario-tag.local {
+            background: rgba(255, 107, 107, 0.15);
+            color: var(--color-stdio);
+            border-color: rgba(255, 107, 107, 0.3);
+        }
+
+        .scenario-tag.remote {
+            background: rgba(78, 205, 196, 0.15);
+            color: var(--color-sse);
+            border-color: rgba(78, 205, 196, 0.3);
+        }
+
+        .scenario-tag.high-freq {
+            background: rgba(150, 206, 180, 0.15);
+            color: var(--color-websocket);
+            border-color: rgba(150, 206, 180, 0.3);
+        }
+
+        .scenario-tag.microservice {
+            background: rgba(255, 159, 243, 0.15);
+            color: var(--color-grpc);
+            border-color: rgba(255, 159, 243, 0.3);
+        }
+
+        .dimension-icon {
+            display: inline-block;
+            width: 20px;
+            text-align: center;
+            margin-right: 4px;
+        }
+
+        @media (max-width: 1024px) {
+            .radar-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .legend {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            
+            .legend-item {
+                flex: 1;
+                min-width: 200px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 24px 16px;
+            }
+            
+            .radar-section,
+            .table-section {
+                padding: 20px;
+            }
+            
+            .legend-item {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="noise-bg"></div>
+    <div class="gradient-mesh"></div>
+    
+    <div class="container">
+        <header>
+            <h1>MCP传输方式对比矩阵</h1>
+            <p class="subtitle">Model Context Protocol Transport Comparison Matrix</p>
+        </header>
+
+        <div class="viz-wrapper">
+            <section class="radar-section">
+                <h2 class="section-title">多维能力雷达 / Radar Analysis</h2>
+                <div class="radar-container">
+                    <div class="radar-chart-wrapper">
+                        <svg id="radarChart" viewBox="0 0 400 400">
+                            <defs>
+                                <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                    <feMerge>
+                                        <feMergeNode in="coloredBlur"/>
+                                        <feMergeNode in="SourceGraphic"/>
+                                    </feMerge>
+                                </filter>
+                            </defs>
+                        </svg>
+                    </div>
+                    <div class="legend" id="legend"></div>
+                </div>
+            </section>
+
+            <section class="table-section">
+                <h2 class="section-title">详细对比表格 / Detailed Comparison</h2>
+                <div class="table-container">
+                    <table id="comparisonTable">
+                        <thead>
+                            <tr>
+                                <th data-sort="name">传输方式 <span class="transport-star">★</span><span class="sort-icon"></span></th>
+                                <th data-sort="latency"><span class="dimension-icon">⚡</span>延迟 <span class="sort-icon"></span></th>
+                                <th data-sort="throughput"><span class="dimension-icon">📊</span>吞吐 <span class="sort-icon"></span></th>
+                                <th data-sort="security"><span class="dimension-icon">🔒</span>安全 <span class="sort-icon"></span></th>
+                                <th data-sort="complexity"><span class="dimension-icon">🔧</span>复杂度 <span class="sort-icon"></span></th>
+                                <th data-sort="reliability"><span class="dimension-icon">🛡️</span>可靠性 <span class="sort-icon"></span></th>
+                                <th>适用场景</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const dimensions = ['延迟', '吞吐', '安全', '复杂度', '可靠性'];
+        const dimensionKeys = ['latency', 'throughput', 'security', 'complexity', 'reliability'];
+        
+        const transports = [
+            {
+                id: 'stdio',
+                name: 'stdio',
+                fullName: 'Standard I/O',
+                desc: '标准输入输出管道',
+                color: '#ff6b6b',
+                recommended: true,
+                values: [98, 85, 60, 95, 80],
+                metrics: { latency: '<1ms', throughput: '10K/s', security: 'OS隔离', complexity: '极简', reliability: '高' },
+                scenarios: ['本地开发', 'IDE插件', 'CLI工具']
+            },
+            {
+                id: 'sse',
+                name: 'SSE',
+                fullName: 'Server-Sent Events',
+                desc: 'HTTP长连接推送',
+                color: '#4ecdc4',
+                recommended: true,
+                values: [70, 75, 85, 80, 75],
+                metrics: { latency: '10-100ms', throughput: '5K/s', security: 'HTTPS', complexity: '简单', reliability: '中' },
+                scenarios: ['远程服务', '实时推送', 'Web应用']
+            },
+            {
+                id: 'streamable',
+                name: 'Streamable HTTP',
+                fullName: 'Streamable HTTP',
+                desc: '双向流式HTTP新标准',
+                color: '#45b7d1',
+                recommended: false,
+                values: [75, 80, 85, 75, 80],
+                metrics: { latency: '10-80ms', throughput: '6K/s', security: 'HTTPS', complexity: '中等', reliability: '高' },
+                scenarios: ['远程服务', '双向流', 'SSE替代']
+            },
+            {
+                id: 'websocket',
+                name: 'WebSocket',
+                fullName: 'WebSocket',
+                desc: '全双工双向通信',
+                color: '#96ceb4',
+                recommended: false,
+                values: [85, 90, 70, 65, 85],
+                metrics: { latency: '5-50ms', throughput: '50K/s', security: '需额外层', complexity: '中等', reliability: '高' },
+                scenarios: ['高频交互', '实时协作', '游戏']
+            },
+            {
+                id: 'http',
+                name: 'HTTP+JSON-RPC',
+                fullName: 'HTTP + JSON-RPC',
+                desc: '传统请求响应模式',
+                color: '#feca57',
+                recommended: false,
+                values: [50, 60, 90, 90, 70],
+                metrics: { latency: '50-200ms', throughput: '1K/s', security: '标准HTTP', complexity: '极简', reliability: '中' },
+                scenarios: ['低频调用', 'REST API', '简单集成']
+            },
+            {
+                id: 'grpc',
+                name: 'gRPC',
+                fullName: 'gRPC',
+                desc: '高性能RPC框架',
+                color: '#ff9ff3',
+                recommended: false,
+                values: [90, 95, 80, 40, 90],
+                metrics: { latency: '<5ms', throughput: '100K/s', security: 'mTLS', complexity: '复杂', reliability: '极高' },
+                scenarios: ['微服务', '服务网格', '高吞吐']
+            },
+            {
+                id: 'unix',
+                name: 'Unix Socket',
+                fullName: 'Unix Domain Socket',
+                desc: '本地高性能IPC',
+                color: '#54a0ff',
+                recommended: false,
+                values: [95, 90, 75, 70, 85],
+                metrics: { latency: '<1ms', throughput: '50K/s', security: '文件权限', complexity: '中等', reliability: '高' },
+                scenarios: ['本地IPC', '多客户端', 'Linux/macOS']
+            },
+            {
+                id: 'pipe',
+                name: 'Named Pipe',
+                fullName: 'Named Pipe (Windows)',
+                desc: 'Windows本地IPC方案',
+                color: '#5f27cd',
+                recommended: false,
+                values: [88, 82, 70, 65, 75],
+                metrics: { latency: '<2ms', throughput: '20K/s', security: 'ACL', complexity: '中等', reliability: '中' },
+                scenarios: ['Windows本地', '跨进程', '企业环境']
+            }
+        ];
+
+        const svg = document.getElementById('radarChart');
+        const centerX = 200;
+        const centerY = 200;
+        const radius = 140;
+        const levels = 5;
+
+        function getCoordinates(value, index, total) {
+            const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
+            const r = (value / 100) * radius;
+            return {
+                x: centerX + r * Math.cos(angle),
+                y: centerY + r * Math.sin(angle)
+            };
+        }
+
+        function createRadarChart() {
+            const gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            gridGroup.setAttribute('class', 'radar-grid-group');
+            
+            for (let i = 1; i <= levels; i++) {
+                const points = [];
+                for (let j = 0; j < dimensions.length; j++) {
+                    const coords = getCoordinates((i / levels) * 100, j, dimensions.length);
+                    points.push(`${coords.x},${coords.y}`);
+                }
+                
+                const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                polygon.setAttribute('points', points.join(' '));
+                polygon.setAttribute('class', 'radar-grid');
+                gridGroup.appendChild(polygon);
+            }
+            
+            svg.appendChild(gridGroup);
+
+            for (let i = 0; i < dimensions.length; i++) {
+                const outer = getCoordinates(100, i, dimensions.length);
+                
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', centerX);
+                line.setAttribute('y1', centerY);
+                line.setAttribute('x2', outer.x);
+                line.setAttribute('y2', outer.y);
+                line.setAttribute('class', 'radar-axis');
+                svg.appendChild(line);
+                
+                const labelCoords = getCoordinates(115, i, dimensions.length);
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', labelCoords.x);
+                text.setAttribute('y', labelCoords.y);
+                text.setAttribute('class', 'radar-axis-label');
+                text.textContent = dimensions[i];
+                svg.appendChild(text);
+            }
+
+            transports.forEach((transport, index) => {
+                const points = transport.values.map((value, i) => {
+                    const coords = getCoordinates(value, i, dimensions.length);
+                    return `${coords.x},${coords.y}`;
+                });
+
+                const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                polygon.setAttribute('points', points.join(' '));
+                polygon.setAttribute('class', 'radar-polygon');
+                polygon.setAttribute('fill', transport.color);
+                polygon.setAttribute('stroke', transport.color);
+                polygon.setAttribute('data-id', transport.id);
+                
+                polygon.addEventListener('mouseenter', () => highlightTransport(transport.id));
+                polygon.addEventListener('mouseleave', () => unhighlightAll());
+                
+                svg.appendChild(polygon);
+
+                transport.values.forEach((value, i) => {
+                    const coords = getCoordinates(value, i, dimensions.length);
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', coords.x);
+                    circle.setAttribute('cy', coords.y);
+                    circle.setAttribute('r', 3);
+                    circle.setAttribute('fill', transport.color);
+                    circle.setAttribute('class', 'radar-point');
+                    circle.setAttribute('data-id', transport.id);
+                    svg.appendChild(circle);
+                });
+            });
+        }
+
+        function createLegend() {
+            const legend = document.getElementById('legend');
+            
+            transports.forEach(transport => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.dataset.id = transport.id;
+                
+                item.innerHTML = `
+                    <div class="legend-color" style="background: ${transport.color}"></div>
+                    <div class="legend-text">
+                        <div class="legend-name">
+                            ${transport.name}
+                            ${transport.recommended ? '<span class="legend-star">★</span>' : ''}
+                        </div>
+                        <div class="legend-desc">${transport.desc}</div>
+                    </div>
+                `;
+                
+                item.addEventListener('click', () => toggleTransport(transport.id));
+                item.addEventListener('mouseenter', () => highlightTransport(transport.id));
+                item.addEventListener('mouseleave', () => unhighlightAll());
+                
+                legend.appendChild(item);
+            });
+        }
+
+        function highlightTransport(id) {
+            document.querySelectorAll('.radar-polygon').forEach(el => {
+                if (el.dataset.id === id) {
+                    el.classList.remove('dimmed');
+                    el.style.filter = 'url(#glow)';
+                } else {
+                    el.classList.add('dimmed');
+                    el.style.filter = 'none';
+                }
+            });
+            
+            document.querySelectorAll('.legend-item').forEach(el => {
+                if (el.dataset.id === id) {
+                    el.style.opacity = '1';
+                } else {
+                    el.style.opacity = '0.4';
+                }
+            });
+        }
+
+        function unhighlightAll() {
+            document.querySelectorAll('.radar-polygon').forEach(el => {
+                el.classList.remove('dimmed');
+                el.style.filter = 'none';
+            });
+            
+            document.querySelectorAll('.legend-item').forEach(el => {
+                el.style.opacity = el.classList.contains('hidden') ? '0.4' : '1';
+            });
+        }
+
+        function toggleTransport(id) {
+            const legendItem = document.querySelector(`.legend-item[data-id="${id}"]`);
+            const polygon = document.querySelector(`.radar-polygon[data-id="${id}"]`);
+            const points = document.querySelectorAll(`.radar-point[data-id="${id}"]`);
+            
+            legendItem.classList.toggle('hidden');
+            const isHidden = legendItem.classList.contains('hidden');
+            
+            polygon.style.display = isHidden ? 'none' : 'block';
+            points.forEach(p => p.style.display = isHidden ? 'none' : 'block');
+        }
+
+        function createTable() {
+            const tbody = document.getElementById('tableBody');
+            
+            transports.forEach(transport => {
+                const row = document.createElement('tr');
+                if (transport.recommended) row.classList.add('recommended');
+                
+                const scenarioClass = {
+                    '本地开发': 'local',
+                    '远程服务': 'remote',
+                    '高频交互': 'high-freq',
+                    '微服务': 'microservice'
+                };
+                
+                row.innerHTML = `
+                    <td>
+                        <div class="transport-name">
+                            <div class="transport-color" style="background: ${transport.color}"></div>
+                            <span>${transport.name}</span>
+                            ${transport.recommended ? '<span class="transport-star">★</span>' : ''}
+                        </div>
+                    </td>
+                    <td class="metric-cell">
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: ${transport.values[0]}%; background: ${transport.color}"></div>
+                        </div>
+                        <div class="metric-value">${transport.metrics.latency}</div>
+                    </td>
+                    <td class="metric-cell">
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: ${transport.values[1]}%; background: ${transport.color}"></div>
+                        </div>
+                        <div class="metric-value">${transport.metrics.throughput}</div>
+                    </td>
+                    <td class="metric-cell">
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: ${transport.values[2]}%; background: ${transport.color}"></div>
+                        </div>
+                        <div class="metric-value">${transport.metrics.security}</div>
+                    </td>
+                    <td class="metric-cell">
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: ${transport.values[3]}%; background: ${transport.color}"></div>
+                        </div>
+                        <div class="metric-value">${transport.metrics.complexity}</div>
+                    </td>
+                    <td class="metric-cell">
+                        <div class="metric-bar">
+                            <div class="metric-fill" style="width: ${transport.values[4]}%; background: ${transport.color}"></div>
+                        </div>
+                        <div class="metric-value">${transport.metrics.reliability}</div>
+                    </td>
+                    <td>
+                        <div class="scenario-tags">
+                            ${transport.scenarios.map(s => `<span class="scenario-tag ${scenarioClass[s] || ''}">${s}</span>`).join('')}
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        let sortColumn = null;
+        let sortDirection = 'asc';
+
+        document.querySelectorAll('thead th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const column = th.dataset.sort;
+                
+                document.querySelectorAll('thead th').forEach(header => {
+                    header.classList.remove('sort-asc', 'sort-desc');
+                });
+                
+                if (sortColumn === column) {
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortColumn = column;
+                    sortDirection = 'asc';
+                }
+                
+                th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+                
+                sortTable(column, sortDirection);
+            });
+        });
+
+        function sortTable(column, direction) {
+            const tbody = document.getElementById('tableBody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            const columnIndex = {
+                'name': 0,
+                'latency': 1,
+                'throughput': 2,
+                'security': 3,
+                'complexity': 4,
+                'reliability': 5
+            }[column];
+
+            rows.sort((a, b) => {
+                let aVal, bVal;
+                
+                if (column === 'name') {
+                    aVal = a.querySelector('.transport-name span').textContent;
+                    bVal = b.querySelector('.transport-name span').textContent;
+                    return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                } else {
+                    const transportA = transports.find(t => t.name === a.querySelector('.transport-name span').textContent);
+                    const transportB = transports.find(t => t.name === b.querySelector('.transport-name span').textContent);
+                    
+                    const dimIndex = dimensionKeys.indexOf(column);
+                    aVal = transportA.values[dimIndex];
+                    bVal = transportB.values[dimIndex];
+                    
+                    return direction === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+            });
+            
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        createRadarChart();
+        createLegend();
+        createTable();
+    </script>
+</body>
+</html>

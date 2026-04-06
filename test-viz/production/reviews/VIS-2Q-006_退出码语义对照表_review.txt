@@ -1,0 +1,46 @@
+总分: 16/20
+
+布局: 4/5 — 表格结构规整、响应式适配良好，但 `exit-2` 行右侧的 "最反直觉" badge 在桌面端 absolute 定位脱离文档流，与左侧内容产生视觉割裂感
+
+信息: 4/5 — 核心对照逻辑清晰（0=成功、2=阻断、1/3/4=警告），Unix 渊源注释有助于理解设计动机；但 PermissionRequest 列的 hookSpecificOutput 决策格式仅以代码片段展示，缺乏可读性说明
+
+美学: 4/5 — 配色体系一致（绿/红/黄三色语义明确），深色背景舒适，字体层次分明；唯 `tr.exit-2` 的 inset box-shadow 与行背景渐变叠加略显厚重，视觉焦点分散
+
+完整: 4/5 — 可直接浏览器打开运行，无语法错误；hover 交互流畅；移动端 padding 收缩合理，但 max-width: 768px 时 th/td 的跨列对齐未做特殊处理
+
+---
+
+**缺陷:**
+
+1. **布局/行 152** — `tr.exit-2` 中 `<span class="counter-intuitive-badge">` 使用 `position: absolute; right: 16px;`，在长内容行（如 PermissionRequest 列）会导致 badge 覆盖左侧 exit code 单元格内容，且不同行高时对齐不一致
+
+2. **美学/行 148-153** — `tr.exit-2 td` 同时使用了 `background: linear-gradient(...)` 和 `box-shadow: inset 0 0 30px rgba(...)` 两种效果叠加，在深色背景下过于浓重，建议只保留 `box-shadow` 或简化背景
+
+3. **信息/行 117-120** — PermissionRequest 列中 `{ decision: "allow" }` 等 JSON 片段仅以 monospace 字体颜色区分，对非技术用户可读性差，应补充简短中文说明
+
+4. **布局/行 48** — `.dichotomy-arrow` 的 `animation: pulse` 仅改变 opacity，但 `ease-in-out` 在 2s 周期下动画感生硬，建议加 `transform: scale(1.05)` 使脉冲更自然
+
+5. **完整/行 218-232** — JavaScript hover 逻辑在 `mouseout` 时重置所有 td 背景，但未考虑已通过 CSS 设置了特定背景的单元格（如 `td.permission-col`），导致自定义背景被意外清除
+
+---
+
+**修改建议:**
+
+1. 将 `counter-intuitive-badge` 改为 `position: relative` 并放置于 `exit-2` 行最后一个 td 内部，与行内容对齐；或将其移出表格作为行的附属标注
+
+2. 移除 `tr.exit-2 td` 的 `background: linear-gradient` 改用单一 `box-shadow`（内发光）实现警示效果，降低视觉噪音
+
+3. 在 `hook-specific` 代码块上方增加一行说明文字，例如 `// 决策对象`，提升非技术背景读者理解度
+
+4. 脉冲动画改为：
+   ```css
+   .dichotomy-arrow {
+     animation: pulse 2s ease-in-out infinite;
+   }
+   @keyframes pulse {
+     0%, 100% { opacity: 0.4; transform: scale(1); }
+     50% { opacity: 1; transform: scale(1.08); }
+   }
+   ```
+
+5. `mouseout` handler 中对特殊列（`permission-col`、exit-2 行等）先存储其原始 background 样式再恢复，而非统一清空

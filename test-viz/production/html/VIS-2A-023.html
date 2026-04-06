@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>攻击面矩阵 | Attack Surface Matrix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e0a;
+            --bg-secondary: #111811;
+            --bg-cell-empty: #1a1f1a;
+            --border-color: #2a3a2a;
+            --border-glow: #00ff8833;
+            --text-primary: #e8f5e8;
+            --text-secondary: #7a9a7a;
+            --accent-primary: #00ff88;
+            --accent-secondary: #00d4aa;
+            --accent-tertiary: #00b4d8;
+            --accent-weak: #2d5a3d;
+            --danger: #ff4444;
+            --stat-bar-bg: #1f2f1f;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 40px 20px;
+            background-image: 
+                linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(0, 255, 136, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(0, 180, 216, 0.06) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        .badge {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--accent-primary);
+            border: 1px solid var(--accent-primary);
+            padding: 6px 16px;
+            margin-bottom: 20px;
+            background: rgba(0, 255, 136, 0.08);
+        }
+
+        h1 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 48px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            font-weight: 400;
+        }
+
+        .matrix-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 
+                0 0 60px rgba(0, 255, 136, 0.1),
+                0 20px 80px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .matrix-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+        }
+
+        .matrix {
+            display: grid;
+            grid-template-columns: 280px repeat(4, 1fr) 100px;
+            gap: 1px;
+            background: var(--border-color);
+        }
+
+        .cell {
+            background: var(--bg-secondary);
+            padding: 20px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .cell.header-row {
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, #0f150f 100%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            text-align: center;
+            padding: 16px 12px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .cell.header-row .layer-num {
+            display: block;
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 4px;
+            font-family: 'Crimson Pro', serif;
+        }
+
+        .cell.header-row .layer-name-zh {
+            display: block;
+            color: var(--text-primary);
+            font-size: 13px;
+            margin-bottom: 2px;
+            letter-spacing: 1px;
+        }
+
+        .cell.header-row .layer-name-en {
+            display: block;
+            font-size: 10px;
+            opacity: 0.7;
+        }
+
+        .cell.corner {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, #0a100a 100%);
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .cell.corner .corner-title {
+            font-family: 'Crimson Pro', serif;
+            font-size: 18px;
+            color: var(--accent-primary);
+            font-style: italic;
+        }
+
+        .cell.row-header {
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .cell.row-header .attack-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(255, 68, 68, 0.15) 0%, rgba(255, 68, 68, 0.05) 100%);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .cell.row-header .attack-info {
+            flex: 1;
+        }
+
+        .cell.row-header .attack-name-zh {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .cell.row-header .attack-name-en {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .cell.protected {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.08) 0%, rgba(0, 212, 170, 0.04) 100%);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            cursor: pointer;
+        }
+
+        .cell.protected:hover {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.15) 0%, rgba(0, 212, 170, 0.08) 100%);
+            border-color: var(--accent-primary);
+            box-shadow: inset 0 0 30px rgba(0, 255, 136, 0.1);
+            transform: scale(1.02);
+            z-index: 10;
+        }
+
+        .cell.protected.primary {
+            background: linear-gradient(135deg, rgba(0, 180, 90, 0.2) 0%, rgba(0, 140, 70, 0.1) 100%);
+            border-color: rgba(0, 255, 136, 0.4);
+        }
+
+        .cell.protected.secondary {
+            background: linear-gradient(135deg, rgba(0, 180, 216, 0.12) 0%, rgba(0, 150, 180, 0.05) 100%);
+            border-color: rgba(0, 180, 216, 0.3);
+        }
+
+        .cell.empty {
+            background: var(--bg-cell-empty);
+            position: relative;
+        }
+
+        .cell.empty::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 60%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 68, 68, 0.3), transparent);
+            transform: translate(-50%, -50%) rotate(-45deg);
+        }
+
+        .cell.empty .no-coverage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 10px;
+            color: rgba(255, 68, 68, 0.5);
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 1px;
+        }
+
+        .protection-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            height: 100%;
+        }
+
+        .protection-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--accent-primary);
+            align-self: flex-start;
+        }
+
+        .protection-badge.secondary-badge {
+            color: var(--accent-tertiary);
+        }
+
+        .protection-text {
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--text-primary);
+        }
+
+        .cell.stat-col {
+            background: linear-gradient(90deg, var(--bg-secondary) 0%, rgba(0, 255, 136, 0.05) 100%);
+            border-left: 2px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .coverage-num {
+            font-family: 'Crimson Pro', serif;
+            font-size: 36px;
+            font-weight: 600;
+            color: var(--accent-primary);
+            line-height: 1;
+        }
+
+        .coverage-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .coverage-bar {
+            width: 40px;
+            height: 4px;
+            background: var(--stat-bar-bg);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .coverage-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        .cell.stat-row {
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, rgba(0, 255, 136, 0.05) 100%);
+            border-top: 2px solid var(--border-color);
+            text-align: center;
+            padding: 16px;
+        }
+
+        .stat-row .coverage-num {
+            font-size: 28px;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .legend-box {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+        }
+
+        .legend-box.primary {
+            background: linear-gradient(135deg, rgba(0, 180, 90, 0.3) 0%, rgba(0, 140, 70, 0.15) 100%);
+            border: 1px solid rgba(0, 255, 136, 0.5);
+        }
+
+        .legend-box.secondary {
+            background: linear-gradient(135deg, rgba(0, 180, 216, 0.2) 0%, rgba(0, 150, 180, 0.1) 100%);
+            border: 1px solid rgba(0, 180, 216, 0.4);
+        }
+
+        .legend-box.empty {
+            background: var(--bg-cell-empty);
+            position: relative;
+        }
+
+        .legend-box.empty::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 70%;
+            height: 1px;
+            background: rgba(255, 68, 68, 0.4);
+            transform: translate(-50%, -50%) rotate(-45deg);
+        }
+
+        .defense-summary {
+            margin-top: 30px;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.05) 0%, transparent 100%);
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--accent-primary);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .defense-summary h3 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 18px;
+            color: var(--accent-primary);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .defense-summary p {
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+
+        .tooltip {
+            position: fixed;
+            background: rgba(10, 20, 15, 0.98);
+            border: 1px solid var(--accent-primary);
+            border-radius: 8px;
+            padding: 16px;
+            max-width: 320px;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 255, 136, 0.2);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip h4 {
+            font-family: 'Crimson Pro', serif;
+            font-size: 16px;
+            color: var(--accent-primary);
+            margin-bottom: 8px;
+        }
+
+        .tooltip p {
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .tooltip .meta {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--accent-secondary);
+        }
+
+        @media (max-width: 1200px) {
+            .matrix {
+                grid-template-columns: 220px repeat(4, 1fr) 80px;
+            }
+            .cell {
+                padding: 14px;
+            }
+            .protection-text {
+                font-size: 11px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            h1 {
+                font-size: 32px;
+            }
+            .matrix-container {
+                overflow-x: auto;
+            }
+            .matrix {
+                min-width: 800px;
+            }
+            .legend {
+                flex-wrap: wrap;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="badge">Security Architecture VIS-2A-023</div>
+            <h1>攻击面矩阵</h1>
+            <div class="subtitle">ATTACK SURFACE MATRIX — FOUR-LAYER DEFENSE COVERAGE</div>
+        </header>
+
+        <div class="matrix-container">
+            <div class="matrix">
+                <!-- Header Row -->
+                <div class="cell corner">
+                    <div class="corner-title">Attack Vector × Defense Layer</div>
+                </div>
+                <div class="cell header-row">
+                    <span class="layer-num">L1</span>
+                    <span class="layer-name-zh">企业策略</span>
+                    <span class="layer-name-en">Enterprise Policy</span>
+                </div>
+                <div class="cell header-row">
+                    <span class="layer-num">L2</span>
+                    <span class="layer-name-zh">沙箱隔离</span>
+                    <span class="layer-name-en">Sandbox Isolation</span>
+                </div>
+                <div class="cell header-row">
+                    <span class="layer-num">L3</span>
+                    <span class="layer-name-zh">权限状态机</span>
+                    <span class="layer-name-en">Permission FSM</span>
+                </div>
+                <div class="cell header-row">
+                    <span class="layer-num">L4</span>
+                    <span class="layer-name-zh">代码级安全</span>
+                    <span class="layer-name-en">Code Security</span>
+                </div>
+                <div class="cell corner">
+                    <div class="corner-title" style="font-size: 14px;">Coverage</div>
+                </div>
+
+                <!-- Row 1: Prompt Injection -->
+                <div class="cell row-header">
+                    <div class="attack-icon">⚡</div>
+                    <div class="attack-info">
+                        <div class="attack-name-zh">Prompt Injection</div>
+                        <div class="attack-name-en">Via web/file content</div>
+                    </div>
+                </div>
+                <div class="cell empty" data-detail="企业策略层不直接处理提示词注入攻击">
+                    <span class="no-coverage">N/A</span>
+                </div>
+                <div class="cell empty" data-detail="沙箱层不直接处理提示词级攻击">
+                    <span class="no-coverage">N/A</span>
+                </div>
+                <div class="cell protected primary" 
+                     data-detail="系统提示词警告 + 权限检查链。所有用户输入经过九步检查链验证，确保注入指令无法绕过权限系统。"
+                     data-source="core/permissions/check_chain.ts">
+                    <div class="protection-content">
+                        <span class="protection-badge">🛡️ PRIMARY</span>
+                        <div class="protection-text">系统提示词警告 + 权限检查链</div>
+                    </div>
+                </div>
+                <div class="cell protected secondary" 
+                     data-detail="输入验证与过滤。所有外部输入经过 Zod 模式验证和注入检测。"
+                     data-source="core/validation/input.ts">
+                    <div class="protection-content">
+                        <span class="protection-badge secondary-badge">🔒 AUX</span>
+                        <div class="protection-text">Zod 输入验证 + 注入检测</div>
+                    </div>
+                </div>
+                <div class="cell stat-col">
+                    <div class="coverage-num">2</div>
+                    <div class="coverage-label">Layers</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-bar-fill" style="width: 50%"></div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Bare Git Repo -->
+                <div class="cell row-header">
+                    <div class="attack-icon">📁</div>
+                    <div class="attack-info">
+                        <div class="attack-name-zh">Bare Git Repo</div>
+                        <div class="attack-name-en">Fake .git directory</div>
+                    </div>
+                </div>
+                <div class="cell empty" data-detail="企业策略层不直接处理文件系统级攻击">
+                    <span class="no-coverage">N/A</span>
+                </div>
+                <div class="cell protected primary" 
+                     data-detail="沙箱检测与自动清除。启动时扫描工作目录，检测并移除植入的 .git 目录。"
+                     data-source="sandbox/git_protection.ts">
+                    <div class="protection-content">
+                        <span class="protection-badge">🛡️ PRIMARY</span>
+                        <div class="protection-text">沙箱检测与自动清除</div>
+                    </div>
+                </div>
+                <div class="cell empty" data-detail="权限状态机不直接处理文件系统级攻击">
+                    <span class="no-coverage">N/A</span>
+                </div>
+                <div class="cell empty" data-detail="代码级安全依赖沙箱层处理此攻击">
+                    <span class="no-coverage">N/A</span>
+                </div>
+                <div class="cell stat-col">
+                    <div class="coverage-num">1</div>
+                    <div class="coverage-label">Layer</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-bar-fill" style="width: 25%"></div>
+                    </div>
+                </div>
+
+                <!-- Row 3: Command Injection -->
+                <div class="cell row-header">
+                    <div class="attack-icon">⌘</div>
+                    <div class="attack-info">
+                        <div class="attack-name-zh">Command Injection</div>
+                        <div class="attack-name-en">Shell via tool args</div>
+                    </div>
+                </div>
+                <div class="cell empty" data-detail="企业策略层依赖下层处理命令注入">
+                    <span class="no-coverage">N/A</span>
+                </div>
+                <div class="cell empty" data-detail="沙箱层聚焦文件系统，命令注入由代码层处理">
+                    <span class="no-coverage">N/A</span>
+                </div>
+                <div class="cell protected secondary" 
+                     data-detail="命令执行权限检查。所有工具调用经过九步检查链验证参数合法性。"
+                     data-source="core/permissions/tools.ts">
+                    <div class="protection-content">
+                        <span class="protection-badge secondary-badge">🔒 AUX</span>
+                        <div class="protection-text">命令执行权限检查</div>
+                    </div>
+                </div>
+                <div class="cell protected primary" 
+                     data-detail="Zod 输入验证 + 命令解析器。严格的模式验证阻止注入字符，专用解析器处理参数。"
+                     data-source="core/tools/command_parser.ts">
+                    <div class="protection-content">
+                        <span class="protection-badge">🛡️ PRIMARY</span>
+                        <div class="protection-text">Zod 验证 + 命令解析器</div>
+                    </div>
+                </div>
+                <div class="cell stat-col">
+                    <div class="coverage-num">2</div>
+                    <div class="coverage-label">Layers</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-bar-fill" style="width: 50%"></div>
+                    </div>
+                </div>
+
+                <!-- Row 4: Path Traversal -->
+                <div class="cell row-header">
+                    <div class="attack-icon">🔄</div>
+                    <div class="attack-info">
+                        <div class="attack-name-zh">Path Traversal</div>
+                        <div class="attack-name-en">/etc/passwd access</div>
+                    </div>
+                </div>
+                <div class="cell empty" data-detail="企业策略层不直接处理路径遍历">
+                    <span class="no-coverage">N/A</span>
+                </div>
+                <div class="cell protected primary" 
+                     data-detail="文件系统沙箱限制。工作目录隔离，禁止访问系统路径。"
+                     data-source="sandbox/fs_isolation.ts">
+                    <div class="protection-content">
+                        <span class="protection-badge">🛡️ PRIMARY</span>
+                        <div class="protection-text">文件系统沙箱限制</div>
+                    </div>
+                </div>
+                <div class="cell empty" data-detail="权限状态机依赖沙箱和代码层处理路径安全">
+                    <span class="no-coverage">N/A</span>
+                </div>
+                <div class="cell protected secondary" 
+                     data-detail="路径规范化 + 白名单。所有路径经过规范化处理，验证在工作目录内。"
+                     data-source="core/fs/path_validator.ts">
+                    <div class="protection-content">
+                        <span class="protection-badge secondary-badge">🔒 AUX</span>
+                        <div class="protection-text">路径规范化验证</div>
+                    </div>
+                </div>
+                <div class="cell stat-col">
+                    <div class="coverage-num">2</div>
+                    <div class="coverage-label">Layers</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-bar-fill" style="width: 50%"></div>
+                    </div>
+                </div>
+
+                <!-- Row 5: MCP Server Attack -->
+                <div class="cell row-header">
+                    <div class="attack-icon">🔌</div>
+                    <div class="attack-info">
+                        <div class="attack-name-zh">MCP Server Attack</div>
+                        <div class="attack-name-en">Malicious MCP response</div>
+                    </div>
+                </div>
+                <div class="cell protected primary" 
+                     data-detail="域名白名单 + 企业策略控制。仅允许预批准域名，管理员可禁用 MCP。"
+                     data-source="enterprise/mcp_policy.ts">
+                    <div class="protection-content">
+                        <span class="protection-badge">🛡️ PRIMARY</span>
+                        <div class="protection-text">域名白名单 + 策略控制</div>
+                    </div>
+                </div>
+                <div class="cell empty" data-detail="沙箱层主要聚焦本地资源">
+                    <span class="no-coverage">N/A</span>
+                </div>
+                <div class="cell protected secondary" 
+                     data-detail="MCP 响应权限检查。所有 MCP 返回内容经过权限验证。"
+                     data-source="core/permissions/mcp_check.ts">
+                    <div class="protection-content">
+                        <span class="protection-badge secondary-badge">🔒 AUX</span>
+                        <div class="protection-text">MCP 响应权限检查</div>
+                    </div>
+                </div>
+                <div class="cell empty" data-detail="代码层依赖权限状态机处理 MCP 内容">
+                    <span class="no-coverage">N/A</span>
+                </div>
+                <div class="cell stat-col">
+                    <div class="coverage-num">2</div>
+                    <div class="coverage-label">Layers</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-bar-fill" style="width: 50%"></div>
+                    </div>
+                </div>
+
+                <!-- Row 6: Env Variable Leak -->
+                <div class="cell row-header">
+                    <div class="attack-icon">🔑</div>
+                    <div class="attack-info">
+                        <div class="attack-name-zh">Env Variable Leak</div>
+                        <div class="attack-name-en">Sensitive env access</div>
+                    </div>
+                </div>
+                <div class="cell empty" data-detail="企业策略层依赖下层处理环境隔离">
+                    <span class="no-coverage">N/A</span>
+                </div>
+                <div class="cell protected primary" 
+                     data-detail="沙箱环境隔离。敏感环境变量在沙箱内被过滤，子进程继承清理后的环境。"
+                     data-source="sandbox/env_isolation.ts">
+                    <div class="protection-content">
+                        <span class="protection-badge">🛡️ PRIMARY</span>
+                        <div class="protection-text">沙箱环境隔离</div>
+                    </div>
+                </div>
+                <div class="cell protected secondary" 
+                     data-detail="bypass-immune 规则。环境变量访问受严格的不可绕过规则保护。"
+                     data-source="core/permissions/env_rules.ts">
+                    <div class="protection-content">
+                        <span class="protection-badge secondary-badge">🔒 AUX</span>
+                        <div class="protection-text">bypass-immune 规则</div>
+                    </div>
+                </div>
+                <div class="cell empty" data-detail="代码层依赖权限规则处理环境访问">
+                    <span class="no-coverage">N/A</span>
+                </div>
+                <div class="cell stat-col">
+                    <div class="coverage-num">2</div>
+                    <div class="coverage-label">Layers</div>
+                    <div class="coverage-bar">
+                        <div class="coverage-bar-fill" style="width: 50%"></div>
+                    </div>
+                </div>
+
+                <!-- Bottom Stats Row -->
+                <div class="cell row-header" style="background: linear-gradient(90deg, var(--bg-secondary) 0%, rgba(0,255,136,0.05) 100%); border-top: 2px solid var(--border-color);">
+                    <div class="attack-info">
+                        <div class="attack-name-zh" style="color: var(--accent-primary);">覆盖统计</div>
+                        <div class="attack-name-en">Coverage Stats</div>
+                    </div>
+                </div>
+                <div class="cell stat-row">
+                    <div class="coverage-num">1</div>
+                    <div class="coverage-label">Attack Covered</div>
+                </div>
+                <div class="cell stat-row">
+                    <div class="coverage-num">3</div>
+                    <div class="coverage-label">Attacks Covered</div>
+                </div>
+                <div class="cell stat-row">
+                    <div class="coverage-num">4</div>
+                    <div class="coverage-label">Attacks Covered</div>
+                </div>
+                <div class="cell stat-row">
+                    <div class="coverage-num">4</div>
+                    <div class="coverage-label">Attacks Covered</div>
+                </div>
+                <div class="cell stat-col" style="background: linear-gradient(135deg, rgba(0,255,136,0.1) 0%, rgba(0,212,170,0.05) 100%);">
+                    <div class="coverage-num" style="font-size: 28px;">11</div>
+                    <div class="coverage-label">Total</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-box primary"></div>
+                <span>主要防护 Primary Defense</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box secondary"></div>
+                <span>辅助防护 Auxiliary Defense</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box empty"></div>
+                <span>无覆盖 No Coverage</span>
+            </div>
+        </div>
+
+        <div class="defense-summary">
+            <h3>Defense in Depth Principle</h3>
+            <p>每个攻击向量至少被两层防御覆盖，确保无单点失败。纵深防御架构将安全控制分布在多个层面：企业策略进行前置过滤，沙箱隔离提供运行时保护，权限状态机执行动态访问控制，代码级安全实现底层验证。这种分层设计即使某一层被绕过，其他层仍能提供防护保障。</p>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip">
+        <h4></h4>
+        <p></p>
+        <div class="meta"></div>
+    </div>
+
+    <script>
+        const tooltip = document.getElementById('tooltip');
+        const protectedCells = document.querySelectorAll('.cell[data-detail]');
+
+        protectedCells.forEach(cell => {
+            cell.addEventListener('mouseenter', (e) => {
+                const detail = cell.getAttribute('data-detail');
+                const source = cell.getAttribute('data-source');
+                const isPrimary = cell.classList.contains('primary');
+                
+                tooltip.querySelector('h4').textContent = isPrimary ? '🛡️ 主要防护措施' : '🔒 辅助防护措施';
+                tooltip.querySelector('p').textContent = detail;
+                tooltip.querySelector('.meta').textContent = source ? `Source: ${source}` : '';
+                
+                tooltip.classList.add('visible');
+            });
+
+            cell.addEventListener('mousemove', (e) => {
+                const x = e.clientX + 20;
+                const y = e.clientY + 20;
+                
+                // Boundary check
+                const rect = tooltip.getBoundingClientRect();
+                const maxX = window.innerWidth - rect.width - 20;
+                const maxY = window.innerHeight - rect.height - 20;
+                
+                tooltip.style.left = Math.min(x, maxX) + 'px';
+                tooltip.style.top = Math.min(y, maxY) + 'px';
+            });
+
+            cell.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+        });
+
+        // Animate coverage bars on load
+        window.addEventListener('load', () => {
+            document.querySelectorAll('.coverage-bar-fill').forEach(bar => {
+                const width = bar.style.width;
+                bar.style.width = '0';
+                setTimeout(() => {
+                    bar.style.width = width;
+                }, 300);
+            });
+        });
+    </script>
+</body>
+</html>

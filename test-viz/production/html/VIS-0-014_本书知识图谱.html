@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本书知识图谱 | Book Knowledge Graph</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+:root{
+  --bg:#0d1117;
+  --bg-2:#161b22;
+  --bg-3:#21262d;
+  --text-main:#c9d1d9;
+  --text-sub:#8b949e;
+  --accent-blue:#58a6ff;
+  --accent-purple:#bc8cff;
+  --accent-orange:#f0883e;
+  --accent-green:#3fb950;
+  --accent-red:#f85149;
+  --panel:#0d1117ee;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text-main); font-family:"Noto Sans SC","PingFang SC",sans-serif; }
+#graph { width:100%; height:100%; position:relative; }
+.bg-radial { position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at 30% 20%,rgba(88,166,255,0.08) 0%,transparent 50%),radial-gradient(ellipse at 70% 80%,rgba(188,140,255,0.06) 0%,transparent 50%),radial-gradient(ellipse at 80% 20%,rgba(248,81,73,0.05) 0%,transparent 40%); }
+svg.main-svg { width:100%; height:100%; display:block; cursor:grab; }
+svg.main-svg:active { cursor:grabbing; }
+.ui-layer { position:absolute; inset:0; pointer-events:none; }
+.ui-layer>* { pointer-events:auto; }
+.header { position:absolute; top:24px; left:28px; }
+.header h1 { font-size:22px; font-weight:700; letter-spacing:0.5px; margin-bottom:4px; background:linear-gradient(120deg,#fff 60%,var(--text-sub)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.header p { font-size:11px; color:var(--text-sub); text-transform:uppercase; letter-spacing:1.5px; font-family:"JetBrains Mono",monospace; }
+.controls { position:absolute; top:24px; right:28px; display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
+.search-box { display:flex; align-items:center; background:var(--bg-2); border:1px solid var(--bg-3); border-radius:8px; padding:6px 10px; width:220px; }
+.search-box input { background:transparent; border:none; outline:none; color:var(--text-main); font-size:13px; width:100%; }
+.search-box input::placeholder { color:var(--text-sub); }
+.path-bar { display:flex; gap:6px; background:var(--bg-2); border:1px solid var(--bg-3); border-radius:8px; padding:4px; }
+.path-btn { font-size:11px; padding:6px 12px; border-radius:6px; border:none; background:transparent; color:var(--text-sub); cursor:pointer; transition:.2s; font-family:"JetBrains Mono",monospace; }
+.path-btn:hover { color:var(--text-main); }
+.path-btn.active { background:var(--bg-3); color:#fff; }
+.path-btn.novice.active { color:var(--accent-blue); }
+.path-btn.intermediate.active { color:var(--accent-orange); }
+.path-btn.advanced.active { color:var(--accent-red); }
+.legend { position:absolute; bottom:28px; left:28px; display:flex; flex-wrap:wrap; gap:12px; background:var(--bg-2); border:1px solid var(--bg-3); border-radius:10px; padding:10px 14px; backdrop-filter:blur(4px); }
+.legend-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-sub); }
+.dot { width:10px; height:10px; border-radius:50%; }
+.minimap { position:absolute; bottom:28px; right:28px; width:160px; height:120px; background:var(--bg-2); border:1px solid var(--bg-3); border-radius:10px; overflow:hidden; }
+.minimap svg { width:100%; height:100%; }
+.minimap-rect { fill:none; stroke:#fff; stroke-width:1.5; opacity:0.4; }
+.detail-panel { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.96); width:320px; background:var(--panel); border:1px solid var(--bg-3); border-radius:14px; padding:20px; opacity:0; pointer-events:none; transition:all .2s ease; backdrop-filter:blur(10px); box-shadow:0 20px 60px rgba(0,0,0,0.5); }
+.detail-panel.show { opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1); }
+.detail-panel h3 { font-size:16px; margin-bottom:4px; }
+.detail-panel .sub { font-size:11px; color:var(--text-sub); font-family:"JetBrains Mono",monospace; margin-bottom:14px; }
+.detail-row { display:flex; justify-content:space-between; font-size:12px; margin:6px 0; color:var(--text-sub); }
+.detail-row span:last-child { color:var(--text-main); font-weight:500; }
+.close-btn { position:absolute; top:10px; right:10px; width:26px; height:26px; border-radius:50%; border:none; background:var(--bg-3); color:var(--text-sub); cursor:pointer; font-size:14px; line-height:1; }
+.close-btn:hover { color:#fff; }
+.tooltip { position:absolute; background:var(--bg-2); border:1px solid var(--bg-3); border-radius:8px; padding:8px 12px; font-size:12px; color:var(--text-main); pointer-events:none; opacity:0; transition:opacity .15s; max-width:220px; z-index:100; }
+.node { cursor:pointer; transition:filter .2s; }
+.node-circle { stroke:var(--bg); stroke-width:1.5; }
+.link { transition:stroke-opacity .3s, stroke .3s; }
+.cluster-label { font-size:28px; font-weight:800; opacity:0.06; pointer-events:none; text-anchor:middle; dominant-baseline:middle; user-select:none; }
+.hub-label { font-size:11px; font-weight:600; fill:var(--text-main); pointer-events:none; text-shadow:0 1px 4px var(--bg); opacity:0.9; }
+.dim { opacity:0.08 !important; }
+.highlight-node { filter:drop-shadow(0 0 6px currentColor); }
+</style>
+</head>
+<body>
+
+<div id="graph">
+  <div class="bg-radial"></div>
+  <svg class="main-svg"></svg>
+  <div class="ui-layer">
+    <div class="header">
+      <h1>本书知识图谱</h1>
+      <p>Book Knowledge Graph &bull; 74 Chapters &bull; 5 Clusters</p>
+    </div>
+    <div class="controls">
+      <div class="search-box"><input type="text" id="search" placeholder="搜索章节 / Search chapter..."></div>
+      <div class="path-bar">
+        <button class="path-btn novice" data-path="novice">新手路径 Beginner</button>
+        <button class="path-btn intermediate" data-path="intermediate">中级路径 Intermediate</button>
+        <button class="path-btn advanced" data-path="advanced">高级路径 Advanced</button>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="dot" style="background:var(--accent-blue)"></div>架构基础 Architecture</div>
+      <div class="legend-item"><div class="dot" style="background:var(--accent-purple)"></div>核心引擎 Engine</div>
+      <div class="legend-item"><div class="dot" style="background:var(--accent-orange)"></div>工具系统 Tools</div>
+      <div class="legend-item"><div class="dot" style="background:var(--accent-green)"></div>安全与扩展 Security</div>
+      <div class="legend-item"><div class="dot" style="background:var(--accent-red)"></div>高级主题 Advanced</div>
+    </div>
+    <div class="minimap"><svg id="minimap"></svg></div>
+    <div class="detail-panel" id="panel">
+      <button class="close-btn" onclick="closePanel()">×</button>
+      <h3 id="p-title">章节标题</h3>
+      <div class="sub" id="p-sub">Chapter Title</div>
+      <div class="detail-row"><span>所属部分 Part</span><span id="p-part">-</span></div>
+      <div class="detail-row"><span>被引用次数 In-degree</span><span id="p-in">0</span></div>
+      <div class="detail-row"><span>引用他人 Out-degree</span><span id="p-out">0</span></div>
+      <div class="detail-row"><span>枢纽等级 Hub</span><span id="p-hub">-</span></div>
+    </div>
+  </div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const parts=[
+  {id:0,name:"架构基础",en:"Architecture",color:"#58a6ff"},
+  {id:1,name:"核心引擎",en:"Core Engine",color:"#bc8cff"},
+  {id:2,name:"工具系统",en:"Tool System",color:"#f0883e"},
+  {id:3,name:"安全与扩展",en:"Security & Ext",color:"#3fb950"},
+  {id:4,name:"高级主题",en:"Advanced Topics",color:"#f85149"}
+];
+
+function randint(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+
+const chapterNames=[
+  ["项目概览","CLI入口设计","配置系统","项目结构解析","技术栈分析","模块化设计","构建流程","依赖管理","目录规范","版本控制","初始化流程","环境搭建","代码规范","文档系统","发布流程"],
+  ["Agent Loop核心","消息系统","API通信","Prompt工程","状态管理","上下文流转","请求调度","响应解析","流式处理","会话管理","模型抽象","多轮对话","指令解析","思维链","反馈循环"],
+  ["工具基类","文件操作","搜索系统","Bash执行","Agent工具","编辑器工具","代码搜索","批量替换","读写策略","工具注册","参数校验","结果格式化","工具链","外部集成","调试工具"],
+  ["权限系统","沙箱机制","MCP协议","Hooks系统","CLAUDE.md","安全策略","输入校验","审计日志","扩展点设计","插件架构","隔离策略","资源限制","认证授权","隐私保护","合规检查"],
+  ["性能优化","上下文管理","错误处理","测试策略","部署方案","缓存机制","内存管理","并发控制","日志监控","容错设计","降级策略","链路追踪","基准测试","持续集成"]
+];
+
+let chapters=[];
+chapterNames.forEach((list,pi)=>{
+  list.forEach((name,idx)=>{
+    let id=chapters.length;
+    let baseIn=0,baseOut=0;
+    if(name==="项目概览"){baseIn=2;baseOut=12;}
+    else if(name==="Agent Loop核心"){baseIn=28;baseOut=4;}
+    else if(name==="工具基类"){baseIn=22;baseOut=6;}
+    else if(name==="权限系统"){baseIn=18;baseOut=5;}
+    else if(name==="配置系统"){baseIn=16;baseOut=3;}
+    else if(name==="MCP协议"){baseIn=10;baseOut=7;}
+    else if(name==="消息系统"){baseIn=9;baseOut=4;}
+    else if(name==="Prompt工程"){baseIn=8;baseOut=3;}
+    else if(name==="测试策略"){baseIn=3;baseOut=2;}
+    else { baseIn=randint(0,6); baseOut=randint(0,5); }
+    chapters.push({id,title:name,part:pi,inDegree:baseIn,outDegree:baseOut});
+  });
+});
+
+// Fill remaining to 74
+while(chapters.length<74){
+  let id=chapters.length;
+  let pi=randint(0,4);
+  let extras=["元数据","索引结构","缓存层","事件总线","序列化","压缩算法","网关层","负载均衡","服务发现","配置中心","监控告警","限流熔断","灰度发布","容器化","无服务器"];
+  let name=extras[id-59]||`补充章节${id}`;
+  chapters.push({id,title:name,part:pi,inDegree:randint(0,4),outDegree:randint(0,3)});
+}
+
+// Build references
+let references=[];
+chapters.forEach(a=>{
+  let targets=new Set();
+  // Overview references all parts entry chapters
+  if(a.title==="项目概览"){
+    [1,16,31,46,60].forEach(t=>targets.add(t));
+  }
+  // Same part references
+  let samePart=chapters.filter(c=>c.part===a.part && c.id!==a.id);
+  for(let i=0;i<a.outDegree;i++){
+    let t=pick(samePart);
+    if(t) targets.add(t.id);
+  }
+  // Cross part references based on domain logic
+  if(a.part===2){ // tools reference tool base
+    let base=chapters.find(c=>c.title==="工具基类");
+    if(base) targets.add(base.id);
+  }
+  if(a.part===3){ // security reference permission
+    let perm=chapters.find(c=>c.title==="权限系统");
+    if(perm) targets.add(perm.id);
+  }
+  if([1,2,3,4].includes(a.part)){ // all reference config
+    let cfg=chapters.find(c=>c.title==="配置系统");
+    if(cfg) targets.add(cfg.id);
+  }
+  if(a.part===1 && a.title!=="Agent Loop核心"){
+    let agent=chapters.find(c=>c.title==="Agent Loop核心");
+    if(agent) targets.add(agent.id);
+  }
+  if(a.part===2 && a.title!=="工具基类"){
+    let base=chapters.find(c=>c.title==="工具基类");
+    if(base) targets.add(base.id);
+  }
+  if(a.title==="MCP协议"){
+    let toolBase=chapters.find(c=>c.title==="工具基类");
+    if(toolBase) targets.add(toolBase.id);
+  }
+  if(a.title==="权限系统"){
+    let toolBase=chapters.find(c=>c.title==="工具基类");
+    if(toolBase) targets.add(toolBase.id);
+  }
+  if(a.title==="工具基类"){
+    let perm=chapters.find(c=>c.title==="权限系统");
+    if(perm) targets.add(perm.id);
+  }
+  // Ensure minimum out-degree match
+  while(targets.size < Math.max(1,a.outDegree)){
+    let t=pick(chapters.filter(c=>c.id!==a.id));
+    if(t) targets.add(t.id);
+  }
+  targets.forEach(tid=>references.push({source:a.id,target:tid}));
+});
+
+// Deduplicate references
+let refMap=new Map();
+references.forEach(r=>{
+  let k=`${r.source}-${r.target}`;
+  refMap.set(k,r);
+});
+references=Array.from(refMap.values());
+
+// Recalculate degrees from actual references
+chapters.forEach(c=>{c.inDegree=0;c.outDegree=0;});
+references.forEach(r=>{
+  chapters[r.source].outDegree++;
+  chapters[r.target].inDegree++;
+});
+
+const width=window.innerWidth;
+const height=window.innerHeight;
+const svg=d3.select("svg.main-svg");
+const g=svg.append("g");
+
+const zoom=d3.zoom().scaleExtent([0.3,4]).on("zoom",e=>{
+  g.attr("transform",e.transform);
+  updateMinimap(e.transform);
+});
+svg.call(zoom);
+
+// Define arrow marker
+svg.append("defs").append("marker")
+  .attr("id","arrow")
+  .attr("viewBox","0 -5 10 10")
+  .attr("refX",15)
+  .attr("refY",0)
+  .attr("markerWidth",5)
+  .attr("markerHeight",5)
+  .attr("orient","auto")
+  .append("path")
+  .attr("d","M0,-4L10,0L0,4")
+  .attr("fill","#8b949e");
+
+// Cluster centers
+const clusterCenters=[
+  {x:width*0.35,y:height*0.25},
+  {x:width*0.7,y:height*0.35},
+  {x:width*0.65,y:height*0.72},
+  {x:width*0.3,y:height*0.75},
+  {x:width*0.15,y:height*0.45}
+];
+
+const simulation=d3.forceSimulation(chapters)
+  .force("link",d3.forceLink(references).id(d=>d.id).distance(45))
+  .force("charge",d3.forceManyBody().strength(-90))
+  .force("center",d3.forceCenter(width/2,height/2))
+  .force("collide",d3.forceCollide().radius(d=>Math.sqrt(d.inDegree)*2+8))
+  .force("cluster",alpha=>{
+    const k=alpha*0.08;
+    chapters.forEach(d=>{
+      const cx=clusterCenters[d.part].x;
+      const cy=clusterCenters[d.part].y;
+      d.vx+=(cx-d.x)*k;
+      d.vy+=(cy-d.y)*k;
+    });
+  })
+  .on("tick",ticked);
+
+function nodeRadius(d){return Math.min(30,Math.max(6,Math.sqrt(d.inDegree)*2.5+4));}
+
+const link=g.append("g").attr("class","links").selectAll("line")
+  .data(references).enter().append("line")
+  .attr("class","link")
+  .attr("stroke","#8b949e")
+  .attr("stroke-opacity",0.12)
+  .attr("stroke-width",1)
+  .attr("marker-end","url(#arrow)");
+
+const clusterLabelG=g.append("g").attr("class","cluster-labels").selectAll("text")
+  .data(parts).enter().append("text")
+  .attr("class","cluster-label")
+  .attr("fill",d=>d.color)
+  .text(d=>d.name);
+
+const node=g.append("g").attr("class","nodes").selectAll("g")
+  .data(chapters).enter().append("g")
+  .attr("class","node")
+  .call(d3.drag().on("start",dragstarted).on("drag",dragged).on("end",dragended));
+
+node.append("circle")
+  .attr("class","node-circle")
+  .attr("r",nodeRadius)
+  .attr("fill",d=>parts[d.part].color)
+  .attr("fill-opacity",0.85);
+
+// Glow for hubs
+node.filter(d=>d.inDegree>10).append("circle")
+  .attr("r",d=>nodeRadius(d)+6)
+  .attr("fill",d=>parts[d.part].color)
+  .attr("opacity",0.18)
+  .attr("class","glow");
+
+const hubLabels=g.append("g").attr("class","hub-labels").selectAll("text")
+  .data(chapters.filter(d=>d.inDegree>10)).enter().append("text")
+  .attr("class","hub-label")
+  .text(d=>d.title)
+  .attr("dy",d=>-nodeRadius(d)-8);
+
+const tooltip=d3.select("#tooltip");
+
+node.on("mouseover",function(event,d){
+  tooltip.style("opacity",1).html(`<strong>${d.title}</strong><br><span style="color:#8b949e">${parts[d.part].en} · 被引 ${d.inDegree}</span>`);
+}).on("mousemove",function(event){
+  tooltip.style("left",(event.pageX+12)+"px").style("top",(event.pageY+12)+"px");
+}).on("mouseout",()=>tooltip.style("opacity",0)).on("dblclick",function(event,d){
+  showPanel(d);
+  event.stopPropagation();
+});
+
+svg.on("dblclick",()=>closePanel());
+
+function ticked(){
+  link.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y)
+      .attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
+  node.attr("transform",d=>`translate(${d.x},${d.y})`);
+  hubLabels.attr("x",d=>d.x).attr("y",d=>d.y);
+  clusterLabelG.attr("x",d=>clusterCenters[d.id].x).attr("y",d=>clusterCenters[d.id].y);
+}
+
+function dragstarted(event,d){
+  if(!event.active) simulation.alphaTarget(0.3).restart();
+  d.fx=d.x; d.fy=d.y;
+}
+function dragged(event,d){ d.fx=event.x; d.fy=event.y; }
+function dragended(event,d){
+  if(!event.active) simulation.alphaTarget(0);
+  d.fx=null; d.fy=null;
+}
+
+// Reading paths
+const readingPaths={
+  novice:[0,1,2,3,16,31,46,60],
+  intermediate:[0,1,2,4,16,17,18,19,20,31,32,33,46,47,48,60,61,62],
+  advanced:[16,17,18,21,22,23,31,34,35,36,46,49,50,51,60,63,64,65]
+};
+
+document.querySelectorAll(".path-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const isActive=btn.classList.contains("active");
+    document.querySelectorAll(".path-btn").forEach(b=>b.classList.remove("active"));
+    if(!isActive){
+      btn.classList.add("active");
+      const key=btn.dataset.path;
+      highlightPath(key);
+    } else {
+      clearHighlight();
+    }
+  });
+});
+
+function highlightPath(key){
+  const ids=new Set(readingPaths[key]);
+  node.classed("dim",d=>!ids.has(d.id));
+  link.classed("dim",d=>!ids.has(d.source.id)||!ids.has(d.target.id));
+  hubLabels.classed("dim",d=>!ids.has(d.id));
+  clusterLabelG.style("opacity",0.02);
+}
+function clearHighlight(){
+  node.classed("dim",false);
+  link.classed("dim",false);
+  hubLabels.classed("dim",false);
+  clusterLabelG.style("opacity",null);
+}
+
+// Search
+const searchInput=document.getElementById("search");
+searchInput.addEventListener("input",()=>{
+  const val=searchInput.value.trim().toLowerCase();
+  if(!val){ clearHighlight(); return; }
+  const matched=chapters.filter(c=>c.title.toLowerCase().includes(val));
+  if(matched.length){
+    const ids=new Set(matched.map(d=>d.id));
+    node.classed("dim",d=>!ids.has(d.id));
+    link.classed("dim",d=>!ids.has(d.source.id)&&!ids.has(d.target.id));
+    hubLabels.classed("dim",d=>!ids.has(d.id));
+    if(matched.length===1){
+      const t=d3.zoomIdentity.translate(width/2-matched[0].x,height/2-matched[0].y).scale(1.6);
+      svg.transition().duration(600).call(zoom.transform,t);
+    }
+  }
+});
+
+// Detail panel
+function showPanel(d){
+  document.getElementById("p-title").textContent=d.title;
+  document.getElementById("p-sub").textContent=parts[d.part].en+" Chapter";
+  document.getElementById("p-part").textContent=parts[d.part].name;
+  document.getElementById("p-in").textContent=d.inDegree;
+  document.getElementById("p-out").textContent=d.outDegree;
+  let hub="-";
+  if(d.inDegree>20) hub="核心枢纽 Core Hub";
+  else if(d.inDegree>10) hub="重要枢纽 Major Hub";
+  else if(d.inDegree>5) hub="局部枢纽 Local Hub";
+  else hub="普通章节 Standard";
+  document.getElementById("p-hub").textContent=hub;
+  document.getElementById("panel").classList.add("show");
+}
+function closePanel(){ document.getElementById("panel").classList.remove("show"); }
+
+// Minimap
+const minimap=d3.select("#minimap");
+const mmW=160, mmH=120;
+const mmG=minimap.append("g");
+const mmScale=Math.min(mmW/width,mmH/height)*0.9;
+const mmOffsetX=(mmW-width*mmScale)/2;
+const mmOffsetY=(mmH-height*mmScale)/2;
+
+const mmLink=mmG.selectAll("line").data(references).enter().append("line")
+  .attr("stroke","#8b949e").attr("stroke-opacity",0.1).attr("stroke-width",0.5);
+const mmNode=mmG.selectAll("circle").data(chapters).enter().append("circle")
+  .attr("r",1.5).attr("fill",d=>parts[d.part].color);
+const mmRect=mmG.append("rect").attr("class","minimap-rect").attr("width",mmW).attr("height",mmH);
+
+function updateMinimap(transform){
+  const k=transform.k, x=transform.x, y=transform.y;
+  mmG.attr("transform",`translate(${mmOffsetX},${mmOffsetY}) scale(${mmScale})`);
+  mmLink.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
+  mmNode.attr("cx",d=>d.x).attr("cy",d=>d.y);
+  const rx=-x/k, ry=-y/k, rw=width/k, rh=height/k;
+  mmRect.attr("x",rx).attr("y",ry).attr("width",rw).attr("height",rh);
+}
+updateMinimap(d3.zoomIdentity);
+
+window.addEventListener("resize",()=>{
+  const w=window.innerWidth, h=window.innerHeight;
+  svg.attr("width",w).attr("height",h);
+  simulation.force("center",d3.forceCenter(w/2,h/2));
+  simulation.alpha(0.3).restart();
+});
+
+</script>
+</body>
+</html>

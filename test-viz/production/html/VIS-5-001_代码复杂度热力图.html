@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>代码复杂度热力图 | Code Complexity Heatmap</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #1a1a2e;
+  --bg-panel: #16213e;
+  --text-primary: #eaeaea;
+  --text-secondary: #a0a0a0;
+  --color-high: #ff2020;
+  --color-med-high: #ff6b35;
+  --color-medium: #ffd93d;
+  --color-med-low: #a8e06c;
+  --color-low: #48bb78;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+  background: var(--bg-deep);
+  min-height: 100vh;
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  position: relative;
+  z-index: 1;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff 0%, #a0a0a0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -1px;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+.stats-bar {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin: 20px 0 30px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--color-medium);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+#treemap-container {
+  background: var(--bg-panel);
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+  overflow: hidden;
+  position: relative;
+}
+
+.treemap-svg {
+  display: block;
+  width: 100%;
+}
+
+.module-rect {
+  stroke: rgba(255,255,255,0.15);
+  stroke-width: 1;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.module-rect:hover {
+  stroke: #fff;
+  stroke-width: 2;
+  filter: brightness(1.1);
+}
+
+.heat-shimmer {
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { filter: hue-rotate(0deg) brightness(1); }
+  50% { filter: hue-rotate(10deg) brightness(1.15); }
+}
+
+.module-label {
+  font-size: 13px;
+  font-weight: 600;
+  fill: #fff;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.module-sublabel {
+  font-size: 10px;
+  fill: rgba(255,255,255,0.85);
+  pointer-events: none;
+}
+
+.module-meta {
+  font-size: 9px;
+  fill: rgba(255,255,255,0.7);
+  pointer-events: none;
+}
+
+.legend {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(26,26,46,0.95);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.legend-title {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.legend-gradient {
+  width: 150px;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, 
+    var(--color-high) 0%, 
+    var(--color-med-high) 25%, 
+    var(--color-medium) 50%, 
+    var(--color-med-low) 75%, 
+    var(--color-low) 100%
+  );
+  margin-bottom: 6px;
+}
+
+.legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+
+.tooltip {
+  position: absolute;
+  background: rgba(20,20,35,0.98);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 16px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+  min-width: 240px;
+  backdrop-filter: blur(10px);
+}
+
+.tooltip.visible {
+  opacity: 1;
+}
+
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.complexity-badge {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.tooltip-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 6px 0;
+  font-size: 12px;
+}
+
+.tooltip-label {
+  color: var(--text-secondary);
+}
+
+.tooltip-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.complexity-high { color: var(--color-high); }
+.complexity-med-high { color: var(--color-med-high); }
+.complexity-medium { color: var(--color-medium); }
+.complexity-low { color: var(--color-low); }
+
+.top-functions {
+  margin-top: 30px;
+  background: var(--bg-panel);
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+}
+
+.top-functions h3 {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-functions h3::before {
+  content: "⚠";
+  color: var(--color-high);
+}
+
+.function-list {
+  display: grid;
+  gap: 12px;
+}
+
+.function-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 14px 18px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  border-left: 3px solid;
+}
+
+.function-rank {
+  font-size: 1.3rem;
+  font-weight: 700;
+  width: 30px;
+  color: var(--text-secondary);
+}
+
+.function-info {
+  flex: 1;
+}
+
+.function-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.function-location {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.function-metrics {
+  display: flex;
+  gap: 20px;
+  font-size: 11px;
+}
+
+.metric {
+  text-align: right;
+}
+
+.metric-value {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.metric-label {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.footer-note {
+  text-align: center;
+  margin-top: 30px;
+  padding: 20px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.footer-note strong {
+  color: var(--color-medium);
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<div class="container">
+  <header>
+    <h1>代码复杂度热力图 <span style="font-size:0.6em;font-weight:400;opacity:0.7">Code Complexity Heatmap</span></h1>
+    <div class="subtitle">Claude Code 各模块代码健康度体检报告 / System Health Diagnostic</div>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-value">~15K</div>
+      <div class="stat-label">总代码行数 / Total LOC</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">10</div>
+      <div class="stat-label">核心模块 / Modules</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" style="color:#ff2020">47</div>
+      <div class="stat-label">最高圈复杂度 / Max Cyclomatic</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" style="color:#ff6b35">62</div>
+      <div class="stat-label">平均认知复杂度 / Avg Cognitive</div>
+    </div>
+  </div>
+
+  <div id="treemap-container">
+    <svg id="treemap" class="treemap-svg" viewBox="0 0 1000 520"></svg>
+    <div class="legend">
+      <div class="legend-title">复杂度 / Complexity</div>
+      <div class="legend-gradient"></div>
+      <div class="legend-labels">
+        <span>高 High</span>
+        <span>低 Low</span>
+      </div>
+    </div>
+    <div id="tooltip" class="tooltip"></div>
+  </div>
+
+  <div class="top-functions">
+    <h3>最高复杂度函数 Top 5 / Most Complex Functions</h3>
+    <div class="function-list">
+      <div class="function-item" style="border-left-color:#ff2020">
+        <div class="function-rank">1</div>
+        <div class="function-info">
+          <div class="function-name">queryLoop()</div>
+          <div class="function-location">src/queryLoop.ts · 主消息循环</div>
+        </div>
+        <div class="function-metrics">
+          <div class="metric">
+            <div class="metric-value complexity-high">47</div>
+            <div class="metric-label">圈复杂度</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value complexity-high">89</div>
+            <div class="metric-label">认知复杂度</div>
+          </div>
+        </div>
+      </div>
+      <div class="function-item" style="border-left-color:#ff2020">
+        <div class="function-rank">2</div>
+        <div class="function-info">
+          <div class="function-name">checkPermission()</div>
+          <div class="function-location">src/permission.ts · 权限检查核心</div>
+        </div>
+        <div class="function-metrics">
+          <div class="metric">
+            <div class="metric-value complexity-high">38</div>
+            <div class="metric-label">圈复杂度</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value complexity-high">71</div>
+            <div class="metric-label">认知复杂度</div>
+          </div>
+        </div>
+      </div>
+      <div class="function-item" style="border-left-color:#ff6b35">
+        <div class="function-rank">3</div>
+        <div class="function-info">
+          <div class="function-name">evaluateRules()</div>
+          <div class="function-location">src/permission/rules.ts · 规则引擎</div>
+        </div>
+        <div class="function-metrics">
+          <div class="metric">
+            <div class="metric-value complexity-med-high">34</div>
+            <div class="metric-label">圈复杂度</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value complexity-med-high">58</div>
+            <div class="metric-label">认知复杂度</div>
+          </div>
+        </div>
+      </div>
+      <div class="function-item" style="border-left-color:#ff6b35">
+        <div class="function-rank">4</div>
+        <div class="function-info">
+          <div class="function-name">mergeSettings()</div>
+          <div class="function-location">src/settings/merge.ts · 配置合并</div>
+        </div>
+        <div class="function-metrics">
+          <div class="metric">
+            <div class="metric-value complexity-med-high">29</div>
+            <div class="metric-label">圈复杂度</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value complexity-med-high">52</div>
+            <div class="metric-label">认知复杂度</div>
+          </div>
+        </div>
+      </div>
+      <div class="function-item" style="border-left-color:#ffd93d">
+        <div class="function-rank">5</div>
+        <div class="function-info">
+          <div class="function-name">executeTool()</div>
+          <div class="function-location">src/tools/executor.ts · 工具执行器</div>
+        </div>
+        <div class="function-metrics">
+          <div class="metric">
+            <div class="metric-value complexity-medium">26</div>
+            <div class="metric-label">圈复杂度</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value complexity-medium">45</div>
+            <div class="metric-label">认知复杂度</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    <strong>≠ 复杂度 ≠ 质量差 / Complexity ≠ Poor Quality</strong><br>
+    queryLoop 的高复杂度是业务本身复杂度的映射——它要处理消息历史、退出条件、工具调度、错误恢复等多重职责<br>
+    复杂度热力图的价值在于识别"深水区"，指导测试策略：越复杂的模块，越需要全面的测试覆盖
+  </div>
+</div>
+
+<script>
+const modules = [
+  { name: "queryLoop系统", nameEn: "Query Loop", lines: 3000, complexity: 95, functions: 12, maxCC: 47, cognitive: 89, desc: "while+switch+异步+错误处理" },
+  { name: "permission系统", nameEn: "Permission", lines: 2500, complexity: 88, functions: 18, maxCC: 38, cognitive: 71, desc: "九步链+6种模式+规则引擎" },
+  { name: "tool系统", nameEn: "Tool System", lines: 4000, complexity: 72, functions: 43, maxCC: 26, cognitive: 45, desc: "43个工具，统一interface" },
+  { name: "settings系统", nameEn: "Settings", lines: 1800, complexity: 75, functions: 24, maxCC: 29, cognitive: 52, desc: "9层配置合并，优先级逻辑" },
+  { name: "MCP客户端", nameEn: "MCP Client", lines: 1500, complexity: 65, functions: 22, maxCC: 22, cognitive: 38, desc: "8种transport+连接管理" },
+  { name: "Hook系统", nameEn: "Hook System", lines: 800, complexity: 55, functions: 14, maxCC: 18, cognitive: 32, desc: "事件注册+脚本执行" },
+  { name: "沙箱系统", nameEn: "Sandbox", lines: 600, complexity: 45, functions: 10, maxCC: 15, cognitive: 26, desc: "跨平台适配macOS/Linux" },
+  { name: "UI组件", nameEn: "UI Components", lines: 2000, complexity: 35, functions: 35, maxCC: 12, cognitive: 18, desc: "React声明式，复杂度低" },
+  { name: "commands系统", nameEn: "Commands", lines: 500, complexity: 28, functions: 8, maxCC: 8, cognitive: 14, desc: "简单注册-分发模式" },
+  { name: "plugins系统", nameEn: "Plugins", lines: 200, complexity: 22, functions: 6, maxCC: 5, cognitive: 10, desc: "最简洁的扩展点设计" }
+];
+
+const colorScale = d3.scaleLinear()
+  .domain([20, 45, 60, 80, 95])
+  .range(["#48bb78", "#a8e06c", "#ffd93d", "#ff6b35", "#ff2020"]);
+
+const svg = d3.select("#treemap");
+const width = 1000;
+const height = 520;
+const tooltip = d3.select("#tooltip");
+
+const root = d3.hierarchy({ children: modules })
+  .sum(d => d.lines)
+  .sort((a, b) => b.value - a.value);
+
+d3.treemap()
+  .size([width, height])
+  .padding(2)
+  .round(true)
+  (root);
+
+const cell = svg.selectAll("g")
+  .data(root.leaves())
+  .enter().append("g")
+  .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+cell.append("rect")
+  .attr("class", d => `module-rect ${d.data.complexity > 80 ? 'heat-shimmer' : ''}`)
+  .attr("width", d => d.x1 - d.x0)
+  .attr("height", d => d.y1 - d.y0)
+  .attr("fill", d => colorScale(d.data.complexity))
+  .attr("rx", 4)
+  .on("mouseover", function(event, d) {
+    const color = colorScale(d.data.complexity);
+    tooltip.html(`
+      <div class="tooltip-header">
+        <div class="complexity-badge" style="background:${color}"></div>
+        <div class="tooltip-title">${d.data.name}</div>
+      </div>
+      <div class="tooltip-row">
+        <span class="tooltip-label">英文 / English</span>
+        <span class="tooltip-value">${d.data.nameEn}</span>
+      </div>
+      <div class="tooltip-row">
+        <span class="tooltip-label">代码行数 / Lines</span>
+        <span class="tooltip-value">${d.data.lines.toLocaleString()}</span>
+      </div>
+      <div class="tooltip-row">
+        <span class="tooltip-label">函数数量 / Functions</span>
+        <span class="tooltip-value">${d.data.functions}</span>
+      </div>
+      <div class="tooltip-row">
+        <span class="tooltip-label">复杂度评分 / Score</span>
+        <span class="tooltip-value" style="color:${color}">${d.data.complexity}/100</span>
+      </div>
+      <div class="tooltip-row">
+        <span class="tooltip-label">最高圈复杂度 / Max CC</span>
+        <span class="tooltip-value">${d.data.maxCC}</span>
+      </div>
+      <div class="tooltip-row">
+        <span class="tooltip-label">认知复杂度 / Cognitive</span>
+        <span class="tooltip-value">${d.data.cognitive}</span>
+      </div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.1);font-size:11px;color:#a0a0a0;">
+        ${d.data.desc}
+      </div>
+    `);
+    tooltip.classed("visible", true);
+  })
+  .on("mousemove", function(event) {
+    const containerRect = document.getElementById("treemap-container").getBoundingClientRect();
+    let x = event.clientX - containerRect.left + 15;
+    let y = event.clientY - containerRect.top + 15;
+    
+    const tooltipRect = tooltip.node().getBoundingClientRect();
+    if (x + tooltipRect.width > containerRect.width) x = event.clientX - containerRect.left - tooltipRect.width - 15;
+    if (y + tooltipRect.height > containerRect.height) y = event.clientY - containerRect.top - tooltipRect.height - 15;
+    
+    tooltip.style("left", x + "px").style("top", y + "px");
+  })
+  .on("mouseout", function() {
+    tooltip.classed("visible", false);
+  });
+
+cell.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 40)
+  .append("text")
+  .attr("class", "module-label")
+  .attr("x", 10)
+  .attr("y", 22)
+  .text(d => d.data.name);
+
+cell.filter(d => (d.x1 - d.x0) > 60 && (d.y1 - d.y0) > 55)
+  .append("text")
+  .attr("class", "module-sublabel")
+  .attr("x", 10)
+  .attr("y", 38)
+  .text(d => d.data.nameEn);
+
+cell.filter(d => (d.x1 - d.x0) > 80 && (d.y1 - d.y0) > 70)
+  .append("text")
+  .attr("class", "module-meta")
+  .attr("x", 10)
+  .attr("y", 55)
+  .text(d => `${d.data.lines.toLocaleString()} lines`);
+
+cell.filter(d => (d.x1 - d.x0) > 80 && (d.y1 - d.y0) > 85)
+  .append("text")
+  .attr("class", "module-meta")
+  .attr("x", 10)
+  .attr("y", 68)
+  .text(d => `Complexity: ${d.data.complexity}`);
+</script>
+</body>
+</html>

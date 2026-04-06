@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据流完整旅程图</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: 'Crimson Pro', Georgia, serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #58a6ff, #bc8cff, #3fb950);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            color: #8b949e;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .description {
+            max-width: 1200px;
+            margin: 0 auto 30px;
+            padding: 20px 30px;
+            background: rgba(22, 27, 34, 0.6);
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #c9d1d9;
+        }
+        
+        .chart-container {
+            width: 100%;
+            max-width: 1700px;
+            overflow-x: auto;
+            background: #0d1117;
+            border-radius: 12px;
+            border: 1px solid #21262d;
+        }
+        
+        svg {
+            display: block;
+            background: 
+                linear-gradient(90deg, #161b22 1px, transparent 1px),
+                linear-gradient(#161b22 1px, transparent 1px);
+            background-size: 80px 80px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>数据流完整旅程图</h1>
+        <div class="subtitle">Complete Data Journey · 从一句话到一行代码的 10 个阶段</div>
+    </div>
+    
+    <div class="description">
+        追踪一次典型用户交互 (例如『帮我重构这个函数』) 从键入到最终输出的完整数据旅程。横轴是 10 个阶段，每个 Stage 标注了数据当前的形态 (从 string → object → JSON → SSE → ReactNode)。橙色虚线展示了 Agent Loop 回环 — 当 API 返回的响应包含工具调用时，系统会执行工具，把结果回传给 Stage 5，重新发起请求，平均循环 2-5 轮才能完成一个任务。
+    </div>
+    
+    <div class="chart-container">
+        <svg width="1700" height="900" viewBox="0 0 1700 900" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+                    <path d="M0,0 L0,8 L8,4 z" fill="#58a6ff"/>
+                </marker>
+                <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+                    <path d="M0,0 L0,8 L8,4 z" fill="#bc8cff"/>
+                </marker>
+                <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+                    <path d="M0,0 L0,8 L8,4 z" fill="#3fb950"/>
+                </marker>
+                <marker id="arrow-orange" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+                    <path d="M0,0 L0,8 L8,4 z" fill="#f0883e"/>
+                </marker>
+                <linearGradient id="grad-blue" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#58a6ff;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#58a6ff;stop-opacity:0.6" />
+                </linearGradient>
+                <linearGradient id="grad-purple" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#bc8cff;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#bc8cff;stop-opacity:0.6" />
+                </linearGradient>
+                <linearGradient id="grad-green" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#3fb950;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#3fb950;stop-opacity:0.6" />
+                </linearGradient>
+                <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+            
+            <!-- Swimlane reference lines -->
+            <line x1="0" y1="120" x2="1700" y2="120" stroke="#30363d" stroke-dasharray="3 6" stroke-width="1"/>
+            <line x1="0" y1="260" x2="1700" y2="260" stroke="#30363d" stroke-dasharray="3 6" stroke-width="1"/>
+            <line x1="0" y1="380" x2="1700" y2="380" stroke="#30363d" stroke-dasharray="3 6" stroke-width="1"/>
+            
+            <!-- Swimlane labels -->
+            <text x="40" y="115" font-size="13" fill="#8b949e" font-family="JetBrains Mono, monospace" font-weight="500">Client · 客户端层</text>
+            <text x="40" y="255" font-size="13" fill="#8b949e" font-family="JetBrains Mono, monospace" font-weight="500">Network · 网络通信</text>
+            <text x="40" y="375" font-size="13" fill="#8b949e" font-family="JetBrains Mono, monospace" font-weight="500">Server · Anthropic API</text>
+            
+            <!-- Swimlane details -->
+            <text x="40" y="135" font-size="10" fill="#6e7681" font-family="JetBrains Mono, monospace">Client: S1, S2, S10</text>
+            <text x="40" y="275" font-size="10" fill="#6e7681" font-family="JetBrains Mono, monospace">Network: S5 ← → S6 (传输层)</text>
+            <text x="40" y="395" font-size="10" fill="#6e7681" font-family="JetBrains Mono, monospace">Server: S3, S4, S7, S8, S9 在 Claude Code 内执行</text>
+            
+            <!-- Connection lines between stages -->
+            <!-- S1→S2 -->
+            <line x1="180" y1="490" x2="220" y2="490" stroke="url(#grad-blue)" stroke-width="2" marker-end="url(#arrow)"/>
+            <!-- S2→S3 -->
+            <line x1="340" y1="490" x2="380" y2="490" stroke="url(#grad-blue)" stroke-width="2" marker-end="url(#arrow)"/>
+            <!-- S3→S4 -->
+            <line x1="500" y1="490" x2="540" y2="490" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrow-purple)"/>
+            <!-- S4→S5 -->
+            <line x1="660" y1="490" x2="700" y2="490" stroke="url(#grad-purple)" stroke-width="2" marker-end="url(#arrow-purple)"/>
+            <!-- S5→S6 -->
+            <line x1="820" y1="490" x2="860" y2="490" stroke="url(#grad-purple)" stroke-width="2" marker-end="url(#arrow-purple)"/>
+            <!-- S6→S7 -->
+            <line x1="980" y1="490" x2="1020" y2="490" stroke="url(#grad-purple)" stroke-width="2" marker-end="url(#arrow-purple)"/>
+            <!-- S7→S8 -->
+            <line x1="1140" y1="490" x2="1180" y2="490" stroke="url(#grad-purple)" stroke-width="2" marker-end="url(#arrow-purple)"/>
+            <!-- S8→S9 -->
+            <line x1="1300" y1="490" x2="1340" y2="490" stroke="url(#grad-purple)" stroke-width="2" marker-end="url(#arrow-purple)"/>
+            <!-- S9→S10 -->
+            <line x1="1460" y1="490" x2="1500" y2="490" stroke="#bc8cff" stroke-width="2" marker-end="url(#arrow-green)"/>
+            
+            <!-- Agent Loop path -->
+            <path d="M 1400 530 L 1400 680 L 760 680 L 760 530" fill="none" stroke="#f0883e" stroke-width="3" stroke-dasharray="8 5" marker-end="url(#arrow-orange)" filter="url(#glow)"/>
+            <text x="1080" y="700" font-size="14" fill="#f0883e" font-family="JetBrains Mono, monospace" text-anchor="middle" font-weight="500">Agent Loop · 平均 2-5 轮</text>
+            
+            <!-- Stage 1: 用户输入 -->
+            <rect x="60" y="450" width="120" height="80" rx="12" fill="rgba(22,27,34,0.95)" stroke="#58a6ff" stroke-width="2"/>
+            <text x="120" y="478" font-size="10" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 1</text>
+            <text x="120" y="494" font-size="14" fill="#58a6ff" font-weight="600" text-anchor="middle">用户输入</text>
+            <text x="120" y="512" font-size="10" fill="#8b949e" text-anchor="middle">Input</text>
+            <text x="120" y="430" font-size="10" fill="#6e7681" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 1</text>
+            <text x="120" y="560" font-size="11" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">string "重构这个函数"</text>
+            
+            <!-- Stage 2: 命令解析 -->
+            <rect x="220" y="450" width="120" height="80" rx="12" fill="rgba(22,27,34,0.95)" stroke="#58a6ff" stroke-width="2"/>
+            <text x="280" y="478" font-size="10" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 2</text>
+            <text x="280" y="494" font-size="14" fill="#58a6ff" font-weight="600" text-anchor="middle">命令解析</text>
+            <text x="280" y="512" font-size="10" fill="#8b949e" text-anchor="middle">Parse</text>
+            <text x="280" y="430" font-size="10" fill="#6e7681" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 2</text>
+            <text x="280" y="560" font-size="11" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">HumanMessage{}</text>
+            
+            <!-- Stage 3: 权限检查 -->
+            <rect x="380" y="450" width="120" height="80" rx="12" fill="rgba(22,27,34,0.95)" stroke="#58a6ff" stroke-width="2"/>
+            <text x="440" y="478" font-size="10" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 3</text>
+            <text x="440" y="494" font-size="14" fill="#58a6ff" font-weight="600" text-anchor="middle">权限检查</text>
+            <text x="440" y="512" font-size="10" fill="#8b949e" text-anchor="middle">Permission</text>
+            <text x="440" y="430" font-size="10" fill="#6e7681" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 3</text>
+            <text x="440" y="560" font-size="11" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">mode: 'auto'</text>
+            
+            <!-- Stage 4: Prompt 组装 -->
+            <rect x="540" y="450" width="120" height="80" rx="12" fill="rgba(22,27,34,0.95)" stroke="#bc8cff" stroke-width="2"/>
+            <text x="600" y="478" font-size="10" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 4</text>
+            <text x="600" y="494" font-size="14" fill="#bc8cff" font-weight="600" text-anchor="middle">Prompt 组装</text>
+            <text x="600" y="512" font-size="10" fill="#8b949e" text-anchor="middle">Build</text>
+            <text x="600" y="430" font-size="10" fill="#6e7681" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 4</text>
+            <text x="600" y="560" font-size="11" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">messages[10]</text>
+            
+            <!-- Stage 5: API 请求 -->
+            <rect x="700" y="450" width="120" height="80" rx="12" fill="rgba(22,27,34,0.95)" stroke="#bc8cff" stroke-width="2"/>
+            <text x="760" y="478" font-size="10" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 5</text>
+            <text x="760" y="494" font-size="14" fill="#bc8cff" font-weight="600" text-anchor="middle">API 请求</text>
+            <text x="760" y="512" font-size="10" fill="#8b949e" text-anchor="middle">API Call</text>
+            <text x="760" y="430" font-size="10" fill="#6e7681" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 5</text>
+            <text x="760" y="560" font-size="11" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">POST /v1/messages</text>
+            
+            <!-- Stage 6: 流式响应 -->
+            <rect x="860" y="450" width="120" height="80" rx="12" fill="rgba(22,27,34,0.95)" stroke="#bc8cff" stroke-width="2"/>
+            <text x="920" y="478" font-size="10" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 6</text>
+            <text x="920" y="494" font-size="14" fill="#bc8cff" font-weight="600" text-anchor="middle">流式响应</text>
+            <text x="920" y="512" font-size="10" fill="#8b949e" text-anchor="middle">Stream</text>
+            <text x="920" y="430" font-size="10" fill="#6e7681" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 6</text>
+            <text x="920" y="560" font-size="11" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">event: delta</text>
+            
+            <!-- Stage 7: 工具判定 -->
+            <rect x="1020" y="450" width="120" height="80" rx="12" fill="rgba(22,27,34,0.95)" stroke="#bc8cff" stroke-width="2"/>
+            <text x="1080" y="478" font-size="10" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 7</text>
+            <text x="1080" y="494" font-size="14" fill="#bc8cff" font-weight="600" text-anchor="middle">工具判定</text>
+            <text x="1080" y="512" font-size="10" fill="#8b949e" text-anchor="middle">Decide</text>
+            <text x="1080" y="430" font-size="10" fill="#6e7681" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 7</text>
+            <text x="1080" y="560" font-size="11" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">tool_use{}</text>
+            
+            <!-- Stage 8: 工具执行 -->
+            <rect x="1180" y="450" width="120" height="80" rx="12" fill="rgba(22,27,34,0.95)" stroke="#bc8cff" stroke-width="2"/>
+            <text x="1240" y="478" font-size="10" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 8</text>
+            <text x="1240" y="494" font-size="14" fill="#bc8cff" font-weight="600" text-anchor="middle">工具执行</text>
+            <text x="1240" y="512" font-size="10" fill="#8b949e" text-anchor="middle">Execute</text>
+            <text x="1240" y="430" font-size="10" fill="#6e7681" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 8</text>
+            <text x="1240" y="560" font-size="11" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">exec/read/write</text>
+            
+            <!-- Stage 9: 结果回传 -->
+            <rect x="1340" y="450" width="120" height="80" rx="12" fill="rgba(22,27,34,0.95)" stroke="#bc8cff" stroke-width="2"/>
+            <text x="1400" y="478" font-size="10" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 9</text>
+            <text x="1400" y="494" font-size="14" fill="#bc8cff" font-weight="600" text-anchor="middle">结果回传</text>
+            <text x="1400" y="512" font-size="10" fill="#8b949e" text-anchor="middle">Return</text>
+            <text x="1400" y="430" font-size="10" fill="#6e7681" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 9</text>
+            <text x="1400" y="560" font-size="11" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">tool_result</text>
+            
+            <!-- Stage 10: 渲染输出 -->
+            <rect x="1500" y="450" width="120" height="80" rx="12" fill="rgba(22,27,34,0.95)" stroke="#3fb950" stroke-width="2"/>
+            <text x="1560" y="478" font-size="10" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 10</text>
+            <text x="1560" y="494" font-size="14" fill="#3fb950" font-weight="600" text-anchor="middle">渲染输出</text>
+            <text x="1560" y="512" font-size="10" fill="#8b949e" text-anchor="middle">Render</text>
+            <text x="1560" y="430" font-size="10" fill="#6e7681" font-family="JetBrains Mono, monospace" text-anchor="middle">Stage 10</text>
+            <text x="1560" y="560" font-size="11" fill="#8b949e" font-family="JetBrains Mono, monospace" text-anchor="middle">Ink Component</text>
+            
+            <!-- Loop indicator dots at corners -->
+            <circle cx="1400" cy="530" r="4" fill="#f0883e"/>
+            <circle cx="760" cy="530" r="4" fill="#f0883e"/>
+        </svg>
+    </div>
+</body>
+</html>

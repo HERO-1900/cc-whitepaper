@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bare Git Repo 攻击与防御流程图 | VIS-3-010</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@400;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #1a1a2e;
+  --bg-panel: #16213e;
+  --bg-card: #0f3460;
+  --attack: #ff6b6b;
+  --attack-glow: rgba(255, 107, 107, 0.4);
+  --defense: #48bb78;
+  --defense-glow: rgba(72, 187, 120, 0.4);
+  --warning: #ffd93d;
+  --accent: #e94560;
+  --text-main: #f0f0f0;
+  --text-sub: #b0b8c8;
+  --link: #63b3ed;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-deep);
+  color: var(--text-main);
+  font-family: 'Noto Sans SC', 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  overflow-x: auto;
+}
+.noise {
+  position: fixed;
+  inset: 0;
+  opacity: 0.04;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  z-index: 0;
+}
+.container {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px 60px;
+}
+header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+header h1 {
+  font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+  font-size: 2.2rem;
+  font-weight: 900;
+  margin: 0 0 8px;
+  letter-spacing: 1px;
+  background: linear-gradient(90deg, var(--attack) 0%, var(--warning) 50%, var(--defense) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+header .meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-sub);
+}
+header .meta a {
+  color: var(--link);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--link);
+}
+header .meta a:hover { color: var(--warning); border-color: var(--warning); }
+.diagram-wrapper {
+  background: linear-gradient(180deg, rgba(255,107,107,0.06) 0%, rgba(22,33,62,1) 45%, rgba(22,33,62,1) 55%, rgba(72,187,120,0.06) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+.svg-container {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+svg { display: block; width: 100%; height: auto; }
+.node-rect {
+  rx: 14;
+  ry: 14;
+  fill: var(--bg-card);
+  stroke: rgba(255,255,255,0.12);
+  stroke-width: 1.5;
+  transition: all 0.3s ease;
+}
+.node-rect.attack { stroke: var(--attack); }
+.node-rect.defense { stroke: var(--defense); }
+.node-rect:hover { filter: brightness(1.15); }
+.node-text-title {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--text-main);
+  pointer-events: none;
+}
+.node-text-sub {
+  font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  fill: var(--text-sub);
+  pointer-events: none;
+}
+.num-circle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  fill: #fff;
+  pointer-events: none;
+}
+.phase-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--text-sub);
+  pointer-events: none;
+}
+.arrow-attack {
+  fill: none;
+  stroke: var(--attack);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  marker-end: url(#arrowRed);
+}
+.arrow-defense {
+  fill: none;
+  stroke: var(--defense);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  marker-end: url(#arrowGreen);
+}
+.arrow-block {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-dasharray: 6,4;
+  stroke-linecap: round;
+}
+.divider-line {
+  stroke: rgba(255,255,255,0.15);
+  stroke-width: 1.5;
+  stroke-dasharray: 8,6;
+}
+.zone-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  opacity: 0.85;
+  pointer-events: none;
+}
+.pulse-red {
+  animation: pulseRed 2s infinite;
+}
+@keyframes pulseRed {
+  0% { stroke-opacity: 1; filter: drop-shadow(0 0 0 var(--attack)); }
+  50% { stroke-opacity: 0.65; filter: drop-shadow(0 0 6px var(--attack)); }
+  100% { stroke-opacity: 1; filter: drop-shadow(0 0 0 var(--attack)); }
+}
+.glow-green {
+  filter: drop-shadow(0 0 4px var(--defense));
+}
+.x-mark {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  fill: var(--accent);
+  pointer-events: none;
+}
+.file-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  fill: var(--text-sub);
+  pointer-events: none;
+}
+.issue-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  fill: var(--link);
+  pointer-events: none;
+}
+.issue-bg {
+  fill: rgba(99,179,237,0.12);
+  stroke: var(--link);
+  stroke-width: 1;
+  rx: 10;
+  ry: 10;
+}
+.icon { pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<div class="container">
+  <header>
+    <h1>Bare Git Repo 攻击流程图</h1>
+    <div class="meta">
+      VIS-3-010 · Sandbox沙箱系统完全解析 ·
+      <a href="https://github.com/anthropics/claude-code/issues/29316" target="_blank">anthropics/claude-code#29316</a>
+    </div>
+  </header>
+  <div class="diagram-wrapper">
+    <div class="svg-container">
+      <svg viewBox="0 0 1100 650" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L9,3 z" fill="#ff6b6b"/>
+          </marker>
+          <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L9,3 z" fill="#48bb78"/>
+          </marker>
+          <linearGradient id="zoneGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ff6b6b" stop-opacity="0.08"/>
+            <stop offset="50%" stop-color="#ffd93d" stop-opacity="0.05"/>
+            <stop offset="100%" stop-color="#48bb78" stop-opacity="0.08"/>
+          </linearGradient>
+          <filter id="glowRed" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+
+        <!-- Background zones -->
+        <rect x="20" y="20" width="1060" height="280" rx="14" fill="url(#zoneGrad)" stroke="none"/>
+        <rect x="20" y="340" width="1060" height="290" rx="14" fill="url(#zoneGrad)" stroke="none"/>
+
+        <!-- Divider line -->
+        <line x1="40" y1="320" x2="1060" y2="320" class="divider-line"/>
+
+        <!-- Zone labels -->
+        <text x="60" y="55" fill="#ff6b6b" class="zone-label">攻击面 Attack Surface</text>
+        <text x="60" y="375" fill="#48bb78" class="zone-label">防御面 Defense Surface</text>
+
+        <!-- ========== Attack Nodes ========== -->
+        <!-- Node 1: Attacker -->
+        <g class="attack-node" data-phase="1">
+          <rect x="70" y="90" width="150" height="90" class="node-rect attack"/>
+          <circle cx="100" cy="122" r="18" fill="#2d0a0a" stroke="#ff6b6b" stroke-width="2"/>
+          <!-- Hacker mask icon -->
+          <path d="M92 116 Q100 112 108 116 L108 124 Q100 130 92 124 Z M96 119.5 A1.5 1.5 0 1 1 95.999 119.5 M104 119.5 A1.5 1.5 0 1 1 103.999 119.5" fill="none" stroke="#ff6b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"/>
+          <text x="145" y="118" text-anchor="middle" class="node-text-title">攻击者诱导</text>
+          <text x="145" y="135" text-anchor="middle" class="node-text-sub">Malicious Prompt</text>
+          <text x="145" y="150" text-anchor="middle" class="node-text-sub">恶意指令 / Prompt Injection</text>
+          <circle cx="70" cy="90" r="14" fill="#ff6b6b"/>
+          <text x="70" y="95" text-anchor="middle" class="num-circle">1</text>
+        </g>
+
+        <!-- Arrow 1-2 -->
+        <path d="M220 135 L255 135" class="arrow-attack pulse-red"/>
+
+        <!-- Node 2: Files created -->
+        <g class="attack-node" data-phase="2">
+          <rect x="260" y="90" width="150" height="90" class="node-rect attack"/>
+          <rect x="290" y="112" width="14" height="18" rx="2" fill="#ff6b6b" opacity="0.25" class="icon"/>
+          <rect x="292" y="114" width="10" height="14" rx="1" fill="none" stroke="#ff6b6b" stroke-width="1.5" class="icon"/>
+          <text x="335" y="118" text-anchor="middle" class="node-text-title">Claude 创建文件</text>
+          <text x="335" y="135" text-anchor="middle" class="node-text-sub">Create HEAD / objects / refs</text>
+          <text x="335" y="150" text-anchor="middle" class="node-text-sub">在 CWD 植入关键文件</text>
+          <circle cx="260" cy="90" r="14" fill="#ff6b6b"/>
+          <text x="260" y="95" text-anchor="middle" class="num-circle">2</text>
+        </g>
+
+        <!-- Arrow 2-3 -->
+        <path d="M410 135 L445 135" class="arrow-attack pulse-red"/>
+
+        <!-- Node 3: Git detection -->
+        <g class="attack-node" data-phase="3">
+          <rect x="450" y="90" width="150" height="90" class="node-rect attack"/>
+          <circle cx="480" cy="122" r="16" fill="#2d0a0a" stroke="#ff6b6b" stroke-width="2"/>
+          <text x="480" y="127" text-anchor="middle" fill="#ff6b6b" font-size="12" font-weight="700" class="icon">G</text>
+          <text x="525" y="118" text-anchor="middle" class="node-text-title">Git 检测触发</text>
+          <text x="525" y="135" text-anchor="middle" class="node-text-sub">is_git_directory()</text>
+          <text x="525" y="150" text-anchor="middle" class="node-text-sub">检测到 HEAD + objects + refs</text>
+          <circle cx="450" cy="90" r="14" fill="#ff6b6b"/>
+          <text x="450" y="95" text-anchor="middle" class="num-circle">3</text>
+        </g>
+
+        <!-- Arrow 3-4 -->
+        <path d="M600 135 L635 135" class="arrow-attack pulse-red"/>
+
+        <!-- Node 4: Bare repo misclass -->
+        <g class="attack-node" data-phase="4">
+          <rect x="640" y="90" width="150" height="90" class="node-rect attack"/>
+          <path d="M670 130 L675 118 L680 130 M672 126 H678" fill="none" stroke="#ff6b6b" stroke-width="2" stroke-linecap="round" class="icon"/>
+          <text x="715" y="118" text-anchor="middle" class="node-text-title">误判为 Bare Repo</text>
+          <text x="715" y="135" text-anchor="middle" class="node-text-sub">Git thinks CWD is bare repo</text>
+          <text x="715" y="150" text-anchor="middle" class="node-text-sub">目录身份被欺骗</text>
+          <circle cx="640" cy="90" r="14" fill="#ff6b6b"/>
+          <text x="640" y="95" text-anchor="middle" class="num-circle">4</text>
+        </g>
+
+        <!-- Arrow 4-5 -->
+        <path d="M790 135 L825 135" class="arrow-attack pulse-red"/>
+
+        <!-- Node 5: Malicious execution -->
+        <g class="attack-node" data-phase="5">
+          <rect x="830" y="90" width="180" height="90" class="node-rect attack"/>
+          <circle cx="860" cy="122" r="16" fill="#2d0a0a" stroke="#ff6b6b" stroke-width="2"/>
+          <path d="M855 128 L860 118 L865 128 M857 124 H863" fill="none" stroke="#ff6b6b" stroke-width="2" stroke-linecap="round" class="icon"/>
+          <text x="920" y="118" text-anchor="middle" class="node-text-title">执行恶意 Git 操作</text>
+          <text x="920" y="135" text-anchor="middle" class="node-text-sub">Hooks execution / Config injection</text>
+          <text x="920" y="150" text-anchor="middle" class="node-text-sub">在恶意"仓库"上运行危险命令</text>
+          <circle cx="830" cy="90" r="14" fill="#ff6b6b"/>
+          <text x="830" y="95" text-anchor="middle" class="num-circle">5</text>
+        </g>
+
+        <!-- ========== Defense Nodes ========== -->
+        <!-- Phase A -->
+        <g class="defense-node" data-phase="A">
+          <rect x="70" y="410" width="170" height="100" class="node-rect defense"/>
+          <rect x="100" y="435" width="22" height="26" rx="3" fill="none" stroke="#48bb78" stroke-width="2.5" class="icon"/>
+          <circle cx="111" cy="444" r="3.5" fill="#48bb78" class="icon"/>
+          <path d="M111 448 V452" stroke="#48bb78" stroke-width="2.5" class="icon"/>
+          <text x="170" y="438" text-anchor="middle" class="node-text-title">Phase A: 已存在检测</text>
+          <text x="170" y="458" text-anchor="middle" class="node-text-sub">sandbox-adapter.ts:256-279</text>
+          <text x="170" y="475" text-anchor="middle" class="node-text-sub">检测 5 个关键路径</text>
+          <text x="170" y="490" text-anchor="middle" class="node-text-sub" style="fill:#48bb78;font-weight:700;">-> denyWrite (只读绑定)</text>
+          <circle cx="70" cy="410" r="16" fill="#48bb78"/>
+          <text x="70" y="416" text-anchor="middle" class="num-circle">A</text>
+        </g>
+
+        <!-- Arrow A-B -->
+        <path d="M240 460 L285 460" class="arrow-defense glow-green"/>
+
+        <!-- 5 file chips near Phase A -->
+        <g transform="translate(60, 520)">
+          <rect x="0" y="0" width="42" height="20" rx="10" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.15)"/>
+          <text x="21" y="13" text-anchor="middle" class="file-chip">HEAD</text>
+          <rect x="48" y="0" width="58" height="20" rx="10" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.15)"/>
+          <text x="77" y="13" text-anchor="middle" class="file-chip">objects</text>
+          <rect x="112" y="0" width="42" height="20" rx="10" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.15)"/>
+          <text x="133" y="13" text-anchor="middle" class="file-chip">refs</text>
+          <rect x="160" y="0" width="48" height="20" rx="10" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.15)"/>
+          <text x="184" y="13" text-anchor="middle" class="file-chip">hooks</text>
+          <rect x="214" y="0" width="52" height="20" rx="10" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.15)"/>
+          <text x="240" y="13" text-anchor="middle" class="file-chip">config</text>
+        </g>
+
+        <!-- Phase B -->
+        <g class="defense-node" data-phase="B">
+          <rect x="290" y="410" width="170" height="100" class="node-rect defense"/>
+          <!-- Broom icon -->
+          <path d="M320 440 L335 440 L332 455 L323 455 Z M322 438 H333" fill="none" stroke="#48bb78" stroke-width="2" stroke-linecap="round" class="icon"/>
+          <line x1="327.5" y1="438" x2="327.5" y2="432" stroke="#48bb78" stroke-width="2" class="icon"/>
+          <text x="375" y="438" text-anchor="middle" class="node-text-title">Phase B: 不存在清除</text>
+          <text x="375" y="458" text-anchor="middle" class="node-text-sub">sandbox-adapter.ts:403-413</text>
+          <text x="375" y="475" text-anchor="middle" class="node-text-sub">加入 bareGitRepoScrubPaths</text>
+          <text x="375" y="490" text-anchor="middle" class="node-text-sub" style="fill:#48bb78;font-weight:700;">-> scrubBareGitRepoFiles()</text>
+          <circle cx="290" cy="410" r="16" fill="#48bb78"/>
+          <text x="290" y="416" text-anchor="middle" class="num-circle">B</text>
+        </g>
+
+        <!-- Arrow B-C -->
+        <path d="M460 460 L505 460" class="arrow-defense glow-green"/>
+
+        <!-- Phase C -->
+        <g class="defense-node" data-phase="C">
+          <rect x="510" y="410" width="170" height="100" class="node-rect defense"/>
+          <!-- Branch icon -->
+          <path d="M540 440 Q550 440 550 450 V452 Q550 458 555 458 M550 452 Q550 458 545 458" fill="none" stroke="#48bb78" stroke-width="2.5" stroke-linecap="round" class="icon"/>
+          <circle cx="540" cy="438" r="3.5" fill="#48bb78" class="icon"/>
+          <circle cx="555" cy="456" r="3.5" fill="#48bb78" class="icon"/>
+          <circle cx="545" cy="456" r="3.5" fill="#48bb78" class="icon"/>
+          <text x="595" y="438" text-anchor="middle" class="node-text-title">Phase C: Worktree 兼容</text>
+          <text x="595" y="458" text-anchor="middle" class="node-text-sub">sandbox-adapter.ts:282-287</text>
+          <text x="595" y="475" text-anchor="middle" class="node-text-sub">识别 .git 文件 (非目录)</text>
+          <text x="595" y="490" text-anchor="middle" class="node-text-sub" style="fill:#48bb78;font-weight:700;">-> 允许 index.lock 写入</text>
+          <circle cx="510" cy="410" r="16" fill="#48bb78"/>
+          <text x="510" y="416" text-anchor="middle" class="num-circle">C</text>
+        </g>
+
+        <!-- ========== Block connections ========== -->
+        <!-- Block from attack node 2 to Phase A -->
+        <path d="M335 180 Q335 260 155 260 Q155 400 155 410" class="arrow-block"/>
+        <text x="155" y="270" text-anchor="middle" class="x-mark">X</text>
+
+        <!-- Block from attack node 3 to Phase B -->
+        <path d="M525 180 Q525 240 375 240 Q375 400 375 410" class="arrow-block"/>
+        <text x="375" y="250" text-anchor="middle" class="x-mark">X</text>
+
+        <!-- Block from attack node 5 to Phase B (extended) -->
+        <path d="M920 180 Q920 280 375 280 Q375 400 375 410" class="arrow-block"/>
+        <text x="375" y="290" text-anchor="middle" class="x-mark">X</text>
+
+        <!-- ========== Side annotations ========== -->
+        <rect x="730" y="410" width="300" height="140" rx="14" fill="rgba(15,52,96,0.5)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <text x="750" y="440" class="node-text-title" fill="#ffd93d">防御机制总结 Defense Summary</text>
+        <text x="750" y="465" class="node-text-sub">. 已存在文件 -> denyWrite 只读绑定，防止篡改</text>
+        <text x="750" y="485" class="node-text-sub">. 不存在文件 -> 命令后 scrub，主动清除植入物</text>
+        <text x="750" y="505" class="node-text-sub">. Worktree 场景 -> 缓存主仓库路径，放行合法操作</text>
+        <text x="750" y="530" class="node-text-sub">-> 双重防护确保 CWD 不会被误识别为 bare repo</text>
+
+        <!-- Issue badge -->
+        <g transform="translate(920, 50)">
+          <rect x="0" y="0" width="110" height="28" class="issue-bg"/>
+          <text x="55" y="18" text-anchor="middle" class="issue-badge">#29316</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</div>
+</body>
+</html>

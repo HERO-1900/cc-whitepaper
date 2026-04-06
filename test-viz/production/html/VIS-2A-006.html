@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I/O并行甘特图 - 启动序列优化</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a26;
+            --accent-blue: #4fc3f7;
+            --accent-cyan: #00e5ff;
+            --accent-green: #69f0ae;
+            --accent-purple: #b388ff;
+            --accent-gold: #ffd740;
+            --accent-orange: #ffab40;
+            --accent-red: #ff5252;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-tertiary: #606070;
+            --grid-line: #252535;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: auto;
+        }
+
+        .container {
+            min-width: 1200px;
+            padding: 40px 60px;
+        }
+
+        header {
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .title {
+            font-size: 42px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .controls {
+            position: absolute;
+            right: 0;
+            top: 0;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .replay-btn {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            border: none;
+            padding: 12px 28px;
+            border-radius: 8px;
+            color: #000;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .replay-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(79, 195, 247, 0.3);
+        }
+
+        .replay-btn:active {
+            transform: translateY(0);
+        }
+
+        .legend {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .legend-color.sync { background: var(--accent-blue); }
+        .legend-color.async { background: var(--accent-cyan); opacity: 0.6; }
+        .legend-color.init { background: var(--accent-purple); }
+        .legend-color.preconnect { background: var(--accent-gold); }
+        .legend-color.deferred { background: var(--accent-green); opacity: 0.7; }
+
+        .chart-container {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 30px;
+            position: relative;
+            border: 1px solid var(--bg-tertiary);
+        }
+
+        #gantt-svg {
+            width: 100%;
+            height: 600px;
+        }
+
+        .task-bar {
+            cursor: pointer;
+            transition: filter 0.2s ease;
+        }
+
+        .task-bar:hover {
+            filter: brightness(1.2);
+        }
+
+        .grid-line {
+            stroke: var(--grid-line);
+            stroke-width: 1;
+        }
+
+        .grid-line.major {
+            stroke: #353545;
+            stroke-width: 1.5;
+        }
+
+        .axis-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            fill: var(--text-tertiary);
+        }
+
+        .task-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            fill: var(--text-primary);
+        }
+
+        .task-label-secondary {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            fill: var(--text-tertiary);
+        }
+
+        .parallel-window {
+            fill: none;
+            stroke: var(--accent-orange);
+            stroke-width: 2;
+            stroke-dasharray: 6, 4;
+        }
+
+        .window-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            fill: var(--accent-orange);
+        }
+
+        .milestone {
+            stroke: var(--accent-red);
+            stroke-width: 1.5;
+            stroke-dasharray: 4, 4;
+        }
+
+        .milestone-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            fill: var(--accent-red);
+            font-weight: 500;
+        }
+
+        .zero-wait-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            fill: #000;
+            font-weight: 600;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(20, 20, 35, 0.95);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 8px;
+            padding: 16px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 100;
+            min-width: 280px;
+            backdrop-filter: blur(8px);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            margin-bottom: 8px;
+        }
+
+        .tooltip-row {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 4px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .tooltip-value {
+            color: var(--text-primary);
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 40px;
+            margin-top: 30px;
+            padding: 24px 30px;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .animate-bar {
+            animation: slideIn 0.6s ease forwards;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="title">I/O Parallel Gantt</h1>
+            <p class="subtitle">在不可避免的等待时间里藏工作 —— 启动序列并行优化可视化</p>
+            <div class="controls">
+                <button class="replay-btn" onclick="replayAnimation()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    回放动画
+                </button>
+            </div>
+        </header>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color sync"></div>
+                <span>同步阻塞 (Sync Blocking)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color async"></div>
+                <span>异步并行 (Async Parallel)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color init"></div>
+                <span>初始化步骤 (Init Steps)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color preconnect"></div>
+                <span>预连接 (Preconnect)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color deferred"></div>
+                <span>延迟预取 (Deferred)</span>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <svg id="gantt-svg"></svg>
+            <div class="tooltip" id="tooltip">
+                <div class="tooltip-title" id="tooltip-title"></div>
+                <div class="tooltip-row">时间范围: <span class="tooltip-value" id="tooltip-time"></span></div>
+                <div class="tooltip-row">持续时间: <span class="tooltip-value" id="tooltip-duration"></span></div>
+                <div class="tooltip-row">源码函数: <span class="tooltip-value" id="tooltip-function"></span></div>
+            </div>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-value">135ms</span>
+                <span class="stat-label">模块加载时间</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">5×</span>
+                <span class="stat-label">Git命令并行加速</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">7</span>
+                <span class="stat-label">Fire-and-forget任务</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">300ms</span>
+                <span class="stat-label">首屏渲染完成</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tasks = [
+            {
+                id: 'module-load',
+                name: '模块加载',
+                nameEn: 'Module Loading',
+                type: 'sync',
+                start: 0,
+                end: 135,
+                color: '#4fc3f7',
+                function: 'import chain (1884 files)',
+                details: '同步阻塞: 1884个文件的import链'
+            },
+            {
+                id: 'mdm-read',
+                name: 'MDM配置读取',
+                nameEn: 'MDM Config Read',
+                type: 'async',
+                start: 0,
+                end: 80,
+                color: '#00e5ff',
+                opacity: 0.5,
+                function: 'startMdmRawRead()',
+                details: '异步: plutil子进程(macOS) / reg query(Windows)'
+            },
+            {
+                id: 'keychain-prefetch',
+                name: '钥匙串预取',
+                nameEn: 'Keychain Prefetch',
+                type: 'async',
+                start: 0,
+                end: 65,
+                color: '#69f0ae',
+                opacity: 0.5,
+                function: 'startKeychainPrefetch()',
+                details: '两个并行读取: OAuth token + 遗留API key'
+            },
+            {
+                id: 'enable-configs',
+                name: 'enableConfigs + CA证书',
+                nameEn: 'Enable Configs + CA Certs',
+                type: 'init',
+                start: 135,
+                end: 160,
+                color: '#b388ff',
+                function: 'enableConfigs()',
+                details: '启用配置和CA证书加载'
+            },
+            {
+                id: 'background-tasks',
+                name: '7个后台任务并行启动',
+                nameEn: '7 Background Tasks',
+                type: 'async',
+                start: 160,
+                end: 500,
+                color: '#ffab40',
+                opacity: 0.4,
+                function: 'fire-and-forget',
+                details: '1P事件日志/OAuth/JetBrains/Git/远程设置/策略限制/首次启动时间'
+            },
+            {
+                id: 'mtls-config',
+                name: 'mTLS配置',
+                nameEn: 'mTLS Configuration',
+                type: 'init',
+                start: 175,
+                end: 195,
+                color: '#b388ff',
+                function: 'configureMtls()',
+                details: '双向TLS证书配置'
+            },
+            {
+                id: 'api-preconnect',
+                name: 'API预连接',
+                nameEn: 'API Preconnect',
+                type: 'preconnect',
+                start: 175,
+                end: 250,
+                color: '#ffd740',
+                function: 'preconnectAnthropicApi()',
+                details: 'TCP+TLS握手提前完成'
+            },
+            {
+                id: 'init-continue',
+                name: 'init后续步骤',
+                nameEn: 'Init Continuation',
+                type: 'init',
+                start: 195,
+                end: 300,
+                color: '#b388ff',
+                function: 'init()',
+                details: '初始化后续处理'
+            },
+            {
+                id: 'launch-repl',
+                name: 'launchRepl首屏渲染',
+                nameEn: 'First Screen Render',
+                type: 'milestone',
+                start: 300,
+                end: 300,
+                color: '#ff5252',
+                function: 'launchRepl()',
+                details: '首屏渲染完成，用户可交互'
+            },
+            {
+                id: 'deferred-user',
+                name: '延迟预取 - 用户信息',
+                nameEn: 'Deferred: User Info',
+                type: 'deferred',
+                start: 300,
+                end: 400,
+                color: '#69f0ae',
+                opacity: 0.6,
+                function: 'prefetchUserInfo()',
+                details: '利用用户打字延迟预取'
+            },
+            {
+                id: 'deferred-git',
+                name: '延迟预取 - Git状态5并行',
+                nameEn: 'Deferred: Git Status (5×)',
+                type: 'deferred',
+                start: 300,
+                end: 450,
+                color: '#69f0ae',
+                opacity: 0.6,
+                function: 'git rev-parse/branch/status/log/remote',
+                details: '5个git命令并行执行: 150ms vs 串行500ms'
+            },
+            {
+                id: 'deferred-files',
+                name: '延迟预取 - 文件计数',
+                nameEn: 'Deferred: File Count',
+                type: 'deferred',
+                start: 350,
+                end: 450,
+                color: '#69f0ae',
+                opacity: 0.6,
+                function: 'countWorkspaceFiles()',
+                details: '工作区文件数量统计'
+            },
+            {
+                id: 'deferred-model',
+                name: '延迟预取 - 模型缓存',
+                nameEn: 'Deferred: Model Cache',
+                type: 'deferred',
+                start: 320,
+                end: 500,
+                color: '#69f0ae',
+                opacity: 0.6,
+                function: 'prefetchModelCache()',
+                details: '模型元数据缓存'
+            }
+        ];
+
+        const milestones = [
+            { time: 0, label: '启动 Start' },
+            { time: 135, label: 'Pre-import完成' },
+            { time: 300, label: '首屏渲染' },
+            { time: 500, label: '完成 Done' }
+        ];
+
+        const parallelWindows = [
+            { start: 0, end: 135, label: 'Pre-import并行窗口', top: 1 },
+            { start: 300, end: 500, label: '打字并行窗口', top: 9 }
+        ];
+
+        const svg = document.getElementById('gantt-svg');
+        const tooltip = document.getElementById('tooltip');
+        
+        const margin = { top: 60, right: 40, bottom: 60, left: 280 };
+        const width = 1000;
+        const height = 600;
+        const chartWidth = width - margin.left - margin.right;
+        const chartHeight = height - margin.top - margin.bottom;
+
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+        const xScale = (time) => margin.left + (time / 500) * chartWidth;
+        const yScale = (index) => margin.top + index * 38;
+
+        function drawGrid() {
+            const grid = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            
+            // Vertical grid lines every 50ms
+            for (let t = 0; t <= 500; t += 50) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', xScale(t));
+                line.setAttribute('y1', margin.top);
+                line.setAttribute('x2', xScale(t));
+                line.setAttribute('y2', margin.top + tasks.length * 38);
+                line.setAttribute('class', t % 100 === 0 ? 'grid-line major' : 'grid-line');
+                grid.appendChild(line);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', xScale(t));
+                text.setAttribute('y', height - 20);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('class', 'axis-text');
+                text.textContent = t + 'ms';
+                grid.appendChild(text);
+            }
+
+            return grid;
+        }
+
+        function drawMilestones() {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            
+            milestones.forEach(m => {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', xScale(m.time));
+                line.setAttribute('y1', margin.top - 10);
+                line.setAttribute('x2', xScale(m.time));
+                line.setAttribute('y2', margin.top + tasks.length * 38 + 10);
+                line.setAttribute('class', 'milestone');
+                g.appendChild(line);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', xScale(m.time) + 5);
+                text.setAttribute('y', margin.top - 20);
+                text.setAttribute('class', 'milestone-label');
+                text.textContent = m.label;
+                g.appendChild(text);
+            });
+
+            return g;
+        }
+
+        function drawParallelWindows() {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+            parallelWindows.forEach(w => {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', xScale(w.start));
+                rect.setAttribute('y', margin.top + w.top * 38 - 19);
+                rect.setAttribute('width', xScale(w.end) - xScale(w.start));
+                rect.setAttribute('height', (w.label.includes('Pre-import') ? 3 : 5) * 38);
+                rect.setAttribute('class', 'parallel-window');
+                rect.setAttribute('rx', 4);
+                g.appendChild(rect);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', xScale(w.start) + 10);
+                text.setAttribute('y', margin.top + w.top * 38 - 25);
+                text.setAttribute('class', 'window-label');
+                text.textContent = '▶ ' + w.label;
+                g.appendChild(text);
+            });
+
+            return g;
+        }
+
+        function drawTasks() {
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.id = 'tasks-group';
+
+            tasks.forEach((task, i) => {
+                const y = yScale(i);
+                
+                // Task label
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', margin.left - 15);
+                label.setAttribute('y', y + 5);
+                label.setAttribute('text-anchor', 'end');
+                label.setAttribute('class', 'task-label');
+                label.textContent = task.name;
+                g.appendChild(label);
+
+                // Secondary label
+                const label2 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label2.setAttribute('x', margin.left - 15);
+                label2.setAttribute('y', y + 18);
+                label2.setAttribute('text-anchor', 'end');
+                label2.setAttribute('class', 'task-label-secondary');
+                label2.textContent = task.nameEn;
+                g.appendChild(label2);
+
+                if (task.type === 'milestone') {
+                    // Diamond shape for milestone
+                    const diamond = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                    const cx = xScale(task.start);
+                    const cy = y;
+                    const size = 10;
+                    diamond.setAttribute('points', `${cx},${cy-size} ${cx+size},${cy} ${cx},${cy+size} ${cx-size},${cy}`);
+                    diamond.setAttribute('fill', task.color);
+                    diamond.setAttribute('class', 'task-bar');
+                    diamond.dataset.taskId = task.id;
+                    g.appendChild(diamond);
+
+                    // "Zero Wait" badge
+                    const badge = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    badge.setAttribute('x', cx + 15);
+                    badge.setAttribute('y', cy - 10);
+                    badge.setAttribute('width', 70);
+                    badge.setAttribute('height', 18);
+                    badge.setAttribute('rx', 4);
+                    badge.setAttribute('fill', task.color);
+                    g.appendChild(badge);
+
+                    const badgeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    badgeText.setAttribute('x', cx + 50);
+                    badgeText.setAttribute('y', cy + 3);
+                    badgeText.setAttribute('text-anchor', 'middle');
+                    badgeText.setAttribute('class', 'zero-wait-badge');
+                    badgeText.textContent = 'ZERO WAIT';
+                    g.appendChild(badgeText);
+                } else {
+                    // Bar for regular tasks
+                    const bar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    bar.setAttribute('x', xScale(task.start));
+                    bar.setAttribute('y', y - 12);
+                    bar.setAttribute('width', Math.max(2, xScale(task.end) - xScale(task.start)));
+                    bar.setAttribute('height', 20);
+                    bar.setAttribute('rx', 4);
+                    bar.setAttribute('fill', task.color);
+                    if (task.opacity) {
+                        bar.setAttribute('fill-opacity', task.opacity);
+                    }
+                    bar.setAttribute('class', 'task-bar');
+                    bar.dataset.taskId = task.id;
+                    g.appendChild(bar);
+
+                    // Duration label inside bar
+                    if (task.end - task.start > 40) {
+                        const durationText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        durationText.setAttribute('x', xScale(task.start) + (xScale(task.end) - xScale(task.start)) / 2);
+                        durationText.setAttribute('y', y + 4);
+                        durationText.setAttribute('text-anchor', 'middle');
+                        durationText.setAttribute('class', 'zero-wait-badge');
+                        durationText.textContent = (task.end - task.start) + 'ms';
+                        g.appendChild(durationText);
+                    }
+
+                    // "May be done" badge for early completion
+                    if (task.id === 'mdm-read' || task.id === 'keychain-prefetch') {
+                        const badgeX = xScale(task.end) + 10;
+                        const badge = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        badge.setAttribute('x', badgeX);
+                        badge.setAttribute('y', y - 10);
+                        badge.setAttribute('width', 90);
+                        badge.setAttribute('height', 16);
+                        badge.setAttribute('rx', 3);
+                        badge.setAttribute('fill', 'rgba(105, 240, 174, 0.2)');
+                        badge.setAttribute('stroke', '#69f0ae');
+                        badge.setAttribute('stroke-width', 1);
+                        g.appendChild(badge);
+
+                        const badgeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        badgeText.setAttribute('x', badgeX + 45);
+                        badgeText.setAttribute('y', y + 2);
+                        badgeText.setAttribute('text-anchor', 'middle');
+                        badgeText.setAttribute('fill', '#69f0ae');
+                        badgeText.setAttribute('font-size', '9');
+                        badgeText.setAttribute('font-family', 'JetBrains Mono');
+                        badgeText.textContent = '可能已完成';
+                        g.appendChild(badgeText);
+                    }
+                }
+            });
+
+            return g;
+        }
+
+        function setupInteractions() {
+            const taskBars = document.querySelectorAll('.task-bar');
+            
+            taskBars.forEach(bar => {
+                bar.addEventListener('mouseenter', (e) => {
+                    const task = tasks.find(t => t.id === bar.dataset.taskId);
+                    if (!task) return;
+
+                    document.getElementById('tooltip-title').textContent = task.name + ' | ' + task.nameEn;
+                    document.getElementById('tooltip-time').textContent = task.start + 'ms ~ ' + task.end + 'ms';
+                    document.getElementById('tooltip-duration').textContent = (task.end - task.start) + 'ms';
+                    document.getElementById('tooltip-function').textContent = task.function;
+
+                    tooltip.classList.add('visible');
+                });
+
+                bar.addEventListener('mousemove', (e) => {
+                    const rect = svg.getBoundingClientRect();
+                    tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+                    tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
+                });
+
+                bar.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('visible');
+                });
+            });
+        }
+
+        function init() {
+            svg.innerHTML = '';
+            svg.appendChild(drawGrid());
+            svg.appendChild(drawMilestones());
+            svg.appendChild(drawParallelWindows());
+            svg.appendChild(drawTasks());
+            setupInteractions();
+        }
+
+        function replayAnimation() {
+            const tasksGroup = document.getElementById('tasks-group');
+            if (tasksGroup) {
+                tasksGroup.remove();
+            }
+            
+            setTimeout(() => {
+                svg.appendChild(drawTasks());
+                setupInteractions();
+                
+                // Add animation class
+                const bars = document.querySelectorAll('.task-bar');
+                bars.forEach((bar, i) => {
+                    bar.style.opacity = '0';
+                    setTimeout(() => {
+                        bar.style.transition = 'opacity 0.4s ease';
+                        bar.style.opacity = '1';
+                    }, i * 50);
+                });
+            }, 100);
+        }
+
+        init();
+    </script>
+</body>
+</html>

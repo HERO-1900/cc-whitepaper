@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>流式渲染时序图 | Streaming Render Sequence</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap');
+
+  :root {
+    --bg-void: #0a0b0f;
+    --bg-panel: #11131a;
+    --line-axis: #ffffff;
+    --line-dim: rgba(255,255,255,0.12);
+    --api-blue: #4fc1ff;
+    --react-purple: #c084fc;
+    --pipe-start: #34d399;
+    --pipe-mid: #facc15;
+    --pipe-end: #fb923c;
+    --terminal-white: #f5f5f5;
+    --accent-red: #ff6473;
+    --font-display: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+    --font-body: 'JetBrains Mono', 'Noto Sans SC', monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-void); color: var(--terminal-white); font-family: var(--font-body); }
+  body { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; }
+
+  h1 { font-family: var(--font-display); font-size: clamp(24px, 4vw, 40px); margin: 0 0 8px; letter-spacing: -0.5px; }
+  .subtitle { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 28px; }
+
+  .controls { display: flex; gap: 16px; align-items: center; margin-bottom: 20px; }
+  .controls label { font-size: 12px; color: rgba(255,255,255,0.7); }
+  input[type=range] { width: 220px; accent-color: var(--api-blue); }
+  button { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: var(--terminal-white); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-family: var(--font-body); font-size: 13px; }
+  button:hover { background: rgba(255,255,255,0.14); }
+
+  .stage { width: min(1100px, 96vw); background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 24px; position: relative; overflow: hidden; }
+  .stage::before { content: ""; position: absolute; inset: 0; background: radial-gradient(600px 200px at 20% 0%, rgba(79,193,255,0.08), transparent), radial-gradient(600px 200px at 80% 100%, rgba(192,132,252,0.08), transparent); pointer-events: none; }
+
+  .diagram { position: relative; height: 420px; }
+  svg { width: 100%; height: 100%; display: block; }
+
+  .tooltip { position: absolute; pointer-events: none; background: rgba(10,11,15,0.95); border: 1px solid rgba(255,255,255,0.15); padding: 12px 14px; border-radius: 8px; font-size: 12px; line-height: 1.5; color: rgba(255,255,255,0.9); max-width: 320px; opacity: 0; transform: translateY(6px); transition: opacity .15s, transform .15s; box-shadow: 0 10px 30px rgba(0,0,0,0.4); z-index: 10; }
+  .tooltip.active { opacity: 1; transform: translateY(0); }
+  .tooltip .title { color: var(--api-blue); font-weight: 700; margin-bottom: 4px; font-family: var(--font-display); font-size: 13px; }
+  .tooltip .detail { color: rgba(255,255,255,0.7); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px 24px; margin-top: 18px; justify-content: center; font-size: 12px; }
+  .legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+  .legend .block { display: inline-block; width: 14px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+
+  .note { margin-top: 18px; font-size: 12px; color: rgba(255,255,255,0.55); line-height: 1.6; text-align: center; }
+
+  @media (max-width: 720px) {
+    .diagram { height: 560px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>流式渲染时序图 <span style="opacity:.6;font-weight:400;">Streaming Render Sequence</span></h1>
+<div class="subtitle">VIS-2A-032 | 图表预留 2.12-C</div>
+
+<div class="controls">
+  <label>时间缩放 Zoom: <input id="zoom" type="range" min="0.6" max="1.6" step="0.05" value="1"></label>
+  <button id="replay">重播 Replay</button>
+</div>
+
+<div class="stage">
+  <div class="diagram" id="diagram">
+    <svg id="svg" viewBox="0 0 1040 420" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="pipeGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="var(--pipe-start)"/>
+          <stop offset="50%" stop-color="var(--pipe-mid)"/>
+          <stop offset="100%" stop-color="var(--pipe-end)"/>
+        </linearGradient>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 L2,4 z" fill="rgba(255,255,255,0.5)"/>
+        </marker>
+      </defs>
+
+      <g id="grid"></g>
+      <g id="lanes"></g>
+      <g id="shapes"></g>
+      <g id="labels"></g>
+      <g id="magnifier"></g>
+      <g id="animOverlay"></g>
+    </svg>
+
+    <div class="tooltip" id="tooltip">
+      <div class="title" id="tt-title">Title</div>
+      <div class="detail" id="tt-detail">Detail</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:var(--api-blue)"></span>API chunk 到达</span>
+    <span><span class="dot" style="background:var(--react-purple)"></span>React setState</span>
+    <span><span class="block" style="background:linear-gradient(90deg,var(--pipe-start),var(--pipe-mid),var(--pipe-end))"></span>渲染管线 Render pipeline</span>
+    <span><span class="dot" style="background:var(--terminal-white)"></span>stdout.write 输出</span>
+    <span><span class="dot" style="background:var(--accent-red)"></span>合并 Merge</span>
+  </div>
+
+  <div class="note">
+    16ms 帧间隔 = 60fps，平衡实时性与性能 / 16ms frame budget = 60fps, balancing latency and throughput.<br>
+    稳态输出仅约 ~50 bytes，对应最后一行几个字符的增量更新 / Steady-state output ~50 bytes, updating only the trailing characters.
+  </div>
+</div>
+
+<script>
+(() => {
+  const svg = document.getElementById('svg');
+  const grid = document.getElementById('grid');
+  const lanes = document.getElementById('lanes');
+  const shapes = document.getElementById('shapes');
+  const labels = document.getElementById('labels');
+  const magnifier = document.getElementById('magnifier');
+  const animOverlay = document.getElementById('animOverlay');
+  const tooltip = document.getElementById('tooltip');
+  const ttTitle = document.getElementById('tt-title');
+  const ttDetail = document.getElementById('tt-detail');
+
+  const W = 1040, H = 420;
+  const margin = { top: 40, right: 40, bottom: 40, left: 140 };
+  const laneY = { api: 110, react: 210, term: 310 };
+  const laneH = 56;
+  const frameW = 240; // width of 16ms frame on canvas
+  const startX = margin.left + 20;
+
+  const frames = 4;
+  const msPerFrame = 16;
+  const totalMs = frames * msPerFrame;
+
+  function x(ms) { return startX + (ms / totalMs) * (frames * frameW); }
+  function ms(px) { return ((px - startX) / (frames * frameW)) * totalMs; }
+
+  const palette = {
+    api: getComputedStyle(document.documentElement).getPropertyValue('--api-blue').trim() || '#4fc1ff',
+    react: getComputedStyle(document.documentElement).getPropertyValue('--react-purple').trim() || '#c084fc',
+    pipeStart: getComputedStyle(document.documentElement).getPropertyValue('--pipe-start').trim() || '#34d399',
+    pipeMid: getComputedStyle(document.documentElement).getPropertyValue('--pipe-mid').trim() || '#facc15',
+    pipeEnd: getComputedStyle(document.documentElement).getPropertyValue('--pipe-end').trim() || '#fb923c',
+    term: getComputedStyle(document.documentElement).getPropertyValue('--terminal-white').trim() || '#f5f5f5',
+    accent: getComputedStyle(document.documentElement).getPropertyValue('--accent-red').trim() || '#ff6473',
+    lineDim: 'rgba(255,255,255,0.12)'
+  };
+
+  function setTooltip(el, title, detail) {
+    el.addEventListener('mouseenter', (e) => {
+      ttTitle.textContent = title;
+      ttDetail.textContent = detail;
+      tooltip.classList.add('active');
+      positionTooltip(e);
+    });
+    el.addEventListener('mousemove', positionTooltip);
+    el.addEventListener('mouseleave', () => tooltip.classList.remove('active'));
+  }
+
+  function positionTooltip(e) {
+    const rect = document.getElementById('diagram').getBoundingClientRect();
+    let left = e.clientX - rect.left + 14;
+    let top = e.clientY - rect.top + 14;
+    if (left + 280 > rect.width) left = e.clientX - rect.left - 290;
+    if (top + 100 > rect.height) top = e.clientY - rect.top - 100;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+  }
+
+  function createEl(tag, attrs, parent) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    if (parent) parent.appendChild(el);
+    return el;
+  }
+
+  function clearAll() {
+    grid.innerHTML = '';
+    lanes.innerHTML = '';
+    shapes.innerHTML = '';
+    labels.innerHTML = '';
+    magnifier.innerHTML = '';
+    animOverlay.innerHTML = '';
+  }
+
+  function draw() {
+    clearAll();
+
+    // Lanes
+    const laneNames = [
+      { y: laneY.api, labelZh: 'API Stream', labelEn: ' stream chunk 到达' },
+      { y: laneY.react, labelZh: 'React / Ink', labelEn: ' state & render pipeline' },
+      { y: laneY.term, labelZh: 'Terminal Output', labelEn: ' ANSI to stdout' }
+    ];
+    laneNames.forEach(ln => {
+      createEl('rect', { x: margin.left - 10, y: ln.y - laneH/2, width: W - margin.left - margin.right + 20, height: laneH, fill: 'rgba(255,255,255,0.02)', rx: 8 }, lanes);
+      const t = createEl('text', { x: margin.left - 18, y: ln.y + 5, fill: 'rgba(255,255,255,0.9)', 'text-anchor': 'end', 'font-size': 13, 'font-weight': 700 }, lanes);
+      t.textContent = ln.labelZh;
+      const t2 = createEl('text', { x: margin.left - 18, y: ln.y + 20, fill: 'rgba(255,255,255,0.45)', 'text-anchor': 'end', 'font-size': 11 }, lanes);
+      t2.textContent = ln.labelEn;
+    });
+
+    // Time axis
+    createEl('line', { x1: startX, y1: laneY.term + laneH/2 + 18, x2: x(totalMs), y2: laneY.term + laneH/2 + 18, stroke: palette.term, 'stroke-width': 2 }, lanes);
+
+    for (let i = 0; i <= frames; i++) {
+      const xi = x(i * msPerFrame);
+      // frame boundary
+      const dash = createEl('line', { x1: xi, x2: xi, y1: laneY.api - laneH/2 - 10, y2: laneY.term + laneH/2 + 10, stroke: palette.lineDim, 'stroke-width': 1, 'stroke-dasharray': '4 4' }, grid);
+      if (i < frames) {
+        // 16ms label
+        const t = createEl('text', { x: xi + frameW/2, y: laneY.term + laneH/2 + 36, fill: 'rgba(255,255,255,0.55)', 'text-anchor': 'middle', 'font-size': 11 }, grid);
+        t.textContent = `t=${i*msPerFrame}ms`;
+      }
+    }
+
+    // Events data
+    const events = [
+      // frame 0
+      { ms: 0, lane: 'api', type: 'dot', color: palette.api, label: 'chunk 1', title: 'API stream chunk 到达', detail: 't=0ms: text_delta 到达，几个 token 触发一次状态更新。' },
+      { ms: 0, lane: 'react', type: 'dot', color: palette.react, label: 'setState', title: 'React setState', detail: 't=0ms: AssistantMessage 的 content 被更新，触发重新渲染。' },
+      { ms: 2, lane: 'api', type: 'dot', color: palette.api, label: 'chunk 2', title: 'API stream chunk 合并前', detail: 't=2ms: 第二个 chunk 到达，将被 scheduleRender 节流合并。' },
+      { ms: 5, lane: 'api', type: 'dot', color: palette.api, label: 'chunk 3', title: 'API stream chunk 合并前', detail: 't=5ms: 第三个 chunk 到达，合并进同一帧。' },
+
+      // frame 1 (16ms)
+      { ms: 16, lane: 'api', type: 'dot', color: palette.api, label: 'chunk 4', title: 'API stream chunk 到达', detail: 't=16ms: 新的 chunk 到达，恰好落在帧边界。' },
+      { ms: 16, lane: 'react', type: 'block', w: 140, h: 18, color: 'url(#pipeGrad)', label: '', title: '渲染管线 Render Pipeline', detail: 't=16ms: Reconciler → Yoga → Render → Screen diff → LogUpdate → stdout。' },
+      { ms: 16, lane: 'term', type: 'pulse', label: '~50 bytes', title: 'stdout.write', detail: 't=16ms: 最终 ANSI 输出，稳态下仅几十字节。' },
+      { ms: 18, lane: 'api', type: 'dot', color: palette.api, label: 'chunk 5', title: 'API stream chunk', detail: 't=18ms: 很快被合并进下一帧。' },
+      { ms: 22, lane: 'api', type: 'dot', color: palette.accent, label: 'merge', title: '合并 Merge', detail: '同一帧内多个 chunk 合并处理，避免过度渲染。' },
+
+      // frame 2 (32ms)
+      { ms: 32, lane: 'api', type: 'dot', color: palette.api, label: 'chunk 6', title: 'API stream chunk', detail: 't=32ms: 新 chunk 触发 scheduleRender。' },
+      { ms: 32, lane: 'react', type: 'block', w: 140, h: 18, color: 'url(#pipeGrad)', label: '', title: '渲染管线 Render Pipeline', detail: 't=32ms: 重复管线：blit 跳过 clean 子树，双缓冲 diff 只写变化 cell。' },
+      { ms: 32, lane: 'term', type: 'pulse', label: '~50 bytes', title: 'stdout.write', detail: 't=32ms: 输出最小补丁。' },
+      { ms: 34, lane: 'api', type: 'dot', color: palette.api, label: 'chunk 7', title: 'API stream chunk', detail: 't=34ms: 继续合并进下一帧。' },
+      { ms: 38, lane: 'api', type: 'dot', color: palette.api, label: 'chunk 8', title: 'API stream chunk', detail: 't=38ms: 合并。' },
+
+      // frame 3 (48ms)
+      { ms: 48, lane: 'api', type: 'dot', color: palette.api, label: 'chunk 9', title: 'API stream chunk', detail: 't=48ms: 稳态流式输出持续进行。' },
+      { ms: 48, lane: 'react', type: 'block', w: 140, h: 18, color: 'url(#pipeGrad)', label: '', title: '渲染管线 Render Pipeline', detail: 't=48ms: 管线完整执行，性能开销稳定。' },
+      { ms: 48, lane: 'term', type: 'pulse', label: '~50 bytes', title: 'stdout.write', detail: 't=48ms: 最终输出到终端，实现“说一个字、显一个字”。' },
+      { ms: 52, lane: 'api', type: 'dot', color: palette.api, label: 'chunk 10', title: 'API stream chunk', detail: 't=52ms: 最后被合并处理。' },
+    ];
+
+    const pipelineSub = [
+      { name: 'Reconciler', offset: 0, w: 28 },
+      { name: 'Yoga', offset: 30, w: 22 },
+      { name: 'Render', offset: 54, w: 24 },
+      { name: 'Screen', offset: 80, w: 24 },
+      { name: 'LogUpdate', offset: 106, w: 30 }
+    ];
+
+    // Draw events
+    events.forEach(ev => {
+      const y = laneY[ev.lane];
+      const xi = x(ev.ms);
+      if (ev.type === 'dot') {
+        const c = createEl('circle', { cx: xi, cy: y, r: 6, fill: ev.color, filter: 'url(#glow)', class: 'ev' }, shapes);
+        setTooltip(c, ev.title, ev.detail);
+        const t = createEl('text', { x: xi, y: y + (ev.lane==='api'? -14 : (ev.lane==='term'? 22 : -14)), fill: 'rgba(255,255,255,0.8)', 'text-anchor': 'middle', 'font-size': 10 }, labels);
+        t.textContent = ev.label;
+      } else if (ev.type === 'block') {
+        const rect = createEl('rect', { x: xi, y: y - 9, width: ev.w, height: ev.h, fill: ev.color, rx: 4, class: 'ev' }, shapes);
+        setTooltip(rect, ev.title, ev.detail);
+
+        // pipeline sub-blocks inside the magnifier area (only first frame block gets detail; visually we render text)
+        if (ev.ms === 16) {
+          const mx = xi + 6;
+          const my = y + 40;
+          // magnifier bracket
+          createEl('path', { d: `M${mx},${y+9} L${mx},${my-10} L${mx+ev.w-12},${my-10} L${mx+ev.w-12},${y+9}`, fill: 'none', stroke: 'rgba(255,255,255,0.25)', 'stroke-width': 1 }, magnifier);
+          pipelineSub.forEach((sub, idx) => {
+            const sx = mx + sub.offset;
+            const gradId = `subgrad-${idx}`;
+            const grad = createEl('linearGradient', { id: gradId, x1: 0, y1: 0, x2: 1, y2: 0 }, magnifier);
+            const stop1 = createEl('stop', { offset: '0%', 'stop-color': palette.pipeStart }, grad);
+            const stop2 = createEl('stop', { offset: '100%', 'stop-color': palette.pipeEnd }, grad);
+            const r = createEl('rect', { x: sx, y: my - 6, width: sub.w, height: 12, fill: `url(#${gradId})`, rx: 2, opacity: 0.9 }, magnifier);
+            const txt = createEl('text', { x: sx + sub.w/2, y: my + 16, fill: 'rgba(255,255,255,0.6)', 'text-anchor': 'middle', 'font-size': 9 }, magnifier);
+            txt.textContent = sub.name;
+            setTooltip(r, sub.name, `管线阶段 ${sub.name} 在帧内快速执行，耗时约 ${Math.round(sub.w/3)}% 帧预算。`);
+          });
+          const magLabel = createEl('text', { x: mx + ev.w/2, y: my - 16, fill: 'rgba(255,255,255,0.7)', 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700 }, magnifier);
+          magLabel.textContent = '单帧放大 Detail';
+        }
+      } else if (ev.type === 'pulse') {
+        const g = createEl('g', { class: 'ev' }, shapes);
+        const c = createEl('circle', { cx: xi, cy: y, r: 5, fill: palette.term }, g);
+        const ring = createEl('circle', { cx: xi, cy: y, r: 12, fill: 'none', stroke: palette.term, 'stroke-width': 1.5, opacity: 0.5 }, g);
+        setTooltip(g, ev.title, ev.detail);
+        const t = createEl('text', { x: xi + 18, y: y + 4, fill: 'rgba(255,255,255,0.8)', 'font-size': 10 }, labels);
+        t.textContent = ev.label;
+      }
+    });
+
+    // Merge arcs between chunks and frame blocks
+    const merges = [
+      { from: { ms: 2, y: laneY.api }, to: { ms: 16, y: laneY.react } },
+      { from: { ms: 5, y: laneY.api }, to: { ms: 16, y: laneY.react } },
+      { from: { ms: 18, y: laneY.api }, to: { ms: 32, y: laneY.react } },
+      { from: { ms: 22, y: laneY.api }, to: { ms: 32, y: laneY.react } },
+      { from: { ms: 34, y: laneY.api }, to: { ms: 48, y: laneY.react } },
+      { from: { ms: 38, y: laneY.api }, to: { ms: 48, y: laneY.react } }
+    ];
+
+    merges.forEach(m => {
+      const mx = (x(m.from.ms) + x(m.to.ms)) / 2;
+      const d = `M${x(m.from.ms)},${m.from.y} Q${mx},${(m.from.y + m.to.y)/2} ${x(m.to.ms)},${m.to.y}`;
+      const path = createEl('path', { d, fill: 'none', stroke: palette.accent, 'stroke-width': 1.2, 'stroke-dasharray': '3 3', opacity: 0.7 }, shapes);
+      setTooltip(path, '合并 Merge', '多个 stream chunk 在 16ms 内被节流合并为单帧渲染。');
+    });
+
+    // Frame boundary labels
+    for (let i = 1; i <= frames; i++) {
+      const xi = x(i * msPerFrame);
+      const t = createEl('text', { x: xi + 6, y: laneY.api - laneH/2 - 2, fill: 'rgba(255,255,255,0.35)', 'font-size': 10 }, labels);
+      t.textContent = `+${msPerFrame}ms`;
+    }
+  }
+
+  draw();
+
+  // simple replay animation using CSS classes on overlay clones
+  function replay() {
+    animOverlay.innerHTML = '';
+    const chunks = shapes.querySelectorAll('circle.ev, g.ev');
+    const originals = Array.from(chunks);
+    originals.forEach((orig, idx) => {
+      const bbox = orig.getBBox();
+      const clone = orig.cloneNode(true);
+      clone.setAttribute('opacity', '0');
+      clone.style.transition = 'opacity .15s, transform .4s';
+      animOverlay.appendChild(clone);
+      // stagger reveal left to right
+      const delay = idx * 80 + 200;
+      setTimeout(() => {
+        clone.setAttribute('opacity', '1');
+      }, delay);
+      setTimeout(() => {
+        clone.setAttribute('opacity', '0');
+      }, delay + 900);
+    });
+  }
+
+  document.getElementById('replay').addEventListener('click', replay);
+  document.getElementById('zoom').addEventListener('input', (e) => {
+    const v = e.target.value;
+    const vbW = W / v;
+    const vbH = H / v;
+    svg.setAttribute('viewBox', `0 0 ${vbW} ${vbH}`);
+  });
+
+  window.addEventListener('resize', draw);
+})();
+</script>
+
+</body>
+</html>

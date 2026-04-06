@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code 启动时间线</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-grid: #1a1a25;
+      --color-pre: #3b82f6;
+      --color-pre-dark: #1d4ed8;
+      --color-init: #8b5cf6;
+      --color-init-dark: #6d28d9;
+      --color-ready: #10b981;
+      --color-ready-dark: #059669;
+      --color-text: #e2e8f0;
+      --color-text-muted: #64748b;
+      --color-accent: #f59e0b;
+      --color-line: #334155;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg-primary);
+      color: var(--color-text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      overflow-x: hidden;
+    }
+    
+    .noise-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      z-index: 1000;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 50px;
+      position: relative;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff 0%, var(--color-text-muted) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      color: var(--color-text-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    
+    .timeline-container {
+      width: 100%;
+      max-width: 1200px;
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 40px;
+      position: relative;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--bg-grid);
+    }
+    
+    .timeline-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+      opacity: 0.5;
+    }
+    
+    .legend {
+      display: flex;
+      gap: 30px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      position: relative;
+    }
+    
+    .legend-color.pre { background: var(--color-pre); }
+    .legend-color.init { background: var(--color-init); }
+    .legend-color.ready { background: var(--color-ready); }
+    
+    .legend-color.async::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: repeating-linear-gradient(90deg, transparent, transparent 4px, var(--bg-primary) 4px, var(--bg-primary) 8px);
+      transform: translateY(-50%);
+    }
+    
+    svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    
+    .grid-line {
+      stroke: var(--bg-grid);
+      stroke-width: 1;
+    }
+    
+    .grid-line.major {
+      stroke: var(--color-line);
+      stroke-width: 1.5;
+    }
+    
+    .phase-bg {
+      opacity: 0.08;
+    }
+    
+    .phase-bg.pre { fill: var(--color-pre); }
+    .phase-bg.init { fill: var(--color-init); }
+    .phase-bg.ready { fill: var(--color-ready); }
+    
+    .task-bar {
+      rx: 4;
+      ry: 4;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .task-bar:hover {
+      filter: brightness(1.2);
+    }
+    
+    .task-bar.pre { fill: var(--color-pre); }
+    .task-bar.pre-async { fill: var(--color-pre-dark); opacity: 0.7; }
+    .task-bar.init { fill: var(--color-init); }
+    .task-bar.init-async { fill: var(--color-init-dark); opacity: 0.7; }
+    .task-bar.ready { fill: var(--color-ready); }
+    .task-bar.ready-async { fill: var(--color-ready-dark); opacity: 0.7; }
+    
+    .task-bar.pattern {
+      fill: url(#diagonalPattern);
+    }
+    
+    .task-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      fill: var(--color-text);
+      font-weight: 500;
+    }
+    
+    .task-label.small {
+      font-size: 9px;
+      fill: var(--color-text-muted);
+    }
+    
+    .time-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      fill: var(--color-text-muted);
+      text-anchor: middle;
+    }
+    
+    .time-label.major {
+      font-size: 12px;
+      fill: var(--color-text);
+      font-weight: 600;
+    }
+    
+    .phase-label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      text-anchor: middle;
+    }
+    
+    .phase-label.pre { fill: var(--color-pre); }
+    .phase-label.init { fill: var(--color-init); }
+    .phase-label.ready { fill: var(--color-ready); }
+    
+    .milestone-line {
+      stroke: var(--color-accent);
+      stroke-width: 2;
+      stroke-dasharray: 6, 4;
+      opacity: 0.8;
+    }
+    
+    .milestone-label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px;
+      fill: var(--color-accent);
+      font-weight: 600;
+      text-anchor: middle;
+    }
+    
+    .milestone-label-bg {
+      fill: var(--bg-primary);
+      rx: 4;
+      ry: 4;
+    }
+    
+    .connection-line {
+      stroke: var(--color-text-muted);
+      stroke-width: 1;
+      stroke-dasharray: 4, 4;
+      fill: none;
+      opacity: 0.5;
+    }
+    
+    .axis-line {
+      stroke: var(--color-line);
+      stroke-width: 2;
+    }
+    
+    .tooltip {
+      position: absolute;
+      background: var(--bg-primary);
+      border: 1px solid var(--color-line);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      z-index: 100;
+      max-width: 280px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+    
+    .tooltip.show {
+      opacity: 1;
+    }
+    
+    .tooltip-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--color-accent);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+    
+    .tooltip-desc {
+      color: var(--color-text-muted);
+      line-height: 1.5;
+    }
+    
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid var(--bg-grid);
+    }
+    
+    .stat {
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--color-accent), #fbbf24);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 4px;
+    }
+    
+    .row-label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px;
+      fill: var(--color-text-muted);
+      text-anchor: end;
+      dominant-baseline: middle;
+    }
+    
+    .async-indicator {
+      fill: none;
+      stroke: var(--color-text);
+      stroke-width: 1.5;
+      stroke-dasharray: 3, 3;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    
+    .pulse {
+      animation: pulse 2s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="noise-overlay"></div>
+  
+  <div class="header">
+    <h1>Claude Code 启动时间线</h1>
+    <div class="subtitle">Startup Timeline Visualization · 0-500ms</div>
+  </div>
+  
+  <div class="timeline-container">
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-color pre"></div>
+        <span>Pre-import 阶段</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color init"></div>
+        <span>Init 阶段</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color ready"></div>
+        <span>Ready 阶段</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color pre async"></div>
+        <span>异步任务</span>
+      </div>
+    </div>
+    
+    <svg viewBox="0 0 1100 520" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <pattern id="diagonalPattern" patternUnits="userSpaceOnUse" width="8" height="8">
+          <path d="M0,8 L8,0" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+        </pattern>
+        <linearGradient id="gradPre" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:var(--color-pre);stop-opacity:0.3" />
+          <stop offset="100%" style="stop-color:var(--color-pre);stop-opacity:0.1" />
+        </linearGradient>
+        <linearGradient id="gradInit" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:var(--color-init);stop-opacity:0.3" />
+          <stop offset="100%" style="stop-color:var(--color-init);stop-opacity:0.1" />
+        </linearGradient>
+        <linearGradient id="gradReady" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:var(--color-ready);stop-opacity:0.3" />
+          <stop offset="100%" style="stop-color:var(--color-ready);stop-opacity:0.1" />
+        </linearGradient>
+      </defs>
+      
+      <!-- Phase backgrounds -->
+      <rect class="phase-bg pre" x="100" y="60" width="243" height="380"/>
+      <rect class="phase-bg init" x="343" width="247" height="380" y="60"/>
+      <rect class="phase-bg ready" x="590" y="60" width="407" height="380"/>
+      
+      <!-- Grid lines -->
+      <g id="grid">
+        <line class="grid-line major" x1="100" y1="440" x2="997" y2="440"/>
+        <line class="grid-line" x1="100" y1="60" x2="100" y2="440"/>
+        <line class="grid-line" x1="161" y1="60" x2="161" y2="440"/>
+        <line class="grid-line" x1="222" y1="60" x2="222" y2="440"/>
+        <line class="grid-line" x1="283" y1="60" x2="283" y2="440"/>
+        <line class="grid-line major" x1="343" y1="60" x2="343" y2="440"/>
+        <line class="grid-line" x1="404" y1="60" x2="404" y2="440"/>
+        <line class="grid-line" x1="465" y1="60" x2="465" y2="440"/>
+        <line class="grid-line" x1="526" y1="60" x2="526" y2="440"/>
+        <line class="grid-line major" x1="590" y1="60" x2="590" y2="440"/>
+        <line class="grid-line" x1="651" y1="60" x2="651" y2="440"/>
+        <line class="grid-line" x1="712" y1="60" x2="712" y2="440"/>
+        <line class="grid-line" x1="773" y1="60" x2="773" y2="440"/>
+        <line class="grid-line" x1="834" y1="60" x2="834" y2="440"/>
+        <line class="grid-line" x1="895" y1="60" x2="895" y2="440"/>
+        <line class="grid-line" x1="956" y1="60" x2="956" y2="440"/>
+        <line class="grid-line major" x1="997" y1="60" x2="997" y2="440"/>
+      </g>
+      
+      <!-- Phase labels -->
+      <text class="phase-label pre" x="221" y="85">PRE-IMPORT</text>
+      <text class="phase-label init" x="466" y="85">INIT</text>
+      <text class="phase-label ready" x="793" y="85">READY</text>
+      
+      <!-- Time labels -->
+      <text class="time-label major" x="100" y="460">0ms</text>
+      <text class="time-label" x="161" y="460">25</text>
+      <text class="time-label" x="222" y="460">50</text>
+      <text class="time-label" x="283" y="460">75</text>
+      <text class="time-label major" x="343" y="460">100</text>
+      <text class="time-label" x="404" y="460">125</text>
+      <text class="time-label major" x="465" y="460">150</text>
+      <text class="time-label" x="526" y="460">175</text>
+      <text class="time-label major" x="590" y="460">200</text>
+      <text class="time-label" x="651" y="460">225</text>
+      <text class="time-label" x="712" y="460">250</text>
+      <text class="time-label" x="773" y="460">275</text>
+      <text class="time-label major" x="834" y="460">300</text>
+      <text class="time-label" x="895" y="460">400</text>
+      <text class="time-label" x="956" y="460">450</text>
+      <text class="time-label major" x="997" y="460">500ms</text>
+      
+      <!-- Row labels -->
+      <text class="row-label" x="90" y="130">Module Loading</text>
+      <text class="row-label" x="90" y="165">MDM Read</text>
+      <text class="row-label" x="90" y="200">Keychain</text>
+      <text class="row-label" x="90" y="250">Main Execution</text>
+      <text class="row-label" x="90" y="285">Init Tasks</text>
+      <text class="row-label" x="90" y="320">API Preconnect</text>
+      <text class="row-label" x="90" y="370">UI Render</text>
+      <text class="row-label" x="90" y="405">Deferred</text>
+      
+      <!-- Pre-import Phase Tasks -->
+      <!-- Module Loading (sync, dominates this phase) -->
+      <rect class="task-bar pre" x="100" y="115" width="243" height="28" data-task="module" data-desc="1884个文件同步加载 · main.tsx解析"/>
+      <text class="task-label" x="115" y="133">main.tsx → 1884 modules</text>
+      
+      <!-- MDM Read (async, parallel) -->
+      <rect class="task-bar pre-async pattern" x="100" y="155" width="200" height="18" data-task="mdm" data-desc="startMdmRawRead() 异步启动 · 与模块加载并行"/>
+      <text class="task-label small" x="105" y="168">MDM raw read (async)</text>
+      
+      <!-- Keychain Prefetch (async, parallel) -->
+      <rect class="task-bar pre-async pattern" x="100" y="190" width="180" height="18" data-task="keychain" data-desc="startKeychainPrefetch() 异步启动 · 后台预取"/>
+      <text class="task-label small" x="105" y="203">Keychain prefetch</text>
+      
+      <!-- Connection lines for parallel tasks -->
+      <path class="connection-line" d="M 300 165 Q 320 165 335 250"/>
+      <path class="connection-line" d="M 280 200 Q 300 200 335 280"/>
+      
+      <!-- Init Phase Tasks -->
+      <!-- Main execution -->
+      <rect class="task-bar init" x="343" y="235" width="80" height="28" data-task="main" data-desc="main()执行 · 模式路由判断"/>
+      <text class="task-label" x="348" y="253">main()</text>
+      
+      <!-- Migration check -->
+      <rect class="task-bar init" x="423" y="235" width="40" height="28" data-task="migrate" data-desc="迁移检查 · 配置启用"/>
+      <text class="task-label small" x="428" y="253">migrate</text>
+      
+      <!-- Init tasks -->
+      <rect class="task-bar init" x="463" y="235" width="127" height="28" data-task="init" data-desc="init()初始化: enableConfigs→CA证书→7个异步后台任务→mTLS"/>
+      <text class="task-label" x="468" y="253">init() subsystems</text>
+      
+      <!-- Async init details -->
+      <rect class="task-bar init-async pattern" x="490" y="275" width="100" height="18" data-task="bg-tasks" data-desc="7个异步后台任务并行执行"/>
+      <text class="task-label small" x="495" y="288">7 bg tasks</text>
+      
+      <!-- API Preconnect -->
+      <rect class="task-bar init" x="520" y="310" width="70" height="28" data-task="preconnect" data-desc="preconnectAnthropicApi() · TCP+TLS握手提前完成"/>
+      <text class="task-label small" x="525" y="328">API preconnect</text>
+      
+      <!-- Ready Phase Tasks -->
+      <!-- UI Render -->
+      <rect class="task-bar ready" x="590" y="355" width="15" height="28" data-task="ui" data-desc="launchRepl() · 首屏渲染完成"/>
+      <text class="task-label" x="595" y="373" style="fill: var(--color-ready)">UI</text>
+      
+      <!-- Deferred Prefetches -->
+      <rect class="task-bar ready-async pattern" x="605" y="390" width="392" height="28" data-task="deferred" data-desc="startDeferredPrefetches(): 用户信息/git状态5并行/文件计数/模型缓存/ChangeDetector/Buddy状态"/>
+      <text class="task-label" x="610" y="408">Deferred prefetches (5 parallel)</text>
+      
+      <!-- Deferred sub-tasks -->
+      <rect class="task-bar ready-async" x="620" y="425" width="60" height="12" opacity="0.5"/>
+      <rect class="task-bar ready-async" x="690" y="425" width="60" height="12" opacity="0.5"/>
+      <rect class="task-bar ready-async" x="760" y="425" width="60" height="12" opacity="0.5"/>
+      <rect class="task-bar ready-async" x="830" y="425" width="60" height="12" opacity="0.5"/>
+      <rect class="task-bar ready-async" x="900" y="425" width="60" height="12" opacity="0.5"/>
+      
+      <!-- Milestone line at 300ms -->
+      <line class="milestone-line" x1="834" y1="60" x2="834" y2="440"/>
+      <rect class="milestone-label-bg" x="784" y="45" width="100" height="22"/>
+      <text class="milestone-label" x="834" y="60">用户可见 Ready</text>
+      
+      <!-- Start point marker -->
+      <circle cx="100" cy="440" r="4" fill="var(--color-accent)"/>
+      <text class="task-label small" x="100" y="475" text-anchor="middle" fill="var(--color-accent)">claude命令</text>
+    </svg>
+    
+    <div class="tooltip" id="tooltip">
+      <div class="tooltip-title" id="tooltip-title"></div>
+      <div class="tooltip-desc" id="tooltip-desc"></div>
+    </div>
+    
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value">500ms</div>
+        <div class="stat-label">总启动时间</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">1884</div>
+        <div class="stat-label">模块文件</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">7</div>
+        <div class="stat-label">后台任务</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">5</div>
+        <div class="stat-label">延迟预取</div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const tooltip = document.getElementById('tooltip');
+    const tooltipTitle = document.getElementById('tooltip-title');
+    const tooltipDesc = document.getElementById('tooltip-desc');
+    const taskBars = document.querySelectorAll('.task-bar');
+    
+    const taskInfo = {
+      'module': {
+        title: 'Module Loading (0-135ms)',
+        desc: '同步加载1884个文件 · Node.js解析main.tsx · 这是启动过程中最耗时的同步操作'
+      },
+      'mdm': {
+        title: 'MDM Raw Read (async)',
+        desc: 'startMdmRawRead()异步启动 · 与模块加载并行执行 · 确保MdmSettingsLoaded时可能零等待'
+      },
+      'keychain': {
+        title: 'Keychain Prefetch (async)',
+        desc: 'startKeychainPrefetch()异步启动 · 后台预取钥匙串数据 · 供ensureKeychainPrefetchCompleted()使用'
+      },
+      'main': {
+        title: 'Main Execution (135-175ms)',
+        desc: 'main()函数执行 · 模式路由判断 · 决定进入REPL还是执行单次命令'
+      },
+      'migrate': {
+        title: 'Migration Check (175-215ms)',
+        desc: '迁移检查 · 配置启用(enableConfigs) · 确保系统状态一致'
+      },
+      'init': {
+        title: 'Init Subsystems (215-300ms)',
+        desc: 'init()核心初始化: CA证书配置 → mTLS设置 → 子系统就绪'
+      },
+      'bg-tasks': {
+        title: 'Background Tasks (async)',
+        desc: '7个异步后台任务并行执行 · 不阻塞主流程的关键初始化'
+      },
+      'preconnect': {
+        title: 'API Preconnect (250-300ms)',
+        desc: 'preconnectAnthropicApi() · 提前完成TCP+TLS握手 · 减少首次API调用延迟'
+      },
+      'ui': {
+        title: 'UI Render (300ms)',
+        desc: 'launchRepl() · 首屏渲染完成 · 用户看到输入框 · 系统进入交互状态'
+      },
+      'deferred': {
+        title: 'Deferred Prefetches (300-500ms)',
+        desc: '利用用户打字时间完成: 用户信息/git状态(5并行)/文件计数/模型缓存/ChangeDetector/Buddy状态'
+      }
+    };
+    
+    taskBars.forEach(bar => {
+      bar.addEventListener('mouseenter', (e) => {
+        const task = bar.getAttribute('data-task');
+        const info = taskInfo[task];
+        if (info) {
+          tooltipTitle.textContent = info.title;
+          tooltipDesc.textContent = info.desc;
+          tooltip.classList.add('show');
+        }
+      });
+      
+      bar.addEventListener('mousemove', (e) => {
+        const rect = document.querySelector('.timeline-container').getBoundingClientRect();
+        tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+        tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
+      });
+      
+      bar.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('show');
+      });
+    });
+    
+    // Animate bars on load
+    window.addEventListener('load', () => {
+      const bars = document.querySelectorAll('.task-bar');
+      bars.forEach((bar, index) => {
+        const originalWidth = bar.getAttribute('width');
+        bar.setAttribute('width', '0');
+        setTimeout(() => {
+          bar.style.transition = 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+          bar.setAttribute('width', originalWidth);
+        }, index * 100 + 200);
+      });
+    });
+  </script>
+</body>
+</html>

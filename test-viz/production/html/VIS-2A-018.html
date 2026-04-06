@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent通信拓扑图 | Agent Communication Topology</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0c10;
+  --bg-panel: #11141c;
+  --accent-gold: #f0c674;
+  --accent-blue: #5c9dff;
+  --accent-green: #68d391;
+  --accent-purple: #b794f6;
+  --text-primary: #e8ecf1;
+  --text-secondary: #8b95a5;
+  --line-down: #5c9dff;
+  --line-up: #68d391;
+  --line-peer: #b794f6;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+}
+.bg-mesh {
+  position: fixed;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 20% 30%, rgba(92,157,255,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(183,148,246,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(240,198,116,0.03) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+.noise {
+  position: fixed;
+  inset: 0;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+header {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 2.5rem 1rem 1.5rem;
+}
+header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #fff 0%, var(--text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+header p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 0.3rem;
+  letter-spacing: 0.05em;
+}
+.container {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 1100px;
+  padding: 0 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.svg-wrapper {
+  width: 100%;
+  background: var(--bg-panel);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 
+    0 24px 64px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+}
+svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.node {
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.node:hover { transform: scale(1.05); }
+.node-circle {
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+}
+.node-label {
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--text-primary);
+  text-anchor: middle;
+  pointer-events: none;
+}
+.node-sub {
+  font-size: 10px;
+  fill: var(--text-secondary);
+  text-anchor: middle;
+  pointer-events: none;
+}
+.link {
+  fill: none;
+  stroke-width: 2.5;
+  transition: opacity 0.3s, stroke-width 0.3s;
+  cursor: pointer;
+}
+.link.dim { opacity: 0.12; }
+.link.highlight { stroke-width: 4; opacity: 1; filter: drop-shadow(0 0 6px currentColor); }
+.link-down { stroke: var(--line-down); }
+.link-up { stroke: var(--line-up); stroke-dasharray: 8,6; }
+.link-peer { stroke: var(--line-peer); stroke-dasharray: 4,4; }
+.arrow-marker path {
+  stroke: none;
+}
+.particle {
+  fill: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+.tooltip {
+  position: absolute;
+  background: rgba(17,20,28,0.96);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 0.9rem 1.1rem;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  max-width: 280px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+  line-height: 1.5;
+}
+.tooltip h4 { font-size: 0.85rem; margin-bottom: 0.35rem; color: var(--accent-gold); }
+.tooltip .meta { color: var(--text-secondary); font-size: 0.75rem; margin-top: 0.4rem; }
+.legend {
+  position: absolute;
+  bottom: 2rem;
+  right: 2rem;
+  background: rgba(17,20,28,0.92);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  font-size: 0.8rem;
+  backdrop-filter: blur(10px);
+}
+.legend-item { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.6rem; }
+.legend-item:last-child { margin-bottom: 0; }
+.legend-line { width: 28px; height: 3px; border-radius: 2px; position: relative; }
+.legend-line.down { background: var(--line-down); }
+.legend-line.up { background: repeating-linear-gradient(90deg, var(--line-up), var(--line-up) 5px, transparent 5px, transparent 9px); height: 3px; }
+.legend-line.peer { background: repeating-linear-gradient(90deg, var(--line-peer), var(--line-peer) 3px, transparent 3px, transparent 6px); height: 3px; }
+.legend-text { color: var(--text-secondary); font-size: 0.75rem; }
+.info-panel {
+  width: 100%;
+  max-width: 800px;
+  margin-top: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.info-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+}
+.info-card h3 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+}
+.info-card p {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.info-card .highlight { color: var(--accent-gold); font-weight: 600; }
+.info-card .blue { color: var(--accent-blue); }
+.info-card .green { color: var(--accent-green); }
+.info-card .purple { color: var(--accent-purple); }
+.status-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-left: 0.4rem;
+}
+.status-reliable { background: rgba(104,211,145,0.12); color: var(--accent-green); }
+.status-eventual { background: rgba(183,148,246,0.12); color: var(--accent-purple); }
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="noise"></div>
+<header>
+  <h1>Agent 通信拓扑图</h1>
+  <p>Agent Communication Topology · VIS-2A-018</p>
+</header>
+<div class="container">
+  <div class="svg-wrapper" style="position: relative;">
+    <svg viewBox="0 0 900 520" id="topologySvg">
+      <defs>
+        <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#f6d365"/>
+          <stop offset="100%" stop-color="#d4a854"/>
+        </linearGradient>
+        <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#6cb2ff"/>
+          <stop offset="100%" stop-color="#3a7bd5"/>
+        </linearGradient>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        <marker id="arrow-down" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="var(--line-down)"/>
+        </marker>
+        <marker id="arrow-up" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="var(--line-up)"/>
+        </marker>
+        <marker id="arrow-peer-start" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M9,0 L9,6 L0,3 z" fill="var(--line-peer)"/>
+        </marker>
+        <marker id="arrow-peer-end" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="var(--line-peer)"/>
+        </marker>
+      </defs>
+      
+      <g class="links">
+        <path class="link link-down" id="ld1" d="M450,110 Q360,180 255,240" marker-end="url(#arrow-down)"
+          data-type="down" data-title="向下通信 · Downward" data-desc="父Agent → 子Agent A<br>通过 <b>SendMessage</b> 工具发送后续指令<br>同步调用，可靠交付" data-reliability="可靠（直接调用）"></path>
+        <path class="link link-down" id="ld2" d="M450,110 Q420,190 375,260" marker-end="url(#arrow-down)"
+          data-type="down" data-title="向下通信 · Downward" data-desc="父Agent → 子Agent B<br>通过 <b>SendMessage</b> 工具发送后续指令<br>同步调用，可靠交付" data-reliability="可靠（直接调用）"></path>
+        <path class="link link-down" id="ld3" d="M450,110 Q480,190 525,260" marker-end="url(#arrow-down)"
+          data-type="down" data-title="向下通信 · Downward" data-desc="父Agent → 子Agent C<br>通过 <b>SendMessage</b> 工具发送后续指令<br>同步调用，可靠交付" data-reliability="可靠（直接调用）"></path>
+        <path class="link link-down" id="ld4" d="M450,110 Q540,180 645,240" marker-end="url(#arrow-down)"
+          data-type="down" data-title="向下通信 · Downward" data-desc="父Agent → 子Agent D<br>通过 <b>SendMessage</b> 工具发送后续指令<br>同步调用，可靠交付" data-reliability="可靠（直接调用）"></path>
+        
+        <path class="link link-up" id="lu1" d="M255,240 Q360,180 450,110" marker-end="url(#arrow-up)"
+          data-type="up" data-title="向上通信 · Upward" data-desc="子Agent A → 父Agent<br>通过 <b>Task Notification XML</b> 格式注入消息历史<br>示例: &lt;task-notification task-id=&quot;...&quot; status=&quot;completed&quot;&gt;" data-reliability="可靠（XML注入）"></path>
+        <path class="link link-up" id="lu2" d="M375,260 Q420,190 450,110" marker-end="url(#arrow-up)"
+          data-type="up" data-title="向上通信 · Upward" data-desc="子Agent B → 父Agent<br>通过 <b>Task Notification XML</b> 格式注入消息历史" data-reliability="可靠（XML注入）"></path>
+        <path class="link link-up" id="lu3" d="M525,260 Q480,190 450,110" marker-end="url(#arrow-up)"
+          data-type="up" data-title="向上通信 · Upward" data-desc="子Agent C → 父Agent<br>通过 <b>Task Notification XML</b> 格式注入消息历史" data-reliability="可靠（XML注入）"></path>
+        <path class="link link-up" id="lu4" d="M645,240 Q540,180 450,110" marker-end="url(#arrow-up)"
+          data-type="up" data-title="向上通信 · Upward" data-desc="子Agent D → 父Agent<br>通过 <b>Task Notification XML</b> 格式注入消息历史" data-reliability="可靠（XML注入）"></path>
+        
+        <path class="link link-peer" id="lp1" d="M255,240 Q315,300 375,260" marker-start="url(#arrow-peer-start)" marker-end="url(#arrow-peer-end)"
+          data-type="peer" data-title="平行通信 · Peer-to-Peer" data-desc="子Agent A ↔ 子Agent B<br>通过共享 <b>Scratchpad</b> 文件 (tengu_scratch)<br>所有Agent都可读写" data-reliability="最终一致（无锁）"></path>
+        <path class="link link-peer" id="lp2" d="M375,260 L525,260" marker-start="url(#arrow-peer-start)" marker-end="url(#arrow-peer-end)"
+          data-type="peer" data-title="平行通信 · Peer-to-Peer" data-desc="子Agent B ↔ 子Agent C<br>通过共享 <b>Scratchpad</b> 文件 (tengu_scratch)<br>所有Agent都可读写" data-reliability="最终一致（无锁）"></path>
+        <path class="link link-peer" id="lp3" d="M525,260 Q585,300 645,240" marker-start="url(#arrow-peer-start)" marker-end="url(#arrow-peer-end)"
+          data-type="peer" data-title="平行通信 · Peer-to-Peer" data-desc="子Agent C ↔ 子Agent D<br>通过共享 <b>Scratchpad</b> 文件 (tengu_scratch)<br>所有Agent都可读写" data-reliability="最终一致（无锁）"></path>
+        <path class="link link-peer" id="lp4" d="M255,240 Q450,340 645,240" marker-start="url(#arrow-peer-start)" marker-end="url(#arrow-peer-end)"
+          data-type="peer" data-title="平行通信 · Peer-to-Peer" data-desc="子Agent A ↔ 子Agent D<br>通过共享 <b>Scratchpad</b> 文件 (tengu_scratch)<br>所有Agent都可读写" data-reliability="最终一致（无锁）"></path>
+        <path class="link link-peer" id="lp5" d="M255,240 Q375,320 525,260" marker-start="url(#arrow-peer-start)" marker-end="url(#arrow-peer-end)"
+          data-type="peer" data-title="平行通信 · Peer-to-Peer" data-desc="子Agent A ↔ 子Agent C<br>通过共享 <b>Scratchpad</b> 文件" data-reliability="最终一致（无锁）"></path>
+        <path class="link link-peer" id="lp6" d="M375,260 Q510,320 645,240" marker-start="url(#arrow-peer-start)" marker-end="url(#arrow-peer-end)"
+          data-type="peer" data-title="平行通信 · Peer-to-Peer" data-desc="子Agent B ↔ 子Agent D<br>通过共享 <b>Scratchpad</b> 文件" data-reliability="最终一致（无锁）"></path>
+        
+        <path class="link link-peer" id="ls1" d="M450,340 L375,260" marker-end="url(#arrow-peer-end)"
+          data-type="peer" data-title="平行通信 · Peer-to-Peer" data-desc="Scratchpad ↔ 子Agent B" data-reliability="最终一致（无锁）"></path>
+        <path class="link link-peer" id="ls2" d="M450,340 L525,260" marker-end="url(#arrow-peer-end)"
+          data-type="peer" data-title="平行通信 · Peer-to-Peer" data-desc="Scratchpad ↔ 子Agent C" data-reliability="最终一致（无锁）"></path>
+        <path class="link link-peer" id="ls3" d="M450,340 Q400,300 255,240" marker-end="url(#arrow-peer-end)"
+          data-type="peer" data-title="平行通信 · Peer-to-Peer" data-desc="Scratchpad ↔ 子Agent A" data-reliability="最终一致（无锁）"></path>
+        <path class="link link-peer" id="ls4" d="M450,340 Q500,300 645,240" marker-end="url(#arrow-peer-end)"
+          data-type="peer" data-title="平行通信 · Peer-to-Peer" data-desc="Scratchpad ↔ 子Agent D" data-reliability="最终一致（无锁）"></path>
+      </g>
+      
+      <g class="particles"></g>
+      
+      <g class="node" id="node-main" transform="translate(450,90)" data-id="main">
+        <circle r="36" fill="url(#goldGrad)" class="node-circle" opacity="0.15"/>
+        <circle r="28" fill="url(#goldGrad)" class="node-circle" filter="url(#glow)"/>
+        <text y="4" text-anchor="middle" fill="#0a0c10" font-size="11" font-weight="700">MAIN</text>
+      </g>
+      <text x="450" y="145" class="node-label">主 Agent</text>
+      <text x="450" y="158" class="node-sub">Parent / Orchestrator</text>
+      
+      <g class="node" id="node-a" transform="translate(255,240)" data-id="a">
+        <circle r="24" fill="url(#blueGrad)" class="node-circle" filter="url(#glow)"/>
+        <text y="3" text-anchor="middle" fill="#0a0c10" font-size="10" font-weight="700">A</text>
+      </g>
+      <text x="255" y="280" class="node-label">子 Agent A</text>
+      <text x="255" y="293" class="node-sub">Sub-Agent</text>
+      
+      <g class="node" id="node-b" transform="translate(375,260)" data-id="b">
+        <circle r="24" fill="url(#blueGrad)" class="node-circle" filter="url(#glow)"/>
+        <text y="3" text-anchor="middle" fill="#0a0c10" font-size="10" font-weight="700">B</text>
+      </g>
+      <text x="375" y="300" class="node-label">子 Agent B</text>
+      <text x="375" y="313" class="node-sub">Sub-Agent</text>
+      
+      <g class="node" id="node-c" transform="translate(525,260)" data-id="c">
+        <circle r="24" fill="url(#blueGrad)" class="node-circle" filter="url(#glow)"/>
+        <text y="3" text-anchor="middle" fill="#0a0c10" font-size="10" font-weight="700">C</text>
+      </g>
+      <text x="525" y="300" class="node-label">子 Agent C</text>
+      <text x="525" y="313" class="node-sub">Sub-Agent</text>
+      
+      <g class="node" id="node-d" transform="translate(645,240)" data-id="d">
+        <circle r="24" fill="url(#blueGrad)" class="node-circle" filter="url(#glow)"/>
+        <text y="3" text-anchor="middle" fill="#0a0c10" font-size="10" font-weight="700">D</text>
+      </g>
+      <text x="645" y="280" class="node-label">子 Agent D</text>
+      <text x="645" y="293" class="node-sub">Sub-Agent</text>
+      
+      <g class="node" id="node-scratch" transform="translate(450,340)" data-id="scratch">
+        <rect x="-30" y="-22" width="60" height="44" rx="10" fill="rgba(183,148,246,0.12)" stroke="var(--line-peer)" stroke-width="1.5"/>
+        <path d="M-16,-8 L-6,-8 L-2,-14 L10,-14 L10,14 L-16,14 Z" fill="none" stroke="var(--line-peer)" stroke-width="1.8" stroke-linejoin="round"/>
+        <line x1="-12" y1="2" x2="6" y2="2" stroke="var(--line-peer)" stroke-width="1.5"/>
+        <line x1="-12" y1="7" x2="6" y2="7" stroke="var(--line-peer)" stroke-width="1.5"/>
+      </g>
+      <text x="450" y="380" class="node-label" style="fill: var(--line-peer);">Scratchpad</text>
+      <text x="450" y="393" class="node-sub">Shared State · tengu_scratch</text>
+    </svg>
+    
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-line down"></div>
+        <div class="legend-text">向下 父→子 <span class="status-badge status-reliable">可靠</span></div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line up"></div>
+        <div class="legend-text">向上 子→父 <span class="status-badge status-reliable">可靠</span></div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line peer"></div>
+        <div class="legend-text">平行 子↔子 <span class="status-badge status-eventual">最终一致</span></div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="info-panel">
+    <div class="info-card">
+      <h3>通信可靠性</h3>
+      <p><span class="blue">向下</span> = 可靠（直接调用）<br><span class="green">向上</span> = 可靠（XML注入）<br><span class="purple">平行</span> = 最终一致（无锁）</p>
+    </div>
+    <div class="info-card">
+      <h3>自动后台化</h3>
+      <p>getAutoBackgroundMs() = <span class="highlight">120,000ms</span><br>超过 2 分钟的长任务将自动转为后台运行，避免阻塞父Agent。</p>
+    </div>
+    <div class="info-card">
+      <h3>终止方式</h3>
+      <p>自然完成 / 父Agent调用 <b>TaskStop</b> / 达到 max_turns / 用户按下 Ctrl+C</p>
+    </div>
+    <div class="info-card">
+      <h3>Scratchpad 风险提示</h3>
+      <p>文件读写<b>无锁机制</b>，并发写入时存在极低概率的数据丢失风险。作为Agent间唯一的共享状态，需谨慎使用。</p>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <h4></h4>
+  <div class="desc"></div>
+  <div class="meta"></div>
+</div>
+
+<script>
+const svg = document.getElementById('topologySvg');
+const tooltip = document.getElementById('tooltip');
+const links = document.querySelectorAll('.link');
+const nodes = document.querySelectorAll('.node');
+let activeNode = null;
+
+function showTooltip(e, title, desc, reliability) {
+  tooltip.querySelector('h4').textContent = title;
+  tooltip.querySelector('.desc').innerHTML = desc;
+  tooltip.querySelector('.meta').textContent = '可靠性: ' + reliability;
+  tooltip.style.opacity = '1';
+  moveTooltip(e);
+}
+function moveTooltip(e) {
+  const rect = document.querySelector('.svg-wrapper').getBoundingClientRect();
+  let x = e.clientX - rect.left + 16;
+  let y = e.clientY - rect.top + 16;
+  if (x + 260 > rect.width) x = e.clientX - rect.left - 270;
+  if (y + 120 > rect.height) y = e.clientY - rect.top - 120;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+function hideTooltip() {
+  tooltip.style.opacity = '0';
+}
+
+links.forEach(link => {
+  link.addEventListener('mouseenter', e => {
+    const d = link.dataset;
+    showTooltip(e, d.title, d.desc, d.reliability);
+    link.classList.add('highlight');
+  });
+  link.addEventListener('mousemove', moveTooltip);
+  link.addEventListener('mouseleave', () => {
+    hideTooltip();
+    if (!activeNode) link.classList.remove('highlight');
+    else if (!isLinkConnected(link, activeNode.dataset.id)) link.classList.remove('highlight');
+  });
+});
+
+function isLinkConnected(link, nodeId) {
+  const id = link.id;
+  const map = {
+    main: ['ld1','ld2','ld3','ld4','lu1','lu2','lu3','lu4'],
+    a: ['ld1','lu1','lp1','lp4','lp5','ls3'],
+    b: ['ld2','lu2','lp1','lp2','lp6','ls1'],
+    c: ['ld3','lu3','lp2','lp3','lp5','ls2'],
+    d: ['ld4','lu4','lp3','lp4','lp6','ls4'],
+    scratch: ['ls1','ls2','ls3','ls4']
+  };
+  return map[nodeId] && map[nodeId].includes(id);
+}
+
+nodes.forEach(node => {
+  node.addEventListener('click', () => {
+    const id = node.dataset.id;
+    if (activeNode === node) {
+      activeNode = null;
+      links.forEach(l => l.classList.remove('dim','highlight'));
+      nodes.forEach(n => n.style.opacity = '1');
+    } else {
+      activeNode = node;
+      links.forEach(l => {
+        if (isLinkConnected(l, id)) {
+          l.classList.add('highlight');
+          l.classList.remove('dim');
+        } else {
+          l.classList.add('dim');
+          l.classList.remove('highlight');
+        }
+      });
+      nodes.forEach(n => {
+        if (n === node || (id !== 'scratch' && n.dataset.id !== 'scratch' && id !== 'main' && n.dataset.id !== 'main')) {
+          n.style.opacity = '1';
+        } else if (id === 'main') {
+          n.style.opacity = n.dataset.id === 'scratch' ? '0.35' : '1';
+        } else if (id === 'scratch') {
+          n.style.opacity = '1';
+        } else {
+          n.style.opacity = '0.35';
+        }
+      });
+      if (id !== 'main' && id !== 'scratch') {
+        document.getElementById('node-main').style.opacity = '1';
+        document.getElementById('node-scratch').style.opacity = '1';
+      }
+    }
+  });
+});
+
+const particleGroup = svg.querySelector('.particles');
+function createParticle(path, color) {
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  p.setAttribute('r', '3');
+  p.setAttribute('fill', color);
+  p.setAttribute('class', 'particle');
+  particleGroup.appendChild(p);
+  const len = path.getTotalLength();
+  let start = Math.random() * len;
+  let progress = 0;
+  const speed = 1.5 + Math.random();
+  function animate() {
+    progress += speed;
+    const current = (start + progress) % len;
+    const pt = path.getPointAtLength(current);
+    const opacity = Math.sin((current / len) * Math.PI);
+    p.setAttribute('cx', pt.x);
+    p.setAttribute('cy', pt.y);
+    p.setAttribute('opacity', opacity.toFixed(2));
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+const downPaths = Array.from(links).filter(l => l.classList.contains('link-down'));
+const upPaths = Array.from(links).filter(l => l.classList.contains('link-up'));
+const peerPaths = Array.from(links).filter(l => l.classList.contains('link-peer'));
+
+downPaths.forEach(path => {
+  for (let i = 0; i < 3; i++) setTimeout(() => createParticle(path, '#5c9dff'), i * 400);
+});
+upPaths.forEach(path => {
+  for (let i = 0; i < 2; i++) setTimeout(() => createParticle(path, '#68d391'), i * 500);
+});
+peerPaths.forEach(path => {
+  for (let i = 0; i < 2; i++) setTimeout(() => createParticle(path, '#b794f6'), i * 600);
+});
+
+window.addEventListener('click', e => {
+  if (!e.target.closest('.node')) {
+    activeNode = null;
+    links.forEach(l => l.classList.remove('dim','highlight'));
+    nodes.forEach(n => n.style.opacity = '1');
+  }
+});
+</script>
+</body>
+</html>

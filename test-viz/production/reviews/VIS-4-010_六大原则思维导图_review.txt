@@ -1,0 +1,45 @@
+总分: 11/20
+
+**布局: 2/5** — 右侧 practice 节点超出 viewBox(1000)，relation labels 与交叉线位置不符，且对角 relation 线与原则节点无语义对应
+
+**信息: 3/5** — 层级结构清晰(中心→原则→实践)，但 relation labels(性能/安全/可维护)语义模糊，与六原则无法对应
+
+**美学: 3/5** — 配色方案成熟，动画流畅，但六色选择缺乏统一语义逻辑，VIS-4-XXX 标签干扰主视觉
+
+**完整: 3/5** — HTML/JS 语法正确，可直接运行，但 SVG viewBox 边界溢出
+
+---
+
+**缺陷:**
+
+1. **viewBox 溢出** — Token节约和组合优于继承的右侧 practice rect 的 x=720~960 超出 1000px viewBox，右侧内容会被裁剪
+
+2. **Relation 线位置错误** — 对角 relation 线(673,327→327,673等)穿过视图四角而非连接六原则，label 在 y=480 居中，与线的实际交叉点(y=500对角线交点)不符
+
+3. **Transform-origin 冲突** — `.principle-circle` 已通过 cx/cy 定位，又在 `:hover` 中设置 `transform-origin: center` 并使用 `transform: scale()`，会导致缩放基点偏移
+
+4. **tooltip-desc 缺失** — JS 引用 `tooltip.querySelector('.tooltip-desc')` 但 HTML 中无此 class 元素，hover 时会静默失败
+
+5. **VIS 标签冗余** — VIS-4-001~007 标签散落各处，占用空间且打断主信息流
+
+6. **六色语义不一致** — 蓝/绿/橙/红/紫/青六色选择缺乏解释，每原则随机一色
+
+7. **Parallax 副作用** — 鼠标 parallax 会让 SVG translate 超出容器，造成边缘内容被裁剪
+
+---
+
+**修改建议:**
+
+1. 扩大 viewBox 至 `1200 1000` 或调整右侧 practice x 坐标至 `x=620~740` 范围内
+
+2. 移除 relation 对角线，或改为连接有语义关联的原则对(如并行↔Token节约)，label 置于连线中点
+
+3. 将 `transform-origin` 应用在 `:hover .principle-group` 而非 `.principle-circle`，或改用 `translate + scale` 而非直接 scale
+
+4. HTML 中添加 `<div class="tooltip-desc"></div>` 或合并到 title
+
+5. 删除所有 VIS-4-XXX 标签，或移至统一图例区域
+
+6. 建立颜色语义规则(如蓝=性能相关，绿=成本相关)并在注释中说明
+
+7. 给 `.container` 添加 `overflow: hidden` 或限制 parallax 幅度在 ±5px

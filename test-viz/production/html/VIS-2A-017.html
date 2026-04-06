@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coordinator 四阶段工作流时序图 | Coordinator Four-Phase Workflow</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0b0f;
+  --bg-gradient-1:#0d1321;
+  --bg-gradient-2:#1a1f2e;
+  --coordinator:#f59e0b;
+  --coordinator-glow:rgba(245,158,11,0.25);
+  --worker-a:#3b82f6;
+  --worker-b:#0ea5e9;
+  --worker-c:#06b6d4;
+  --phase-1:#1e3a5f;
+  --phase-2:#3b0764;
+  --phase-3:#134e4a;
+  --phase-4:#14532d;
+  --text-primary:#f8fafc;
+  --text-secondary:#94a3b8;
+  --text-muted:#64748b;
+  --line:#334155;
+  --accent:#e2e8f0;
+  --callout-bg:#1e293b;
+}
+*{
+  margin:0;padding:0;box-sizing:border-box;
+}
+html,body{
+  width:100%;min-height:100vh;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%,rgba(59,130,246,0.15),transparent),
+    radial-gradient(ellipse 60% 40% at 80% 100%,rgba(245,158,11,0.08),transparent),
+    linear-gradient(180deg,var(--bg-gradient-1) 0%,var(--bg) 40%,var(--bg-gradient-2) 100%);
+  color:var(--text-primary);
+  font-family:"Noto Sans SC","JetBrains Mono",system-ui,sans-serif;
+  overflow-x:auto;
+}
+.container{
+  width:100%;min-width:1200px;max-width:1600px;
+  margin:0 auto;padding:48px 64px 80px;
+}
+.header{
+  margin-bottom:40px;text-align:center;
+}
+.header h1{
+  font-size:32px;font-weight:700;
+  letter-spacing:-0.02em;
+  background:linear-gradient(135deg,var(--text-primary) 0%,var(--coordinator) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:8px;
+}
+.header p{
+  font-size:14px;color:var(--text-secondary);
+  font-family:"JetBrains Mono",monospace;
+  letter-spacing:0.05em;
+}
+.diagram-wrapper{
+  position:relative;
+  background:rgba(15,23,42,0.4);
+  border:1px solid rgba(51,65,85,0.5);
+  border-radius:16px;
+  padding:40px;
+  backdrop-filter:blur(8px);
+  box-shadow:
+    0 25px 50px -12px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+}
+/* Noise texture overlay */
+.diagram-wrapper::before{
+  content:"";
+  position:absolute;inset:0;border-radius:16px;
+  background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events:none;
+}
+svg{
+  width:100%;height:auto;display:block;
+}
+.lifeline-label{
+  font-size:13px;font-weight:700;
+  text-anchor:middle;dominant-baseline:central;
+}
+.lifeline-label-sub{
+  font-size:10px;font-weight:500;
+  text-anchor:middle;dominant-baseline:central;
+  fill:var(--text-secondary);
+  font-family:"JetBrains Mono",monospace;
+}
+.phase-label{
+  font-size:18px;font-weight:700;
+  fill:var(--text-primary);
+  opacity:0.1;
+  text-anchor:middle;
+  letter-spacing:0.15em;
+  pointer-events:none;
+}
+.phase-label-sub{
+  font-size:11px;font-weight:500;
+  fill:var(--text-secondary);
+  opacity:0.15;
+  text-anchor:middle;
+  font-family:"JetBrains Mono",monospace;
+  pointer-events:none;
+}
+.message-text{
+  font-size:11px;font-weight:500;
+  font-family:"Noto Sans SC","JetBrains Mono",sans-serif;
+  fill:var(--text-primary);
+}
+.message-text-en{
+  font-size:9px;font-weight:400;
+  font-family:"JetBrains Mono",monospace;
+  fill:var(--text-secondary);
+}
+.arrow{
+  stroke-width:1.5;
+  fill:none;
+  opacity:0;animation:drawArrow 0.5s ease forwards;
+}
+.arrow-solid{stroke-dasharray:none;}
+.arrow-dashed{stroke-dasharray:5,4;}
+.arrow-marker polygon{
+  stroke:none;
+}
+.actor-box{
+  rx:6;ry:6;
+  filter:drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+}
+.callout-text{
+  font-size:10px;font-weight:500;
+  font-family:"Noto Sans SC",sans-serif;
+  fill:var(--text-primary);
+}
+.callout-text-en{
+  font-size:9px;font-weight:400;
+  font-family:"JetBrains Mono",monospace;
+  fill:var(--text-secondary);
+}
+.continue-badge,.spawn-badge{
+  font-size:9px;font-weight:700;
+  font-family:"JetBrains Mono",monospace;
+  text-anchor:middle;dominant-baseline:central;
+}
+.hover-group{ cursor:pointer; }
+.hover-group:hover .arrow{ stroke-width:2.5; filter:drop-shadow(0 0 4px currentColor); }
+.hover-group:hover .message-text{ fill:#fff; font-weight:700; }
+.hover-group:hover .message-text-en{ fill:#cbd5e1; }
+.tooltip{
+  position:absolute;
+  background:rgba(15,23,42,0.95);
+  border:1px solid rgba(100,116,139,0.5);
+  border-radius:8px;
+  padding:12px 16px;
+  font-size:12px;
+  color:var(--text-primary);
+  max-width:280px;
+  pointer-events:none;
+  opacity:0;
+  transform:translateY(4px);
+  transition:all 0.2s ease;
+  box-shadow:0 10px 30px rgba(0,0,0,0.4);
+  z-index:100;
+}
+.tooltip.visible{ opacity:1; transform:translateY(0); }
+.tooltip-title{ font-weight:700;margin-bottom:4px;color:var(--coordinator); }
+.tooltip-desc{ color:var(--text-secondary);line-height:1.5; }
+@keyframes drawArrow{ to{ opacity:1; } }
+@keyframes pulseLine{
+  0%,100%{ stroke-opacity:0.4; }
+  50%{ stroke-opacity:0.8; }
+}
+.active-region{ animation:pulseLine 2s ease-in-out infinite; }
+/* Step animation delays assigned inline via CSS custom properties handled in JS */
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Coordinator 四阶段工作流</h1>
+    <p>Coordinator Four-Phase Workflow Sequence Diagram · VIS-2A-017</p>
+  </div>
+  <div class="diagram-wrapper">
+    <svg viewBox="0 0 1120 780" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <marker id="arrow-coordinator" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0,0 10,4 0,8" fill="#f59e0b"/></marker>
+        <marker id="arrow-worker-a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0,0 10,4 0,8" fill="#3b82f6"/></marker>
+        <marker id="arrow-worker-b" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0,0 10,4 0,8" fill="#0ea5e9"/></marker>
+        <marker id="arrow-worker-c" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0,0 10,4 0,8" fill="#06b6d4"/></marker>
+        <marker id="arrow-user" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><polygon points="0,0 10,4 0,8" fill="#94a3b8"/></marker>
+        <marker id="arrow-reply" markerWidth="10" markerHeight="8" refX="1" refY="4" orient="auto"><polygon points="10,0 0,4 10,8" fill="#94a3b8"/></marker>
+        <linearGradient id="grad-user" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#475569"/><stop offset="100%" stop-color="#334155"/></linearGradient>
+        <linearGradient id="grad-coordinator" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#d97706"/></linearGradient>
+        <linearGradient id="grad-worker-a" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#2563eb"/></linearGradient>
+        <linearGradient id="grad-worker-b" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#0284c7"/></linearGradient>
+        <linearGradient id="grad-worker-c" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#0891b2"/></linearGradient>
+      </defs>
+      
+      <!-- Phase Background Bands -->
+      <rect x="80" y="110" width="960" height="130" fill="var(--phase-1)" opacity="0.15" rx="4"/>
+      <rect x="80" y="250" width="960" height="140" fill="var(--phase-2)" opacity="0.12" rx="4"/>
+      <rect x="80" y="400" width="960" height="180" fill="var(--phase-3)" opacity="0.12" rx="4"/>
+      <rect x="80" y="590" width="960" height="120" fill="var(--phase-4)" opacity="0.15" rx="4"/>
+      
+      <text x="560" y="170" class="phase-label">阶段 1 · 分析</text>
+      <text x="560" y="190" class="phase-label-sub">PHASE 1 · ANALYZE</text>
+      <text x="560" y="315" class="phase-label">阶段 2 · 调度</text>
+      <text x="560" y="335" class="phase-label-sub">PHASE 2 · DISPATCH</text>
+      <text x="560" y="485" class="phase-label">阶段 3 · 监控</text>
+      <text x="560" y="505" class="phase-label-sub">PHASE 3 · MONITOR</text>
+      <text x="560" y="645" class="phase-label">阶段 4 · 综合</text>
+      <text x="560" y="665" class="phase-label-sub">PHASE 4 · SYNTHESIZE</text>
+      
+      <!-- Lifelines -->
+      <!-- User -->
+      <rect x="130" y="55" width="80" height="36" fill="url(#grad-user)" class="actor-box" rx="6"/>
+      <text x="170" y="73" class="lifeline-label" fill="var(--text-primary)">用户</text>
+      <text x="170" y="85" class="lifeline-label-sub">User</text>
+      <line x1="170" y1="91" x2="170" y2="720" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="4,4"/>
+      
+      <!-- Coordinator (Double Line) -->
+      <rect x="485" y="50" width="130" height="46" fill="url(#grad-coordinator)" class="actor-box" rx="6"/>
+      <text x="550" y="73" class="lifeline-label" fill="#fff">Coordinator</text>
+      <text x="550" y="88" class="lifeline-label-sub" fill="rgba(255,255,255,0.8)">Manager · 370-line Role</text>
+      <line x1="545" y1="96" x2="545" y2="720" stroke="var(--coordinator)" stroke-width="2.5"/>
+      <line x1="555" y1="96" x2="555" y2="720" stroke="var(--coordinator)" stroke-width="2.5"/>
+      
+      <!-- Worker A -->
+      <rect x="760" y="55" width="80" height="36" fill="url(#grad-worker-a)" class="actor-box" rx="6"/>
+      <text x="800" y="73" class="lifeline-label" fill="#fff">Worker A</text>
+      <text x="800" y="85" class="lifeline-label-sub" fill="rgba(255,255,255,0.8)">Research</text>
+      <line x1="800" y1="91" x2="800" y2="720" stroke="var(--worker-a)" stroke-width="1.5"/>
+      
+      <!-- Worker B -->
+      <rect x="870" y="55" width="80" height="36" fill="url(#grad-worker-b)" class="actor-box" rx="6"/>
+      <text x="910" y="73" class="lifeline-label" fill="#fff">Worker B</text>
+      <text x="910" y="85" class="lifeline-label-sub" fill="rgba(255,255,255,0.8)">Code</text>
+      <line x1="910" y1="91" x2="910" y2="720" stroke="var(--worker-b)" stroke-width="1.5"/>
+      
+      <!-- Worker C -->
+      <rect x="980" y="55" width="80" height="36" fill="url(#grad-worker-c)" class="actor-box" rx="6"/>
+      <text x="1020" y="73" class="lifeline-label" fill="#fff">Worker C</text>
+      <text x="1020" y="85" class="lifeline-label-sub" fill="rgba(255,255,255,0.8)">Test</text>
+      <line x1="1020" y1="91" x2="1020" y2="720" stroke="var(--worker-c)" stroke-width="1.5"/>
+      
+      <!-- Scratchpad -->
+      <rect x="735" y="635" width="340" height="70" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="6,4" rx="8" opacity="0.6"/>
+      <text x="905" y="658" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text-secondary)">Scratchpad</text>
+      <text x="905" y="674" text-anchor="middle" font-size="10" font-family="JetBrains Mono" fill="var(--text-muted)">Shared Context / Progress / Findings</text>
+      <text x="905" y="688" text-anchor="middle" font-size="10" font-family="JetBrains Mono" fill="var(--text-muted)">Coordinator & Workers Whiteboard</text>
+      
+      <!-- Phase 1: Analyze -->
+      <g class="hover-group msg-step" data-step="1" data-tip="用户向Coordinator提交原始任务请求。Coordinator开始分析需求。">
+        <line x1="170" y1="125" x2="545" y2="125" stroke="#94a3b8" class="arrow arrow-solid" marker-end="url(#arrow-user)" style="animation-delay:0.3s"/>
+        <text x="357" y="118" class="message-text" text-anchor="middle">提交任务</text>
+        <text x="357" y="130" class="message-text-en" text-anchor="middle">Submit Task</text>
+      </g>
+      
+      <g class="hover-group msg-step" data-step="2" data-tip="Coordinator进行需求分析，拆解任务为子任务，确定需要的Worker数量与类型。">
+        <rect x="545" y="140" width="8" height="40" fill="var(--coordinator)" opacity="0.3" rx="2" class="active-region" style="animation-delay:0.6s"/>
+        <text x="565" y="155" class="message-text" text-anchor="start">理解需求 & 分解子任务</text>
+        <text x="565" y="168" class="message-text-en" text-anchor="start">Analyze Requirements & Decompose</text>
+      </g>
+      
+      <!-- Phase 2: Dispatch -->
+      <g class="hover-group msg-step" data-step="3" data-tip="反懒惰委托规则：Coordinator必须自己先理解问题，给出精确指令，不能简单推给Worker。">
+        <rect x="220" y="265" width="300" height="48" fill="var(--callout-bg)" stroke="var(--coordinator)" stroke-width="1" rx="8" opacity="0.9"/>
+        <text x="370" y="285" class="callout-text" text-anchor="middle">"Never write 'based on your findings, fix the bug'"</text>
+        <text x="370" y="301" class="callout-text" text-anchor="middle">反懒惰委托：Coordinator必须自己理解，再给精确指令</text>
+      </g>
+      
+      <g class="hover-group msg-step" data-step="4" data-tip="创建Worker A并分配研究型子任务。属于Spawn操作：全新独立子任务。">
+        <line x1="545" y1="270" x2="800" y2="270" stroke="var(--worker-a)" class="arrow arrow-solid" marker-end="url(#arrow-worker-a)" style="animation-delay:1.2s"/>
+        <text x="672" y="263" class="message-text" text-anchor="middle">分配子任务 → Worker A</text>
+        <text x="672" y="275" class="message-text-en" text-anchor="middle">Spawn Agent → Research Task</text>
+        <rect x="660" y="280" width="44" height="14" fill="var(--worker-a)" rx="3" opacity="0.2"/>
+        <text x="682" y="291" class="spawn-badge" fill="var(--worker-a)">SPAWN</text>
+      </g>
+      
+      <g class="hover-group msg-step" data-step="5" data-tip="创建Worker B并分配代码型子任务。多个独立任务并行Spawn。">
+        <line x1="545" y1="310" x2="910" y2="310" stroke="var(--worker-b)" class="arrow arrow-solid" marker-end="url(#arrow-worker-b)" style="animation-delay:1.5s"/>
+        <text x="727" y="303" class="message-text" text-anchor="middle">分配子任务 → Worker B</text>
+        <text x="727" y="315" class="message-text-en" text-anchor="middle">Spawn Agent → Code Task</text>
+        <rect x="715" y="320" width="44" height="14" fill="var(--worker-b)" rx="3" opacity="0.2"/>
+        <text x="737" y="331" class="spawn-badge" fill="var(--worker-b)">SPAWN</text>
+      </g>
+      
+      <g class="hover-group msg-step" data-step="6" data-tip="创建Worker C并分配测试型子任务。三个Worker并行执行。">
+        <line x1="545" y1="350" x2="1020" y2="350" stroke="var(--worker-c)" class="arrow arrow-solid" marker-end="url(#arrow-worker-c)" style="animation-delay:1.8s"/>
+        <text x="782" y="343" class="message-text" text-anchor="middle">分配子任务 → Worker C</text>
+        <text x="782" y="355" class="message-text-en" text-anchor="middle">Spawn Agent → Test Task</text>
+        <rect x="770" y="360" width="44" height="14" fill="var(--worker-c)" rx="3" opacity="0.2"/>
+        <text x="792" y="371" class="spawn-badge" fill="var(--worker-c)">SPAWN</text>
+      </g>
+      
+      <!-- Phase 3: Monitor -->
+      <g class="hover-group msg-step" data-step="7" data-tip="Worker B通过Task Notification向Coordinator汇报进度或阶段性结果。">
+        <line x1="910" y1="420" x2="555" y2="420" stroke="var(--worker-b)" class="arrow arrow-dashed" marker-end="url(#arrow-reply)" style="animation-delay:2.4s"/>
+        <text x="732" y="413" class="message-text" text-anchor="middle">← 任务通知 (Worker B)</text>
+        <text x="732" y="425" class="message-text-en" text-anchor="middle">Task Notification · Progress Report</text>
+      </g>
+      
+      <g class="hover-group msg-step" data-step="8" data-tip="Coordinator评估Worker B的进度，决定是否需要追加指导。">
+        <rect x="545" y="435" width="8" height="30" fill="var(--coordinator)" opacity="0.3" rx="2" class="active-region" style="animation-delay:2.7s"/>
+        <text x="565" y="450" class="message-text" text-anchor="start">评估进度 & 决策</text>
+        <text x="565" y="463" class="message-text-en" text-anchor="start">Evaluate Progress · Continue vs Spawn</text>
+      </g>
+      
+      <g class="hover-group msg-step" data-step="9" data-tip="基于已有结果继续指导Worker B，使用SendMessage(Continue)。不需要Spawn新Worker。">
+        <line x1="545" y1="475" x2="910" y2="475" stroke="var(--coordinator)" class="arrow arrow-solid" marker-end="url(#arrow-coordinator)" style="animation-delay:3.0s"/>
+        <text x="727" y="468" class="message-text" text-anchor="middle">追加指令 → Worker B</text>
+        <text x="727" y="480" class="message-text-en" text-anchor="middle">SendMessage(Continue) ·追加指导</text>
+        <rect x="715" y="485" width="56" height="14" fill="var(--coordinator)" rx="3" opacity="0.2"/>
+        <text x="743" y="496" class="continue-badge" fill="var(--coordinator)">CONTINUE</text>
+      </g>
+      
+      <g class="hover-group msg-step" data-step="10" data-tip="Worker A完成任务，向Coordinator发送最终通知。">
+        <line x1="800" y1="520" x2="545" y2="520" stroke="var(--worker-a)" class="arrow arrow-dashed" marker-end="url(#arrow-reply)" style="animation-delay:3.6s"/>
+        <text x="672" y="513" class="message-text" text-anchor="middle">← 完成通知 (Worker A)</text>
+        <text x="672" y="525" class="message-text-en" text-anchor="middle">Task Completed · Worker A</text>
+      </g>
+      
+      <g class="hover-group msg-step" data-step="11" data-tip="某个Worker失败后，Coordinator决定Spawn新的Worker进行重试，而非继续失败Worker。">
+        <line x1="545" y1="545" x2="800" y2="545" stroke="var(--worker-a)" class="arrow arrow-solid" marker-end="url(#arrow-worker-a)" style="animation-delay:3.9s"/>
+        <text x="672" y="538" class="message-text" text-anchor="middle">失败重试 → 新 Worker A'</text>
+        <text x="672" y="550" class="message-text-en" text-anchor="middle">Spawn New Agent · Retry</text>
+        <rect x="660" y="555" width="44" height="14" fill="var(--worker-a)" rx="3" opacity="0.2"/>
+        <text x="682" y="566" class="spawn-badge" fill="var(--worker-a)">SPAWN</text>
+      </g>
+      
+      <!-- Phase 4: Synthesize -->
+      <g class="hover-group msg-step" data-step="12" data-tip="所有Worker完成各自任务，Coordinator开始汇总所有结果。">
+        <line x1="800" y1="610" x2="545" y2="610" stroke="var(--worker-a)" class="arrow arrow-dashed" marker-end="url(#arrow-reply)" style="animation-delay:4.5s"/>
+        <line x1="910" y1="620" x2="555" y2="620" stroke="var(--worker-b)" class="arrow arrow-dashed" marker-end="url(#arrow-reply)" style="animation-delay:4.6s"/>
+        <line x1="1020" y1="630" x2="545" y2="630" stroke="var(--worker-c)" class="arrow arrow-dashed" marker-end="url(#arrow-reply)" style="animation-delay:4.7s"/>
+        <text x="565" y="605" class="message-text" text-anchor="start">全部完成 → 汇总结果</text>
+        <text x="565" y="618" class="message-text-en" text-anchor="start">All Completed → Synthesize</text>
+      </g>
+      
+      <g class="hover-group msg-step" data-step="13" data-tip="Coordinator综合所有Worker输出，结合Scratchpad中的共享上下文，生成最终回答返回给用户。">
+        <rect x="545" y="650" width="8" height="40" fill="var(--coordinator)" opacity="0.3" rx="2" class="active-region" style="animation-delay:5.1s"/>
+        <text x="565" y="665" class="message-text" text-anchor="start">综合结果 & 生成最终回答</text>
+        <text x="565" y="678" class="message-text-en" text-anchor="start">Synthesize & Produce Final Answer</text>
+      </g>
+      
+      <g class="hover-group msg-step" data-step="14" data-tip="Coordinator将最终综合结果返回给用户。四阶段工作流结束。">
+        <line x1="545" y1="700" x2="170" y2="700" stroke="#94a3b8" class="arrow arrow-solid" marker-end="url(#arrow-user)" style="animation-delay:5.4s"/>
+        <text x="357" y="693" class="message-text" text-anchor="middle">最终回答</text>
+        <text x="357" y="705" class="message-text-en" text-anchor="middle">Final Answer</text>
+      </g>
+      
+      <!-- Continue vs Spawn Decision tree annotation -->
+      <rect x="90" y="430" width="180" height="120" fill="rgba(30,41,59,0.6)" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4,3" rx="6" opacity="0.8"/>
+      <text x="180" y="455" text-anchor="middle" font-size="11" font-weight="700" fill="var(--coordinator)">Continue vs Spawn</text>
+      <text x="180" y="472" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="var(--text-secondary)">Continue(SendMessage)</text>
+      <text x="180" y="485" text-anchor="middle" font-size="9" fill="var(--text-muted)">上次结果基础上继续</text>
+      <text x="180" y="505" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="var(--text-secondary)">Spawn(Agent)</text>
+      <text x="180" y="518" text-anchor="middle" font-size="9" fill="var(--text-muted)">全新独立子任务</text>
+      <text x="180" y="535" text-anchor="middle" font-size="9" font-family="JetBrains Mono" fill="var(--text-secondary)">Spawn × N</text>
+      <text x="180" y="548" text-anchor="middle" font-size="9" fill="var(--text-muted)">多个独立任务</text>
+    </svg>
+    <div id="tooltip" class="tooltip"><div class="tooltip-title"></div><div class="tooltip-desc"></div></div>
+  </div>
+</div>
+<script>
+  (function(){
+    const tooltip = document.getElementById('tooltip');
+    const wrapper = document.querySelector('.diagram-wrapper');
+    document.querySelectorAll('.hover-group').forEach(el => {
+      el.addEventListener('mouseenter', e => {
+        const tip = el.getAttribute('data-tip');
+        if(!tip) return;
+        const title = el.querySelector('.message-text')?.textContent || 'Detail';
+        tooltip.querySelector('.tooltip-title').textContent = title;
+        tooltip.querySelector('.tooltip-desc').textContent = tip;
+        tooltip.classList.add('visible');
+      });
+      el.addEventListener('mousemove', e => {
+        const rect = wrapper.getBoundingClientRect();
+        let left = e.clientX - rect.left + 16;
+        let top = e.clientY - rect.top + 16;
+        if(left + 280 > rect.width) left = e.clientX - rect.left - 296;
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+      });
+      el.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+    });
+    // Staggered animation helper
+    const steps = document.querySelectorAll('.msg-step');
+    steps.forEach((s,i)=>{
+      s.style.opacity='0';
+      s.style.transition='opacity 0.4s ease';
+      setTimeout(()=>{s.style.opacity='1';}, 300 + i*350);
+    });
+  })();
+</script>
+</body>
+</html>

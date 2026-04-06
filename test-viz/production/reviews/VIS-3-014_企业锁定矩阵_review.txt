@@ -1,0 +1,51 @@
+我来严格审查这份图表代码。
+
+## 评分结果
+
+**总分: 14/20**
+
+**布局: 3/5** — 整体对齐良好，但存在边框断裂与响应式断点处理不当
+
+**信息: 4/5** — 核心矩阵关系清晰，但低对比度文本与信息密度过高影响首读体验
+
+**美学: 3/5** — 配色体系完整、代码高亮精致，但细节不一致（硬编码颜色、字体层级模糊）
+
+**完整: 4/5** — 可直接运行，但存在 SVG 属性不一致与语义错误
+
+---
+
+## 缺陷列表
+
+1. **[行289] 硬编码颜色** — `.conditional .cell-icon` 的 `stroke="#1a1a2e"` 是唯一使用硬编码的前景色，破坏 CSS 变量一致性
+
+2. **[行140-148] 列头边框断裂** — `thead th` 的 `border-bottom: 2px solid` 加在 th 上，但 `tbody th` 的 `border-right: 2px solid` 打在 th 上而td上没有；且表头右列（最后一行 th）没有右边框，与 tbody 最后列 td 一致性存疑
+
+3. **[行96-98] 滚动容器冲突** — `.matrix-wrapper { overflow-x: auto }` 包裹 table，但外层 `.matrix-section` 无对应 `overflow` 声明；在大表格场景下可能出现双滚动条或裁剪
+
+4. **[行170-172] 悬停层级异常** — `td:hover { transform: scale(1.02); z-index: 2 }` 在嵌套 `.cell-content` 的 td 上，与 `.tooltip` 的 `z-index: 10` 层级关系模糊，且 `transform` 会对相邻单元格产生位移干扰
+
+5. **[行193-194] N/A 单元格图标方向错误** — `.na .cell-icon` 使用 `fill: var(--text-secondary)` 但 N/A 图标是×形（两条交叉线），没有闭合路径可填充；应该用 `stroke` 而非 `fill`
+
+6. **[行200-201] 移动端布局崩塌** — `@media (max-width: 1100px)` 触发时 `.announcement-badge` 从 `position: absolute` 变为 `position: static`，但 `.header` 没有建立 BFC 或 flex 上下文，`margin-bottom: 48px` 与 badge 间距难以控制
+
+7. **[行55-56] 低对比度** — `.col-header small` 使用 `opacity: 0.7`，在深色背景 `#1a1a2e` 上对比度约 4.5:1，勉强达到 WCAG AA 但接近临界值
+
+8. **[行60] 行高不一致风险** — `thead th` padding 为 `16px 12px`，`tbody th` 为 `20px 16px`，`tbody td` 为 `16px`；若内容高度不同，视觉上会产生错位感
+
+---
+
+## 修改建议
+
+1. **统一颜色变量** — 将行289的 `#1a1a2e` 替换为 `--bg-primary` 或直接删除该 stroke 属性（让 CSS 变量继承）
+
+2. **修复表格边框模型** — 建议在 `table` 上加 `border-collapse: collapse`（当前是 separate），或将所有边框打在 `td` 上、让 `th` 跟随；确保四边边框闭合
+
+3. **简化悬停交互** — 移除 `td:hover { transform: scale(1.02) }`，改用 `box-shadow` 或 `background` 变化来表达焦点；tooltip 的 `z-index: 10` 已足够
+
+4. **修复 N/A 图标** — 将 `.na .cell-icon` 的 `fill` 改为 `stroke: var(--text-secondary)`，或换用无填充的 SVG 路径
+
+5. **移动端 header 重构** — 将 `header` 改为 `display: flex; flex-direction: column; align-items: center; gap: 16px`，移除 badge 的 absolute 定位
+
+6. **降低对比度风险** — 将 `opacity: 0.7` 改为明确颜色值如 `color: var(--text-secondary)`，或直接删除继承
+
+7. **统一单元格 padding** — 建议统一为 `padding: 16px`，按内容类型区分而非按行列

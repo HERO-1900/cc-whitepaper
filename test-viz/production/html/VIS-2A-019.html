@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent专业化工具集矩阵</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: #0a0a0f;
+      color: #e8e8ec;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      background-image: 
+        radial-gradient(ellipse at 20% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(15, 23, 42, 1) 0%, rgba(5, 5, 10, 1) 100%);
+    }
+    
+    .container {
+      max-width: 1400px;
+      width: 100%;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    
+    .subtitle {
+      font-size: 1.1rem;
+      color: #6b7280;
+      font-weight: 400;
+    }
+    
+    .principle-banner {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 12px;
+      padding: 16px 28px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .principle-icon {
+      width: 28px;
+      height: 28px;
+      background: #10b981;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    
+    .principle-text {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #10b981;
+      letter-spacing: 0.05em;
+    }
+    
+    .principle-sub {
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-left: 8px;
+    }
+    
+    .matrix-wrapper {
+      background: rgba(15, 15, 25, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 32px;
+      backdrop-filter: blur(20px);
+      overflow-x: auto;
+    }
+    
+    .matrix-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-family: 'JetBrains Mono', monospace;
+      min-width: 900px;
+    }
+    
+    .category-header {
+      font-size: 0.7rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      padding: 0 8px 8px;
+      text-align: center;
+      border-bottom: 2px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    .tool-header {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      padding: 12px 8px;
+      text-align: center;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    
+    .agent-label {
+      font-size: 0.85rem;
+      color: #d1d5db;
+      padding: 16px 20px;
+      text-align: left;
+      font-weight: 600;
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+      white-space: nowrap;
+    }
+    
+    .agent-desc {
+      font-size: 0.7rem;
+      color: #6b7280;
+      font-weight: 400;
+      display: block;
+      margin-top: 4px;
+    }
+    
+    .cell {
+      width: 48px;
+      height: 56px;
+      text-align: center;
+      vertical-align: middle;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+    
+    .cell-inner {
+      width: 32px;
+      height: 32px;
+      margin: 0 auto;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      cursor: help;
+    }
+    
+    .cell:hover .cell-inner {
+      transform: scale(1.15);
+    }
+    
+    .available {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+    
+    .available::after {
+      content: "✓";
+    }
+    
+    .unavailable {
+      background: rgba(55, 65, 81, 0.4);
+      color: #4b5563;
+    }
+    
+    .unavailable::after {
+      content: "—";
+      opacity: 0.3;
+    }
+    
+    .omitted {
+      background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+    }
+    
+    .row-general .cell-inner.available {
+      background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.5);
+    }
+    
+    .row-general .agent-label {
+      color: #10b981;
+    }
+    
+    .row-explore .agent-label {
+      color: #60a5fa;
+    }
+    
+    .tooltip {
+      position: fixed;
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.8rem;
+      color: #e8e8ec;
+      max-width: 280px;
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      font-family: 'Space Grotesk', sans-serif;
+      line-height: 1.5;
+    }
+    
+    .tooltip.visible {
+      opacity: 1;
+    }
+    
+    .tooltip-title {
+      font-weight: 700;
+      color: #10b981;
+      margin-bottom: 4px;
+    }
+    
+    .stats-section {
+      margin-top: 40px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    
+    .stat-card {
+      background: rgba(15, 15, 25, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    
+    .stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .stat-name {
+      font-size: 0.85rem;
+      color: #d1d5db;
+      font-weight: 600;
+    }
+    
+    .stat-count {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #10b981;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .stat-bar {
+      height: 8px;
+      background: rgba(55, 65, 81, 0.4);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .stat-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s ease;
+    }
+    
+    .stat-fill.general { background: linear-gradient(90deg, #10b981, #34d399); }
+    .stat-fill.explore { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .stat-fill.plan { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .stat-fill.statusline { background: linear-gradient(90deg, #ec4899, #f472b6); }
+    .stat-fill.guide { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+    
+    .token-save {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+      border: 1px solid rgba(124, 58, 237, 0.3);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .token-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    
+    .token-content h3 {
+      font-size: 0.95rem;
+      color: #a78bfa;
+      margin-bottom: 4px;
+    }
+    
+    .token-content p {
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+    
+    .token-highlight {
+      color: #a78bfa;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    .omit-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+      color: white;
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Agent专业化工具集矩阵</h1>
+      <p class="subtitle">Agent Specialization Tool Matrix</p>
+    </header>
+    
+    <div style="text-align: center;">
+      <div class="principle-banner">
+        <div class="principle-icon">🛡️</div>
+        <div>
+          <span class="principle-text">最小权限原则</span>
+          <span class="principle-sub">Least Privilege Principle — 每种Agent仅拥有其任务所需的最小工具集合</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="matrix-wrapper">
+      <table class="matrix-table">
+        <thead>
+          <tr class="category-row">
+            <th></th>
+            <th colspan="5" class="category-header">文件操作 File Ops</th>
+            <th colspan="2" class="category-header">执行 Execution</th>
+            <th colspan="2" class="category-header">Agent</th>
+            <th colspan="3" class="category-header">扩展扩展 Extensions</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th class="tool-header">Read</th>
+            <th class="tool-header">Edit</th>
+            <th class="tool-header">Write</th>
+            <th class="tool-header">Glob</th>
+            <th class="tool-header">Grep</th>
+            <th class="tool-header">Bash</th>
+            <th class="tool-header">Notebook</th>
+            <th class="tool-header">Agent</th>
+            <th class="tool-header">Skill</th>
+            <th class="tool-header">WebFetch</th>
+            <th class="tool-header">WebSearch</th>
+            <th class="tool-header">Todo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="row-general">
+            <td class="agent-label">
+              general-purpose
+              <span class="agent-desc">通用型 · 全部能力</span>
+            </td>
+            <td class="cell"><div class="cell-inner available" data-tip="核心读取工具"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="代码编辑能力"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="创建新文件"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="文件搜索"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="内容搜索"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="命令执行"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="Notebook编辑"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="子Agent调用"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="技能调用"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="网页获取"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="网络搜索"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="任务管理"></div></td>
+          </tr>
+          <tr class="row-explore">
+            <td class="agent-label">
+              Explore
+              <span class="agent-desc">代码探索型<span class="omit-badge">omitClaudeMd</span></span>
+            </td>
+            <td class="cell"><div class="cell-inner available" data-tip="读取文件内容"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="禁止: 安全考虑"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="禁止: 安全考虑"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="文件模式匹配"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="代码内容搜索"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="禁止: 安全考虑"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不可用"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="禁止: 简化设计"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不可用"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="获取文档"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="技术搜索"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不可用"></div></td>
+          </tr>
+          <tr class="row-plan">
+            <td class="agent-label">
+              Plan
+              <span class="agent-desc">设计方案型 · 只读</span>
+            </td>
+            <td class="cell"><div class="cell-inner available" data-tip="读取代码结构"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="禁止: 只计划不执行"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="禁止: 只计划不执行"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="探索文件结构"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="搜索相关代码"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="禁止: 只计划不执行"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不可用"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="禁止: 简化设计"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不可用"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="查阅外部文档"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="搜索最佳实践"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不可用"></div></td>
+          </tr>
+          <tr class="row-statusline">
+            <td class="agent-label">
+              statusline-setup
+              <span class="agent-desc">状态栏配置型</span>
+            </td>
+            <td class="cell"><div class="cell-inner available" data-tip="读取配置"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="修改状态栏设置"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不需要: 只改不写"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不需要"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不需要"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不需要"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不可用"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="禁止: 简化设计"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不可用"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不需要"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不需要"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不可用"></div></td>
+          </tr>
+          <tr class="row-guide">
+            <td class="agent-label">
+              claude-code-guide
+              <span class="agent-desc">使用指导型</span>
+            </td>
+            <td class="cell"><div class="cell-inner available" data-tip="读取帮助文档"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="禁止: 只回答不修改"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="禁止: 只回答不修改"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="搜索帮助文件"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="搜索命令用法"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="禁止: 安全考虑"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不可用"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="禁止: 简化设计"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不可用"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="获取在线文档"></div></td>
+            <td class="cell"><div class="cell-inner available" data-tip="搜索使用技巧"></div></td>
+            <td class="cell"><div class="cell-inner unavailable" data-tip="不可用"></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="token-save">
+      <div class="token-icon">⚡</div>
+      <div class="token-content">
+        <h3>Explore Agent Token节省优化</h3>
+        <p>通过 <code>omitClaudeMd=true</code> 排除 Claude Code 文档 + 精简工具集 → 每周节省 <span class="token-highlight">5-15 GTok</span> 模型token消耗</p>
+      </div>
+    </div>
+    
+    <div class="stats-section">
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-name">general-purpose</span>
+          <span class="stat-count">13/13</span>
+        </div>
+        <div class="stat-bar"><div class="stat-fill general" style="width: 100%"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-name">Explore</span>
+          <span class="stat-count">5/13</span>
+        </div>
+        <div class="stat-bar"><div class="stat-fill explore" style="width: 38%"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-name">Plan</span>
+          <span class="stat-count">4/13</span>
+        </div>
+        <div class="stat-bar"><div class="stat-fill plan" style="width: 31%"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-name">statusline-setup</span>
+          <span class="stat-count">2/13</span>
+        </div>
+        <div class="stat-bar"><div class="stat-fill statusline" style="width: 15%"></div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header">
+          <span class="stat-name">claude-code-guide</span>
+          <span class="stat-count">4/13</span>
+        </div>
+        <div class="stat-bar"><div class="stat-fill guide" style="width: 31%"></div></div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="tooltip" id="tooltip">
+    <div class="tooltip-title"></div>
+    <div class="tooltip-content"></div>
+  </div>
+  
+  <script>
+    const tooltip = document.getElementById('tooltip');
+    const cells = document.querySelectorAll('.cell-inner');
+    
+    const tooltips = {
+      'general-purpose': {
+        title: '通用型 Agent',
+        content: '拥有全部13种工具访问权限，可执行任何任务。Token成本最高，但能力无限制。'
+      },
+      'Explore': {
+        title: 'Explore Agent',
+        content: '专用于代码搜索和研究。仅只读工具 + omitClaudeMd 节省每周 5-15 GTok。'
+      },
+      'Plan': {
+        title: 'Plan Agent',
+        content: '软件架构师角色，只设计方案不执行。无编辑/写入权限确保纯规划模式。'
+      },
+      'statusline-setup': {
+        title: 'Statusline Agent',
+        content: '极简配置专用，仅 Read + Edit，用于修改状态栏设置。'
+      },
+      'claude-code-guide': {
+        title: 'Guide Agent',
+        content: '回答 Claude Code 使用问题，需要搜索和读取帮助文档。'
+      }
+    };
+    
+    cells.forEach(cell => {
+      cell.addEventListener('mouseenter', (e) => {
+        const tip = e.target.dataset.tip;
+        const isAvailable = e.target.classList.contains('available');
+        const row = e.target.closest('tr');
+        const agentType = row.querySelector('.agent-label').textContent.trim().split('\n')[0];
+        
+        tooltip.querySelector('.tooltip-title').textContent = isAvailable ? '✓ 可用' : '✗ 不可用';
+        tooltip.querySelector('.tooltip-content').textContent = tip || '';
+        
+        const rect = e.target.getBoundingClientRect();
+        tooltip.style.left = (rect.left + rect.width / 2 - 100) + 'px';
+        tooltip.style.top = (rect.bottom + 10) + 'px';
+        tooltip.classList.add('visible');
+      });
+      
+      cell.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('visible');
+      });
+    });
+  </script>
+</body>
+</html>

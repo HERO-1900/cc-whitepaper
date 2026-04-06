@@ -1,0 +1,72 @@
+## 评分结果
+
+总分: 13/20
+
+| 维度 | 得分 | 说明 |
+|------|------|------|
+| **布局** | 3/5 | Section 区块与 lifeline 端点存在 20px 错位，Clipboard 步骤盒超出 Section 3 下边界 |
+| **信息** | 3/5 | 三阶段流程清晰，但部分消息文字与箭头重叠、Escape 警示线与操作流混杂 |
+| **美学** | 4/5 | 配色和谐专业，暗色背景+发光效果质感好；字体混用稍显凌乱 |
+| **完整** | 3/5 | 代码完整可运行，但 tooltip 在 SVG 内的定位计算有偏差 |
+
+---
+
+## 缺陷明细
+
+### 布局 (Layout)
+
+1. **Section 1 lifeline 端点错位** — 第 143-144 行  
+   最后消息在 `y=520` 结束，但 lifeline 段 1 结束于 `y=520` (第 143 行 `<line x1="100" y1="520"...>`)，段 2 从 `y=540` 开始，**中间存在 20px 断裂**。同理 Section 2 的 860→880 也有同样问题。
+
+2. **Clipboard 步骤盒超出 Section 3 下边界** — 第 280-295 行  
+   Section 3 矩形定义 `height="600"`, `y="880"`，下边界为 y=1480。但最后一个 step-box 序号 6 的 `y=220`，实际底部 y=220+36=256，经 transform translate(620,1055) 后底部达到 **y=1311**，已超出 Section 3 可视范围。
+
+3. **Escape 三角形图标与虚线未对齐** — 第 331 行  
+   `<line x1="80"...x2="960">`，但三角形 transform `translate(970, 730)` 位于线条右侧偏上，`y=730` 比线条 `y=750` 高了 20px。
+
+### 信息 (Information)
+
+4. **返回消息文字与箭头marker重叠** — 多处  
+   返回消息（如第 162 行 `x1="580" y1="455"` 的 return）text y 坐标（447/459）与 line y 坐标（455）接近，文字与箭头头部可能重叠。
+
+5. **Step-box 序号与主消息流向视觉分离**  
+   步骤盒位于 Executor 与 Rust Native 之间偏右（x=620），但主键盘消息在 x=420 到 x=740 之间，步骤盒与主流程的时间顺序关联感弱。
+
+6. **Timeout 标注与泵送消息位置冲突** — 第 160-163 行  
+   `line x1="460" y1="275"` 水平虚线与下方 `1ms pump → resolve` 消息 (y=290-317) 在垂直空间上非常接近，存在轻微遮挡风险。
+
+### 美学 (Aesthetics)
+
+7. **字体使用过于多样**  
+   同时使用了 `Space Grotesk`(标题)、`Noto Sans SC`(中文正文)、`JetBrains Mono`(代码/技术术语)、中英混排且字号频繁变化（12/10/9/8），整体稍显杂乱。
+
+8. **Section 标签颜色与参与者颜色不完全匹配**  
+   Section 1 标题为 `#00d4ff`（匹配 AI Model），但 Section 2/3 使用 `#00ff88`/`#ff8844`，分别对应 Executor/Rust Native，与参与者的视觉对应关系不够直觉。
+
+### 完整 (Completeness)
+
+9. **Tooltip 定位在 SVG 内不准确** — 第 343 行  
+   `tooltip.style.left = (e.pageX + 12) + 'px'` 使用 pageX/Y，但在 `<div class="svg-container">` 内部 SVG 的事件坐标未考虑容器内边距（padding:20px）和滚动偏移。
+
+---
+
+## 修改建议
+
+1. **修复 lifeline 断裂**：将 Section 1 的 lifeline 段 2 起点从 `y=540` 改为 `y=522`（与最后消息 y=520 衔接），Section 2 段 2 起点从 `y=880` 改为 `y=862`。
+
+2. **Clipboard 步骤盒下移或减小 Section 3**：将 transform translate 改为 `(620, 1055)` 改为 `(620, 920)`，使其完整落在 Section 3 内；或增大 Section 3 height 到 680。
+
+3. **Escape 三角形对齐**：将 transform 改为 `translate(970, 750)` 使三角形垂直居中于虚线。
+
+4. **返回消息文字偏移**：将 return 消息的 text y 坐标下调 5-8px（如从 y=447 改为 y=453），为箭头留出空间。
+
+5. **简化字体方案**：统一主要文字用 `Space Grotesk`，技术术语用 `JetBrains Mono`，减少混用。
+
+6. **Tooltip 修复**：
+   ```js
+   g.addEventListener('mousemove', e => {
+     const rect = document.querySelector('.svg-container').getBoundingClientRect();
+     tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+     tooltip.style.top = (e.clientY - rect.top + 12) + 'px';
+   });
+   ```

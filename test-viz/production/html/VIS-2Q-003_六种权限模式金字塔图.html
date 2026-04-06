@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>六种权限模式光谱图 | Permission Modes Spectrum</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0a0f1a;
+            --bg-mid: #111827;
+            --bg-light: #1a2233;
+            --plan: #ff4444;
+            --dontAsk: #ff8844;
+            --default: #ffcc00;
+            --acceptEdits: #88cc44;
+            --auto: #44aaff;
+            --bypass: #44ff88;
+            --text-primary: #f0f4f8;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --glow-intensity: 0.4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Serif SC', serif;
+            background: var(--bg-deep);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated background gradient mesh */
+        .bg-mesh {
+            position: fixed;
+            inset: 0;
+            background: 
+                radial-gradient(ellipse at 20% 30%, rgba(255, 68, 68, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(68, 255, 136, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(68, 170, 255, 0.04) 0%, transparent 60%),
+                linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-mid) 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .noise-overlay {
+            position: fixed;
+            inset: 0;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            width: 95%;
+            max-width: 1400px;
+            padding: 40px 20px;
+        }
+
+        .title-section {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .title-section h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 40px rgba(255, 255, 255, 0.1);
+        }
+
+        .title-section .subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .spectrum-container {
+            position: relative;
+            margin: 60px 0;
+        }
+
+        /* Main spectrum bar */
+        .spectrum-bar {
+            display: flex;
+            height: 180px;
+            position: relative;
+            border-radius: 8px;
+            overflow: visible;
+            filter: drop-shadow(0 20px 60px rgba(0, 0, 0, 0.5));
+        }
+
+        .mode-segment {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 20px 10px;
+            clip-path: polygon(0 0, 100% 0, 95% 100%, 5% 100%);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .mode-segment:hover {
+            transform: translateY(-8px) scale(1.02);
+            filter: brightness(1.15);
+            z-index: 10;
+        }
+
+        .mode-segment.plan {
+            background: linear-gradient(180deg, var(--plan) 0%, rgba(255, 68, 68, 0.7) 100%);
+            box-shadow: 0 0 40px rgba(255, 68, 68, var(--glow-intensity));
+        }
+
+        .mode-segment.dontAsk {
+            background: linear-gradient(180deg, var(--dontAsk) 0%, rgba(255, 136, 68, 0.7) 100%);
+            box-shadow: 0 0 40px rgba(255, 136, 68, var(--glow-intensity));
+        }
+
+        .mode-segment.default {
+            background: linear-gradient(180deg, var(--default) 0%, rgba(255, 204, 0, 0.7) 100%);
+            box-shadow: 0 0 40px rgba(255, 204, 0, var(--glow-intensity));
+        }
+
+        .mode-segment.acceptEdits {
+            background: linear-gradient(180deg, var(--acceptEdits) 0%, rgba(136, 204, 68, 0.7) 100%);
+            box-shadow: 0 0 40px rgba(136, 204, 68, var(--glow-intensity));
+        }
+
+        .mode-segment.auto {
+            background: linear-gradient(180deg, var(--auto) 0%, rgba(68, 170, 255, 0.7) 100%);
+            box-shadow: 0 0 50px rgba(68, 170, 255, calc(var(--glow-intensity) * 1.5));
+        }
+
+        .mode-segment.bypass {
+            background: linear-gradient(180deg, var(--bypass) 0%, rgba(68, 255, 136, 0.7) 100%);
+            box-shadow: 0 0 40px rgba(68, 255, 136, var(--glow-intensity));
+        }
+
+        .mode-icon {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .mode-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            color: rgba(0, 0, 0, 0.85);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .mode-name-en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: rgba(0, 0, 0, 0.6);
+            font-weight: 500;
+        }
+
+        .mode-desc {
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 140%;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            opacity: 0.8;
+        }
+
+        /* Severity indicator bar */
+        .severity-bar {
+            display: flex;
+            margin-top: 80px;
+            padding: 0 20px;
+        }
+
+        .severity-label {
+            flex: 1;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            position: relative;
+        }
+
+        .severity-label::before {
+            content: '';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1px;
+            height: 10px;
+            background: var(--text-muted);
+        }
+
+        /* Auto mode expanded section */
+        .auto-detail {
+            margin-top: 60px;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(68, 170, 255, 0.1) 0%, rgba(68, 170, 255, 0.05) 100%);
+            border: 1px dashed rgba(68, 170, 255, 0.4);
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .auto-detail::before {
+            content: 'AUTO MODE INTELLIGENCE';
+            position: absolute;
+            top: -12px;
+            left: 30px;
+            background: var(--bg-deep);
+            padding: 0 15px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--auto);
+            letter-spacing: 0.15em;
+        }
+
+        .flow-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .flow-box {
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid rgba(68, 170, 255, 0.3);
+            border-radius: 8px;
+            padding: 16px 20px;
+            min-width: 160px;
+            text-align: center;
+            position: relative;
+        }
+
+        .flow-box.fast-path {
+            border-color: rgba(136, 204, 68, 0.4);
+        }
+
+        .flow-box.fast-path .flow-title {
+            color: var(--acceptEdits);
+        }
+
+        .flow-box.classifier {
+            border-color: rgba(255, 204, 0, 0.4);
+            min-width: 200px;
+        }
+
+        .flow-box.classifier .flow-title {
+            color: var(--default);
+        }
+
+        .flow-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--auto);
+            margin-bottom: 6px;
+            letter-spacing: 0.05em;
+        }
+
+        .flow-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .flow-arrow {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        .classifier-output {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .output-tag {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .output-tag.allow {
+            background: rgba(68, 255, 136, 0.15);
+            color: var(--bypass);
+            border: 1px solid rgba(68, 255, 136, 0.3);
+        }
+
+        .output-tag.block {
+            background: rgba(255, 68, 68, 0.15);
+            color: var(--plan);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+        }
+
+        /* Fallback mechanism */
+        .fallback-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(255, 68, 68, 0.08) 0%, rgba(255, 136, 68, 0.05) 100%);
+            border-radius: 10px;
+            border-left: 3px solid var(--plan);
+        }
+
+        .fallback-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--plan);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .fallback-conditions {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .fallback-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .fallback-badge {
+            background: rgba(255, 68, 68, 0.2);
+            color: var(--plan);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .fallback-arrow {
+            color: var(--text-muted);
+        }
+
+        .fallback-result {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Bypass immune warning */
+        .bypass-warning {
+            position: absolute;
+            right: -60px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .lock-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 68, 68, 0.15);
+            border: 2px solid rgba(255, 68, 68, 0.4);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 15px rgba(255, 68, 68, 0); }
+        }
+
+        .bypass-tooltip {
+            position: absolute;
+            right: 70px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 220px;
+            background: var(--bg-light);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .bypass-warning:hover .bypass-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .bypass-tooltip strong {
+            color: var(--plan);
+            display: block;
+            margin-bottom: 8px;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .bypass-tooltip code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(255, 68, 68, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: var(--plan);
+            font-size: 0.7rem;
+        }
+
+        /* Scale indicator */
+        .scale-indicator {
+            position: absolute;
+            bottom: -30px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--plan) 0%, var(--dontAsk) 20%, var(--default) 40%, var(--acceptEdits) 60%, var(--auto) 80%, var(--bypass) 100%);
+            border-radius: 2px;
+            opacity: 0.6;
+        }
+
+        .scale-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* Info cards on hover */
+        .info-card {
+            position: fixed;
+            background: var(--bg-light);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            width: 280px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            z-index: 100;
+            pointer-events: none;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .info-card.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .info-card h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .info-card .usage {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--auto);
+            margin-bottom: 12px;
+            padding: 4px 10px;
+            background: rgba(68, 170, 255, 0.1);
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .info-card p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .info-card .switch-cmd {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            background: var(--bg-deep);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 2px solid var(--auto);
+            color: var(--text-primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .spectrum-bar {
+                flex-direction: column;
+                height: auto;
+                gap: 10px;
+            }
+
+            .mode-segment {
+                clip-path: none;
+                border-radius: 8px;
+                padding: 20px;
+                min-height: 100px;
+            }
+
+            .mode-desc {
+                position: static;
+                transform: none;
+                width: 100%;
+                margin-top: 10px;
+                text-align: left;
+            }
+
+            .severity-bar {
+                display: none;
+            }
+
+            .bypass-warning {
+                position: static;
+                transform: none;
+                margin-top: 30px;
+                flex-direction: row;
+                justify-content: center;
+            }
+
+            .bypass-tooltip {
+                position: static;
+                transform: none;
+                opacity: 1;
+                visibility: visible;
+                width: 100%;
+                margin-top: 15px;
+            }
+
+            .flow-container {
+                flex-direction: column;
+            }
+
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-mesh"></div>
+    <div class="noise-overlay"></div>
+
+    <div class="container">
+        <div class="title-section">
+            <h1>权限模式光谱 · Permission Spectrum</h1>
+            <div class="subtitle">Strict ←————————————————————→ Permissive</div>
+        </div>
+
+        <div class="spectrum-container">
+            <div class="spectrum-bar" id="spectrumBar">
+                <div class="mode-segment plan" data-mode="plan">
+                    <div class="mode-icon">🔒</div>
+                    <div class="mode-name">plan</div>
+                    <div class="mode-name-en">PLAN MODE</div>
+                    <div class="mode-desc">禁止写操作<br>Read-only exploration</div>
+                </div>
+
+                <div class="mode-segment dontAsk" data-mode="dontAsk">
+                    <div class="mode-icon">🚫</div>
+                    <div class="mode-name">dontAsk</div>
+                    <div class="mode-name-en">SILENT DENY</div>
+                    <div class="mode-desc">询问变拒绝<br>CI/Unattended</div>
+                </div>
+
+                <div class="mode-segment default" data-mode="default">
+                    <div class="mode-icon">⚡</div>
+                    <div class="mode-name">default</div>
+                    <div class="mode-name-en">STANDARD</div>
+                    <div class="mode-desc">非只读需批准<br>Daily usage</div>
+                </div>
+
+                <div class="mode-segment acceptEdits" data-mode="acceptEdits">
+                    <div class="mode-icon">✏️</div>
+                    <div class="mode-name">acceptEdits</div>
+                    <div class="mode-name-en">AUTO EDIT</div>
+                    <div class="mode-desc">编辑自动允许<br>Fast coding</div>
+                </div>
+
+                <div class="mode-segment auto" data-mode="auto">
+                    <div class="mode-icon">🤖</div>
+                    <div class="mode-name">auto</div>
+                    <div class="mode-name-en">AI CLASSIFIER</div>
+                    <div class="mode-desc">智能自动决策<br>Intelligent automation</div>
+                </div>
+
+                <div class="mode-segment bypass" data-mode="bypass">
+                    <div class="mode-icon">🔓</div>
+                    <div class="mode-name">bypass</div>
+                    <div class="mode-name-en">FULL ACCESS</div>
+                    <div class="mode-desc">跳过权限检查<br>Maximum freedom</div>
+                </div>
+
+                <div class="bypass-warning">
+                    <div class="lock-icon">🔒</div>
+                    <div class="bypass-tooltip">
+                        <strong>Bypass-Immune Paths</strong>
+                        Even <code>bypassPermissions</code> cannot override:
+                        <br><br>
+                        <code>.git/</code> <code>.claude/</code> <code>.vscode/</code>
+                        <code>~/.bashrc</code> <code>~/.ssh/</code>
+                        <br><br>
+                        These paths always require human confirmation for security.
+                    </div>
+                </div>
+            </div>
+
+            <div class="scale-indicator"></div>
+            <div class="scale-labels">
+                <span>Maximum Security</span>
+                <span>Balanced</span>
+                <span>Maximum Flexibility</span>
+            </div>
+
+            <div class="severity-bar">
+                <div class="severity-label">Strict</div>
+                <div class="severity-label"></div>
+                <div class="severity-label"></div>
+                <div class="severity-label"></div>
+                <div class="severity-label"></div>
+                <div class="severity-label">Permissive</div>
+            </div>
+        </div>
+
+        <!-- Auto Mode Detail Section -->
+        <div class="auto-detail">
+            <div class="flow-container">
+                <div class="flow-box fast-path">
+                    <div class="flow-title">FAST PATH 1</div>
+                    <div class="flow-desc">模拟 acceptEdits 检查<br>Simulate acceptEdits</div>
+                </div>
+                
+                <div class="flow-arrow">→</div>
+                
+                <div class="flow-box fast-path">
+                    <div class="flow-title">FAST PATH 2</div>
+                    <div class="flow-desc">安全工具白名单<br>Safety whitelist</div>
+                </div>
+                
+                <div class="flow-arrow">→</div>
+                
+                <div class="flow-box classifier">
+                    <div class="flow-title">AI CLASSIFIER</div>
+                    <div class="flow-desc">classifyYoloAction()<br>分析完整对话历史</div>
+                    <div class="classifier-output">
+                        <span class="output-tag allow">shouldBlock=false ✓</span>
+                        <span class="output-tag block">shouldBlock=true ✗</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fallback-section">
+                <div class="fallback-title">
+                    <span>⚠️</span> 自动回退机制 · Auto-Fallback
+                </div>
+                <div class="fallback-conditions">
+                    <div class="fallback-item">
+                        <span class="fallback-badge">maxConsecutive=3</span>
+                        <span class="fallback-arrow">→</span>
+                        <span class="fallback-result">连续拒绝3次 → 人工审批</span>
+                    </div>
+                    <div class="fallback-item">
+                        <span class="fallback-badge">maxTotal=20</span>
+                        <span class="fallback-arrow">→</span>
+                        <span class="fallback-result">累计20次拒绝 → 人工审批</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hover Info Card -->
+    <div class="info-card" id="infoCard">
+        <h3 id="cardTitle">Mode Name</h3>
+        <div class="usage" id="cardUsage">Usage Scenario</div>
+        <p id="cardDesc">Description</p>
+        <div class="switch-cmd" id="cardCmd">/config set permissionMode &lt;mode&gt;</div>
+    </div>
+
+    <script>
+        const modeData = {
+            plan: {
+                title: 'plan 模式 · Plan Mode',
+                usage: '适用场景: 探索规划 / Exploration',
+                desc: '完全禁止写操作，只允许读取文件和执行只读命令。用于安全地探索代码库、理解项目结构而不担心意外修改。',
+                cmd: '/config set permissionMode plan'
+            },
+            dontAsk: {
+                title: 'dontAsk 模式 · Silent Deny',
+                usage: '适用场景: CI/无人值守 / Automated',
+                desc: '将所有需要询问的操作自动转为拒绝，不弹出确认对话框。适合自动化脚本、CI环境或需要确定性行为的场景。',
+                cmd: '/config set permissionMode dontAsk'
+            },
+            default: {
+                title: 'default 模式 · Standard',
+                usage: '适用场景: 日常使用 / Daily Use',
+                desc: '标准安全模式。所有非只读操作（文件修改、Bash命令等）都需要用户明确批准。平衡安全性与灵活性。',
+                cmd: '/config set permissionMode default'
+            },
+            acceptEdits: {
+                title: 'acceptEdits 模式 · Auto Edit',
+                usage: '适用场景: 快速编码 / Fast Coding',
+                desc: '自动允许文件编辑操作，但Bash命令仍需批准。适合专注于代码编写、减少编辑确认打扰的场景。',
+                cmd: '/config set permissionMode acceptEdits'
+            },
+            auto: {
+                title: 'auto 模式 · AI Classifier',
+                usage: '适用场景: 智能自动化 / Smart Auto (ant-only)',
+                desc: 'AI分类器智能决策是否允许操作。两阶段检查：先快速路径，再由分类器分析对话历史。自动回退机制防止无限拒绝循环。',
+                cmd: '/config set permissionMode auto'
+            },
+            bypass: {
+                title: 'bypassPermissions 模式 · Full Access',
+                usage: '适用场景: 完全自动化 / Maximum Freedom',
+                desc: '跳过所有权限检查（除安全豁免路径外）。提供最大灵活性，但.git、.claude等关键路径仍受保护。',
+                cmd: '/config set permissionMode bypassPermissions'
+            }
+        };
+
+        const segments = document.querySelectorAll('.mode-segment');
+        const infoCard = document.getElementById('infoCard');
+        const cardTitle = document.getElementById('cardTitle');
+        const cardUsage = document.getElementById('cardUsage');
+        const cardDesc = document.getElementById('cardDesc');
+        const cardCmd = document.getElementById('cardCmd');
+
+        segments.forEach(segment => {
+            segment.addEventListener('mouseenter', (e) => {
+                const mode = segment.dataset.mode;
+                const data = modeData[mode];
+                
+                cardTitle.textContent = data.title;
+                cardUsage.textContent = data.usage;
+                cardDesc.textContent = data.desc;
+                cardCmd.textContent = data.cmd;
+                
+                infoCard.classList.add('visible');
+            });
+
+            segment.addEventListener('mousemove', (e) => {
+                const rect = segment.getBoundingClientRect();
+                infoCard.style.left = (e.clientX + 20) + 'px';
+                infoCard.style.top = (e.clientY - 50) + 'px';
+            });
+
+            segment.addEventListener('mouseleave', () => {
+                infoCard.classList.remove('visible');
+            });
+        });
+
+        // Entrance animation
+        window.addEventListener('load', () => {
+            segments.forEach((seg, i) => {
+                seg.style.opacity = '0';
+                seg.style.transform = 'translateY(30px)';
+                setTimeout(() => {
+                    seg.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+                    seg.style.opacity = '1';
+                    seg.style.transform = 'translateY(0)';
+                }, i * 100);
+            });
+        });
+    </script>
+</body>
+</html>

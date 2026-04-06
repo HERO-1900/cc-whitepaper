@@ -1,0 +1,30 @@
+
+总分: 14/20
+
+**布局: 3/5** — 固定列与表头联动良好，但推荐列底部双线边框重复、hover高亮列时左侧栏单元格背景未同步。
+
+**信息: 4/5** — 矩阵结构清晰、状态色编码直观，但星号标注(`Auto*`)未在图注说明，`dontAsk`模式的绿色标签与"安全自动化"语义存在轻微歧义。
+
+**美学: 3/5** — 深色主题配色和谐、字体搭配考究，但绿色勾选格持续脉冲动画过于分散注意力；背景渐变与网格纹理过重，干扰数据阅读。
+
+**完整: 4/5** — 代码可独立运行、无语法错误、字体CDN有效，缺失部分：键盘辅助导航未实现、无ARIA标签。
+
+---
+
+**缺陷:**
+
+1. **行163-165** — 推荐列(`th.recommended`)同时设`border-top`和`border-right`为2px高亮，但`th`无`border-bottom`定义，导致与下方`tbody tr:last-child td.recommended`的`border-bottom`形成重复双线。
+2. **行197** — `sortRows('security')`后表格tbody顺序变更，但首次加载默认顺序`data-security`属性未按1-4排列（Edit/Notebook均为2，Agent/MCP均为3），导致安全排序结果不直观。
+3. **行246** — `cell-content`使用flex居中，但图标使用HTML实体`&#10003;`而非Unicode字符，渲染一致性问题。
+4. **行268** — `selectMode()`点击切换详情面板后，未同步高亮对应列的`col-highlight`状态，用户失去方向感。
+5. **行177** — `col-highlight`高亮仅改变背景色，但固定列`td:first-child`独立背景色(`var(--bg-elevated)`)未被纳入高亮逻辑，hover时视觉割裂。
+6. **行303** — `pulse`动画对所有绿色勾选格无限循环，在包含多行Allow状态的表格中动画元素过多(Macrumors风格)，干扰专注度。
+
+**修改建议:**
+
+1. 在`th.recommended`追加`border-bottom:none`，或在`tbody tr:last-child td.recommended`去掉`border-bottom`，二选一避免双边。
+2. `data-security`重排为1-6唯一值（将Edit=2、Notebook=3、Agent=4、MCP=5），使安全排序具备全序关系。
+3. 统一使用Unicode字符(如`✓`)或内联SVG，替代HTML实体`&#10003;/&#10007;/&#9888;`，避免字体渲染差异。
+4. `selectMode(index)`执行时，计算该模式对应列索引并触发一次`col-highlight`模拟hover，确保视觉聚焦。
+5. `col-highlight`逻辑改为：不仅改背景色，还需将`td:first-child`的背景叠加`rgba(88,166,255,0.06)`，或在高亮时统一设为`var(--bg-overlay)`。
+6. 将`animation:pulse`限定为仅首行勾选格（如`tbody tr:first-child td[data-status="allow"] .icon`），避免全表动画喧宾夺主。

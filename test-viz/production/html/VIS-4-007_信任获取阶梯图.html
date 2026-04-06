@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>渐进式信任 — 信任获取阶梯图</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-deep: #1a1a2e;
+            --bg-mid: #16213e;
+            --bg-light: #0f3460;
+            --step-1: #4dabf7;
+            --step-2: #38d9a9;
+            --step-3: #69db7c;
+            --step-4: #ffa94d;
+            --step-5: #ffd93d;
+            --text-primary: #f8f9fa;
+            --text-secondary: #adb5bd;
+            --text-muted: #6c757d;
+            --danger: #ff6b6b;
+            --glow-gold: rgba(255, 217, 61, 0.4);
+        }
+        
+        body {
+            font-family: 'Space Grotesk', 'Noto Serif SC', serif;
+            background: var(--bg-deep);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            color: var(--text-primary);
+            overflow-x: auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            opacity: 0;
+            animation: fadeInDown 0.8s ease forwards;
+        }
+        
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--step-5) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header .subtitle {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+        }
+        
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 1100px;
+            height: 650px;
+            background: radial-gradient(ellipse at 30% 70%, rgba(77, 171, 247, 0.08) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 30%, rgba(255, 217, 61, 0.08) 0%, transparent 50%);
+            border-radius: 12px;
+            padding: 40px;
+        }
+        
+        .chart-svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .axis-label {
+            font-family: 'Space Grotesk', 'Noto Serif SC', serif;
+            font-size: 11px;
+            fill: var(--text-muted);
+            font-weight: 500;
+        }
+        
+        .axis-title {
+            font-family: 'Space Grotesk', 'Noto Serif SC', serif;
+            font-size: 13px;
+            fill: var(--text-secondary);
+            font-weight: 600;
+        }
+        
+        .step-group {
+            cursor: pointer;
+            opacity: 0;
+            transform: translateX(-30px);
+            animation: stepAppear 0.6s ease forwards;
+        }
+        
+        .step-group:nth-child(1) { animation-delay: 0.2s; }
+        .step-group:nth-child(2) { animation-delay: 0.4s; }
+        .step-group:nth-child(3) { animation-delay: 0.6s; }
+        .step-group:nth-child(4) { animation-delay: 0.8s; }
+        .step-group:nth-child(5) { animation-delay: 1s; }
+        
+        .step-surface {
+            transition: all 0.3s ease;
+        }
+        
+        .step-group:hover .step-surface {
+            filter: brightness(1.15);
+            transform: translateY(-2px);
+        }
+        
+        .step-group:hover .step-face {
+            filter: brightness(0.9);
+        }
+        
+        .step-label-mode {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            fill: var(--text-primary);
+        }
+        
+        .step-label-zh {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 13px;
+            font-weight: 600;
+            fill: var(--text-primary);
+        }
+        
+        .step-label-desc {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 9px;
+            fill: var(--text-secondary);
+        }
+        
+        .step-label-flag {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 8px;
+            fill: var(--text-muted);
+        }
+        
+        .threshold-label {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 9px;
+            fill: var(--text-muted);
+            font-style: italic;
+        }
+        
+        .user-persona {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 10px;
+            fill: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .persona-icon {
+            font-size: 11px;
+        }
+        
+        .safety-valve {
+            opacity: 0;
+            animation: fadeIn 0.8s ease 1.4s forwards;
+        }
+        
+        .valve-label {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 11px;
+            fill: var(--danger);
+            font-weight: 600;
+        }
+        
+        .valve-sublabel {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 9px;
+            fill: var(--danger);
+            opacity: 0.8;
+        }
+        
+        .figure-path {
+            fill: var(--text-primary);
+            opacity: 0.9;
+        }
+        
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(22, 33, 62, 0.95);
+            border: 1px solid var(--bg-light);
+            border-radius: 8px;
+            padding: 16px 24px;
+            min-width: 320px;
+            text-align: center;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .info-panel.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .info-panel h3 {
+            font-size: 14px;
+            color: var(--step-5);
+            margin-bottom: 6px;
+        }
+        
+        .info-panel p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes stepAppear {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 8px var(--glow-gold)); }
+            50% { filter: drop-shadow(0 0 20px var(--glow-gold)); }
+        }
+        
+        .step-5-glow {
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        @media (max-width: 768px) {
+            .chart-container {
+                height: auto;
+                min-height: 800px;
+            }
+            
+            .header h1 {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>渐进式信任</h1>
+        <div class="subtitle">Progressive Trust Ladder — 从保守到开放的5级信任阶梯</div>
+    </div>
+    
+    <div class="chart-container">
+        <svg class="chart-svg" viewBox="0 0 1000 580" preserveAspectRatio="xMidYMid meet">
+            <defs>
+                <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#4dabf7;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#74c0fc;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#38d9a9;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#63e6be;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#69db7c;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#8ce99a;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="grad4" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#ffa94d;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#ffc078;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="grad5" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#ffd93d;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#ffe066;stop-opacity:1" />
+                </linearGradient>
+                <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+            
+            <!-- Y Axis -->
+            <line x1="80" y1="500" x2="80" y2="80" stroke="#0f3460" stroke-width="2"/>
+            <line x1="75" y1="500" x2="85" y2="500" stroke="#4dabf7" stroke-width="2"/>
+            <line x1="75" y1="395" x2="85" y2="395" stroke="#38d9a9" stroke-width="2"/>
+            <line x1="75" y1="290" x2="85" y2="290" stroke="#69db7c" stroke-width="2"/>
+            <line x1="75" y1="185" x2="85" y2="185" stroke="#ffa94d" stroke-width="2"/>
+            <line x1="75" y1="80" x2="85" y2="80" stroke="#ffd93d" stroke-width="2"/>
+            
+            <text x="45" y="505" class="axis-label" text-anchor="middle">0%</text>
+            <text x="45" y="400" class="axis-label" text-anchor="middle">25%</text>
+            <text x="45" y="295" class="axis-label" text-anchor="middle">50%</text>
+            <text x="45" y="190" class="axis-label" text-anchor="middle">75%</text>
+            <text x="45" y="85" class="axis-label" text-anchor="middle">100%</text>
+            
+            <text x="35" y="290" class="axis-title" text-anchor="middle" transform="rotate(-90, 35, 290)">自动化程度 Automation</text>
+            
+            <!-- X Axis -->
+            <line x1="80" y1="500" x2="920" y2="500" stroke="#0f3460" stroke-width="2"/>
+            <text x="150" y="530" class="axis-label" text-anchor="middle">首次使用</text>
+            <text x="150" y="542" class="axis-label" text-anchor="middle">First Use</text>
+            
+            <text x="340" y="530" class="axis-label" text-anchor="middle">初步信任</text>
+            <text x="340" y="542" class="axis-label" text-anchor="middle">Initial Trust</text>
+            
+            <text x="530" y="530" class="axis-label" text-anchor="middle">持续验证</text>
+            <text x="530" y="542" class="axis-label" text-anchor="middle">Validation</text>
+            
+            <text x="720" y="530" class="axis-label" text-anchor="middle">深度信任</text>
+            <text x="720" y="542" class="axis-label" text-anchor="middle">Deep Trust</text>
+            
+            <text x="910" y="530" class="axis-label" text-anchor="middle">完全委托</text>
+            <text x="910" y="542" class="axis-label" text-anchor="middle">Full Delegation</text>
+            
+            <text x="500" y="565" class="axis-title" text-anchor="middle">使用经验与信任积累 Experience & Trust Building</text>
+            
+            <!-- Step 1: Plan Mode -->
+            <g class="step-group" data-step="1">
+                <!-- Vertical face -->
+                <rect class="step-face" x="110" y="460" width="140" height="40" fill="#2d7cb5" rx="2"/>
+                <!-- Horizontal surface -->
+                <rect class="step-surface" x="110" y="440" width="140" height="20" fill="url(#grad1)" rx="2"/>
+                
+                <!-- Human figure - hesitant stance -->
+                <g transform="translate(155, 415)">
+                    <circle cx="10" cy="5" r="5" class="figure-path"/>
+                    <path d="M 10 12 L 10 25 M 5 15 L 15 15 M 8 25 L 5 32 M 12 25 L 15 32" stroke="var(--text-primary)" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <ellipse cx="10" cy="28" rx="4" ry="2" fill="var(--step-1)" opacity="0.5"/>
+                </g>
+                
+                <!-- Labels -->
+                <text x="180" y="478" class="step-label-flag" text-anchor="middle">--permission-mode plan</text>
+                <text x="180" y="455" class="step-label-mode" text-anchor="middle">Plan</text>
+                <text x="180" y="425" class="step-label-zh" text-anchor="middle" fill="#4dabf7">初次接触</text>
+                <text x="180" y="405" class="step-label-desc" text-anchor="middle">只读分析，不执行任何操作</text>
+                <text x="180" y="395" class="step-label-desc" text-anchor="middle">Read-only Analysis</text>
+                
+                <!-- User persona -->
+                <text x="180" y="370" class="user-persona" text-anchor="middle">新手用户 New User</text>
+            </g>
+            
+            <!-- Step 2: Default Mode -->
+            <g class="step-group" data-step="2">
+                <!-- Vertical face -->
+                <rect class="step-face" x="270" y="395" width="140" height="65" fill="#2a9d7a" rx="2"/>
+                <!-- Horizontal surface -->
+                <rect class="step-surface" x="270" y="355" width="140" height="40" fill="url(#grad2)" rx="2"/>
+                
+                <!-- Trust threshold -->
+                <text x="270" y="430" class="threshold-label" text-anchor="end">AI分析准确 →</text>
+                
+                <!-- Human figure - cautious walking -->
+                <g transform="translate(315, 325)">
+                    <circle cx="10" cy="5" r="5" class="figure-path"/>
+                    <path d="M 10 12 L 8 20 L 5 28 M 8 20 L 15 18 M 12 28 L 15 32 M 8 28 L 5 32" stroke="var(--text-primary)" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <ellipse cx="10" cy="33" rx="5" ry="2" fill="var(--step-2)" opacity="0.5"/>
+                </g>
+                
+                <!-- Labels -->
+                <text x="340" y="413" class="step-label-flag" text-anchor="middle">--permission-mode default</text>
+                <text x="340" y="380" class="step-label-mode" text-anchor="middle">Default</text>
+                <text x="340" y="315" class="step-label-zh" text-anchor="middle" fill="#38d9a9">谨慎执行</text>
+                <text x="340" y="295" class="step-label-desc" text-anchor="middle">每次操作都需弹窗确认</text>
+                <text x="340" y="285" class="step-label-desc" text-anchor="middle">Confirm Each Action</text>
+                
+                <!-- User persona -->
+                <text x="340" y="260" class="user-persona" text-anchor="middle">初级用户 Beginner</text>
+            </g>
+            
+            <!-- Step 3: Accept Edits Mode -->
+            <g class="step-group" data-step="3">
+                <!-- Vertical face -->
+                <rect class="step-face" x="430" y="290" width="140" height="65" fill="#4a9d5a" rx="2"/>
+                <!-- Horizontal surface -->
+                <rect class="step-surface" x="430" y="250" width="140" height="40" fill="url(#grad3)" rx="2"/>
+                
+                <!-- Trust threshold -->
+                <text x="430" y="325" class="threshold-label" text-anchor="end">编辑持续正确 →</text>
+                
+                <!-- Human figure - confident walking -->
+                <g transform="translate(475, 220)">
+                    <circle cx="10" cy="5" r="5" class="figure-path"/>
+                    <path d="M 10 12 L 10 22 M 5 16 L 15 16 M 9 22 L 6 30 M 11 22 L 14 30" stroke="var(--text-primary)" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <ellipse cx="10" cy="32" rx="6" ry="2" fill="var(--step-3)" opacity="0.5"/>
+                </g>
+                
+                <!-- Labels -->
+                <text x="500" y="308" class="step-label-flag" text-anchor="middle">--permission-mode acceptEdits</text>
+                <text x="500" y="275" class="step-label-mode" text-anchor="middle">Accept Edits</text>
+                <text x="500" y="210" class="step-label-zh" text-anchor="middle" fill="#69db7c">选择性信任</text>
+                <text x="500" y="190" class="step-label-desc" text-anchor="middle">文件编辑自动执行</text>
+                <text x="500" y="180" class="step-label-desc" text-anchor="middle">Auto-edit, Confirm Bash</text>
+                
+                <!-- User persona -->
+                <text x="500" y="155" class="user-persona" text-anchor="middle">有经验用户 Experienced</text>
+            </g>
+            
+            <!-- Step 4: Auto Mode -->
+            <g class="step-group" data-step="4">
+                <!-- Vertical face -->
+                <rect class="step-face" x="590" y="185" width="140" height="65" fill="#c97d2e" rx="2"/>
+                <!-- Horizontal surface -->
+                <rect class="step-surface" x="590" y="145" width="140" height="40" fill="url(#grad4)" rx="2"/>
+                
+                <!-- Trust threshold -->
+                <text x="590" y="220" class="threshold-label" text-anchor="end">判断持续可靠 →</text>
+                
+                <!-- Human figure - running -->
+                <g transform="translate(635, 110)">
+                    <circle cx="10" cy="5" r="5" class="figure-path"/>
+                    <path d="M 10 12 L 7 18 L 12 24 M 7 18 L 3 15 M 12 24 L 16 28 M 12 24 L 8 28" stroke="var(--text-primary)" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <ellipse cx="12" cy="30" rx="7" ry="2" fill="var(--step-4)" opacity="0.5"/>
+                </g>
+                
+                <!-- Labels -->
+                <text x="660" y="203" class="step-label-flag" text-anchor="middle">--permission-mode auto</text>
+                <text x="660" y="170" class="step-label-mode" text-anchor="middle">Auto</text>
+                <text x="660" y="100" class="step-label-zh" text-anchor="middle" fill="#ffa94d">广泛信任</text>
+                <text x="660" y="80" class="step-label-desc" text-anchor="middle">大多数操作自动执行</text>
+                <text x="660" y="70" class="step-label-desc" text-anchor="middle">Mostly Automatic</text>
+                
+                <!-- User persona -->
+                <text x="660" y="50" class="user-persona" text-anchor="middle">高级用户 Power User</text>
+            </g>
+            
+            <!-- Step 5: Bypass Mode -->
+            <g class="step-group step-5-glow" data-step="5">
+                <!-- Vertical face -->
+                <rect class="step-face" x="750" y="80" width="140" height="65" fill="#b89a1e" rx="2"/>
+                <!-- Horizontal surface -->
+                <rect class="step-surface" x="750" y="40" width="140" height="40" fill="url(#grad5)" rx="2" filter="url(#glow)"/>
+                
+                <!-- Trust threshold -->
+                <text x="750" y="115" class="threshold-label" text-anchor="end">完全信任 / CI场景 →</text>
+                
+                <!-- Human figure - leaping/celebrating -->
+                <g transform="translate(795, 5)">
+                    <circle cx="10" cy="5" r="5" class="figure-path"/>
+                    <path d="M 10 12 L 8 18 L 5 12 M 8 18 L 12 22 M 12 22 L 16 18 M 12 22 L 16 26" stroke="var(--text-primary)" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <ellipse cx="12" cy="28" rx="8" ry="2" fill="var(--step-5)" opacity="0.6"/>
+                </g>
+                
+                <!-- Labels -->
+                <text x="820" y="98" class="step-label-flag" text-anchor="middle">--permission-mode bypassPermissions</text>
+                <text x="820" y="65" class="step-label-mode" text-anchor="middle">Bypass</text>
+                <text x="820" y="-10" class="step-label-zh" text-anchor="middle" fill="#ffd93d">完全委托</text>
+                <text x="820" y="-30" class="step-label-desc" text-anchor="middle">所有操作自动执行</text>
+                <text x="820" y="-40" class="step-label-desc" text-anchor="middle">Fully Autonomous</text>
+                
+                <!-- User persona -->
+                <text x="820" y="-65" class="user-persona" text-anchor="middle">DevOps / CI·CD</text>
+            </g>
+            
+            <!-- Safety Valve Arrow -->
+            <g class="safety-valve">
+                <path d="M 920 50 Q 950 250 920 480" stroke="#ff6b6b" stroke-width="2" fill="none" stroke-dasharray="8,4" marker-end="url(#arrowhead)"/>
+                
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#ff6b6b"/>
+                    </marker>
+                </defs>
+                
+                <text x="960" y="200" class="valve-label" text-anchor="middle" transform="rotate(90, 960, 200)">安全阀 Safety Valve</text>
+                <text x="960" y="265" class="valve-sublabel" text-anchor="middle" transform="rotate(90, 960, 265)">可随时降级 Can Always Downgrade</text>
+            </g>
+            
+            <!-- CLAUDE.md Note -->
+            <g transform="translate(500, 560)">
+                <text x="0" y="0" class="axis-label" text-anchor="middle" fill="#6c757d" font-size="10">
+                    CLAUDE.md 支持细粒度信任控制 via allowedTools — 可按工具维度授信
+                </text>
+            </g>
+        </svg>
+        
+        <div class="info-panel" id="infoPanel">
+            <h3 id="panelTitle">信任阶梯</h3>
+            <p id="panelDesc">悬停在阶梯上查看详细说明</p>
+        </div>
+    </div>
+    
+    <script>
+        const stepDetails = {
+            1: {
+                title: "Level 1: Plan Mode / 初次接触",
+                desc: "AI仅进行只读分析，展示思考过程和计划。用户观察AI的理解能力，建立初步信任。零风险，完全可控。"
+            },
+            2: {
+                title: "Level 2: Default / 谨慎执行", 
+                desc: "每次工具调用都需用户确认。适合了解AI的判断质量，逐步建立对AI决策的信任。"
+            },
+            3: {
+                title: "Level 3: Accept Edits / 选择性信任",
+                desc: "文件编辑自动执行，但bash命令仍需确认。适合对AI代码能力有信心，但对系统命令保持谨慎。"
+            },
+            4: {
+                title: "Level 4: Auto / 广泛信任",
+                desc: "大多数操作自动执行，仅危险操作需确认。适合有经验的用户，对AI的综合判断有充分信任。"
+            },
+            5: {
+                title: "Level 5: Bypass / 完全委托",
+                desc: "所有操作自动执行，无需确认。适用于CI/CD等自动化场景，或完全信任AI的高级用户。"
+            }
+        };
+        
+        const infoPanel = document.getElementById('infoPanel');
+        const panelTitle = document.getElementById('panelTitle');
+        const panelDesc = document.getElementById('panelDesc');
+        
+        document.querySelectorAll('.step-group').forEach(step => {
+            step.addEventListener('mouseenter', () => {
+                const stepNum = step.getAttribute('data-step');
+                const detail = stepDetails[stepNum];
+                panelTitle.textContent = detail.title;
+                panelDesc.textContent = detail.desc;
+                infoPanel.classList.add('active');
+            });
+            
+            step.addEventListener('mouseleave', () => {
+                infoPanel.classList.remove('active');
+            });
+        });
+    </script>
+</body>
+</html>

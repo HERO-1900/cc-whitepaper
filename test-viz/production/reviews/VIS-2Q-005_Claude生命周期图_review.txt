@@ -1,0 +1,31 @@
+总分: 11/20
+
+**布局: 2/5** — 三阶段分区正确，但节点分布不均导致视觉重心偏移，Startup区左侧拥挤而Shutdown区空洞，Category标签位置与内容对齐混乱。
+
+**信息: 3/5** — 核心架构分层清晰（启动→运行循环→结束），27个Hook分类合理，但节点拥挤时文字标签易重叠，Category分组标签（如"Tools & Permissions"）与实际节点分布不匹配。
+
+**美学: 3/5** — 深色主题+青色高亮色系视觉舒适，渐变流光动画增色，但Loop箭头SVG结构错误（marker-defs嵌套在path内）且var()在SVG presentation attribute中浏览器兼容性存疑。
+
+**完整: 3/5** — HTML/JS语法正确可运行，但SVG结构有两处严重错误：`<defs><marker>`嵌套在`<path>`内部（非法），且CSS变量用于SVG属性`fill="var(--tool)"`可能失效。
+
+---
+
+**缺陷：**
+
+1. **SVG结构错误（行~165）** — `<defs><marker id="arrowhead">`被错误地嵌套在`<path>`元素内部，而非`<svg>`根元素下。`d="M 420 380 Q 600 450 780 380"`之后不应出现`</path><defs>...</defs>`序列。
+2. **CSS变量用于SVG presentation attribute（行~167）** — `fill="var(--tool)"`在`<marker>`的`<polygon>`上，CSS变量对SVG presentation attributes的浏览器支持不一致，建议直接写颜色值`#00d4ff`。
+3. **节点分布失衡** — Running Loop区域（x:360-840）承载了21个节点，平均间距仅~23px，导致y=180和y=440两端的节点标签密集重叠。Startup区仅4个节点，Shutdown区仅1个节点（SessionEnd）。
+4. **Category标签与内容错位（行~155-158）** — `text x="750"`位置对应"Tools & Permissions"，但该区域实际混合了MCP、Subagent、Compact等类别的节点，分组逻辑不准确。
+5. **Loop箭头动画逻辑矛盾（行~149）** — `animation:dashFlow 15s linear infinite reverse`对dash流做了两次反向（先在`dashFlow`关键帧中`to{stroke-dashoffset:-200}`再`reverse`），实际动画方向与注释"loop"意图不符。
+6. **Trust bar与主图间距** — `position:fixed;bottom:0`的trust-bar与`padding-bottom:100px`的container在900px以下视口可能重叠。
+
+---
+
+**修改建议：**
+
+1. 将`<defs><marker>`移出`<path>`，作为`<svg>`的直接子元素置于`<defs>`标签内。
+2. 将`fill="var(--tool)"`改为硬编码颜色`fill="#00d4ff"`。
+3. 重新分配Running Loop区域的节点y坐标，避免单一垂直线上节点过密；考虑将部分Startup区节点（ConfigChange等）移入Running Loop区以平衡左右视觉重量。
+4. 重新设计Category分组或移除category-group-label标签，改为依赖颜色图例和鼠标悬停tooltip传递分类信息。
+5. 若Loop箭头表示"循环"语义，去掉`reverse`关键字；若表示"反向流动"，保留但补充注释说明。
+6. 添加`@media(max-width:600px)`对trust-bar的`padding-bottom`或`margin-bottom`调整。

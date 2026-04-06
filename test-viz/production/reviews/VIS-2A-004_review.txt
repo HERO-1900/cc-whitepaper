@@ -1,0 +1,34 @@
+
+总分: 14/20
+
+**布局: 3/5** — 阶段宽度与时间轴不成比例（Ready阶段400ms占40%宽度，Pre-import 100ms仅占24%），且Y轴任务行间距不一致（Main Execution行距异常），时间刻度300ms处断档。
+
+**信息: 4/5** — 核心启动流程层次清晰，里程碑标注醒目；但UI(300ms)柱形仅15px几乎不可见，Deferred子任务无标签，7个后台任务无明细。
+
+**美学: 4/5** — 配色体系和谐（蓝/紫/绿三阶段+琥珀色点缀），噪声叠加层提升质感；但异步条纹pattern与实色叠加效果混杂，连接虚线增加视觉噪音。
+
+**完整: 3/5** — HTML可独立运行，但SVG `<stop>` 元素内使用 `style="stop-color:var(--color-pre)"` 的CSS变量写法兼容性存疑；动画JS逻辑正确但tooltip定位在overflow场景可能越界。
+
+---
+
+**缺陷:**
+
+1. **[SVG defs:189-200]** `<linearGradient>` 的 `<stop>` 使用 `style="stop-color:var(--color-*)"` — SVG不支持CSS变量直接写在SVG attribute的style里，应改为 `stop-color` 作为SVG属性
+2. **[SVG:226-228]** 时间轴断档：895x处标注400ms，但下一格应为425ms，300→400跳了100ms而非75ms；且300ms刻度落在minor line(834)而非major line
+3. **[SVG:306-309]** UI Render柱宽仅15px (x=590→605)，刻度轴上对应仅25ms，视觉过细几乎成竖线
+4. **[SVG:314-323]** Deferred prefetch的5个sub-task矩形完全无文字标签，父任务"Deferred"行也无可见bar
+5. **[SVG:253-255]** Init区域y=235-263区间有三层任务条重叠：Main Execution(28px高) + Migration check(28px高) + Init subsystems(28px高)，造成视觉堵塞
+6. **[SVG:233-234]** row-label "Main Execution"在y=250，但对应task-bar在y=235，行中心点偏差7.5px
+7. **[SVG:266-268]** 连接虚线path（MDM→Main, Keychain→Init）斜率过陡，与并行任务语义不直观
+8. **[CSS:130-133]** `.task-bar.pattern` 设定 `fill:url(#diagonalPattern)`，但pattern fill会与同元素的 `.pre-async` 等fill叠加，导致条纹+实色混杂
+
+**修改建议:**
+
+1. 将 `<stop style="stop-color:...">` 改为 `<stop stop-color="...">`（SVG原生属性）
+2. 修正时间轴：补齐375ms/425ms刻度；将300ms major线从834移至相邻major位（建议重新计算phase宽度使每个phase内刻度均匀）
+3. UI Render柱宽至少改为50-60px，或改用三角形标记
+4. Deferred sub-task添加 `<text>` 标签（user info/git status等）
+5. Init区域Y轴下行距调整为均匀35px，Main Execution与Init subsystems之间增加视觉分隔
+6. row-label的y坐标与task-bar的y+height/2对齐
+7. 移除或简化连接虚线，用淡色垂直虚线替代更清晰
+8. pattern类任务去掉实色fill class，仅保留pattern填充

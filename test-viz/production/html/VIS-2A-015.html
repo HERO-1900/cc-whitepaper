@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>并发安全矩阵 | Concurrency Safety Matrix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-void: #0a0b10;
+    --bg-surface: #11131a;
+    --bg-elevated: #181b25;
+    --text-primary: #e8ecf1;
+    --text-secondary: #8f9ab2;
+    --accent-green-deep: #0d3b2e;
+    --accent-green-bright: #2dd4a8;
+    --accent-green-dim: #1a7f5e;
+    --accent-red-deep: #3b0d15;
+    --accent-red-bright: #ff4d6d;
+    --accent-red-dim: #a61e3b;
+    --accent-gray: #2a2f3f;
+    --border-subtle: #232836;
+    --glow-green: rgba(45, 212, 168, 0.15);
+    --glow-red: rgba(255, 77, 109, 0.15);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: "Space Grotesk", "Noto Sans SC", sans-serif;
+    background-color: var(--bg-void);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 3rem 1.5rem;
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(45, 212, 168, 0.06) 0%, transparent 35%),
+      radial-gradient(circle at 85% 80%, rgba(255, 77, 109, 0.05) 0%, transparent 35%),
+      linear-gradient(180deg, rgba(10,11,16,1) 0%, rgba(14,16,24,1) 100%);
+    overflow-x: hidden;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 3rem;
+    position: relative;
+  }
+
+  .header-badge {
+    display: inline-block;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+    padding: 0.3rem 0.8rem;
+    border-radius: 999px;
+    margin-bottom: 1rem;
+    letter-spacing: 0.05em;
+    background: var(--bg-surface);
+  }
+
+  .header h1 {
+    font-size: clamp(1.6rem, 5vw, 2.6rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(90deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header p {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  .matrix-container {
+    position: relative;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03);
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .matrix-wrapper {
+    display: inline-block;
+    min-width: 100%;
+  }
+
+  table {
+    border-collapse: separate;
+    border-spacing: 6px;
+    width: auto;
+    margin: 0 auto;
+  }
+
+  th, td {
+    width: 68px;
+    height: 68px;
+    text-align: center;
+    vertical-align: middle;
+    border-radius: 10px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.8rem;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    user-select: none;
+  }
+
+  th {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-weight: 600;
+    border: 1px solid var(--border-subtle);
+    position: relative;
+    cursor: pointer;
+  }
+
+  th:hover {
+    background: #202537;
+  }
+
+  th .tool-name {
+    display: block;
+    font-size: 0.78rem;
+    letter-spacing: -0.02em;
+  }
+
+  th .tool-badge {
+    display: block;
+    font-size: 0.6rem;
+    margin-top: 2px;
+    font-weight: 400;
+    opacity: 0.8;
+  }
+
+  th .tool-badge.safe {
+    color: var(--accent-green-bright);
+  }
+
+  th .tool-badge.unsafe {
+    color: var(--accent-red-bright);
+  }
+
+  td {
+    cursor: help;
+    border: 1px solid transparent;
+    font-weight: 600;
+    font-size: 0.7rem;
+    position: relative;
+  }
+
+  td::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+
+  td.diagonal {
+    background: var(--accent-gray);
+    color: var(--text-secondary);
+    border-color: #3a4055;
+  }
+
+  td.safe-readonly {
+    background: var(--accent-green-deep);
+    color: var(--accent-green-bright);
+    border-color: var(--accent-green-dim);
+    box-shadow: inset 0 0 16px var(--glow-green);
+  }
+
+  td.safe-mixed {
+    background: rgba(13, 59, 46, 0.6);
+    color: #5ee9c0;
+    border-color: var(--accent-green-dim);
+    box-shadow: inset 0 0 12px var(--glow-green);
+  }
+
+  td.unsafe {
+    background: var(--accent-red-deep);
+    color: var(--accent-red-bright);
+    border-color: var(--accent-red-dim);
+    box-shadow: inset 0 0 16px var(--glow-red);
+  }
+
+  td:hover {
+    transform: translateY(-2px) scale(1.05);
+    z-index: 2;
+  }
+
+  td.diagonal:hover {
+    background: #353b52;
+  }
+
+  td.safe-readonly:hover {
+    background: #114536;
+    box-shadow: 0 8px 24px rgba(45, 212, 168, 0.2), inset 0 0 20px var(--glow-green);
+  }
+
+  td.safe-mixed:hover {
+    background: #124d3b;
+    box-shadow: 0 8px 24px rgba(45, 212, 168, 0.15), inset 0 0 20px var(--glow-green);
+  }
+
+  td.unsafe:hover {
+    background: #4d111f;
+    box-shadow: 0 8px 24px rgba(255, 77, 109, 0.2), inset 0 0 20px var(--glow-red);
+  }
+
+  .dimmed {
+    opacity: 0.25;
+    filter: grayscale(0.6);
+  }
+
+  .highlight {
+    outline: 1px solid rgba(255,255,255,0.2);
+    outline-offset: 2px;
+  }
+
+  .corner-cell {
+    background: transparent;
+    border: none;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .legend-box {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    border: 1px solid;
+  }
+
+  .legend-box.green-deep {
+    background: var(--accent-green-deep);
+    border-color: var(--accent-green-dim);
+  }
+
+  .legend-box.green-mixed {
+    background: rgba(13, 59, 46, 0.6);
+    border-color: var(--accent-green-dim);
+  }
+
+  .legend-box.red {
+    background: var(--accent-red-deep);
+    border-color: var(--accent-red-dim);
+  }
+
+  .legend-box.gray {
+    background: var(--accent-gray);
+    border-color: #3a4055;
+  }
+
+  .tooltip {
+    position: fixed;
+    background: rgba(17, 19, 26, 0.95);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 100;
+    max-width: 260px;
+    line-height: 1.4;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    backdrop-filter: blur(6px);
+  }
+
+  .tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .tooltip .pair {
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+    color: #fff;
+  }
+
+  .tooltip .desc {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+  }
+
+  .rule-bar {
+    margin-top: 2.5rem;
+    padding: 1.2rem 1.5rem;
+    background: linear-gradient(90deg, rgba(45,212,168,0.08) 0%, rgba(255,77,109,0.06) 100%);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    max-width: 720px;
+  }
+
+  .rule-bar h3 {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+
+  .rule-bar ul {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    padding-left: 1.2rem;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 640px) {
+    body { padding: 1.5rem 0.75rem; }
+    .matrix-container { padding: 1rem; border-radius: 12px; }
+    th, td { width: 44px; height: 44px; font-size: 0.6rem; border-spacing: 3px; }
+    th .tool-name { font-size: 0.58rem; }
+    th .tool-badge { display: none; }
+    td { font-size: 0.55rem; }
+    .header h1 { font-size: 1.4rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-badge">VIS-2A-015 / 05_工具运行时.md</div>
+  <h1>并发安全矩阵</h1>
+  <p>StreamingToolExecutor 依赖 <span style="font-family:JetBrains Mono,monospace;color:var(--text-primary);">isConcurrencySafe</span> 标记决定工具组合是否可以安全并行执行</p>
+</div>
+
+<div class="matrix-container">
+  <div class="matrix-wrapper">
+    <table id="matrix">
+      <thead>
+        <tr>
+          <th class="corner-cell">Tool × Tool</th>
+        </tr>
+      </thead>
+      <tbody id="matrix-body">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-box green-deep"></div><span>安全并行 · 纯只读组合</span></div>
+  <div class="legend-item"><div class="legend-box green-mixed"></div><span>安全并行 · 含副作用但安全</span></div>
+  <div class="legend-item"><div class="legend-box red"></div><span>必须串行 · 存在并发风险</span></div>
+  <div class="legend-item"><div class="legend-box gray"></div><span>自身对角线</span></div>
+</div>
+
+<div class="rule-bar">
+  <h3>关键规则 / Core Rules</h3>
+  <ul>
+    <li>两个声明为 <span style="color:var(--accent-green-bright);">isConcurrencySafe=true</span> 的工具可以并行执行</li>
+    <li>只要组合中包含一个 <span style="color:var(--accent-red-bright);">isConcurrencySafe=false</span> 的工具，就必须串行</li>
+    <li>系统信任工具自身的声明；若声明错误，可能出现竞态条件</li>
+  </ul>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="pair" id="tt-pair"></div>
+  <div class="desc" id="tt-desc"></div>
+</div>
+
+<script>
+  const tools = [
+    { name: "Read", safe: true, readonly: true, desc: "只读操作，不会影响文件系统状态" },
+    { name: "Glob", safe: true, readonly: true, desc: "文件模式匹配，纯读取" },
+    { name: "Grep", safe: true, readonly: true, desc: "内容搜索，纯读取" },
+    { name: "Agent", safe: true, readonly: false, desc: "独立子进程运行，互不干扰" },
+    { name: "Edit", safe: false, readonly: false, desc: "修改文件内容，存在写冲突风险" },
+    { name: "Write", safe: false, readonly: false, desc: "写入文件，可能覆盖其他操作结果" },
+    { name: "NBEdit", safe: false, readonly: false, desc: "Notebook 单元格修改，有写操作" },
+    { name: "Bash", safe: false, readonly: false, desc: "取决于沙箱配置，默认视为不安全" }
+  ];
+
+  const matrix = document.getElementById("matrix");
+  const theadRow = matrix.querySelector("thead tr");
+  const tbody = document.getElementById("matrix-body");
+  const tooltip = document.getElementById("tooltip");
+  const ttPair = document.getElementById("tt-pair");
+  const ttDesc = document.getElementById("tt-desc");
+
+  // build headers
+  tools.forEach(t => {
+    const th = document.createElement("th");
+    th.innerHTML = `<span class="tool-name">${t.name}</span><span class="tool-badge ${t.safe ? 'safe' : 'unsafe'}">${t.safe ? '✓ safe' : '✗ unsafe'}</span>`;
+    th.dataset.tool = t.name;
+    theadRow.appendChild(th);
+  });
+
+  // build rows
+  tools.forEach(rowTool => {
+    const tr = document.createElement("tr");
+
+    const rowHeader = document.createElement("th");
+    rowHeader.innerHTML = `<span class="tool-name">${rowTool.name}</span><span class="tool-badge ${rowTool.safe ? 'safe' : 'unsafe'}">${rowTool.safe ? '✓ safe' : '✗ unsafe'}</span>`;
+    rowHeader.dataset.tool = rowTool.name;
+    tr.appendChild(rowHeader);
+
+    tools.forEach(colTool => {
+      const td = document.createElement("td");
+      td.dataset.row = rowTool.name;
+      td.dataset.col = colTool.name;
+
+      if (rowTool.name === colTool.name) {
+        td.className = "diagonal";
+        td.textContent = "—";
+        td.dataset.reason = `${rowTool.name} × ${colTool.name}：同一工具的自我组合，实际意义为连续执行`;
+      } else if (!rowTool.safe || !colTool.safe) {
+        td.className = "unsafe";
+        td.textContent = "串行";
+        let reason = "";
+        if (!rowTool.safe && !colTool.safe) {
+          reason = "双方均可能写入文件系统，并行会导致冲突或数据损坏";
+        } else if (rowTool.safe && !colTool.safe) {
+          reason = `${colTool.name} 有写操作，${rowTool.name} 可能读到半写状态`;
+        } else {
+          reason = `${rowTool.name} 有写操作，${colTool.name} 可能读到半写状态`;
+        }
+        td.dataset.reason = `${rowTool.name} × ${colTool.name}：必须串行。${reason}`;
+      } else {
+        // both safe
+        if (rowTool.readonly && colTool.readonly) {
+          td.className = "safe-readonly";
+          td.textContent = "并行";
+          td.dataset.reason = `${rowTool.name} × ${colTool.name}：纯只读组合，互不影响，可安全并行`;
+        } else {
+          td.className = "safe-mixed";
+          td.textContent = "并行";
+          td.dataset.reason = `${rowTool.name} × ${colTool.name}：虽可能有副作用但声明为并发安全，系统信任其隔离性`;
+        }
+      }
+
+      // hover tooltip
+      td.addEventListener("mouseenter", (e) => {
+        ttPair.textContent = `${rowTool.name} × ${colTool.name}`;
+        ttDesc.textContent = td.dataset.reason;
+        tooltip.classList.add("visible");
+      });
+
+      td.addEventListener("mouseleave", () => {
+        tooltip.classList.remove("visible");
+      });
+
+      td.addEventListener("mousemove", (e) => {
+        const x = e.clientX + 14;
+        const y = e.clientY + 14;
+        tooltip.style.left = Math.min(x, window.innerWidth - 280) + "px";
+        tooltip.style.top = Math.min(y, window.innerHeight - 100) + "px";
+      });
+
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  // click to highlight row/col
+  let activeTool = null;
+  const headers = matrix.querySelectorAll("th[data-tool]");
+
+  headers.forEach(th => {
+    th.addEventListener("click", () => {
+      const tool = th.dataset.tool;
+      if (activeTool === tool) {
+        activeTool = null;
+        clearHighlight();
+      } else {
+        activeTool = tool;
+        highlightTool(tool);
+      }
+    });
+  });
+
+  function clearHighlight() {
+    matrix.querySelectorAll("th, td").forEach(el => {
+      el.classList.remove("dimmed", "highlight");
+    });
+  }
+
+  function highlightTool(toolName) {
+    matrix.querySelectorAll("th, td").forEach(el => {
+      el.classList.remove("dimmed", "highlight");
+      const isRowHeader = el.tagName === "TH" && el.parentElement && el.parentElement.querySelector("th") === el && el.dataset.tool === toolName;
+      const isColHeader = el.tagName === "TH" && el.parentElement === theadRow && el.dataset.tool === toolName;
+      const isCell = el.tagName === "TD" && (el.dataset.row === toolName || el.dataset.col === toolName);
+      if (isRowHeader || isColHeader || isCell) {
+        el.classList.add("highlight");
+      } else if (el.className !== "corner-cell") {
+        el.classList.add("dimmed");
+      }
+    });
+  }
+
+  // click outside to clear
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#matrix")) {
+      activeTool = null;
+      clearHighlight();
+    }
+  });
+</script>
+
+</body>
+</html>

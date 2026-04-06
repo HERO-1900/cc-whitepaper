@@ -1,0 +1,78 @@
+我来仔细审查这份代码。
+
+**总分: 12/20**
+
+---
+
+**布局: 2/5** — 力导向布局导致节点随机分布，标签背景依赖 DOM 相邻关系定位不稳定，注释每帧重建
+
+**信息: 4/5** — 核心发现明确（Tool.ts 是辐射中心 vs main.tsx 是汇聚点），交互 tooltip 有效，但标题"依赖热力图"过于笼统
+
+**美学: 3/5** — 配色渐变专业、字体搭配合理，但节点大小与颜色语义略有重叠（有些节点同时大且颜色深），部分 CSS 选择器不精确
+
+**完整: 3/5** — 可直接打开运行，但存在逻辑缺陷和效率问题
+
+---
+
+**缺陷:**
+
+1. **[JS] 第 288-295 行** — `customColor` 函数的颜色映射逻辑混乱：
+   ```js
+   if (t > 0.8) return d3.interpolateRgb("#ff3d00", "#ff9100")(t);  // t 直接传入
+   if (t > 0.5) return d3.interpolateRgb("#ff9100", "#ffd600")(t * 2 - 1); // 范围 [-0.6, 0.4]
+   ```
+   当 t=0.6 时，走第二分支得 0.2，色偏黄；当 t=0.55 时同样得 0.1，0.7 时得 0.4——颜色不随热度单调递增。
+
+2. **[JS] 第 383-384 行** — `labelGroup` 的数据在 `tick` 事件中每帧重新过滤：
+   ```js
+   labelGroup.data(nodes.filter(d => d.indegree > 5 || d.outdegree > 20 || d.type !== "normal"))
+   ```
+   应在初始化时定义一次，而非每帧重复计算。
+
+3. **[JS] 第 393-394 行** — 标签背景定位依赖 `this.previousSibling`：
+   ```js
+   d3.select(this.previousSibling).attr("x", bbox.x - pad)
+   ```
+   DOM 结构一旦变化（插入了其他元素），背景会错位到错误元素。
+
+4. **[JS] 第 372-390 行** — `updateAnnotations` 每帧清空重建：
+   ```js
+   annotations.selectAll("*").remove();
+   annotations.append("text")...
+   ```
+   应使用 D3 enter/update/exit 模式，或只在节点位置大幅变化时更新。
+
+5. **[JS] 第 447 行** — `getBBox()` 前无 null 检查：
+   ```js
+   const bounds = g.node().getBBox();
+   ```
+   若 g 为空会报错。
+
+6. **[CSS] 第 145-147 行** — `.node-label-bg` 定义在全局但仅用于动态创建的元素，SVG rect 应使用 CSS `fill` 而非 class 穿透。
+
+7. **[JS] 第 220-226 行** — 力模拟参数多处硬编码 `Math.random()`，导致每次运行布局不确定，无法复现。
+
+8. **[JS] 第 197-205 行** — `customColor` 颜色区间跳变：0.2-0.5 区间直接跨越暖冷色，中性节点（indegree 10-20 左右）颜色最暗。
+
+---
+
+**修改建议:**
+
+1. 将 `customColor` 替换为基于 `d3.scaleSequential().interpolator(d3.interpolateInferno)` 的单调映射，确保颜色随热度单调变化。
+
+2. 将 `labelGroup` 的数据过滤移至初始化阶段，存入变量而非每帧计算。
+
+3. 使用 `labelGroup.each()` 内部计算背景尺寸，而非依赖 DOM 相邻关系：
+   ```js
+   labelGroup.each(function(d) {
+     const text = d3.select(this).select("text");
+     const bbox = text.node().getBBox();
+     d3.select(this).select("rect").attr(...)
+   });
+   ```
+
+4. 为 `updateAnnotations` 添加节流，或使用 simulation 稳定后的单次调用而非每帧更新。
+
+5. 在 `getBBox()` 前添加守卫：`if (g.node()) { ... }`。
+
+6. 移除节点初始化的 `Math.random()`，改用确定性的角度/螺旋分布预设位置作为 force 初始坐标。

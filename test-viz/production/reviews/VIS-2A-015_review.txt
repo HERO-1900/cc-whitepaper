@@ -1,0 +1,47 @@
+我来详细审查这份图表代码。
+
+**总分: 16/20**
+
+---
+
+**布局: 4/5** — 整体对齐整齐，间距一致，但角头单元格（corner-cell）排版略显松散
+
+**信息: 4/5** — 层次清晰，核心语义（串行/并行、安全/危险）一眼可辨，tooltip 补充详细
+
+**美学: 4/5** — 深色主题配色和谐，字体搭配合理，glow/dimmed 效果精致
+
+**完整: 4/5** — 可直接运行，语法正确，但有若干可清理的遗留代码
+
+---
+
+**缺陷:**
+
+1. **[CSS, 第 199 行]** `/* border-spacing: 3px; */` 是悬空注释，既未应用（被注释掉）也未删除，属遗留代码
+
+2. **[CSS, 第 91 行]** `th, td { … border-spacing: 6px; }` 与移动端 `border-spacing` 注释矛盾，移动端实际沿用 6px
+
+3. **[CSS, 第 146 行]** `.legend-box.green-mixed` 背景为 `rgba(13, 59, 46, 0.6)` 半透明，但边框为实色 `#1a7f5e`，视觉上衔接不紧 — 与 `.safe-mixed` td 的实色背景处理不一致
+
+4. **[JS, 第 165-168 行]** `highlightTool()` 内判断 rowHeader 的逻辑有缺陷：
+   ```js
+   const isRowHeader = el.tagName === "TH" && ... el.parentElement.querySelector("th") === el && ...
+   ```
+   `querySelector("th")` 永远返回 `<thead>` 内第一个 `<th>`（即 corner-cell），所以 rowHeader 判断永远为 false。点击行头时实际无法正确高亮整行。
+
+5. **[CSS, 第 125 行]** `td:hover { transform: translateY(-2px) scale(1.05); }` 在 `overflow-x: auto` 的容器内缩放不会触发滚动条更新，视觉上可能超出容器
+
+6. **[HTML, 第 101 行]** corner-cell 内容为静态文本 "Tool × Tool"，但 JS 从未操作该单元格（仅在 `theadRow.appendChild(th)` 时自动排在最前），属死代码
+
+---
+
+**修改建议:**
+
+1. 删除第 199 行的注释，或恢复 `border-spacing: 3px`（如确需在移动端改间距）
+
+2. 统一 `.legend-box.green-mixed` 与 `.safe-mixed td` 的背景色写法（避免 rgba 与实色混用）
+
+3. 修复 `highlightTool()` 的 rowHeader 检测逻辑，改为检查 `el.dataset.tool` 是否存在且不等于 `"undefined"`，或者另加 `data-rowheader` 属性标识
+
+4. 角头单元格改为由 JS 动态生成（与 body rowHeader 对称），避免静态 HTML 与 JS 生成逻辑不一致
+
+5. hover 缩放可加 `transform-origin: center center` 强化视觉锚点，或限制 scale 倍率至 1.02 减少溢出

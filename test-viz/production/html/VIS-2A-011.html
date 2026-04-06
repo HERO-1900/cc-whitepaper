@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamingToolExecutor 并行时序对比</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-grid: rgba(255, 255, 255, 0.03);
+            --accent-red: #ff4d6d;
+            --accent-red-dim: rgba(255, 77, 109, 0.15);
+            --accent-green: #00f5a0;
+            --accent-green-dim: rgba(0, 245, 160, 0.15);
+            --accent-blue: #00d4ff;
+            --accent-blue-dim: rgba(0, 212, 255, 0.15);
+            --accent-purple: #c084fc;
+            --accent-purple-dim: rgba(192, 132, 252, 0.15);
+            --text-primary: #f0f0f5;
+            --text-secondary: #8a8aa3;
+            --text-muted: #5a5a7a;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --glow-red: rgba(255, 77, 109, 0.4);
+            --glow-green: rgba(0, 245, 160, 0.4);
+            --glow-blue: rgba(0, 212, 255, 0.4);
+            --glow-purple: rgba(192, 132, 252, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* 背景网格与噪点 */
+        .bg-layer {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-grid {
+            background-image: 
+                linear-gradient(var(--bg-grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        .bg-gradient {
+            background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0, 212, 255, 0.08), transparent),
+                        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(192, 132, 252, 0.06), transparent);
+        }
+
+        .bg-noise {
+            opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+
+        header {
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        .badge {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--accent-blue);
+            padding: 6px 14px;
+            border: 1px solid var(--accent-blue);
+            border-radius: 4px;
+            margin-bottom: 16px;
+            opacity: 0;
+            animation: fadeInDown 0.6s ease forwards;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+            font-size: 42px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 8px;
+            opacity: 0;
+            animation: fadeInDown 0.6s ease 0.1s forwards;
+        }
+
+        h1 .zh {
+            display: block;
+        }
+
+        h1 .en {
+            display: block;
+            font-size: 18px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            letter-spacing: 0.02em;
+            margin-top: 6px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 15px;
+            max-width: 600px;
+            margin-top: 16px;
+            opacity: 0;
+            animation: fadeInDown 0.6s ease 0.2s forwards;
+        }
+
+        /* 图表主体 */
+        .chart-wrapper {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 40px;
+            margin-top: 30px;
+            position: relative;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease 0.4s forwards;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset,
+                        0 40px 80px -20px rgba(0,0,0,0.5);
+        }
+
+        .timeline-block {
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        .timeline-block:last-of-type {
+            margin-bottom: 30px;
+        }
+
+        .timeline-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .timeline-label .indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .sequential .indicator {
+            background: var(--accent-red);
+            box-shadow: 0 0 12px var(--glow-red);
+        }
+
+        .parallel .indicator {
+            background: var(--accent-green);
+            box-shadow: 0 0 12px var(--glow-green);
+        }
+
+        .timeline-label h2 {
+            font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .timeline-label .en-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* SVG 样式 */
+        svg {
+            width: 100%;
+            height: auto;
+            overflow: visible;
+        }
+
+        .bar-ai {
+            fill: var(--accent-blue);
+            filter: drop-shadow(0 0 8px var(--glow-blue));
+        }
+
+        .bar-tool {
+            fill: var(--accent-purple);
+            filter: drop-shadow(0 0 8px var(--glow-purple));
+        }
+
+        .bar-ai-dim {
+            fill: url(#aiGradient);
+        }
+
+        .bar-overlap {
+            fill: url(#overlapGradient);
+        }
+
+        .axis-line {
+            stroke: var(--border-subtle);
+            stroke-width: 1;
+        }
+
+        .time-tick {
+            stroke: var(--text-muted);
+            stroke-width: 1;
+            opacity: 0.5;
+        }
+
+        .time-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            fill: var(--text-muted);
+        }
+
+        .bracket {
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+        }
+
+        .bracket-sequential {
+            stroke: var(--accent-red);
+        }
+
+        .bracket-parallel {
+            stroke: var(--accent-green);
+        }
+
+        .bracket-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .bracket-label-sequential {
+            fill: var(--accent-red);
+        }
+
+        .bracket-label-parallel {
+            fill: var(--accent-green);
+        }
+
+        .saving-arrow {
+            opacity: 0;
+            animation: fadeIn 0.6s ease 2.2s forwards;
+        }
+
+        .saving-text {
+            opacity: 0;
+            animation: fadeIn 0.6s ease 2.4s forwards;
+        }
+
+        .dashed-line {
+            stroke: var(--accent-green);
+            stroke-width: 1.5;
+            stroke-dasharray: 6, 4;
+            opacity: 0.6;
+        }
+
+        .annotation {
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 12px;
+            fill: var(--text-secondary);
+        }
+
+        .annotation-en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            fill: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* 约束面板 */
+        .constraint-panel {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 20px;
+            width: 280px;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease 2.6s forwards;
+        }
+
+        .constraint-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .constraint-title .icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+        }
+
+        .tool-list {
+            list-style: none;
+        }
+
+        .tool-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+
+        .tool-item:last-child {
+            border-bottom: none;
+        }
+
+        .tool-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+        }
+
+        .status-safe {
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+        }
+
+        .status-unsafe {
+            background: var(--accent-red-dim);
+            color: var(--accent-red);
+        }
+
+        .tool-reason {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        /* hover tooltip */
+        .tooltip {
+            position: absolute;
+            background: rgba(18, 18, 26, 0.95);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 10px 14px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-size: 12px;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+
+        .tooltip-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .tooltip-time {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        /* 动画关键帧 */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes drawLine {
+            to { stroke-dashoffset: 0; }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* 条形图元素动画 */
+        .seq-bar {
+            opacity: 0;
+            animation: slideInRight 0.5s ease forwards;
+        }
+
+        .seq-bar-ai { animation-delay: 0.6s; }
+        .seq-bar-parse { animation-delay: 0.8s; }
+        .seq-bar-a { animation-delay: 1.0s; }
+        .seq-bar-b { animation-delay: 1.2s; }
+        .seq-bar-c { animation-delay: 1.4s; }
+
+        .par-bar {
+            opacity: 0;
+            animation: slideInRight 0.5s ease forwards;
+        }
+
+        .par-bar-ai { animation-delay: 1.8s; }
+        .par-bar-a { animation-delay: 2.0s; }
+        .par-bar-b { animation-delay: 2.1s; }
+        .par-bar-c { animation-delay: 2.2s; }
+
+        .par-annotation {
+            opacity: 0;
+            animation: fadeIn 0.5s ease 2.4s forwards;
+        }
+
+        /* 响应式 */
+        @media (max-width: 900px) {
+            .container {
+                padding: 30px 20px;
+            }
+            h1 {
+                font-size: 28px;
+            }
+            .chart-wrapper {
+                padding: 24px;
+            }
+            .constraint-panel {
+                position: relative;
+                bottom: auto;
+                right: auto;
+                width: 100%;
+                margin-top: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-layer bg-grid"></div>
+    <div class="bg-layer bg-gradient"></div>
+    <div class="bg-layer bg-noise"></div>
+
+    <div class="container">
+        <header>
+            <div class="badge">VIS-2A-011</div>
+            <h1>
+                <span class="zh">StreamingToolExecutor 并行时序对比</span>
+                <span class="en">Streaming Parallel vs Sequential Execution Timeline</span>
+            </h1>
+            <p class="subtitle">
+                通过上下两组时间线，直观对比传统串行执行与流式并行执行的时间差异。
+                核心优化：在 AI 仍在输出时，检测到 tool_use block 立即启动工具执行。
+            </p>
+        </header>
+
+        <div class="chart-wrapper">
+            <!-- 上方：传统串行 -->
+            <div class="timeline-block sequential">
+                <div class="timeline-label">
+                    <div class="indicator"></div>
+                    <h2>传统串行</h2>
+                    <span class="en-label">Sequential Execution</span>
+                </div>
+                <svg viewBox="0 0 1000 140" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <linearGradient id="aiGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="var(--accent-blue)" stop-opacity="0.9"/>
+                            <stop offset="100%" stop-color="var(--accent-blue)" stop-opacity="0.5"/>
+                        </linearGradient>
+                        <linearGradient id="overlapGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="var(--accent-purple)" stop-opacity="0.85"/>
+                            <stop offset="100%" stop-color="var(--accent-purple)" stop-opacity="0.45"/>
+                        </linearGradient>
+                    </defs>
+
+                    <!-- 轴线 -->
+                    <line class="axis-line" x1="60" y1="95" x2="860" y2="95"/>
+
+                    <!-- 时间刻度 -->
+                    <line class="time-tick" x1="60" y1="90" x2="60" y2="100"/>
+                    <text class="time-label" x="60" y="118" text-anchor="middle">0ms</text>
+
+                    <line class="time-tick" x1="260" y1="90" x2="260" y2="100"/>
+                    <text class="time-label" x="260" y="118" text-anchor="middle">50ms</text>
+
+                    <line class="time-tick" x1="460" y1="90" x2="460" y2="100"/>
+                    <text class="time-label" x="460" y="118" text-anchor="middle">100ms</text>
+
+                    <line class="time-tick" x1="660" y1="90" x2="660" y2="100"/>
+                    <text class="time-label" x="660" y="118" text-anchor="middle">150ms</text>
+
+                    <!-- AI 说话 -->
+                    <g class="seq-bar seq-bar-ai" data-tooltip="AI 输出 | AI Speaking | 80ms">
+                        <rect class="bar-ai" x="60" y="55" width="160" height="32" rx="4"/>
+                        <text x="140" y="76" text-anchor="middle" fill="#0a0a0f" font-size="12" font-weight="700" font-family="JetBrains Mono">AI Speaking</text>
+                    </g>
+
+                    <!-- 解析 -->
+                    <g class="seq-bar seq-bar-parse" data-tooltip="解析响应 | Parse | 10ms">
+                        <rect fill="var(--text-muted)" x="230" y="55" width="30" height="32" rx="4" opacity="0.6"/>
+                        <text x="245" y="76" text-anchor="middle" fill="#0a0a0f" font-size="10" font-weight="700" font-family="JetBrains Mono">Parse</text>
+                    </g>
+
+                    <!-- 工具 A -->
+                    <g class="seq-bar seq-bar-a" data-tooltip="工具 A | Tool A | 20ms">
+                        <rect class="bar-tool" x="270" y="55" width="120" height="32" rx="4"/>
+                        <text x="330" y="76" text-anchor="middle" fill="#0a0a0f" font-size="12" font-weight="700" font-family="JetBrains Mono">Tool A</text>
+                    </g>
+
+                    <!-- 工具 B -->
+                    <g class="seq-bar seq-bar-b" data-tooltip="工具 B | Tool B | 20ms">
+                        <rect class="bar-tool" x="400" y="55" width="120" height="32" rx="4"/>
+                        <text x="460" y="76" text-anchor="middle" fill="#0a0a0f" font-size="12" font-weight="700" font-family="JetBrains Mono">Tool B</text>
+                    </g>
+
+                    <!-- 工具 C -->
+                    <g class="seq-bar seq-bar-c" data-tooltip="工具 C | Tool C | 20ms">
+                        <rect class="bar-tool" x="530" y="55" width="120" height="32" rx="4"/>
+                        <text x="590" y="76" text-anchor="middle" fill="#0a0a0f" font-size="12" font-weight="700" font-family="JetBrains Mono">Tool C</text>
+                    </g>
+
+                    <!-- 总时间括号 -->
+                    <g opacity="0" style="animation: fadeIn 0.5s ease 1.6s forwards;">
+                        <path class="bracket bracket-sequential" d="M 50 45 L 50 35 L 660 35 L 660 45"/>
+                        <text class="bracket-label bracket-label-sequential" x="355" y="28" text-anchor="middle">~150ms Total</text>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- 中间：节省百分比 -->
+            <div style="position: relative; height: 80px; margin: -20px 0;">
+                <svg viewBox="0 0 1000 80" preserveAspectRatio="xMidYMid meet" style="position: absolute; top: 0; left: 0;">
+                    <!-- 大箭头 -->
+                    <g class="saving-arrow">
+                        <path d="M 500 10 L 500 70" stroke="url(#arrowGradient)" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+                        <defs>
+                            <linearGradient id="arrowGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="var(--accent-red)"/>
+                                <stop offset="100%" stop-color="var(--accent-green)"/>
+                            </linearGradient>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="5" refY="3.5" orient="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" fill="var(--accent-green)"/>
+                            </marker>
+                        </defs>
+                    </g>
+
+                    <!-- 节省文本 -->
+                    <g class="saving-text">
+                        <rect x="420" y="22" width="160" height="36" rx="18" fill="rgba(0, 245, 160, 0.1)" stroke="var(--accent-green)" stroke-width="1"/>
+                        <text x="500" y="40" text-anchor="middle" fill="var(--accent-green)" font-size="14" font-weight="700" font-family="Space Grotesk">66% Faster</text>
+                        <text x="500" y="54" text-anchor="middle" fill="var(--text-secondary)" font-size="10" font-family="Noto Sans SC">时间节省约 100ms</text>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- 下方：流式并行 -->
+            <div class="timeline-block parallel">
+                <div class="timeline-label">
+                    <div class="indicator"></div>
+                    <h2>流式并行</h2>
+                    <span class="en-label">Streaming Parallel</span>
+                </div>
+                <svg viewBox="0 0 1000 160" preserveAspectRatio="xMidYMid meet">
+                    <!-- 轴线 -->
+                    <line class="axis-line" x1="60" y1="115" x2="860" y2="115"/>
+
+                    <!-- 时间刻度 -->
+                    <line class="time-tick" x1="60" y1="110" x2="60" y2="120"/>
+                    <text class="time-label" x="60" y="138" text-anchor="middle">0ms</text>
+
+                    <line class="time-tick" x1="260" y1="110" x2="260" y2="120"/>
+                    <text class="time-label" x="260" y="138" text-anchor="middle">50ms</text>
+
+                    <line class="time-tick" x1="460" y1="110" x2="460" y2="120"/>
+                    <text class="time-label" x="460" y="138" text-anchor="middle">100ms</text>
+
+                    <!-- AI 说话 (底层) -->
+                    <g class="par-bar par-bar-ai" data-tooltip="AI 输出 | AI Speaking | 80ms">
+                        <rect class="bar-ai-dim" x="60" y="55" width="160" height="32" rx="4"/>
+                        <text x="140" y="76" text-anchor="middle" fill="#0a0a0f" font-size="12" font-weight="700" font-family="JetBrains Mono">AI Speaking</text>
+                    </g>
+
+                    <!-- 工具 A (与 AI 重叠) -->
+                    <g class="par-bar par-bar-a" data-tooltip="工具 A | Tool A | 20ms (提前启动)">
+                        <rect class="bar-overlap" x="130" y="55" width="120" height="32" rx="4"/>
+                        <text x="190" y="76" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" font-family="JetBrains Mono">Tool A</text>
+                    </g>
+
+                    <!-- 工具 B (与 AI 重叠) -->
+                    <g class="par-bar par-bar-b" data-tooltip="工具 B | Tool B | 20ms (并行)">
+                        <rect class="bar-overlap" x="200" y="55" width="120" height="32" rx="4"/>
+                        <text x="260" y="76" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" font-family="JetBrains Mono">Tool B</text>
+                    </g>
+
+                    <!-- 工具 C (与 AI 重叠) -->
+                    <g class="par-bar par-bar-c" data-tooltip="工具 C | Tool C | 20ms (并行)">
+                        <rect class="bar-overlap" x="270" y="55" width="120" height="32" rx="4"/>
+                        <text x="330" y="76" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" font-family="JetBrains Mono">Tool C</text>
+                    </g>
+
+                    <!-- 总时间括号 -->
+                    <g opacity="0" style="animation: fadeIn 0.5s ease 2.4s forwards;">
+                        <path class="bracket bracket-parallel" d="M 50 45 L 50 35 L 400 35 L 400 45"/>
+                        <text class="bracket-label bracket-label-parallel" x="225" y="28" text-anchor="middle">~50ms Total</text>
+                    </g>
+
+                    <!-- 虚线标注 -->
+                    <g class="par-annotation">
+                        <line class="dashed-line" x1="130" y1="100" x2="130" y2="55"/>
+                        <text class="annotation" x="135" y="108">检测到 tool_use 立即启动</text>
+                        <text class="annotation-en" x="135" y="122">detect tool_use → execute immediately</text>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- 约束面板 -->
+            <div class="constraint-panel">
+                <div class="constraint-title">
+                    <span class="icon">!</span>
+                    <span>isConcurrencySafe 约束</span>
+                </div>
+                <ul class="tool-list">
+                    <li class="tool-item">
+                        <span class="tool-name">
+                            <span class="status status-safe">✓</span>
+                            Read
+                        </span>
+                        <span class="tool-reason">Safe</span>
+                    </li>
+                    <li class="tool-item">
+                        <span class="tool-name">
+                            <span class="status status-safe">✓</span>
+                            Glob
+                        </span>
+                        <span class="tool-reason">Safe</span>
+                    </li>
+                    <li class="tool-item">
+                        <span class="tool-name">
+                            <span class="status status-safe">✓</span>
+                            Grep
+                        </span>
+                        <span class="tool-reason">Safe</span>
+                    </li>
+                    <li class="tool-item">
+                        <span class="tool-name">
+                            <span class="status status-unsafe">✕</span>
+                            Edit
+                        </span>
+                        <span class="tool-reason">文件冲突风险</span>
+                    </li>
+                    <li class="tool-item">
+                        <span class="tool-name">
+                            <span class="status status-unsafe">✕</span>
+                            Write
+                        </span>
+                        <span class="tool-reason">文件冲突风险</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-title" id="tooltip-title"></div>
+        <div class="tooltip-time" id="tooltip-time"></div>
+    </div>
+
+    <script>
+        const tooltip = document.getElementById('tooltip');
+        const tooltipTitle = document.getElementById('tooltip-title');
+        const tooltipTime = document.getElementById('tooltip-time');
+
+        document.querySelectorAll('[data-tooltip]').forEach(el => {
+            el.addEventListener('mouseenter', (e) => {
+                const data = e.currentTarget.getAttribute('data-tooltip').split(' | ');
+                tooltipTitle.textContent = data[0] + ' / ' + data[1];
+                tooltipTime.textContent = data[2];
+                tooltip.style.opacity = '1';
+            });
+
+            el.addEventListener('mousemove', (e) => {
+                tooltip.style.left = e.pageX + 12 + 'px';
+                tooltip.style.top = e.pageY - 40 + 'px';
+            });
+
+            el.addEventListener('mouseleave', () => {
+                tooltip.style.opacity = '0';
+            });
+        });
+    </script>
+</body>
+</html>

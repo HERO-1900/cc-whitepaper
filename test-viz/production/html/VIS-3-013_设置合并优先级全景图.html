@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设置合并优先级全景图</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+  min-height: 100vh;
+  font-family: 'Source Sans 3', sans-serif;
+  color: #e8e8e8;
+  overflow-x: auto;
+}
+
+.container {
+  min-width: 1200px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.title {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, #ffd93d, #ff9f43, #ff6b6b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 2px;
+}
+
+.subtitle {
+  text-align: center;
+  color: #8892b0;
+  font-size: 0.95rem;
+  margin-bottom: 50px;
+  letter-spacing: 1px;
+}
+
+.diagram-wrapper {
+  position: relative;
+  width: 1100px;
+  height: 750px;
+}
+
+/* Background pattern */
+.bg-pattern {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(0, 212, 255, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 107, 107, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(72, 187, 120, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Grid lines */
+.grid-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+}
+
+/* Main layers container */
+.main-layers {
+  position: absolute;
+  left: 280px;
+  top: 80px;
+  width: 540px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+}
+
+/* Individual layer */
+.layer {
+  position: relative;
+  height: 72px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.layer:hover {
+  transform: translateX(10px);
+  filter: brightness(1.15);
+}
+
+.layer-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+  font-size: 16px;
+}
+
+.layer-content {
+  flex: 1;
+}
+
+.layer-name {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 2px;
+  letter-spacing: 0.5px;
+}
+
+.layer-path {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.layer-desc {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+
+/* Layer specific styles - priority increasing upward */
+.layer-plugin {
+  background: linear-gradient(135deg, rgba(128, 128, 128, 0.2), rgba(128, 128, 128, 0.1));
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  width: 480px;
+}
+
+.layer-plugin .layer-icon { background: rgba(128, 128, 128, 0.3); }
+.layer-plugin .layer-name { color: #a0a0a0; }
+
+.layer-user {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.08));
+  border: 1px solid rgba(0, 212, 255, 0.5);
+  box-shadow: 0 3px 12px rgba(0, 212, 255, 0.15);
+  width: 500px;
+}
+
+.layer-user .layer-icon { background: rgba(0, 212, 255, 0.25); color: #00d4ff; }
+.layer-user .layer-name { color: #00d4ff; }
+
+.layer-project {
+  background: linear-gradient(135deg, rgba(72, 187, 120, 0.2), rgba(72, 187, 120, 0.08));
+  border: 1px solid rgba(72, 187, 120, 0.5);
+  box-shadow: 0 3px 12px rgba(72, 187, 120, 0.15);
+  width: 520px;
+}
+
+.layer-project .layer-icon { background: rgba(72, 187, 120, 0.25); color: #48bb78; }
+.layer-project .layer-name { color: #48bb78; }
+
+.layer-local {
+  background: linear-gradient(135deg, rgba(255, 217, 61, 0.2), rgba(255, 217, 61, 0.08));
+  border: 1px solid rgba(255, 217, 61, 0.5);
+  box-shadow: 0 3px 12px rgba(255, 217, 61, 0.15);
+  width: 540px;
+}
+
+.layer-local .layer-icon { background: rgba(255, 217, 61, 0.25); color: #ffd93d; }
+.layer-local .layer-name { color: #ffd93d; }
+
+.layer-flag {
+  background: linear-gradient(135deg, rgba(255, 159, 67, 0.25), rgba(255, 159, 67, 0.1));
+  border: 1px solid rgba(255, 159, 67, 0.6);
+  box-shadow: 0 4px 16px rgba(255, 159, 67, 0.2);
+  width: 560px;
+}
+
+.layer-flag .layer-icon { background: rgba(255, 159, 67, 0.3); color: #ff9f43; }
+.layer-flag .layer-name { color: #ff9f43; }
+
+.layer-policy {
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.3), rgba(255, 107, 107, 0.12));
+  border: 2px solid rgba(255, 107, 107, 0.8);
+  box-shadow: 0 6px 24px rgba(255, 107, 107, 0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+  width: 580px;
+}
+
+.layer-policy .layer-icon { background: rgba(255, 107, 107, 0.35); color: #ff6b6b; }
+.layer-policy .layer-name { color: #ff6b6b; font-size: 16px; }
+
+/* Cowork badge */
+.cowork-badge {
+  position: absolute;
+  left: -85px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  font-size: 9px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.layer-user:hover .cowork-badge { opacity: 1; }
+
+/* Priority label */
+.priority-label {
+  position: absolute;
+  left: -160px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: #8892b0;
+  text-align: right;
+  width: 140px;
+}
+
+.priority-label::before {
+  content: '';
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  width: 12px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+/* Arrow between layers */
+.arrow-up {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -8px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 8px solid currentColor;
+  z-index: 10;
+}
+
+/* Policy sublayers panel */
+.policy-panel {
+  position: absolute;
+  right: 0;
+  top: 380px;
+  width: 280px;
+}
+
+.policy-panel-title {
+  font-size: 12px;
+  color: #ff6b6b;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.policy-sublayers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.policy-sub {
+  height: 56px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.policy-sub:hover { transform: translateX(-8px); }
+
+.policy-sub.remote {
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.4), rgba(255, 107, 107, 0.2));
+  border: 1px solid rgba(255, 107, 107, 0.8);
+}
+
+.policy-sub.mdm {
+  background: linear-gradient(135deg, rgba(220, 80, 80, 0.3), rgba(220, 80, 80, 0.15));
+  border: 1px solid rgba(220, 80, 80, 0.6);
+}
+
+.policy-sub.file {
+  background: linear-gradient(135deg, rgba(190, 60, 60, 0.25), rgba(190, 60, 60, 0.1));
+  border: 1px solid rgba(190, 60, 60, 0.5);
+}
+
+.policy-sub.hkcu {
+  background: linear-gradient(135deg, rgba(160, 40, 40, 0.2), rgba(160, 40, 40, 0.08));
+  border: 1px solid rgba(160, 40, 40, 0.4);
+}
+
+.policy-sub .sub-rank {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+  margin-right: 12px;
+  width: 20px;
+}
+
+.policy-sub .sub-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.policy-sub.remote .sub-name { color: #ff9999; }
+.policy-sub.mdm .sub-name { color: #ff8080; }
+.policy-sub.file .sub-name { color: #ff6666; }
+.policy-sub.hkcu .sub-name { color: #ff4d4d; }
+
+.policy-sub .sub-source {
+  position: absolute;
+  right: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: rgba(255,255,255,0.5);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* First-source-wins arrows */
+.short-circuit-arrow {
+  position: absolute;
+  left: -30px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 2px;
+  background: linear-gradient(90deg, #ff6b6b, transparent);
+}
+
+.short-circuit-arrow::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: -3px;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid #ff6b6b;
+}
+
+/* Drop-in files */
+.dropin-files {
+  position: absolute;
+  right: -140px;
+  top: 112px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dropin-file {
+  background: linear-gradient(135deg, rgba(255, 150, 100, 0.3), rgba(255, 120, 80, 0.15));
+  border: 1px solid rgba(255, 150, 100, 0.5);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: #ffaa77;
+  transform-origin: left center;
+  transition: all 0.3s ease;
+}
+
+.dropin-file:nth-child(1) { transform: rotate(-5deg) translateX(10px); }
+.dropin-file:nth-child(2) { transform: rotate(0deg); }
+.dropin-file:nth-child(3) { transform: rotate(5deg) translateX(10px); }
+
+.dropin-label {
+  position: absolute;
+  right: -140px;
+  top: 80px;
+  font-size: 9px;
+  color: #ffaa77;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Merge semantics panel */
+.semantics-panel {
+  position: absolute;
+  left: 0;
+  top: 200px;
+  width: 260px;
+  background: rgba(15, 20, 35, 0.8);
+  border: 1px solid rgba(100, 120, 180, 0.3);
+  border-radius: 12px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+.semantics-title {
+  font-size: 12px;
+  color: #64b5f6;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.semantics-row {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.semantics-row:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.semantics-type {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.semantics-type.cross { color: #81c784; }
+.semantics-type.same { color: #ffb74d; }
+
+.semantics-type .badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: currentColor;
+  color: #1a1a2e;
+}
+
+.semantics-desc {
+  font-size: 11px;
+  color: #8892b0;
+  line-height: 1.5;
+}
+
+.semantics-detail {
+  margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #64b5f6;
+  background: rgba(100, 181, 246, 0.1);
+  padding: 8px;
+  border-radius: 4px;
+  border-left: 2px solid #64b5f6;
+}
+
+/* Cache layers indicator */
+.cache-indicator {
+  position: absolute;
+  left: 280px;
+  bottom: 20px;
+  display: flex;
+  gap: 24px;
+}
+
+.cache-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #8892b0;
+}
+
+.cache-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.cache-icon.parse { background: rgba(100, 100, 150, 0.3); color: #a0a0d0; }
+.cache-icon.source { background: rgba(100, 150, 200, 0.3); color: #80b0e0; }
+.cache-icon.session { background: rgba(150, 200, 250, 0.3); color: #a0d0ff; }
+
+.cache-arrow {
+  color: #8892b0;
+  font-size: 14px;
+}
+
+/* Legend */
+.legend {
+  position: absolute;
+  right: 0;
+  bottom: 20px;
+  display: flex;
+  gap: 24px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #8892b0;
+}
+
+.legend-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.legend-icon.editable { background: rgba(0, 212, 255, 0.3); color: #00d4ff; }
+.legend-icon.readonly { background: rgba(255, 107, 107, 0.3); color: #ff6b6b; }
+
+/* First-source-wins label */
+.first-wins-label {
+  position: absolute;
+  right: 30px;
+  top: 340px;
+  font-size: 10px;
+  color: #ff6b6b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transform: rotate(-90deg);
+  transform-origin: right center;
+  white-space: nowrap;
+}
+
+/* Anti-recursion guard */
+.guard-badge {
+  position: absolute;
+  left: 280px;
+  bottom: 60px;
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 152, 0, 0.1));
+  border: 1px solid rgba(255, 193, 7, 0.4);
+  border-radius: 6px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.guard-icon {
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 193, 7, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.guard-text { color: #ffc107; }
+.guard-detail { color: #8892b0; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+
+/* Hover tooltip */
+.tooltip {
+  position: absolute;
+  background: rgba(20, 25, 40, 0.95);
+  border: 1px solid rgba(100, 120, 180, 0.4);
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 12px;
+  color: #e8e8e8;
+  max-width: 280px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 100;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.tooltip.show { opacity: 1; }
+
+.tooltip-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #64b5f6;
+}
+
+.tooltip-content {
+  line-height: 1.6;
+  color: #8892b0;
+}
+
+/* Editable indicator */
+.editable-marker {
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  background: #00d4ff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00d4ff;
+}
+
+/* SVG connecting lines */
+svg.connections {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.connection-line {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-dasharray: 4, 4;
+  opacity: 0.4;
+}
+
+/* Layer stack visual effect */
+.layer-stack-shadow {
+  position: absolute;
+  left: 285px;
+  top: 85px;
+  width: 470px;
+  height: 440px;
+  background: linear-gradient(180deg, rgba(255,107,107,0.05), transparent);
+  border-radius: 8px;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1 class="title">Settings Merge Priority</h1>
+  <p class="subtitle">设置合并优先级全景图 · 9层来源合并链</p>
+  
+  <div class="diagram-wrapper">
+    <div class="bg-pattern"></div>
+    <div class="grid-lines"></div>
+    <div class="layer-stack-shadow"></div>
+    
+    <!-- Main Layers -->
+    <div class="main-layers">
+      <!-- Plugin Base (bottom) -->
+      <div class="layer layer-plugin" data-tooltip="pluginSettingsBase: 插件定义的默认设置，作为最底层基础">
+        <div class="priority-label">Level 0 · Foundation</div>
+        <div class="arrow-up" style="color: #808080;"></div>
+        <div class="layer-icon">📦</div>
+        <div class="layer-content">
+          <div class="layer-name">Plugin Base · 插件默认值</div>
+          <div class="layer-path">pluginSettingsBase</div>
+        </div>
+        <div class="layer-desc">Foundation</div>
+      </div>
+      
+      <!-- User Settings -->
+      <div class="layer layer-user" data-tooltip="userSettings: 用户级配置，存储于 ~/.claude/settings.json，可被 Cowork 模式切换">
+        <div class="priority-label">Level 1 · User</div>
+        <div class="cowork-badge">Cowork Mode</div>
+        <div class="arrow-up" style="color: #00d4ff;"></div>
+        <div class="layer-icon">✏️</div>
+        <div class="layer-content">
+          <div class="layer-name">User Settings · 用户设置</div>
+          <div class="layer-path">~/.claude/settings.json</div>
+        </div>
+        <div class="layer-desc">Editable</div>
+        <div class="editable-marker"></div>
+      </div>
+      
+      <!-- Project Settings -->
+      <div class="layer layer-project" data-tooltip="projectSettings: 项目级配置，存储于 .claude/settings.json，可被版本控制">
+        <div class="priority-label">Level 2 · Project</div>
+        <div class="arrow-up" style="color: #48bb78;"></div>
+        <div class="layer-icon">✏️</div>
+        <div class="layer-content">
+          <div class="layer-name">Project Settings · 项目设置</div>
+          <div class="layer-path">.claude/settings.json</div>
+        </div>
+        <div class="layer-desc">Editable</div>
+        <div class="editable-marker"></div>
+      </div>
+      
+      <!-- Local Settings -->
+      <div class="layer layer-local" data-tooltip="localSettings: 本地覆盖配置，存储于 .claude/settings.local.json，gitignored">
+        <div class="priority-label">Level 3 · Local</div>
+        <div class="arrow-up" style="color: #ffd93d;"></div>
+        <div class="layer-icon">✏️</div>
+        <div class="layer-content">
+          <div class="layer-name">Local Settings · 本地设置</div>
+          <div class="layer-path">.claude/settings.local.json</div>
+        </div>
+        <div class="layer-desc">Editable</div>
+        <div class="editable-marker"></div>
+      </div>
+      
+      <!-- Flag Settings -->
+      <div class="layer layer-flag" data-tooltip="flagSettings: 命令行参数 --settings 或 SDK 内联设置，运行时只读">
+        <div class="priority-label">Level 4 · Flags</div>
+        <div class="arrow-up" style="color: #ff9f43;"></div>
+        <div class="layer-icon">🔒</div>
+        <div class="layer-content">
+          <div class="layer-name">Flag Settings · 标志设置</div>
+          <div class="layer-path">--settings &lt;path&gt; / SDK inline</div>
+        </div>
+        <div class="layer-desc">Read-Only</div>
+      </div>
+      
+      <!-- Policy Settings (top) -->
+      <div class="layer layer-policy" data-tooltip="policySettings: 企业策略设置，最高优先级，内部使用 first-source-wins 策略">
+        <div class="priority-label">Level 5 · Policy</div>
+        <div class="layer-icon">🔒</div>
+        <div class="layer-content">
+          <div class="layer-name">Policy Settings · 策略设置</div>
+          <div class="layer-path">Enterprise Policy (Highest Priority)</div>
+        </div>
+        <div class="layer-desc">Read-Only · Top</div>
+      </div>
+    </div>
+    
+    <!-- Merge Semantics Panel -->
+    <div class="semantics-panel">
+      <div class="semantics-title">Merge Semantics · 合并语义</div>
+      
+      <div class="semantics-row">
+        <div class="semantics-type cross">
+          <span class="badge">CROSS-SOURCE</span>
+          跨来源合并
+        </div>
+        <div class="semantics-desc">
+          不同来源间的合并使用深度合并策略：
+          <br>• 数组 → 拼接去重 (uniq)
+          <br>• 对象 → 深度递归合并
+          <br>• 其他 → 后者覆盖前者
+        </div>
+        <div class="semantics-detail">
+          settingsMergeCustomizer()
+          <br>lodash mergeWith()
+        </div>
+      </div>
+      
+      <div class="semantics-row">
+        <div class="semantics-type same">
+          <span class="badge">SAME-SOURCE</span>
+          同来源更新
+        </div>
+        <div class="semantics-desc">
+          同一来源的配置更新使用替换策略：
+          <br>• undefined → 删除键
+          <br>• 数组 → 完全替换
+          <br>• 对象 → 默认 merge 行为
+        </div>
+        <div class="semantics-detail">
+          updateSettingsForSource()
+          <br>Anti-Mutation: clone()
+        </div>
+      </div>
+    </div>
+    
+    <!-- Policy Sublayers -->
+    <div class="policy-panel">
+      <div class="policy-panel-title">Policy Sublayers · First-Source-Wins</div>
+      <div class="policy-sublayers">
+        <div class="policy-sub remote" data-tooltip="remote: 远程管理设置 API，最高优先级策略源">
+          <div class="short-circuit-arrow"></div>
+          <div class="sub-rank">#1</div>
+          <div class="sub-name">Remote · 远程</div>
+          <div class="sub-source">getRemoteManagedSettings</div>
+        </div>
+        
+        <div class="policy-sub mdm" data-tooltip="MDM: 移动设备管理策略，macOS Property List / Windows HKLM">
+          <div class="short-circuit-arrow"></div>
+          <div class="sub-rank">#2</div>
+          <div class="sub-name">MDM · 设备管理</div>
+          <div class="sub-source">plist / HKLM</div>
+        </div>
+        
+        <div class="policy-sub file" data-tooltip="file: managed-settings.json + drop-in 目录，按字母序合并">
+          <div class="short-circuit-arrow"></div>
+          <div class="dropin-label">drop-in dir</div>
+          <div class="dropin-files">
+            <div class="dropin-file">30-compliance.json</div>
+            <div class="dropin-file">20-security.json</div>
+            <div class="dropin-file">10-otel.json</div>
+          </div>
+          <div class="sub-rank">#3</div>
+          <div class="sub-name">File · 文件</div>
+          <div class="sub-source">managed-settings.d/</div>
+        </div>
+        
+        <div class="policy-sub hkcu" data-tooltip="HKCU: Windows 当前用户注册表，最低优先级策略源">
+          <div class="sub-rank">#4</div>
+          <div class="sub-name">HKCU · 用户注册表</div>
+          <div class="sub-source">Windows Registry</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- First Source Wins Label -->
+    <div class="first-wins-label">First-Source-Wins Strategy ↓</div>
+    
+    <!-- Cache Indicator -->
+    <div class="cache-indicator">
+      <div class="cache-item">
+        <div class="cache-icon parse">📄</div>
+        <span>Parse Cache<br><small>文件解析</small></span>
+      </div>
+      <div class="cache-arrow">→</div>
+      <div class="cache-item">
+        <div class="cache-icon source">📂</div>
+        <span>Source Cache<br><small>来源设置</small></span>
+      </div>
+      <div class="cache-arrow">→</div>
+      <div class="cache-item">
+        <div class="cache-icon session">⚡</div>
+        <span>Session Cache<br><small>会话设置</small></span>
+      </div>
+    </div>
+    
+    <!-- Anti-Recursion Guard -->
+    <div class="guard-badge">
+      <div class="guard-icon">🛡️</div>
+      <div>
+        <div class="guard-text">Anti-Recursion Guard</div>
+        <div class="guard-detail">isLoadingSettings flag</div>
+      </div>
+    </div>
+    
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-icon editable">✏️</div>
+        <span>Editable Source<br><small>可编辑来源</small></span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-icon readonly">🔒</div>
+        <span>Read-Only Source<br><small>只读来源</small></span>
+      </div>
+    </div>
+    
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip">
+      <div class="tooltip-title"></div>
+      <div class="tooltip-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Tooltip functionality
+const tooltip = document.getElementById('tooltip');
+const tooltipTitle = tooltip.querySelector('.tooltip-title');
+const tooltipContent = tooltip.querySelector('.tooltip-content');
+
+document.querySelectorAll('[data-tooltip]').forEach(el => {
+  el.addEventListener('mouseenter', (e) => {
+    const text = e.currentTarget.getAttribute('data-tooltip');
+    const parts = text.split(': ');
+    tooltipTitle.textContent = parts[0];
+    tooltipContent.textContent = parts[1] || '';
+    tooltip.classList.add('show');
+  });
+  
+  el.addEventListener('mousemove', (e) => {
+    const rect = document.querySelector('.diagram-wrapper').getBoundingClientRect();
+    tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+    tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
+  });
+  
+  el.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('show');
+  });
+});
+</script>
+</body>
+</html>

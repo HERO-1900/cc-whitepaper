@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coordinator四阶段工作流 | Coordinator 4-Phase Workflow</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Noto+Serif+SC:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+        
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --research: #00d4ff;
+            --synthesis: #7b61ff;
+            --implementation: #48bb78;
+            --verification: #ffd93d;
+            --coordinator: #e056a0;
+            --workers: #6c5ce7;
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0a0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Serif SC', serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: auto;
+            position: relative;
+        }
+        
+        /* Background atmosphere */
+        .bg-atmosphere {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background: 
+                radial-gradient(ellipse at 15% 20%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 85% 80%, rgba(123, 97, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(224, 86, 160, 0.05) 0%, transparent 70%),
+                var(--bg-primary);
+        }
+        
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.03;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+        
+        .container {
+            position: relative;
+            z-index: 10;
+            padding: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* Title */
+        .title-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .main-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2.2rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #fff 0%, var(--coordinator) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+        }
+        
+        .sub-title {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+        
+        /* Main SVG diagram */
+        .diagram-container {
+            background: rgba(22, 33, 62, 0.6);
+            border-radius: 12px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 25px;
+        }
+        
+        /* Info panel */
+        .info-panel {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 3px solid var(--synthesis);
+        }
+        
+        .rule-quote {
+            font-style: italic;
+            font-size: 1.1rem;
+            color: var(--synthesis);
+            margin-bottom: 10px;
+            padding-left: 15px;
+            border-left: 2px solid var(--synthesis);
+        }
+        
+        .rule-explanation {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        /* Decision matrix */
+        .matrix-section {
+            background: rgba(22, 33, 62, 0.6);
+            border-radius: 12px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        
+        .matrix-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: var(--verification);
+            text-align: center;
+        }
+        
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        
+        .matrix-table th {
+            background: rgba(255,255,255,0.05);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+        
+        .matrix-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-secondary);
+        }
+        
+        .matrix-table tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+        
+        .badge-continue {
+            background: rgba(72, 187, 120, 0.2);
+            color: var(--implementation);
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .badge-spawn {
+            background: rgba(255, 217, 61, 0.2);
+            color: var(--verification);
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
+        @keyframes flow {
+            0% { stroke-dashoffset: 100; }
+            100% { stroke-dashoffset: 0; }
+        }
+        
+        @keyframes search {
+            0%, 100% { transform: translateY(0); }
+            25% { transform: translateY(-3px); }
+            75% { transform: translateY(3px); }
+        }
+        
+        @keyframes spotlight {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+        
+        .worker-search {
+            animation: search 2s ease-in-out infinite;
+        }
+        
+        .worker-search:nth-child(2) { animation-delay: 0.3s; }
+        .worker-search:nth-child(3) { animation-delay: 0.6s; }
+        
+        .flow-line {
+            stroke-dasharray: 8 4;
+            animation: flow 3s linear infinite;
+        }
+        
+        .spotlight-effect {
+            animation: spotlight 3s ease-in-out infinite;
+        }
+        
+        /* Tooltip */
+        .phase-block {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .phase-block:hover {
+            filter: brightness(1.1);
+        }
+        
+        /* XML tag styling */
+        .xml-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            fill: var(--text-secondary);
+        }
+        
+        /* Hover details */
+        .hover-detail {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .phase-group:hover .hover-detail {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-atmosphere"></div>
+    <div class="bg-grid"></div>
+    
+    <div class="container">
+        <!-- Title -->
+        <div class="title-section">
+            <h1 class="main-title">COORDINATOR ORCHESTRATION</h1>
+            <p class="sub-title">四阶段工作流 · 4-Phase Workflow</p>
+        </div>
+        
+        <!-- Main Diagram -->
+        <div class="diagram-container">
+            <svg viewBox="0 0 1200 520" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <!-- Gradients -->
+                    <linearGradient id="grad-research" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="rgba(0, 212, 255, 0.15)"/>
+                        <stop offset="100%" stop-color="rgba(0, 212, 255, 0.05)"/>
+                    </linearGradient>
+                    <linearGradient id="grad-synthesis" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="rgba(123, 97, 255, 0.2)"/>
+                        <stop offset="100%" stop-color="rgba(123, 97, 255, 0.08)"/>
+                    </linearGradient>
+                    <linearGradient id="grad-impl" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="rgba(72, 187, 120, 0.15)"/>
+                        <stop offset="100%" stop-color="rgba(72, 187, 120, 0.05)"/>
+                    </linearGradient>
+                    <linearGradient id="grad-verify" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="rgba(255, 217, 61, 0.15)"/>
+                        <stop offset="100%" stop-color="rgba(255, 217, 61, 0.05)"/>
+                    </linearGradient>
+                    <radialGradient id="spotlight" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="rgba(123, 97, 255, 0.4)"/>
+                        <stop offset="100%" stop-color="transparent"/>
+                    </radialGradient>
+                    <filter id="glow-blue">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+                
+                <!-- Coordinator Bar (top) -->
+                <rect x="50" y="20" width="1100" height="50" rx="4" fill="rgba(224, 86, 160, 0.1)" stroke="#e056a0" stroke-width="1.5"/>
+                <text x="600" y="52" text-anchor="middle" fill="#e056a0" font-family="Cinzel, serif" font-size="16" font-weight="600">COORDINATOR 编排者</text>
+                
+                <!-- Coordinator Icon -->
+                <circle cx="100" cy="45" r="15" fill="#e056a0"/>
+                <text x="100" y="50" text-anchor="middle" fill="#fff" font-size="12" font-family="JetBrains Mono">C</text>
+                
+                <!-- Phase 1: Research -->
+                <g class="phase-group">
+                    <rect class="phase-block" x="50" y="90" width="260" height="320" rx="8" fill="url(#grad-research)" stroke="#00d4ff" stroke-width="2"/>
+                    <text x="180" y="120" text-anchor="middle" fill="#00d4ff" font-family="Cinzel, serif" font-size="14" font-weight="600">PHASE 1</text>
+                    <text x="180" y="145" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">Research 研究</text>
+                    
+                    <!-- Workers Parallel -->
+                    <g class="worker-search">
+                        <rect x="90" y="170" width="60" height="70" rx="6" fill="rgba(108, 92, 231, 0.3)" stroke="#6c5ce7" stroke-width="1.5"/>
+                        <text x="120" y="205" text-anchor="middle" fill="#6c5ce7" font-size="24">🔍</text>
+                        <text x="120" y="230" text-anchor="middle" fill="#a0a0a0" font-size="10" font-family="JetBrains Mono">W-A</text>
+                    </g>
+                    <g class="worker-search">
+                        <rect x="170" y="170" width="60" height="70" rx="6" fill="rgba(108, 92, 231, 0.3)" stroke="#6c5ce7" stroke-width="1.5"/>
+                        <text x="200" y="205" text-anchor="middle" fill="#6c5ce7" font-size="24">🔍</text>
+                        <text x="200" y="230" text-anchor="middle" fill="#a0a0a0" font-size="10" font-family="JetBrains Mono">W-B</text>
+                    </g>
+                    <g class="worker-search">
+                        <rect x="130" y="255" width="60" height="70" rx="6" fill="rgba(108, 92, 231, 0.3)" stroke="#6c5ce7" stroke-width="1.5"/>
+                        <text x="160" y="290" text-anchor="middle" fill="#6c5ce7" font-size="24">🔍</text>
+                        <text x="160" y="315" text-anchor="middle" fill="#a0a0a0" font-size="10" font-family="JetBrains Mono">W-C</text>
+                    </g>
+                    
+                    <!-- Concurrency note -->
+                    <text x="180" y="360" text-anchor="middle" fill="#00d4ff" font-size="9" font-family="JetBrains Mono">⚡ 只读并行 · FREE PARALLEL</text>
+                    
+                    <!-- Arrow to Coordinator -->
+                    <path d="M 180 340 L 180 380 L 100 380 L 100 400" fill="none" stroke="#00d4ff" stroke-width="1.5" stroke-dasharray="4 2" marker-end="url(#arrowhead)"/>
+                </g>
+                
+                <!-- XML Notification between 1-2 -->
+                <rect x="330" y="220" width="80" height="40" rx="4" fill="rgba(0,0,0,0.5)" stroke="#a0a0a0" stroke-width="1"/>
+                <text x="370" y="236" text-anchor="middle" fill="#a0a0a0" font-size="8" font-family="JetBrains Mono">&lt;task-notification&gt;</text>
+                <text x="370" y="250" text-anchor="middle" fill="#6c5ce7" font-size="7" font-family="JetBrains Mono">Worker Results</text>
+                
+                <!-- Arrow -->
+                <path d="M 310 240 L 330 240" fill="none" stroke="#a0a0a0" stroke-width="1"/>
+                
+                <!-- Phase 2: Synthesis (CRITICAL) -->
+                <g class="phase-group">
+                    <rect class="phase-block" x="420" y="90" width="260" height="320" rx="8" fill="url(#grad-synthesis)" stroke="#7b61ff" stroke-width="3"/>
+                    
+                    <!-- Spotlight effect -->
+                    <circle class="spotlight-effect" cx="550" cy="200" r="80" fill="url(#spotlight)"/>
+                    
+                    <text x="550" y="120" text-anchor="middle" fill="#7b61ff" font-family="Cinzel, serif" font-size="14" font-weight="600">PHASE 2 ⭐</text>
+                    <text x="550" y="145" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">Synthesis 综合</text>
+                    
+                    <!-- Coordinator alone -->
+                    <circle cx="550" cy="220" r="35" fill="rgba(224, 86, 160, 0.3)" stroke="#e056a0" stroke-width="2"/>
+                    <text x="550" y="230" text-anchor="middle" fill="#e056a0" font-size="32">🧠</text>
+                    
+                    <!-- Key rule highlight -->
+                    <rect x="440" y="280" width="220" height="70" rx="6" fill="rgba(0,0,0,0.4)" stroke="#7b61ff" stroke-width="1.5"/>
+                    <text x="550" y="305" text-anchor="middle" fill="#7b61ff" font-size="11" font-family="JetBrains Mono" font-weight="600">"NEVER HAND OFF UNDERSTANDING"</text>
+                    <text x="550" y="325" text-anchor="middle" fill="#a0a0a0" font-size="9">禁止委托理解 · Coordinator必须亲自理解</text>
+                    <text x="550" y="340" text-anchor="middle" fill="#ffd93d" font-size="10" font-weight="600">最关键阶段 · CRITICAL PHASE</text>
+                </g>
+                
+                <!-- XML Notification between 2-3 -->
+                <rect x="700" y="220" width="80" height="40" rx="4" fill="rgba(0,0,0,0.5)" stroke="#a0a0a0" stroke-width="1"/>
+                <text x="740" y="236" text-anchor="middle" fill="#a0a0a0" font-size="8" font-family="JetBrains Mono">&lt;task-notification&gt;</text>
+                <text x="740" y="250" text-anchor="middle" fill="#48bb78" font-size="7" font-family="JetBrains Mono">Impl Spec</text>
+                
+                <!-- Arrow -->
+                <path d="M 680 240 L 700 240" fill="none" stroke="#a0a0a0" stroke-width="1"/>
+                
+                <!-- Phase 3: Implementation -->
+                <g class="phase-group">
+                    <rect class="phase-block" x="790" y="90" width="170" height="320" rx="8" fill="url(#grad-impl)" stroke="#48bb78" stroke-width="2"/>
+                    <text x="875" y="120" text-anchor="middle" fill="#48bb78" font-family="Cinzel, serif" font-size="14" font-weight="600">PHASE 3</text>
+                    <text x="875" y="145" text-anchor="middle" fill="#fff" font-size="16" font-weight="700">Implementation</text>
+                    <text x="875" y="162" text-anchor="middle" fill="#a0a0a0" font-size="12">实现</text>
+                    
+                    <!-- Workers with spec -->
+                    <rect x="815" y="190" width="60" height="70" rx="6" fill="rgba(108, 92, 231, 0.3)" stroke="#6c5ce7" stroke-width="1.5"/>
+                    <text x="845" y="225" text-anchor="middle" fill="#6c5ce7" font-size="24">✏️</text>
+                    <text x="845" y="250" text-anchor="middle" fill="#a0a0a0" font-size="10" font-family="JetBrains Mono">W-D</text>
+                    
+                    <rect x="875" y="270" width="60" height="70" rx="6" fill="rgba(108, 92, 231, 0.3)" stroke="#6c5ce7" stroke-width="1.5"/>
+                    <text x="905" y="305" text-anchor="middle" fill="#6c5ce7" font-size="24">✏️</text>
+                    <text x="905" y="330" text-anchor="middle" fill="#a0a0a0" font-size="10" font-family="JetBrains Mono">W-E</text>
+                    
+                    <!-- Serial/Parallel note -->
+                    <text x="875" y="370" text-anchor="middle" fill="#48bb78" font-size="8" font-family="JetBrains Mono">同文件串行·不同并行</text>
+                    <text x="875" y="385" text-anchor="middle" fill="#a0a0a0" font-size="7">SERIAL/FILE · PARALLEL/FILES</text>
+                </g>
+                
+                <!-- Arrow to Phase 4 -->
+                <path d="M 960 250 L 980 250" fill="none" stroke="#a0a0a0" stroke-width="1"/>
+                
+                <!-- Phase 4: Verification -->
+                <g class="phase-group">
+                    <rect class="phase-block" x="980" y="90" width="170" height="320" rx="8" fill="url(#grad-verify)" stroke="#ffd93d" stroke-width="2"/>
+                    <text x="1065" y="120" text-anchor="middle" fill="#ffd93d" font-family="Cinzel, serif" font-size="14" font-weight="600">PHASE 4</text>
+                    <text x="1065" y="145" text-anchor="middle" fill="#fff" font-size="16" font-weight="700">Verification</text>
+                    <text x="1065" y="162" text-anchor="middle" fill="#a0a0a0" font-size="12">验证</text>
+                    
+                    <!-- Worker verifying -->
+                    <rect x="1035" y="200" width="60" height="70" rx="6" fill="rgba(108, 92, 231, 0.3)" stroke="#6c5ce7" stroke-width="1.5"/>
+                    <text x="1065" y="235" text-anchor="middle" fill="#6c5ce7" font-size="24">✓</text>
+                    <text x="1065" y="260" text-anchor="middle" fill="#a0a0a0" font-size="10" font-family="JetBrains Mono">W-F</text>
+                    
+                    <!-- Test icons -->
+                    <text x="1065" y="320" text-anchor="middle" fill="#ffd93d" font-size="20">🧪</text>
+                    <text x="1065" y="350" text-anchor="middle" fill="#a0a0a0" font-size="9">测试·Lint·验证</text>
+                    
+                    <text x="1065" y="385" text-anchor="middle" fill="#ffd93d" font-size="8" font-family="JetBrains Mono">可与Phase 3并行</text>
+                </g>
+                
+                <!-- Scratchpad - connecting all workers -->
+                <rect x="50" y="430" width="1100" height="60" rx="6" fill="rgba(255, 217, 61, 0.05)" stroke="#ffd93d" stroke-width="1" stroke-dasharray="6 3"/>
+                <text x="600" y="455" text-anchor="middle" fill="#ffd93d" font-size="11" font-family="JetBrains Mono">SCRATCHPAD (tengu_scratch) — 跨Worker知识共享 · Cross-Worker Knowledge Persistence</text>
+                <text x="600" y="475" text-anchor="middle" fill="#a0a0a0" font-size="9">370行系统提示词核心规则 · 370-line System Prompt Core Rules</text>
+                
+                <!-- Connection lines from workers to scratchpad -->
+                <line x1="160" y1="340" x2="160" y2="430" stroke="#ffd93d" stroke-width="0.5" stroke-dasharray="3 3" opacity="0.5"/>
+                <line x1="550" y1="390" x2="550" y2="430" stroke="#ffd93d" stroke-width="0.5" stroke-dasharray="3 3" opacity="0.5"/>
+                <line x1="875" y1="390" x2="875" y2="430" stroke="#ffd93d" stroke-width="0.5" stroke-dasharray="3 3" opacity="0.5"/>
+                <line x1="1065" y1="390" x2="1065" y2="430" stroke="#ffd93d" stroke-width="0.5" stroke-dasharray="3 3" opacity="0.5"/>
+            </svg>
+        </div>
+        
+        <!-- Info Panel -->
+        <div class="info-panel">
+            <div class="rule-quote">"Never write 'based on your findings'"</div>
+            <div class="rule-explanation">
+                反懒惰委托规则：Coordinator必须亲自阅读Worker的发现、自己理解问题、亲自编写实现规范。绝不能简单地把Worker的输出转交给其他Worker去"基于这些发现做实现"。这是最关键的防故障机制。
+            </div>
+        </div>
+        
+        <!-- Decision Matrix -->
+        <div class="matrix-section" style="margin-top: 25px;">
+            <h3 class="matrix-title">Continue vs Spawn 决策矩阵</h3>
+            <table class="matrix-table">
+                <thead>
+                    <tr>
+                        <th style="width: 45%;">场景 Scenario</th>
+                        <th style="width: 20%;">决策 Decision</th>
+                        <th style="width: 35%;">原因 Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>研究范围恰好覆盖编辑文件</td>
+                        <td><span class="badge-continue">CONTINUE</span></td>
+                        <td>已有上下文 · 避免重复加载</td>
+                    </tr>
+                    <tr>
+                        <td>研究范围广、实现范围窄</td>
+                        <td><span class="badge-spawn">SPAWN</span></td>
+                        <td>避免噪音 · 精确定位</td>
+                    </tr>
+                    <tr>
+                        <td>修正失败或扩展近期工作</td>
+                        <td><span class="badge-continue">CONTINUE</span></td>
+                        <td>保留错误上下文 · 连续修复</td>
+                    </tr>
+                    <tr>
+                        <td>验证另一Worker的代码</td>
+                        <td><span class="badge-spawn">SPAWN</span></td>
+                        <td>新鲜视角 · 避免偏见</td>
+                    </tr>
+                    <tr>
+                        <td>首次实现用了错误方法</td>
+                        <td><span class="badge-spawn">SPAWN</span></td>
+                        <td>避免锚定效应 · 重新思考</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

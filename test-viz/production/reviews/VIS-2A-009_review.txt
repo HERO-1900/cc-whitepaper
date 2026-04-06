@@ -1,0 +1,57 @@
+总分: 14/20
+
+**布局: 3/5** — 主体结构清晰，但柱状图 Y 轴无刻度标签、折线图 Y 轴刻度 label 溢出 viewBox，文字与柱子分离感强。
+
+**信息: 3/5** — 核心对比信息（96% 节省、25x multiplier）传达有效，但柱状图缺少 Y 轴美元刻度，只能靠 grid line 猜值；"20 rounds" 仅在 slider 处体现，图表标题固定为 "20 Rounds" 但实际会随 slider 变化但未同步更新。
+
+**美学: 4/5** — 深色背景 + 霓虹绿/红配色和谐，渐变柱条、glow 效果、噪点纹理营造出精致的科技感。唯一扣分：Footer 出现错字。
+
+**完整: 4/5** — 代码可独立运行，外部 CDN 均有效，D3 交互（tooltip、slider）逻辑完整。
+
+---
+
+**缺陷（逐条）：**
+
+1. **[lineChart SVG / Y轴标签溢出]** `<g transform="translate(20, 130) rotate(-90)">` 的文字 "累计成本 / Cumulative Cost" x=20 但 left margin=60，文字完全落在 viewBox 左侧可见区外。
+
+2. **[barChart SVG / 图例标签越界]** `text x="270" y="325"` 和 `y="342"` 两行 label 位于 axis `line y1=300` 下方，但 viewBox height="340"，y=342 已超出边界，文字会被截断。
+
+3. **[柱状图缺少 Y 轴刻度]** `barGrid` 仅画了 5 条 grid-line（对应 $0.5~$2.5），但没有对应的 `<text>` 元素标注美元数值，用户无法准确读出柱高对应的金额。
+
+4. **[Footer 错字]** 文字 "这就是为什么提示词排列顺序如此重要" 中 "排列顺序" 应为 "优化顺序"，语句才通顺。
+
+5. **[Bar Chart 标题语义冲突]** 标题写死 "20 Rounds" 但实际内容随 slider 变化，应改为动态显示当前轮次，或移除 "20" 数字。
+
+6. **[lineChart tooltipGroup 未考虑初始不可见状态]** `#tooltipGroup` 默认 `opacity="0"`，但 `overlay.on("mousemove")` 中若 round > currentRounds 时设为 opacity=0，逻辑正确，但首次鼠标进入时若直接落在无效区域会无反馈——属边缘情况，影响轻微。
+
+7. **[Badge 定位下边界可能抖动]** `badgeY` 计算后用 `Math.max(50, Math.min(badgeY, 260))` clamp，当 hitH 很小时 badgeY 可能计算出意外值（特别是在 rounds 很小的场景如 r=5），不过有 clamp 保护，风险较低。
+
+---
+
+**修改建议：**
+
+1. **补 Y 轴刻度标签**（针对缺陷 3）：
+   ```js
+   // 在 barGrid 的 grid line 循环后追加
+   barGrid.selectAll(".bar-y-label")
+     .data([0.5, 1.0, 1.5, 2.0, 2.5])
+     .enter()
+     .append("text")
+     .attr("class", "fill-[var(--text-muted)] text-[10px] font-mono")
+     .attr("x", 95)
+     .attr("y", d => baseY - barScale(d) + 4)
+     .attr("text-anchor", "end")
+     .text(d => `$${d}`);
+   ```
+
+2. **修复 lineChart Y 轴 label 位置**（针对缺陷 1）：
+   将 `translate(20, 130)` 改为 `translate(${margin.left - 50}, 130)` 使其位于 left margin 区域内。
+
+3. **修复 barChart legend 越界**（针对缺陷 2）：
+   减小 axis line y 值或增大 viewBox height，或将 "缓存命中/未命中" 两行 label 移至 bar 内部（y 值改为 axis 上方）。
+
+4. **修复错字**（针对缺陷 4）：
+   `"排列顺序如此重要"` → `"优化顺序如此重要"`
+
+5. **动态标题**（针对缺陷 5）：
+   在 `updateAll()` 中同步更新 barChart 标题区域的轮次显示，或移除 "20 Rounds" 字样改为通用描述。

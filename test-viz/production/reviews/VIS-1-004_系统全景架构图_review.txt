@@ -1,0 +1,53 @@
+我来严格审查这份图表代码。
+
+总分: 13/20
+
+布局: 2/5 — **存在元素引用错误和坐标不对齐问题**
+信息: 4/5 — **架构层次清晰，但部分标签字号过小阅读困难**
+美学: 4/5 — **配色体系和谐，但缺失gridPattern破坏背景效果**
+完整: 3/5 — **无法直接运行，存在SVG定义缺失的渲染错误**
+
+---
+
+**缺陷:**
+
+1. **L140** — `fill="url(#gridPattern)"` 但 `<defs>` 中从未定义 `gridPattern`，导致背景矩形无法渲染
+
+2. **L164** — `security-barrier` 透明度动画语法错误：`<animate>` 应在 `<defs>` 内定义，而非直接内联在元素上；且 `opacity="0.2"` 属性会被动画覆盖
+
+3. **L141** — `<rect ... fill="url(#gridPattern)" opacity="0.3"/>` 同样引用了不存在的 gridPattern
+
+4. **节点坐标不对齐:**
+   - `node-query` 中心 (600,400)，但 `security-barrier` 覆盖区域 (480,480)-(720,600) 未与中心节点底部对齐
+   - 部分连接线端点未精确落在节点边缘（如 L193 `x1="600" y1="160"` 到 `y2="330"`，而 Terminal UI 节点高度80，底部应在 y=160)
+
+5. **L129** — 箭头 marker 的 `refX="9"` 在 `markerWidth="10"` 时可能裁切箭头头部，建议 `refX="5"`
+
+6. **L108** — `.node-group:hover .node-shape` 中的 `transform: scale(1.05)` 在 SVG 中需在分组级别生效才能正确变换，子元素 `node-shape` 的 transform 不会累计
+
+7. **L200** — `Extensions to MCP` 连接线 `x2="300"` 但 MCP Servers 外部框起始于 x="180"，连接线未到达目标
+
+8. **字体降级缺失** — `'Space Grotesk'` 为西文字体，`'Noto Sans SC'` 为中文字体，但未声明通用 fallback 如 `sans-serif`
+
+---
+
+**修改建议:**
+
+1. 在 `<defs>` 中添加缺失的 gridPattern：
+```xml
+<pattern id="gridPattern" width="40" height="40" patternUnits="userSpaceOnUse">
+  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(0,212,255,0.05)" stroke-width="1"/>
+</pattern>
+```
+
+2. 将 security-barrier 动画移至 `<defs>` 中的 `<animate>` 定义，并修正透明度范围
+
+3. 统一所有连接线端点坐标，使其精确对齐节点边缘（如 Terminal UI 节点 y=120±40=80-160，连接线应止于 y=160 或起于 y=160）
+
+4. 修正 MCP 连接线端点为 x="180" 或将 MCP Servers 框调整位置
+
+5. 将 marker 的 `refX` 改为 `5`，确保箭头完整显示
+
+6. CSS transform 问题：hover 效果应使用 `transform-origin: center` 并确保 SVG transform 级联正确
+
+7. 字体栈改为：`'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif`

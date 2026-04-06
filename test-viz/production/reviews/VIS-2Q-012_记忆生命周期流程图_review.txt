@@ -1,0 +1,31 @@
+总分: 12/20
+
+**布局: 2/5** — 相邻相位存在-10px负边距叠加，warning-box/diamond-label等绝对定位元素易与相体内内容重叠。
+
+**信息: 3/5** — 核心流程层次清晰，但验证阶段(Phase 04)的警告框被挤出相体，流程分支意图不够直观。
+
+**美学: 4/5** — 配色方案统一且各相位色彩区分度高，渐变/噪点背景增添质感，字体搭配(Playfair Display + Source Sans Pro)得体。
+
+**完整: 3/5** — 语法无误可直接运行，但响应式断点(1100px)下warning-box转为static后位置生硬，且Phase 05的apply相体缺乏箭头引导。
+
+---
+
+**缺陷:**
+
+1. **第71行** — `.phase { margin: 0 -10px; }` 负边距导致相位重叠，hover时z-index:10未能根本解决布局挤压
+2. **第176-181行** — `.warning-box { right: -80px; }` 超出相体边界，视觉上割裂
+3. **第134-140行** — `.diamond-label` 绝对定位标签，在相位body内可能与step内容重叠
+4. **第215行** — `.rejection-note { bottom: 80px; }` 与`.water-level { bottom: 10px; }` 间距仅70px，相位body总高280px时内容紧张
+5. **第240行** — Phase 05缺少`.arrow-connector`，但CSS保留了其样式，与其他相位不一致
+6. **第270行** — 响应式下`.warning-box`转为static但缺少明确上边距，位置突兀
+7. **第78行** — `.phase-header.apply`使用`rgba(255,255,255,0.2)`边框，与其他相位统一性不足
+
+**修改建议:**
+
+1. 将负边距改为`gap: 20px`配合容器justify-content实现相同间距效果
+2. warning-box纳入phase-body正常文档流，或在响应式下正确处理
+3. diamond-label改用相对定位或调整位置避免与step内容重叠
+4. rejection-note与water-level二选一保留，或增加phase-body最小高度
+5. Phase 05添加空的arrow-connector元素保持视觉一致性
+6. 响应式warning-box添加`margin-top`或合并至phase-body内
+7. apply相位边框颜色应使用与主题一致的变量(如`var(--text-secondary)`)

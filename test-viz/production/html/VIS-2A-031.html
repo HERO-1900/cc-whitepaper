@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REPL 组件树结构图 | REPL Component Tree</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0b0f;
+  --bg-panel:#11131a;
+  --grid:rgba(56,189,248,0.06);
+  --text-main:#e2e8f0;
+  --text-sub:#94a3b8;
+  --accent-cyan:#22d3ee;
+  --accent-purple:#a78bfa;
+  --accent-blue:#60a5fa;
+  --accent-green:#34d399;
+  --accent-orange:#fb923c;
+  --accent-yellow:#facc15;
+  --accent-gray:#94a3b8;
+  --accent-red:#f87171;
+  --hot:#ff006e;
+  --shadow:0 20px 60px rgba(0,0,0,0.6);
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+html,body{
+  width:100%;
+  height:100%;
+  background:var(--bg);
+  color:var(--text-main);
+  font-family:'Space Grotesk',sans-serif;
+  overflow-x:hidden;
+}
+
+body{
+  min-height:100vh;
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:40px 40px;
+  background-position:center top;
+}
+
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(34,211,238,0.08),transparent 60%);
+  pointer-events:none;
+  z-index:0;
+}
+
+.container{
+  position:relative;
+  z-index:1;
+  max-width:1400px;
+  margin:0 auto;
+  padding:48px 24px 80px;
+}
+
+header{
+  margin-bottom:40px;
+  text-align:left;
+}
+
+header h1{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:clamp(28px,4vw,44px);
+  font-weight:700;
+  letter-spacing:-0.02em;
+  background:linear-gradient(135deg,var(--text-main) 0%,var(--accent-cyan) 100%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  margin-bottom:8px;
+}
+
+header .subtitle{
+  font-size:15px;
+  color:var(--text-sub);
+  font-weight:400;
+}
+
+header .meta{
+  margin-top:12px;
+  display:flex;
+  gap:16px;
+  flex-wrap:wrap;
+  font-family:'JetBrains Mono',monospace;
+  font-size:12px;
+  color:var(--text-sub);
+}
+
+header .meta span{
+  background:rgba(148,163,184,0.08);
+  padding:4px 10px;
+  border-radius:4px;
+  border:1px solid rgba(148,163,184,0.15);
+}
+
+.chart-wrapper{
+  position:relative;
+  background:var(--bg-panel);
+  border:1px solid rgba(148,163,184,0.12);
+  border-radius:16px;
+  padding:32px;
+  box-shadow:var(--shadow);
+  overflow:auto;
+}
+
+.legend{
+  display:flex;
+  gap:20px;
+  flex-wrap:wrap;
+  margin-bottom:24px;
+  font-size:13px;
+  font-family:'JetBrains Mono',monospace;
+}
+
+.legend-item{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.legend-dot{
+  width:10px;
+  height:10px;
+  border-radius:2px;
+}
+
+#tree-svg{
+  width:100%;
+  height:auto;
+  display:block;
+  min-width:900px;
+}
+
+.node-rect{
+  rx:8;
+  ry:8;
+  stroke-width:1.5;
+  transition:all 0.3s ease;
+  cursor:pointer;
+}
+
+.node-group:hover .node-rect{
+  filter:brightness(1.15);
+  transform:scale(1.02);
+  transform-box:fill-box;
+  transform-origin:center;
+}
+
+.node-group:hover{
+  filter:drop-shadow(0 0 8px rgba(34,211,238,0.3));
+}
+
+.node-text{
+  font-family:'JetBrains Mono',monospace;
+  font-size:13px;
+  font-weight:600;
+  fill:var(--text-main);
+  pointer-events:none;
+}
+
+.node-desc{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:10px;
+  fill:var(--text-sub);
+  pointer-events:none;
+}
+
+.connector{
+  stroke:rgba(148,163,184,0.25);
+  stroke-width:1.5;
+  fill:none;
+  stroke-linecap:round;
+}
+
+.hot-path{
+  stroke:var(--hot);
+  stroke-width:2.5;
+  stroke-dasharray:6,4;
+  fill:none;
+  opacity:0.85;
+  filter:drop-shadow(0 0 4px var(--hot));
+  animation:pulsePath 2s ease-in-out infinite;
+}
+
+@keyframes pulsePath{
+  0%,100%{stroke-opacity:0.6;}
+  50%{stroke-opacity:1;}
+}
+
+.hot-badge{
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;
+  fill:var(--hot);
+  font-weight:700;
+  pointer-events:none;
+}
+
+.popup-node .node-rect{
+  filter:drop-shadow(0 10px 20px rgba(251,146,60,0.35));
+}
+
+.tooltip{
+  position:absolute;
+  background:rgba(10,11,15,0.96);
+  border:1px solid rgba(148,163,184,0.2);
+  border-radius:8px;
+  padding:14px 16px;
+  max-width:280px;
+  font-size:13px;
+  color:var(--text-main);
+  pointer-events:none;
+  opacity:0;
+  transform:translateY(6px);
+  transition:opacity 0.2s,transform 0.2s;
+  z-index:100;
+  box-shadow:0 14px 40px rgba(0,0,0,0.5);
+  backdrop-filter:blur(6px);
+}
+
+.tooltip.show{
+  opacity:1;
+  transform:translateY(0);
+}
+
+.tooltip .tt-title{
+  font-family:'JetBrains Mono',monospace;
+  font-size:12px;
+  font-weight:700;
+  margin-bottom:6px;
+  color:var(--accent-cyan);
+}
+
+.tooltip .tt-row{
+  margin-top:4px;
+  color:var(--text-sub);
+  font-size:12px;
+  line-height:1.5;
+}
+
+.tooltip .tt-hot{
+  color:var(--hot);
+  font-weight:600;
+}
+
+.info-panel{
+  margin-top:28px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:16px;
+}
+
+.info-card{
+  background:var(--bg-panel);
+  border:1px solid rgba(148,163,184,0.1);
+  border-radius:12px;
+  padding:18px 20px;
+}
+
+.info-card h3{
+  font-size:13px;
+  font-weight:600;
+  color:var(--accent-cyan);
+  margin-bottom:8px;
+  font-family:'JetBrains Mono',monospace;
+}
+
+.info-card p{
+  font-size:13px;
+  color:var(--text-sub);
+  line-height:1.6;
+}
+
+.flow-arrow{
+  fill:none;
+  stroke:var(--accent-green);
+  stroke-width:1.5;
+  marker-end:url(#arrowhead);
+  opacity:0.7;
+}
+
+@media (max-width:768px){
+  .chart-wrapper{
+    padding:16px;
+  }
+  #tree-svg{
+    min-width:700px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>REPL 组件树结构图</h1>
+    <div class="subtitle">REPL Component Tree Architecture</div>
+    <div class="meta">
+      <span>VIS-2A-031</span>
+      <span>章节 12 · 终端UI.md</span>
+      <span>图表 2.12-B</span>
+    </div>
+  </header>
+
+  <div class="chart-wrapper">
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent-purple)"></div>容器组件 Container</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent-blue)"></div>管理/上下文 Manager</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent-green)"></div>消息组件 Message</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent-orange)"></div>交互组件 Interactive</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent-yellow)"></div>输入组件 Input</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent-gray)"></div>系统组件 System</div>
+    </div>
+
+    <svg id="tree-svg" viewBox="0 0 1000 740" preserveAspectRatio="xMidYMin meet">
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="var(--accent-green)" opacity="0.7"/>
+        </marker>
+        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+
+      <!-- Streaming hot path highlight (behind) -->
+      <path class="hot-path" d="M500,186 L500,230 L280,230 L280,274" />
+      <path class="hot-path" d="M280,366 L280,410 L190,410 L190,454" />
+
+      <!-- connectors -->
+      <line class="connector" x1="500" y1="146" x2="500" y2="186" />
+      <line class="connector" x1="500" y1="230" x2="280" y2="274" />
+      <line class="connector" x1="500" y1="230" x2="500" y2="274" />
+      <line class="connector" x1="500" y1="230" x2="720" y2="274" />
+      <line class="connector" x1="280" y1="318" x2="280" y2="366" />
+      <line class="connector" x1="280" y1="410" x2="100" y2="454" />
+      <line class="connector" x1="280" y1="410" x2="190" y2="454" />
+      <line class="connector" x1="280" y1="410" x2="280" y2="454" />
+      <line class="connector" x1="280" y1="410" x2="370" y2="454" />
+      <line class="connector" x1="500" y1="318" x2="500" y2="366" />
+      <line class="connector" x1="720" y1="318" x2="720" y2="366" />
+
+      <!-- ErrorBoundary (floating right) -->
+      <g class="node-group" transform="translate(840,420)" data-title="ErrorBoundary" data-desc="全局错误边界，捕获渲染异常防止整个应用崩溃" data-file="src/ui/ErrorBoundary.tsx" data-hot="false">
+        <rect class="node-rect" x="0" y="0" width="140" height="56" fill="rgba(148,163,184,0.08)" stroke="var(--accent-gray)" />
+        <text class="node-text" x="70" y="22" text-anchor="middle">&lt;ErrorBoundary&gt;</text>
+        <text class="node-desc" x="70" y="40" text-anchor="middle">Global Error Guard</text>
+      </g>
+      <line class="connector" x1="570" y1="274" x2="840" y2="420" stroke-dasharray="4,4" opacity="0.4" />
+
+      <!-- App -->
+      <g class="node-group" transform="translate(420,90)" data-title="App" data-desc="REPL 根组件，应用入口点，初始化全局状态与上下文" data-file="src/ui/App.tsx" data-hot="false">
+        <rect class="node-rect" x="0" y="0" width="160" height="56" fill="rgba(167,139,250,0.10)" stroke="var(--accent-purple)" />
+        <text class="node-text" x="80" y="22" text-anchor="middle">&lt;App&gt;</text>
+        <text class="node-desc" x="80" y="40" text-anchor="middle">Root / Entry Point</text>
+      </g>
+
+      <!-- AlternateScreen -->
+      <g class="node-group" transform="translate(390,186)" data-title="AlternateScreen" data-desc="备用屏幕缓冲区，退出时恢复用户原始终端内容" data-file="src/ui/AlternateScreen.tsx" data-hot="false">
+        <rect class="node-rect" x="0" y="0" width="220" height="56" fill="rgba(167,139,250,0.10)" stroke="var(--accent-purple)" />
+        <text class="node-text" x="110" y="22" text-anchor="middle">&lt;AlternateScreen&gt;</text>
+        <text class="node-desc" x="110" y="40" text-anchor="middle">Alt Buffer / Restore Terminal</text>
+      </g>
+
+      <!-- FocusProvider -->
+      <g class="node-group" transform="translate(180,274)" data-title="FocusProvider" data-desc="焦点栈管理器，支持 Tab 切换与自动焦点分配" data-file="src/ui/FocusProvider.tsx" data-hot="false">
+        <rect class="node-rect" x="0" y="0" width="200" height="56" fill="rgba(96,165,250,0.10)" stroke="var(--accent-blue)" />
+        <text class="node-text" x="100" y="22" text-anchor="middle">&lt;FocusProvider&gt;</text>
+        <text class="node-desc" x="100" y="40" text-anchor="middle">Focus Stack Manager</text>
+      </g>
+
+      <!-- StatusBar -->
+      <g class="node-group" transform="translate(430,274)" data-title="StatusBar" data-desc="顶部状态栏，显示模型名称、token 计数与会话信息" data-file="src/ui/StatusBar.tsx" data-hot="false">
+        <rect class="node-rect" x="0" y="0" width="140" height="56" fill="rgba(148,163,184,0.08)" stroke="var(--accent-gray)" />
+        <text class="node-text" x="70" y="22" text-anchor="middle">&lt;StatusBar&gt;</text>
+        <text class="node-desc" x="70" y="40" text-anchor="middle">Model / Tokens / Session</text>
+      </g>
+
+      <!-- ScrollBox -->
+      <g class="node-group" transform="translate(620,274)" data-title="ScrollBox" data-desc="主消息区域可滚动容器，管理滚动状态与视口" data-file="src/ui/ScrollBox.tsx" data-hot="true">
+        <rect class="node-rect" x="0" y="0" width="200" height="56" fill="rgba(34,211,238,0.10)" stroke="var(--accent-cyan)" />
+        <text class="node-text" x="100" y="22" text-anchor="middle">&lt;ScrollBox&gt;</text>
+        <text class="node-desc" x="100" y="40" text-anchor="middle">Scrollable Container</text>
+        <text class="hot-badge" x="190" y="12" text-anchor="end">HOT</text>
+      </g>
+
+      <!-- MessageList -->
+      <g class="node-group" transform="translate(180,366)" data-title="MessageList" data-desc="消息列表容器，负责消息排序与渲染分发" data-file="src/ui/MessageList.tsx" data-hot="true">
+        <rect class="node-rect" x="0" y="0" width="200" height="56" fill="rgba(52,211,153,0.10)" stroke="var(--accent-green)" />
+        <text class="node-text" x="100" y="22" text-anchor="middle">&lt;MessageList&gt;</text>
+        <text class="node-desc" x="100" y="40" text-anchor="middle">Message List Container</text>
+        <text class="hot-badge" x="190" y="12" text-anchor="end">HOT</text>
+      </g>
+
+      <!-- UserMessage -->
+      <g class="node-group" transform="translate(20,454)" data-title="UserMessage" data-desc="用户输入消息渲染组件" data-file="src/ui/messages/UserMessage.tsx" data-hot="false">
+        <rect class="node-rect" x="0" y="0" width="160" height="56" fill="rgba(52,211,153,0.08)" stroke="var(--accent-green)" />
+        <text class="node-text" x="80" y="22" text-anchor="middle">&lt;UserMessage&gt;</text>
+        <text class="node-desc" x="80" y="40" text-anchor="middle">User Input Render</text>
+      </g>
+
+      <!-- AssistantMessage -->
+      <g class="node-group" transform="translate(110,454)" data-title="AssistantMessage" data-desc="AI 回复消息，支持流式渲染，每个 chunk 触发重渲染" data-file="src/ui/messages/AssistantMessage.tsx" data-hot="true">
+        <rect class="node-rect" x="0" y="0" width="160" height="56" fill="rgba(52,211,153,0.12)" stroke="var(--accent-green)" />
+        <text class="node-text" x="80" y="22" text-anchor="middle">&lt;AssistantMessage&gt;</text>
+        <text class="node-desc" x="80" y="40" text-anchor="middle">Streaming AI Output</text>
+        <text class="hot-badge" x="150" y="12" text-anchor="end">HOT</text>
+      </g>
+
+      <!-- ToolCallResult -->
+      <g class="node-group" transform="translate(200,454)" data-title="ToolCallResult" data-desc="工具调用结果可视化渲染组件" data-file="src/ui/messages/ToolCallResult.tsx" data-hot="false">
+        <rect class="node-rect" x="0" y="0" width="160" height="56" fill="rgba(52,211,153,0.08)" stroke="var(--accent-green)" />
+        <text class="node-text" x="80" y="22" text-anchor="middle">&lt;ToolCallResult&gt;</text>
+        <text class="node-desc" x="80" y="40" text-anchor="middle">Tool Output Render</text>
+      </g>
+
+      <!-- SystemMessage -->
+      <g class="node-group" transform="translate(290,454)" data-title="SystemMessage" data-desc="系统提示消息组件" data-file="src/ui/messages/SystemMessage.tsx" data-hot="false">
+        <rect class="node-rect" x="0" y="0" width="160" height="56" fill="rgba(52,211,153,0.08)" stroke="var(--accent-green)" />
+        <text class="node-text" x="80" y="22" text-anchor="middle">&lt;SystemMessage&gt;</text>
+        <text class="node-desc" x="80" y="40" text-anchor="middle">System Prompt Render</text>
+      </g>
+
+      <!-- InputBox -->
+      <g class="node-group" transform="translate(450,366)" data-title="InputBox" data-desc="用户输入框，支持多行编辑与历史记录" data-file="src/ui/InputBox.tsx" data-hot="true">
+        <rect class="node-rect" x="0" y="0" width="160" height="56" fill="rgba(250,204,21,0.10)" stroke="var(--accent-yellow)" />
+        <text class="node-text" x="80" y="22" text-anchor="middle">&lt;InputBox&gt;</text>
+        <text class="node-desc" x="80" y="40" text-anchor="middle">Multi-line Input</text>
+        <text class="hot-badge" x="150" y="12" text-anchor="end">HOT</text>
+      </g>
+
+      <!-- CompletionMenu -->
+      <g class="node-group" transform="translate(630,366)" data-title="CompletionMenu" data-desc="自动补全菜单，提供命令与路径补全" data-file="src/ui/CompletionMenu.tsx" data-hot="false">
+        <rect class="node-rect" x="0" y="0" width="180" height="56" fill="rgba(250,204,21,0.10)" stroke="var(--accent-yellow)" />
+        <text class="node-text" x="90" y="22" text-anchor="middle">&lt;CompletionMenu&gt;</text>
+        <text class="node-desc" x="90" y="40" text-anchor="middle">Auto-completion Menu</text>
+      </g>
+
+      <!-- PermissionDialog (popup style) -->
+      <g class="node-group popup-node" transform="translate(740,160)" data-title="PermissionDialog" data-desc="权限确认弹窗，影响九步权限检查流程的 Step 8" data-file="src/ui/PermissionDialog.tsx" data-hot="true">
+        <rect class="node-rect" x="0" y="0" width="180" height="64" rx="12" ry="12" fill="rgba(251,146,60,0.12)" stroke="var(--accent-orange)" />
+        <text class="node-text" x="90" y="24" text-anchor="middle" fill="#fff">&lt;PermissionDialog&gt;</text>
+        <text class="node-desc" x="90" y="42" text-anchor="middle">Allow / Deny Modal</text>
+        <text class="hot-badge" x="170" y="14" text-anchor="end">HOT</text>
+      </g>
+      <line class="connector" x1="740" y1="224" x2="740" y2="274" stroke-dasharray="4,4" opacity="0.5" />
+
+      <!-- Data flow arrow annotation -->
+      <path class="flow-arrow" d="M850,480 L850,530 L750,530" />
+      <text x="852" y="510" fill="var(--accent-green)" font-size="10" font-family="JetBrains Mono" opacity="0.8">API stream</text>
+      <text x="852" y="522" fill="var(--accent-green)" font-size="10" font-family="JetBrains Mono" opacity="0.8">→ state</text>
+
+    </svg>
+
+    <div class="tooltip" id="tooltip">
+      <div class="tt-title" id="tt-title"></div>
+      <div class="tt-row" id="tt-desc"></div>
+      <div class="tt-row" id="tt-file"></div>
+      <div class="tt-row tt-hot" id="tt-hot"></div>
+    </div>
+  </div>
+
+  <div class="info-panel">
+    <div class="info-card">
+      <h3>流式渲染热路径</h3>
+      <p>Streaming Hot Path: API 响应以 chunk 形式流入 AssistantMessage，导致从 ScrollBox 到 MessageList 的整条路径频繁重渲染。</p>
+    </div>
+    <div class="info-card">
+      <h3>焦点管理</h3>
+      <p>FocusProvider 维护焦点栈。当 PermissionDialog 弹出时，它会自动夺取焦点，用户确认后焦点归还至 InputBox。</p>
+    </div>
+    <div class="info-card">
+      <h3>错误边界</h3>
+      <p>ErrorBoundary 独立于主树右侧，捕获任何子树的渲染错误，防止整个终端 React 应用崩溃并退出备用屏幕。</p>
+    </div>
+    <div class="info-card">
+      <h3>数据流方向</h3>
+      <p>InputBox → 用户消息 → API 调用 → stream chunks → state update → MessageList → AssistantMessage (re-render per chunk)。</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tooltip=document.getElementById('tooltip');
+const ttTitle=document.getElementById('tt-title');
+const ttDesc=document.getElementById('tt-desc');
+const ttFile=document.getElementById('tt-file');
+const ttHot=document.getElementById('tt-hot');
+
+document.querySelectorAll('.node-group').forEach(node=>{
+  node.addEventListener('mouseenter',e=>{
+    const title=node.dataset.title;
+    const desc=node.dataset.desc;
+    const file=node.dataset.file;
+    const hot=node.dataset.hot==='true';
+    ttTitle.textContent=title;
+    ttDesc.textContent=desc;
+    ttFile.textContent='文件: '+file;
+    ttHot.textContent=hot?'⚡ Hot Component (频繁重渲染)':'';
+    tooltip.classList.add('show');
+  });
+  node.addEventListener('mousemove',e=>{
+    const wrapper=document.querySelector('.chart-wrapper').getBoundingClientRect();
+    let left=e.clientX-wrapper.left+16;
+    let top=e.clientY-wrapper.top+12;
+    if(left+280>wrapper.width) left=e.clientX-wrapper.left-296;
+    tooltip.style.left=left+'px';
+    tooltip.style.top=top+'px';
+  });
+  node.addEventListener('mouseleave',()=>{
+    tooltip.classList.remove('show');
+  });
+});
+</script>
+</body>
+</html>

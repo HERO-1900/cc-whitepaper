@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Companion状态机图</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=ZCOOL+KuaiLe&display=swap');
+
+:root {
+  --bg-dark: #0a0a1a;
+  --bg-panel: #121228;
+  --seed-gray: #888888;
+  --bones-cyan: #00d4ff;
+  --soul-pink: #ff88cc;
+  --sprite-green: #00ff88;
+  --reaction-yellow: #ffcc00;
+  --rarity-common: #9e9e9e;
+  --rarity-uncommon: #4caf50;
+  --rarity-rare: #2196f3;
+  --rarity-epic: #9c27b0;
+  --rarity-legendary: #ffd700;
+  --text-main: #f0f0f0;
+  --text-dim: #8888aa;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Space Mono', monospace;
+  background: var(--bg-dark);
+  background-image: 
+    radial-gradient(ellipse at 20% 30%, rgba(0,212,255,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(255,136,204,0.06) 0%, transparent 50%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.container {
+  width: 1100px;
+  background: var(--bg-panel);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 
+    0 20px 60px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.title {
+  font-family: 'ZCOOL KuaiLe', cursive;
+  font-size: 28px;
+  text-align: center;
+  color: var(--text-main);
+  margin-bottom: 8px;
+  text-shadow: 0 0 20px rgba(255,136,204,0.3);
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 12px;
+  margin-bottom: 30px;
+  letter-spacing: 2px;
+}
+
+.diagram {
+  position: relative;
+  width: 100%;
+  height: 480px;
+}
+
+/* State Nodes */
+.state-node {
+  position: absolute;
+  border-radius: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 140px;
+}
+
+.state-node:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+
+.state-node .cn-name {
+  font-family: 'ZCOOL KuaiLe', cursive;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.state-node .en-name {
+  font-size: 10px;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.state-node .details {
+  font-size: 9px;
+  margin-top: 8px;
+  opacity: 0.6;
+  line-height: 1.5;
+}
+
+/* Seed Node */
+.node-seed {
+  left: 20px;
+  top: 180px;
+  background: linear-gradient(135deg, rgba(136,136,136,0.15) 0%, rgba(136,136,136,0.05) 100%);
+  border: 1px solid var(--seed-gray);
+  color: var(--seed-gray);
+}
+
+/* Bones Node */
+.node-bones {
+  left: 200px;
+  top: 180px;
+  background: linear-gradient(135deg, rgba(0,212,255,0.15) 0%, rgba(0,212,255,0.05) 100%);
+  border: 1px solid var(--bones-cyan);
+  color: var(--bones-cyan);
+}
+
+.node-bones:hover {
+  box-shadow: 0 0 30px rgba(0,212,255,0.2);
+}
+
+/* Soul Node */
+.node-soul {
+  left: 380px;
+  top: 180px;
+  background: linear-gradient(135deg, rgba(255,136,204,0.15) 0%, rgba(255,136,204,0.05) 100%);
+  border: 1px solid var(--soul-pink);
+  color: var(--soul-pink);
+}
+
+.node-soul:hover {
+  box-shadow: 0 0 30px rgba(255,136,204,0.2);
+}
+
+/* Sprite Node */
+.node-sprite {
+  left: 560px;
+  top: 180px;
+  background: linear-gradient(135deg, rgba(0,255,136,0.15) 0%, rgba(0,255,136,0.05) 100%);
+  border: 1px solid var(--sprite-green);
+  color: var(--sprite-green);
+  min-width: 180px;
+}
+
+.node-sprite:hover {
+  box-shadow: 0 0 30px rgba(0,255,136,0.2);
+}
+
+/* Reaction Node */
+.node-reaction {
+  left: 780px;
+  top: 180px;
+  background: linear-gradient(135deg, rgba(255,204,0,0.15) 0%, rgba(255,204,0,0.05) 100%);
+  border: 1px solid var(--reaction-yellow);
+  color: var(--reaction-yellow);
+}
+
+.node-reaction:hover {
+  box-shadow: 0 0 30px rgba(255,204,0,0.2);
+}
+
+/* Arrows */
+.arrow {
+  position: absolute;
+  height: 2px;
+  background: linear-gradient(90deg, currentColor 50%, transparent 100%);
+  background-size: 10px 2px;
+}
+
+.arrow-h1 { left: 160px; top: 206px; width: 40px; color: var(--seed-gray); }
+.arrow-h2 { left: 340px; top: 206px; width: 40px; color: var(--bones-cyan); }
+.arrow-h3 { left: 520px; top: 206px; width: 40px; color: var(--soul-pink); }
+.arrow-h4 { left: 740px; top: 206px; width: 40px; color: var(--sprite-green); }
+
+.arrow::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: -4px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid currentColor;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+
+/* ASCII Duck Animation */
+.duck-frame {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: pre;
+  margin-top: 10px;
+  opacity: 0;
+  position: absolute;
+  left: 20px;
+  top: 70px;
+}
+
+.duck-frame.active {
+  opacity: 1;
+}
+
+/* Rarity Section */
+.rarity-section {
+  position: absolute;
+  left: 200px;
+  top: 320px;
+  width: 320px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.rarity-title {
+  font-family: 'ZCOOL KuaiLe', cursive;
+  font-size: 14px;
+  color: var(--text-main);
+  margin-bottom: 12px;
+}
+
+.rarity-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rarity-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+}
+
+.rarity-label {
+  width: 70px;
+  color: var(--text-dim);
+}
+
+.rarity-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.rarity-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.rarity-common .rarity-bar-fill { width: 60%; background: var(--rarity-common); }
+.rarity-uncommon .rarity-bar-fill { width: 25%; background: var(--rarity-uncommon); }
+.rarity-rare .rarity-bar-fill { width: 10%; background: var(--rarity-rare); }
+.rarity-epic .rarity-bar-fill { width: 4%; background: var(--rarity-epic); }
+.rarity-legendary .rarity-bar-fill { width: 1%; background: var(--rarity-legendary); }
+
+.rarity-value {
+  width: 30px;
+  text-align: right;
+  color: var(--text-main);
+}
+
+/* Stats Section */
+.stats-section {
+  position: absolute;
+  left: 560px;
+  top: 320px;
+  width: 300px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.stats-title {
+  font-family: 'ZCOOL KuaiLe', cursive;
+  font-size: 14px;
+  color: var(--text-main);
+  margin-bottom: 12px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 8px 4px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.stat-name {
+  font-size: 8px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.stat-icon {
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  font-size: 10px;
+  color: var(--soul-pink);
+  font-weight: bold;
+}
+
+/* Anti-cheat Lock */
+.anti-cheat {
+  position: absolute;
+  left: 200px;
+  top: 130px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text-dim);
+  padding: 6px 12px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 20px;
+  border: 1px dashed rgba(136,136,136,0.4);
+}
+
+.lock-icon {
+  width: 14px;
+  height: 14px;
+  fill: var(--seed-gray);
+}
+
+/* Idle Sequence */
+.idle-section {
+  position: absolute;
+  left: 560px;
+  top: 435px;
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.idle-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  display: flex;
+  justify-content: space-between;
+}
+
+.idle-sequence {
+  display: flex;
+  gap: 3px;
+}
+
+.idle-step {
+  width: 22px;
+  height: 22px;
+  background: rgba(0,255,136,0.1);
+  border: 1px solid rgba(0,255,136,0.3);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: var(--sprite-green);
+  transition: all 0.2s;
+}
+
+.idle-step.active {
+  background: var(--sprite-green);
+  color: var(--bg-dark);
+  box-shadow: 0 0 10px var(--sprite-green);
+  transform: scale(1.1);
+}
+
+/* Heart Particles for Pet */
+.heart-particle {
+  position: absolute;
+  color: var(--soul-pink);
+  font-size: 12px;
+  pointer-events: none;
+  animation: floatUp 1.5s ease-out forwards;
+}
+
+@keyframes floatUp {
+  0% { transform: translateY(0) scale(0.5); opacity: 1; }
+  100% { transform: translateY(-40px) scale(1); opacity: 0; }
+}
+
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  background: rgba(0,0,0,0.9);
+  color: var(--text-main);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 10px;
+  max-width: 200px;
+  border: 1px solid rgba(255,255,255,0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 100;
+  line-height: 1.5;
+}
+
+.state-node:hover .tooltip {
+  opacity: 1;
+}
+
+/* Pulse Animation for Active States */
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.pulsing {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* Connection Lines SVG */
+.connections {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Stored Data Box */
+.stored-box {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  width: 160px;
+  background: rgba(255,136,204,0.1);
+  border: 1px solid rgba(255,136,204,0.3);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 9px;
+}
+
+.stored-title {
+  color: var(--soul-pink);
+  font-weight: bold;
+  margin-bottom: 6px;
+  font-family: 'ZCOOL KuaiLe', cursive;
+}
+
+.stored-field {
+  color: var(--text-dim);
+  margin: 2px 0;
+  padding: 2px 0;
+  border-bottom: 1px dotted rgba(255,255,255,0.1);
+}
+
+/* Tick Indicator */
+.tick-indicator {
+  position: absolute;
+  right: 20px;
+  top: 320px;
+  width: 100px;
+  text-align: center;
+  padding: 12px;
+  background: rgba(0,255,136,0.1);
+  border: 1px solid rgba(0,255,136,0.3);
+  border-radius: 8px;
+}
+
+.tick-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.tick-value {
+  font-size: 18px;
+  color: var(--sprite-green);
+  font-weight: bold;
+  font-family: 'Space Mono', monospace;
+}
+
+/* Hash Formula */
+.hash-formula {
+  position: absolute;
+  left: 20px;
+  top: 130px;
+  font-size: 9px;
+  color: var(--text-dim);
+  background: rgba(0,0,0,0.4);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(136,136,136,0.2);
+}
+
+/* Legend */
+.legend {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  display: flex;
+  gap: 16px;
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Animations */
+@keyframes flow {
+  0% { stroke-dashoffset: 20; }
+  100% { stroke-dashoffset: 0; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1 class="title">🐤 Companion 状态机图</h1>
+  <p class="subtitle">从孵化到渲染的完整生命周期 | State Machine Lifecycle</p>
+  
+  <div class="diagram">
+    <!-- Hash Formula -->
+    <div class="hash-formula">
+      hash(userId + 'friend-2026-401') → Mulberry32 PRNG
+    </div>
+    
+    <!-- Anti-cheat Lock -->
+    <div class="anti-cheat">
+      <svg class="lock-icon" viewBox="0 0 24 24">
+        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+      </svg>
+      防作弊: Bones从不存储，每次重算
+    </div>
+    
+    <!-- Stored Data Box -->
+    <div class="stored-box">
+      <div class="stored-title">💾 StoredCompanion</div>
+      <div class="stored-field">{ name, personality, hatchedAt }</div>
+      <div class="stored-field" style="margin-top:6px; color:#888;">Soul可改名，Bones改不了命</div>
+    </div>
+    
+    <!-- Tick Indicator -->
+    <div class="tick-indicator">
+      <div class="tick-label">500ms Tick</div>
+      <div class="tick-value pulsing">●</div>
+    </div>
+    
+    <!-- State Nodes -->
+    <div class="state-node node-seed">
+      <div class="cn-name">🌱 种子生成</div>
+      <div class="en-name">Seed Generation</div>
+      <div class="details">Mulberry32 PRNG<br>确定性随机种子</div>
+      <div class="tooltip">基于userId + SALT生成哈希<br>保证同一用户始终看到同一只小动物</div>
+    </div>
+    
+    <div class="state-node node-bones">
+      <div class="cn-name">🦴 Bones生成</div>
+      <div class="en-name">Bones Generation</div>
+      <div class="details">物种×18 | 稀有度×5<br>眼睛·帽子·闪光·属性</div>
+      <div class="tooltip">roll()决定一切外观特征<br>五维属性: DEBUGGING, PATIENCE<br>CHAOS, WISDOM, SNARK</div>
+    </div>
+    
+    <div class="state-node node-soul">
+      <div class="cn-name">💖 Soul生成</div>
+      <div class="en-name">Soul Generation</div>
+      <div class="details">AI孵化名字+性格<br>StoredCompanion</div>
+      <div class="tooltip">首次启动时AI生成<br>存储在配置文件<br>getCompanion()合并Bones+Soul</div>
+    </div>
+    
+    <div class="state-node node-sprite">
+      <div class="cn-name">🎬 Sprite渲染</div>
+      <div class="en-name">Sprite Rendering</div>
+      <!-- Duck ASCII Animation -->
+      <div class="duck-frame" id="duck0">
+   __
+  /( ◕)>
+ (  < )
+  ̅ ̅ ̅ ̅
+      </div>
+      <div class="duck-frame" id="duck1">
+   __
+  /( ◕)>
+ (   >)
+  ̅ ̅ ̅ ̅
+      </div>
+      <div class="duck-frame" id="duck2">
+   __
+  /(- )>
+ (  < )
+  ̅ ̅ ̅ ̅
+      </div>
+      <div class="details" style="margin-top:75px;">3帧精灵图 · 500ms心跳</div>
+      <div class="tooltip">5行×12字符宽<br>IDLE序列: [0,0,0,0,1,0,0,0,-1,0,0,2,0,0,0]<br>-1=眨眼，7.5秒循环</div>
+    </div>
+    
+    <div class="state-node node-reaction">
+      <div class="cn-name">💬 Reaction</div>
+      <div class="en-name">AI Reaction</div>
+      <div class="details">独立AI调用<br>fireCompanionObserver</div>
+      <div class="tooltip">Claude回答完毕时触发<br>真正AI生成的评论<br>PET交互: /buddy pet → 心形粒子</div>
+    </div>
+    
+    <!-- Arrows -->
+    <div class="arrow arrow-h1"></div>
+    <div class="arrow arrow-h2"></div>
+    <div class="arrow arrow-h3"></div>
+    <div class="arrow arrow-h4"></div>
+    
+    <!-- Rarity Section -->
+    <div class="rarity-section">
+      <div class="rarity-title">🎲 稀有度轮盘 | Rarity Roulette</div>
+      <div class="rarity-bars">
+        <div class="rarity-item rarity-common">
+          <span class="rarity-label">Common</span>
+          <div class="rarity-bar-bg"><div class="rarity-bar-fill"></div></div>
+          <span class="rarity-value">60%</span>
+        </div>
+        <div class="rarity-item rarity-uncommon">
+          <span class="rarity-label">Uncommon</span>
+          <div class="rarity-bar-bg"><div class="rarity-bar-fill"></div></div>
+          <span class="rarity-value">25%</span>
+        </div>
+        <div class="rarity-item rarity-rare">
+          <span class="rarity-label">Rare</span>
+          <div class="rarity-bar-bg"><div class="rarity-bar-fill"></div></div>
+          <span class="rarity-value">10%</span>
+        </div>
+        <div class="rarity-item rarity-epic">
+          <span class="rarity-label">Epic</span>
+          <div class="rarity-bar-bg"><div class="rarity-bar-fill"></div></div>
+          <span class="rarity-value">4%</span>
+        </div>
+        <div class="rarity-item rarity-legendary">
+          <span class="rarity-label">Legendary</span>
+          <div class="rarity-bar-bg"><div class="rarity-bar-fill"></div></div>
+          <span class="rarity-value">1%</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Stats Section -->
+    <div class="stats-section">
+      <div class="stats-title">📊 五维属性 | 一强一弱策略</div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-name">Debug</div>
+          <div class="stat-icon">🐛</div>
+          <div class="stat-value">1-100</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-name">Patience</div>
+          <div class="stat-icon">⏳</div>
+          <div class="stat-value">1-100</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-name">Chaos</div>
+          <div class="stat-icon">🌀</div>
+          <div class="stat-value">1-100</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-name">Wisdom</div>
+          <div class="stat-icon">📜</div>
+          <div class="stat-value">1-100</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-name">Snark</div>
+          <div class="stat-icon">😏</div>
+          <div class="stat-value">1-100</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Idle Sequence -->
+    <div class="idle-section">
+      <div class="idle-label">
+        <span>Idle Sequence (15步/7.5秒循环)</span>
+        <span>-1=眨眼 · EXCITED=快速帧循环</span>
+      </div>
+      <div class="idle-sequence" id="idleSequence">
+        <!-- Generated by JS -->
+      </div>
+    </div>
+    
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#888;"></div>
+        <span>Seed</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#00d4ff;"></div>
+        <span>Bones</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ff88cc;"></div>
+        <span>Soul</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#00ff88;"></div>
+        <span>Sprite</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ffcc00;"></div>
+        <span>Reaction</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Duck Animation Frames
+const duckFrames = [0, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 2, 0, 0, 0];
+let currentDuckFrame = 0;
+
+function updateDuck() {
+  // Hide all frames
+  for (let i = 0; i < 3; i++) {
+    const frame = document.getElementById(`duck${i}`);
+    if (frame) frame.classList.remove('active');
+  }
+  
+  // Map sequence value to frame
+  const seqVal = duckFrames[currentDuckFrame];
+  let frameIdx = 0;
+  if (seqVal === -1) frameIdx = 2; // blink
+  else if (seqVal === 1) frameIdx = 1; // hop
+  else frameIdx = 0; // normal
+  
+  const frame = document.getElementById(`duck${frameIdx}`);
+  if (frame) frame.classList.add('active');
+  
+  currentDuckFrame = (currentDuckFrame + 1) % duckFrames.length;
+}
+
+// Idle Sequence Visualization
+const idleSequence = document.getElementById('idleSequence');
+const sequenceValues = [0, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 2, 0, 0, 0];
+sequenceValues.forEach((val, idx) => {
+  const step = document.createElement('div');
+  step.className = 'idle-step';
+  step.textContent = val;
+  step.id = `idle-step-${idx}`;
+  idleSequence.appendChild(step);
+});
+
+let currentIdleStep = 0;
+function updateIdleSequence() {
+  document.querySelectorAll('.idle-step').forEach(s => s.classList.remove('active'));
+  const step = document.getElementById(`idle-step-${currentIdleStep}`);
+  if (step) step.classList.add('active');
+  currentIdleStep = (currentIdleStep + 1) % 15;
+}
+
+// Pet interaction
+document.querySelector('.node-sprite').addEventListener('click', function(e) {
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => {
+      const heart = document.createElement('div');
+      heart.className = 'heart-particle';
+      heart.innerHTML = '❤';
+      heart.style.left = (e.offsetX + Math.random() * 40 - 20) + 'px';
+      heart.style.top = (e.offsetY + Math.random() * 20) + 'px';
+      this.appendChild(heart);
+      setTimeout(() => heart.remove(), 1500);
+    }, i * 100);
+  }
+});
+
+// Main animation loop (500ms)
+setInterval(() => {
+  updateDuck();
+  updateIdleSequence();
+}, 500);
+
+// Initial render
+updateDuck();
+updateIdleSequence();
+</script>
+</body>
+</html>

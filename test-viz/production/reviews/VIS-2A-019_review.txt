@@ -1,0 +1,47 @@
+总分: 14/20
+
+**布局: 3/5** — 表格对齐整体良好，但"扩展扩展"标题存在冗余文字错误，且列宽未显式定义导致工具列过窄(48px)，长工具名易溢出。
+
+**信息: 4/5** — 核心矩阵信息层次清晰，颜色编码直观（绿=可用/灰=禁用/紫=省略），统计摘要补充得当。但tooltip的agent级描述(`tooltips`对象)未连接到hover事件，仅使用cell级`data-tip`。
+
+**美学: 4/5** — 深色主题渐变背景营造专业感，JetBrains Mono + Space Grotesk字体搭配合理，紫绿配色协调。扣分点：emoji(🛡️⚡)偏俏皮与整体技术文档风格略违和；"omitClaudeMd"小标签在视觉上较突兀。
+
+**完整: 3/5** — HTML/CSS/JS结构完整可直接运行。缺陷：tooltip脚本中`tooltips`对象定义后从未被调用（hover只读`dataset.tip`），属无效代码。
+
+---
+
+**缺陷列表:**
+
+1. **行56** — `<th colspan="3" class="category-header">扩展扩展 Extensions</th>` — "扩展扩展"为冗余文字，应为"扩展 Extensions"或直接"Extensions"
+
+2. **行131** — `<span class="agent-desc">代码探索型<span class="omit-badge">omitClaudeMd</span></span>` — `omit-badge`视觉权重过高，且"omitClaudeMd"作为技术参数名放在描述中显得生硬
+
+3. **行221-250** — `tooltips`对象定义了agent级描述，但`mouseenter`事件中只读取`e.target.dataset.tip`，未使用该对象。这段代码为死代码。
+
+4. **行89-92** — tooltip定位使用硬编码`left: rect.left + rect.width / 2 - 100`，当tooltip内容不同时可能导致遮挡或越界，应动态计算宽度
+
+5. **行58-61** — 分类表头"Agent"列只占2列，但"文件操作"占5列、"扩展扩展"占3列，视觉比例失衡，工具列显得拥挤
+
+6. **行47** — `.cell { width: 48px; height: 56px; }` 固定宽度可能导致在高密度显示时内容挤压
+
+---
+
+**修改建议:**
+
+1. 行56：改为 `<th colspan="3" class="category-header">扩展 Extensions</th>`
+
+2. 行131：考虑将`omit-badge`移至单独一行或改为更紧凑的样式（如右上角absolute定位的小圆点），避免打断阅读流
+
+3. 行221-250：删除未使用的`tooltips`对象，或改造为：当hover到`agent-label`时显示agent级总览tooltip，hover到cell时显示具体工具说明
+
+4. 行89-92：tooltip定位改为动态：
+   ```js
+   const tooltipWidth = 280;
+   let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+   left = Math.max(10, Math.min(left, window.innerWidth - tooltipWidth - 10));
+   tooltip.style.left = left + 'px';
+   ```
+
+5. 考虑为表格添加 `table-layout: fixed` 并给首列(agent名)设置合理宽度(如180px)，其余列均分
+
+6. `.cell` 最小宽度改为 `min-width: 60px` 或根据内容自适应

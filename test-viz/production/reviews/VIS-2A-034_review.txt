@@ -1,0 +1,41 @@
+总分: 11/20
+
+**布局: 2/5** — 消息定位存在方向错误（响应消息应从右向左但实际从左向右延伸），Scene B幽灵消息坐标超出容器
+
+**信息: 3/5** — 层次清晰，但核心协议流程需阅读代码注释才能理解，动画时序较长（1.8s）影响信息获取效率
+
+**美学: 3/5** — 配色体系完整和谐，JetBrains Mono与Space Grotesk搭配专业，但legacy warning的旋转动画显得廉价
+
+**完整: 3/5** — 语法正确可运行，但三个场景的sequence diagram完全空白（消息通过JS动态生成，初始HTML无任何消息元素）
+
+---
+
+**缺陷:**
+
+1. **消息方向错误** — `createMessage()` 第179行: `msg.style.left = isRight ? left : '25%'` 对所有响应消息统一设为25%，但响应需要从terminal(75%)向claude(25%)传播，应设置`left: '25%'`配合`transform-origin: right center`或直接`left: '25%'`但现在逻辑反了
+
+2. **幽灵消息越界** — 第197行 `ghost.style.left = '75%'` + `width: '50%'` = 消息从75%延伸到125%，超出sequence容器；应设为`left: '25%'`
+
+3. **Scene A响应箭头top不一致** — sentinel箭头`top: -5px`，query/response箭头`top: -4px`，造成同一图中箭头指向略有偏差
+
+4. **legacy warning动画目的不明** — 2秒延迟淡入后永久停留，无交互价值；占位符内容被划掉但未说明正确值
+
+5. **sequence容器内容为空** — HTML中三个`<div class="sequence" id="scene-x">`完全空白，所有消息由JS生成，导致SEO不友好且无JS环境时完全无内容
+
+6. **result位置可能重叠** — Scene C最末消息在260px，result在bottom:20px(~380px)，但消息label高约20px，间距偏紧
+
+---
+
+**修改建议:**
+
+1. 修正createMessage()中响应消息的定位逻辑，确保transform-origin与left值匹配实现正确的右→左箭头方向
+
+2. 将幽灵消息left改为'25%'并移除transform-origin（保持默认left即可）
+
+3. 统一所有箭头::after的top为-5px或-4px
+
+4. 删除legacy warning的旋转和延迟动画，或改用静态标注说明协议演进历史
+
+5. 在HTML中预置基础消息元素作为无JS降级方案，JS仅用于增强动画效果
+
+6. 将Scene C的result位置上移至bottom:60px，增加与最末消息的间距

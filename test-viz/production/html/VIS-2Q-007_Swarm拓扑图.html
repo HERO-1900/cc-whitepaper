@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swarm拓扑图 - Multi-Agent Collaboration</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0a0f;
+  --bg-panel: #111118;
+  --leader-gold: #ffcc00;
+  --leader-glow: rgba(255, 204, 0, 0.3);
+  --mail-blue: #00d4ff;
+  --mail-glow: rgba(0, 212, 255, 0.4);
+  --perm-purple: #7b61ff;
+  --perm-glow: rgba(123, 97, 255, 0.4);
+  --text-primary: #e8e8f0;
+  --text-secondary: #8a8a9a;
+  --accent-a: #ff6b6b;
+  --accent-b: #4ecdc4;
+  --accent-c: #45b7d1;
+  --accent-d: #96ceb4;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+  background: var(--bg-deep);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 20px;
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+.bg-grid {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(255, 204, 0, 0.05) 0%, transparent 50%),
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 40px 40px, 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  color: var(--leader-gold);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  z-index: 1;
+}
+
+.subtitle {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 30px;
+  z-index: 1;
+}
+
+.diagram-container {
+  position: relative;
+  width: 900px;
+  height: 650px;
+  z-index: 1;
+}
+
+svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Leader Node */
+.leader-node {
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.leader-outer {
+  fill: none;
+  stroke: var(--leader-gold);
+  stroke-width: 2;
+  opacity: 0.5;
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+.leader-inner {
+  fill: rgba(255, 204, 0, 0.15);
+  stroke: var(--leader-gold);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 20px var(--leader-glow));
+}
+
+.leader-core {
+  fill: var(--leader-gold);
+  opacity: 0.9;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { r: 75; opacity: 0.3; }
+  50% { r: 85; opacity: 0.6; }
+}
+
+/* Teammate Nodes */
+.teammate-node {
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.teammate-a { --node-color: var(--accent-a); }
+.teammate-b { --node-color: var(--accent-b); }
+.teammate-c { --node-color: var(--accent-c); }
+.teammate-d { --node-color: var(--accent-d); }
+
+.teammate-circle {
+  fill: rgba(255, 255, 255, 0.05);
+  stroke: var(--node-color);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 15px var(--node-color));
+  transition: all 0.3s ease;
+}
+
+.teammate-node:hover .teammate-circle {
+  fill: rgba(255, 255, 255, 0.1);
+  filter: drop-shadow(0 0 25px var(--node-color));
+}
+
+/* Connection Lines */
+.mailbox-line {
+  fill: none;
+  stroke: var(--mail-blue);
+  stroke-width: 1.5;
+  stroke-dasharray: 5,5;
+  opacity: 0.6;
+  animation: dash-flow 20s linear infinite;
+}
+
+@keyframes dash-flow {
+  to { stroke-dashoffset: -100; }
+}
+
+.permission-line {
+  fill: none;
+  stroke: var(--perm-purple);
+  stroke-width: 2;
+  stroke-dasharray: 8,4;
+  marker-end: url(#arrow-purple);
+  animation: dash-flow-reverse 15s linear infinite;
+}
+
+@keyframes dash-flow-reverse {
+  to { stroke-dashoffset: 100; }
+}
+
+/* Message Particles */
+.message-particle {
+  fill: var(--mail-blue);
+  filter: drop-shadow(0 0 5px var(--mail-blue));
+  animation: travel-to-teammate 3s ease-in-out infinite;
+}
+
+@keyframes travel-to-teammate {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.permission-particle {
+  fill: var(--perm-purple);
+  filter: drop-shadow(0 0 5px var(--perm-purple));
+  animation: travel-to-leader 2s ease-in-out infinite;
+}
+
+@keyframes travel-to-leader {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Icons and Labels */
+.icon-envelope {
+  fill: var(--mail-blue);
+  opacity: 0.8;
+}
+
+.backend-icon {
+  font-size: 14px;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.node-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-anchor: middle;
+  fill: var(--text-primary);
+  pointer-events: none;
+}
+
+.node-sublabel {
+  font-size: 9px;
+  text-anchor: middle;
+  fill: var(--text-secondary);
+  pointer-events: none;
+}
+
+.role-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-anchor: middle;
+  fill: var(--node-color);
+  pointer-events: none;
+}
+
+/* Info Panel */
+.info-panel {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 220px;
+  background: var(--bg-panel);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.teammate-node:hover + .info-panel,
+.info-panel:hover {
+  opacity: 1;
+}
+
+.info-title {
+  color: var(--node-color);
+  font-weight: 700;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.info-item {
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.info-value {
+  color: var(--text-primary);
+}
+
+/* Abort Controller Panel */
+.abort-panel {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  background: var(--bg-panel);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  gap: 20px;
+}
+
+.abort-box {
+  flex: 1;
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 12px;
+  position: relative;
+}
+
+.abort-box.escape {
+  border-color: var(--accent-a);
+  background: rgba(255, 107, 107, 0.05);
+}
+
+.abort-box.lifetime {
+  border-color: var(--perm-purple);
+  background: rgba(123, 97, 255, 0.05);
+}
+
+.abort-label {
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  background: var(--bg-panel);
+  padding: 0 6px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.abort-box.escape .abort-label { color: var(--accent-a); }
+.abort-box.lifetime .abort-label { color: var(--perm-purple); }
+
+.abort-title {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.abort-box.escape .abort-title { color: var(--accent-a); }
+.abort-box.lifetime .abort-title { color: var(--perm-purple); }
+
+.abort-desc {
+  font-size: 9px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.abort-field {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-primary);
+  margin-top: 8px;
+  padding: 4px 8px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 4px;
+}
+
+/* Legend */
+.legend {
+  position: absolute;
+  left: 20px;
+  bottom: 140px;
+  background: var(--bg-panel);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 10px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+}
+
+.legend-item:last-child { margin-bottom: 0; }
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legend-dot.mail { background: var(--mail-blue); }
+.legend-dot.perm { background: var(--perm-purple); }
+.legend-dot.team { background: var(--leader-gold); }
+
+/* Backend badges */
+.backend-badge {
+  font-size: 8px;
+  fill: var(--text-secondary);
+  text-anchor: middle;
+}
+
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  background: rgba(17, 17, 24, 0.95);
+  border: 1px solid var(--node-color);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 10px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 100;
+  min-width: 180px;
+}
+
+.tooltip.show { opacity: 1; }
+
+.tooltip-title {
+  color: var(--node-color);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3px;
+  color: var(--text-secondary);
+}
+
+.tooltip-value {
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<div class="title">Swarm Topology · 星型协作拓扑</div>
+<div class="subtitle">Multi-Agent Collaboration Architecture / 多智能体协同架构</div>
+
+<div class="diagram-container">
+  <svg viewBox="0 0 900 650">
+    <defs>
+      <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#7b61ff" />
+      </marker>
+      <filter id="glow-gold" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+        <feMerge>
+          <feMergeNode in="coloredBlur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+      <linearGradient id="gold-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#ffcc00;stop-opacity:0.3" />
+        <stop offset="100%" style="stop-color:#ffaa00;stop-opacity:0.1" />
+      </linearGradient>
+    </defs>
+
+    <!-- Mailbox communication lines -->
+    <g class="connections">
+      <!-- Leader to A -->
+      <line class="mailbox-line" x1="450" y1="325" x2="200" y2="180" />
+      <circle class="message-particle" r="3" cx="450" cy="325">
+        <animate attributeName="cx" values="450;200;450" dur="3s" repeatCount="indefinite" />
+        <animate attributeName="cy" values="325;180;325" dur="3s" repeatCount="indefinite" />
+      </circle>
+      <!-- Leader to B -->
+      <line class="mailbox-line" x1="450" y1="325" x2="750" y2="180" />
+      <circle class="message-particle" r="3" cx="450" cy="325">
+        <animate attributeName="cx" values="450;750;450" dur="3.5s" repeatCount="indefinite" />
+        <animate attributeName="cy" values="325;180;325" dur="3.5s" repeatCount="indefinite" />
+      </circle>
+      <!-- Leader to C -->
+      <line class="mailbox-line" x1="450" y1="325" x2="200" y2="480" />
+      <circle class="message-particle" r="3" cx="450" cy="325">
+        <animate attributeName="cx" values="450;200;450" dur="4s" repeatCount="indefinite" />
+        <animate attributeName="cy" values="325;480;325" dur="4s" repeatCount="indefinite" />
+      </circle>
+      <!-- Leader to D -->
+      <line class="mailbox-line" x1="450" y1="325" x2="750" y2="480" />
+      <circle class="message-particle" r="3" cx="450" cy="325">
+        <animate attributeName="cx" values="450;750;450" dur="3.2s" repeatCount="indefinite" />
+        <animate attributeName="cy" values="325;480;325" dur="3.2s" repeatCount="indefinite" />
+      </circle>
+    </g>
+
+    <!-- Permission bridge lines -->
+    <g class="permissions">
+      <line class="permission-line" x1="200" y1="180" x2="380" y2="290" />
+      <circle class="permission-particle" r="2.5" cx="200" cy="180">
+        <animate attributeName="cx" values="200;380" dur="2s" repeatCount="indefinite" />
+        <animate attributeName="cy" values="180;290" dur="2s" repeatCount="indefinite" />
+      </circle>
+      <line class="permission-line" x1="750" y1="180" x2="520" y2="290" />
+      <circle class="permission-particle" r="2.5" cx="750" cy="180">
+        <animate attributeName="cx" values="750;520" dur="2.5s" repeatCount="indefinite" />
+        <animate attributeName="cy" values="180;290" dur="2.5s" repeatCount="indefinite" />
+      </circle>
+      <line class="permission-line" x1="200" y1="480" x2="380" y2="360" />
+      <circle class="permission-particle" r="2.5" cx="200" cy="480">
+        <animate attributeName="cx" values="200;380" dur="2.2s" repeatCount="indefinite" />
+        <animate attributeName="cy" values="480;360" dur="2.2s" repeatCount="indefinite" />
+      </circle>
+      <line class="permission-line" x1="750" y1="480" x2="520" y2="360" />
+      <circle class="permission-particle" r="2.5" cx="750" cy="480">
+        <animate attributeName="cx" values="750;520" dur="1.8s" repeatCount="indefinite" />
+        <animate attributeName="cy" values="480;360" dur="1.8s" repeatCount="indefinite" />
+      </circle>
+    </g>
+
+    <!-- Mailbox icons at midpoints -->
+    <g class="mailbox-icons">
+      <g transform="translate(325, 252)">
+        <rect x="-8" y="-6" width="16" height="12" rx="2" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.7"/>
+        <polyline points="-8,-6 0,0 8,-6" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.7"/>
+      </g>
+      <g transform="translate(600, 252)">
+        <rect x="-8" y="-6" width="16" height="12" rx="2" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.7"/>
+        <polyline points="-8,-6 0,0 8,-6" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.7"/>
+      </g>
+      <g transform="translate(325, 402)">
+        <rect x="-8" y="-6" width="16" height="12" rx="2" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.7"/>
+        <polyline points="-8,-6 0,0 8,-6" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.7"/>
+      </g>
+      <g transform="translate(600, 402)">
+        <rect x="-8" y="-6" width="16" height="12" rx="2" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.7"/>
+        <polyline points="-8,-6 0,0 8,-6" fill="none" stroke="#00d4ff" stroke-width="1" opacity="0.7"/>
+      </g>
+    </g>
+
+    <!-- Leader Node -->
+    <g class="leader-node" transform="translate(450, 325)">
+      <circle class="leader-outer" r="75" />
+      <circle class="leader-inner" r="60" />
+      <circle class="leader-core" r="20" opacity="0.3" />
+      <text class="node-label" y="-8">LEADER</text>
+      <text class="node-sublabel" y="5">总指挥 · 审批中心</text>
+      <text class="node-sublabel" y="18">Command & Approval</text>
+    </g>
+
+    <!-- Teammate A -->
+    <g class="teammate-node teammate-a" transform="translate(200, 180)" data-id="A">
+      <circle class="teammate-circle" r="45" />
+      <text class="role-badge" y="-15" style="--node-color: #ff6b6b">researcher@alpha-team</text>
+      <text class="node-label" y="-2">Teammate A</text>
+      <text class="node-sublabel" y="12">研究员 · 数据搜集</text>
+      <text class="backend-badge" y="55">[tmux pane]</text>
+    </g>
+
+    <!-- Teammate B -->
+    <g class="teammate-node teammate-b" transform="translate(750, 180)" data-id="B">
+      <circle class="teammate-circle" r="45" />
+      <text class="role-badge" y="-15" style="--node-color: #4ecdc4">coder@alpha-team</text>
+      <text class="node-label" y="-2">Teammate B</text>
+      <text class="node-sublabel" y="12">编码员 · 代码生成</text>
+      <text class="backend-badge" y="55">[in-process]</text>
+    </g>
+
+    <!-- Teammate C -->
+    <g class="teammate-node teammate-c" transform="translate(200, 480)" data-id="C">
+      <circle class="teammate-circle" r="45" />
+      <text class="role-badge" y="-15" style="--node-color: #45b7d1">reviewer@alpha-team</text>
+      <text class="node-label" y="-2">Teammate C</text>
+      <text class="node-sublabel" y="12">审查员 · 质量检查</text>
+      <text class="backend-badge" y="55">[iTerm2]</text>
+    </g>
+
+    <!-- Teammate D -->
+    <g class="teammate-node teammate-d" transform="translate(750, 480)" data-id="D">
+      <circle class="teammate-circle" r="45" />
+      <text class="role-badge" y="-15" style="--node-color: #96ceb4">tester@alpha-team</text>
+      <text class="node-label" y="-2">Teammate D</text>
+      <text class="node-sublabel" y="12">测试员 · 验证执行</text>
+      <text class="backend-badge" y="55">[tmux pane]</text>
+    </g>
+
+    <!-- Team Config Box -->
+    <g transform="translate(450, 540)">
+      <rect x="-120" y="-25" width="240" height="50" rx="6" fill="rgba(255,204,0,0.05)" stroke="#ffcc00" stroke-width="1" stroke-dasharray="4,2" opacity="0.6"/>
+      <text class="node-sublabel" y="-8" style="fill: #ffcc00; font-size: 9px;">Team Configuration · 团队配置</text>
+      <text class="node-sublabel" y="8" style="font-family: 'JetBrains Mono', monospace; font-size: 8px;">~/.claude/teams/alpha-team/config.json</text>
+      <text class="node-sublabel" y="20" style="font-size: 8px;">teamAllowedPaths: ["/src", "/tests", "/docs"]</text>
+    </g>
+  </svg>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot mail"></div><span>Mailbox 消息系统</span></div>
+    <div class="legend-item"><div class="legend-dot perm"></div><span>Permission Bridge 权限汇聚</span></div>
+    <div class="legend-item"><div class="legend-dot team"></div><span>Team Config 团队配置</span></div>
+  </div>
+
+  <!-- Dual AbortController Panel -->
+  <div class="abort-panel">
+    <div class="abort-box escape">
+      <div class="abort-label">Current Work</div>
+      <div class="abort-title">当前任务中止器</div>
+      <div class="abort-desc">Escape 键触发 · 仅取消当前轮次任务<br>Soft abort - 保留 Agent 生命周期</div>
+      <div class="abort-field">currentWorkAbortController.abort()</div>
+    </div>
+    <div class="abort-box lifetime">
+      <div class="abort-label">Lifecycle</div>
+      <div class="abort-title">生命周期中止器</div>
+      <div class="abort-desc">生死开关 · 彻底终止 Teammate 实例<br>Hard abort - 完全关闭 Agent 进程</div>
+      <div class="abort-field">abortController.abort()</div>
+    </div>
+    <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #8a8a9a;">
+      Dual AbortController Architecture · 双重中止控制器架构
+    </div>
+  </div>
+
+  <!-- Tooltip -->
+  <div class="tooltip" id="tooltip">
+    <div class="tooltip-title" id="tt-title">Teammate</div>
+    <div class="tooltip-row">Backend: <span class="tooltip-value" id="tt-backend">tmux</span></div>
+    <div class="tooltip-row">Permission: <span class="tooltip-value" id="tt-perm">ask</span></div>
+    <div class="tooltip-row">isIdle: <span class="tooltip-value" id="tt-idle">true</span></div>
+    <div class="tooltip-row">pendingMsgs: <span class="tooltip-value" id="tt-pending">0</span></div>
+  </div>
+</div>
+
+<script>
+const teammates = document.querySelectorAll('.teammate-node');
+const tooltip = document.getElementById('tooltip');
+
+const teammateData = {
+  'A': { backend: 'tmux', perm: 'ask', idle: 'false', pending: '3', color: '#ff6b6b' },
+  'B': { backend: 'in-process', perm: 'auto', idle: 'true', pending: '0', color: '#4ecdc4' },
+  'C': { backend: 'iTerm2', perm: 'ask', idle: 'true', pending: '1', color: '#45b7d1' },
+  'D': { backend: 'tmux', perm: 'auto', idle: 'false', pending: '2', color: '#96ceb4' }
+};
+
+teammates.forEach(node => {
+  node.addEventListener('mouseenter', (e) => {
+    const id = node.dataset.id;
+    const data = teammateData[id];
+    const rect = node.getBoundingClientRect();
+    const container = document.querySelector('.diagram-container').getBoundingClientRect();
+    
+    document.getElementById('tt-title').textContent = `Teammate ${id}`;
+    document.getElementById('tt-title').style.color = data.color;
+    document.getElementById('tt-backend').textContent = data.backend;
+    document.getElementById('tt-perm').textContent = data.perm;
+    document.getElementById('tt-idle').textContent = data.idle;
+    document.getElementById('tt-pending').textContent = data.pending;
+    
+    tooltip.style.left = (rect.right - container.left + 10) + 'px';
+    tooltip.style.top = (rect.top - container.top) + 'px';
+    tooltip.classList.add('show');
+  });
+  
+  node.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('show');
+  });
+});
+</script>
+</body>
+</html>

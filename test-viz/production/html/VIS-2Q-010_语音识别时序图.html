@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语音识别时序图 | Voice Recognition Sequence</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a1a 0%, #0d1b2a 50%, #0a0a1a 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+            overflow-x: hidden;
+            color: #e0e0e0;
+        }
+        
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            padding: 30px;
+        }
+        
+        .title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .title h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #00cccc, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 2px;
+        }
+        
+        .title p {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 8px;
+            letter-spacing: 1px;
+        }
+        
+        /* 五道安全检查门 */
+        .gates-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 204, 0, 0.1);
+        }
+        
+        .gate {
+            position: relative;
+            width: 80px;
+            height: 100px;
+            background: linear-gradient(180deg, rgba(255, 204, 0, 0.15) 0%, rgba(255, 204, 0, 0.05) 100%);
+            border: 2px solid #ffcc00;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .gate:hover {
+            background: linear-gradient(180deg, rgba(255, 204, 0, 0.3) 0%, rgba(255, 204, 0, 0.1) 100%);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 204, 0, 0.2);
+        }
+        
+        .gate-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffcc00;
+        }
+        
+        .gate-label {
+            font-size: 9px;
+            color: #ffcc00;
+            text-align: center;
+            padding: 5px;
+            opacity: 0.8;
+        }
+        
+        .gate-tooltip {
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            padding: 12px;
+            background: rgba(20, 20, 35, 0.95);
+            border: 1px solid #ffcc00;
+            border-radius: 8px;
+            font-size: 10px;
+            color: #e0e0e0;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 100;
+            line-height: 1.6;
+        }
+        
+        .gate:hover .gate-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* 主流程管道 */
+        .pipeline-container {
+            position: relative;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            padding: 40px 30px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .pipeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+        
+        /* 管道连接线 */
+        .pipe-connector {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, 
+                #00cccc 0%, 
+                #00d4ff 35%, 
+                #00d4ff 65%, 
+                #00ff88 100%
+            );
+            transform: translateY(-50%);
+            z-index: 1;
+            border-radius: 2px;
+        }
+        
+        .pipe-connector::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: inherit;
+            filter: blur(8px);
+            opacity: 0.5;
+        }
+        
+        /* 流程节点 */
+        .node {
+            position: relative;
+            z-index: 2;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 16px;
+            padding: 20px;
+            min-width: 120px;
+            text-align: center;
+            border: 2px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .node-user {
+            border-color: #00cccc;
+            box-shadow: 0 0 20px rgba(0, 204, 204, 0.2);
+        }
+        
+        .node-mic {
+            border-color: #00cccc;
+            box-shadow: 0 0 20px rgba(0, 204, 204, 0.2);
+        }
+        
+        .node-audio {
+            border-color: #00a8cc;
+            box-shadow: 0 0 20px rgba(0, 168, 204, 0.2);
+        }
+        
+        .node-websocket {
+            border-color: #00d4ff;
+            box-shadow: 0 0 25px rgba(0, 212, 255, 0.3);
+        }
+        
+        .node-deepgram {
+            border-color: #00b4d8;
+            box-shadow: 0 0 20px rgba(0, 180, 216, 0.2);
+        }
+        
+        .node-input {
+            border-color: #00ff88;
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.3);
+        }
+        
+        .node-icon {
+            width: 50px;
+            height: 50px;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+        
+        .node-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .node-subtitle {
+            font-size: 9px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .node-detail {
+            font-size: 9px;
+            color: #9ca3af;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* 音频波形动画 */
+        .waveform {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 30px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 3px;
+        }
+        
+        .wave-bar {
+            width: 3px;
+            background: linear-gradient(180deg, #00cccc 0%, rgba(0, 204, 204, 0.3) 100%);
+            border-radius: 2px;
+            animation: wave 0.8s ease-in-out infinite;
+        }
+        
+        .wave-bar:nth-child(1) { height: 20%; animation-delay: 0s; }
+        .wave-bar:nth-child(2) { height: 60%; animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { height: 100%; animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { height: 70%; animation-delay: 0.3s; }
+        .wave-bar:nth-child(5) { height: 40%; animation-delay: 0.4s; }
+        .wave-bar:nth-child(6) { height: 80%; animation-delay: 0.5s; }
+        .wave-bar:nth-child(7) { height: 30%; animation-delay: 0.6s; }
+        
+        @keyframes wave {
+            0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
+            50% { transform: scaleY(1); opacity: 1; }
+        }
+        
+        /* WebSocket 双管道效果 */
+        .websocket-tunnel {
+            position: relative;
+            padding: 15px 25px;
+        }
+        
+        .tunnel-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #00d4ff;
+        }
+        
+        .tunnel-line.top { top: 5px; }
+        .tunnel-line.bottom { bottom: 5px; }
+        
+        .tunnel-flow {
+            position: absolute;
+            width: 20px;
+            height: 4px;
+            background: #00ffff;
+            border-radius: 2px;
+            filter: blur(2px);
+            animation: flow 1.5s linear infinite;
+        }
+        
+        .tunnel-line.top .tunnel-flow { top: -1px; }
+        .tunnel-line.bottom .tunnel-flow { bottom: -1px; animation-direction: reverse; }
+        
+        @keyframes flow {
+            0% { left: -20px; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { left: 100%; opacity: 0; }
+        }
+        
+        /* 转录输出区域 */
+        .transcription-area {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .transcription-box {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid;
+        }
+        
+        .transcription-box.interim {
+            border-color: rgba(0, 212, 255, 0.3);
+        }
+        
+        .transcription-box.final {
+            border-color: rgba(0, 255, 136, 0.3);
+        }
+        
+        .transcription-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .transcription-box.interim .transcription-label {
+            color: #00d4ff;
+        }
+        
+        .transcription-box.final .transcription-label {
+            color: #00ff88;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .interim .status-dot {
+            background: #00d4ff;
+        }
+        
+        .final .status-dot {
+            background: #00ff88;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+        
+        .transcription-text {
+            font-size: 14px;
+            line-height: 1.8;
+            min-height: 60px;
+        }
+        
+        .interim .transcription-text {
+            color: #00d4ff;
+            border-bottom: 1px dashed rgba(0, 212, 255, 0.4);
+            padding-bottom: 8px;
+        }
+        
+        .final .transcription-text {
+            color: #00ff88;
+            font-weight: 500;
+        }
+        
+        .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 16px;
+            background: #00ff88;
+            margin-left: 4px;
+            animation: blink 1s step-end infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        /* Auto-repeat 时间轴 */
+        .timeline-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .timeline-title {
+            font-size: 11px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+        
+        .timeline {
+            position: relative;
+            height: 60px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .timeline-bar {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, 
+                #ff6b6b 0%, 
+                #ffcc00 20%, 
+                #00d4ff 100%
+            );
+            border-radius: 2px;
+        }
+        
+        .timeline-marker {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translateX(-50%);
+        }
+        
+        .timeline-marker::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #0a0a1a;
+            border: 3px solid;
+            margin-bottom: 8px;
+        }
+        
+        .marker-200 { left: 10%; }
+        .marker-200::before { border-color: #ff6b6b; }
+        .marker-600 { left: 30%; }
+        .marker-600::before { border-color: #ffcc00; }
+        .marker-2000 { left: 100%; }
+        .marker-2000::before { border-color: #00d4ff; }
+        
+        .marker-label {
+            font-size: 10px;
+            color: #9ca3af;
+            white-space: nowrap;
+        }
+        
+        .marker-value {
+            font-size: 12px;
+            font-weight: 700;
+            color: #e0e0e0;
+        }
+        
+        /* 演示按钮 */
+        .demo-section {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .demo-btn {
+            background: linear-gradient(135deg, #00cccc 0%, #00ff88 100%);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            color: #0a0a1a;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
+        }
+        
+        .demo-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+        }
+        
+        .demo-btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* 响应式 */
+        @media (max-width: 900px) {
+            .pipeline {
+                flex-wrap: wrap;
+                gap: 20px;
+                justify-content: center;
+            }
+            
+            .pipe-connector {
+                display: none;
+            }
+            
+            .node {
+                min-width: 100px;
+                padding: 15px;
+            }
+            
+            .transcription-area {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">
+            <h1>语音识别时序图</h1>
+            <p>VOICE RECOGNITION SEQUENCE DIAGRAM</p>
+        </div>
+        
+        <!-- 五道安全检查门 -->
+        <div class="gates-container">
+            <div class="gate">
+                <div class="gate-number">1</div>
+                <div class="gate-label">语音模式<br>Voice Mode</div>
+                <div class="gate-tooltip">
+                    <strong>isVoiceModeEnabled</strong><br>
+                    三层嵌套检查：<br>
+                    1. 全局语音功能开关<br>
+                    2. 用户个人设置<br>
+                    3. 当前会话上下文
+                </div>
+            </div>
+            <div class="gate">
+                <div class="gate-number">2</div>
+                <div class="gate-label">录制可用性<br>Availability</div>
+                <div class="gate-tooltip">
+                    <strong>checkRecordingAvailability</strong><br>
+                    检查系统是否允许录制：<br>
+                    - 无其他应用占用麦克风<br>
+                    - 系统资源充足<br>
+                    - 当前状态允许录音
+                </div>
+            </div>
+            <div class="gate">
+                <div class="gate-number">3</div>
+                <div class="gate-label">语音流<br>Stream Ready</div>
+                <div class="gate-tooltip">
+                    <strong>isVoiceStreamAvailable</strong><br>
+                    验证语音流通道：<br>
+                    - WebSocket 连接状态<br>
+                    - 服务端处理能力<br>
+                    - 网络延迟检查
+                </div>
+            </div>
+            <div class="gate">
+                <div class="gate-number">4</div>
+                <div class="gate-label">依赖检查<br>Dependencies</div>
+                <div class="gate-tooltip">
+                    <strong>checkVoiceDependencies</strong><br>
+                    音频处理依赖：<br>
+                    - macOS: Core Audio API<br>
+                    - 其他平台: SoX 命令行<br>
+                    - 系统权限预检
+                </div>
+            </div>
+            <div class="gate">
+                <div class="gate-number">5</div>
+                <div class="gate-label">麦克风权限<br>Permission</div>
+                <div class="gate-tooltip">
+                    <strong>requestMicrophonePermission</strong><br>
+                    TCC 弹窗请求权限：<br>
+                    - 首次使用触发系统弹窗<br>
+                    - 检查现有授权状态<br>
+                    - 处理用户拒绝情况
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主流程管道 -->
+        <div class="pipeline-container">
+            <div class="pipeline">
+                <div class="pipe-connector"></div>
+                
+                <!-- 用户节点 -->
+                <div class="node node-user">
+                    <div class="waveform" id="userWaveform" style="opacity: 0;">
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                    </div>
+                    <div class="node-icon">👆</div>
+                    <div class="node-title">按住空格</div>
+                    <div class="node-subtitle">Hold Space</div>
+                    <div class="node-detail">对讲机模式<br>Push-to-Talk</div>
+                </div>
+                
+                <!-- 麦克风节点 -->
+                <div class="node node-mic">
+                    <div class="waveform" id="micWaveform" style="opacity: 0;">
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                        <div class="wave-bar"></div>
+                    </div>
+                    <div class="node-icon">🎤</div>
+                    <div class="node-title">麦克风</div>
+                    <div class="node-subtitle">Microphone</div>
+                    <div class="node-detail">PCM 16-bit<br>16kHz 单声道</div>
+                </div>
+                
+                <!-- 音频模块节点 -->
+                <div class="node node-audio">
+                    <div class="node-icon">⚡</div>
+                    <div class="node-title">音频捕获</div>
+                    <div class="node-subtitle">Audio Capture</div>
+                    <div class="node-detail">macOS: Core Audio<br>Other: SoX</div>
+                </div>
+                
+                <!-- WebSocket 节点 -->
+                <div class="node node-websocket websocket-tunnel">
+                    <div class="tunnel-line top">
+                        <div class="tunnel-flow"></div>
+                    </div>
+                    <div class="tunnel-line bottom">
+                        <div class="tunnel-flow"></div>
+                    </div>
+                    <div class="node-icon">🔌</div>
+                    <div class="node-title">WebSocket</div>
+                    <div class="node-subtitle">Real-time Stream</div>
+                    <div class="node-detail">双向实时传输<br>Anthropic Endpoint</div>
+                </div>
+                
+                <!-- Deepgram 节点 -->
+                <div class="node node-deepgram">
+                    <div class="node-icon">🧠</div>
+                    <div class="node-title">Deepgram STT</div>
+                    <div class="node-subtitle">Speech-to-Text</div>
+                    <div class="node-detail">20种语言支持<br>流式识别引擎</div>
+                </div>
+                
+                <!-- 输入框节点 -->
+                <div class="node node-input">
+                    <div class="node-icon">💬</div>
+                    <div class="node-title">输入框</div>
+                    <div class="node-subtitle">Input Field</div>
+                    <div class="node-detail">等待 Enter 发送<br>最终结果</div>
+                </div>
+            </div>
+            
+            <!-- 转录输出 -->
+            <div class="transcription-area">
+                <div class="transcription-box interim">
+                    <div class="transcription-label">
+                        <span class="status-dot"></span>
+                        <span>Interim 实时转录 / Unstable</span>
+                    </div>
+                    <div class="transcription-text" id="interimText">
+                        <span style="opacity: 0.5;">等待语音输入...</span>
+                    </div>
+                </div>
+                <div class="transcription-box final">
+                    <div class="transcription-label">
+                        <span class="status-dot"></span>
+                        <span>Final 最终结果 / Stable</span>
+                    </div>
+                    <div class="transcription-text" id="finalText">
+                        <span style="opacity: 0.3;">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Auto-repeat 时间轴 -->
+        <div class="timeline-section">
+            <div class="timeline-title">Auto-repeat 检测时间轴 / Key Detection Timeline</div>
+            <div class="timeline">
+                <div class="timeline-bar"></div>
+                <div class="timeline-marker marker-200">
+                    <div class="marker-value">200ms</div>
+                    <div class="marker-label">RELEASE_TIMEOUT<br>松手检测</div>
+                </div>
+                <div class="timeline-marker marker-600">
+                    <div class="marker-value">600ms</div>
+                    <div class="marker-label">REPEAT_FALLBACK<br>重复回退</div>
+                </div>
+                <div class="timeline-marker marker-2000">
+                    <div class="marker-value">2000ms</div>
+                    <div class="marker-label">FIRST_PRESS_FALLBACK<br>首次按压</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 演示按钮 -->
+        <div class="demo-section">
+            <button class="demo-btn" id="demoBtn" onmousedown="startRecording()" onmouseup="stopRecording()" onmouseleave="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">
+                按住演示录音流程 / HOLD TO DEMO
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        let isRecording = false;
+        let interimInterval;
+        let demoTexts = [
+            "你好",
+            "你好，这是",
+            "你好，这是一个",
+            "你好，这是一个语音",
+            "你好，这是一个语音测试",
+            "你好，这是一个语音测试演示",
+            "你好，这是一个语音测试演示。",
+            "你好，这是一个语音测试演示。"
+        ];
+        let currentIndex = 0;
+        
+        function startRecording() {
+            if (isRecording) return;
+            isRecording = true;
+            
+            // 显示波形动画
+            document.getElementById('userWaveform').style.opacity = '1';
+            document.getElementById('micWaveform').style.opacity = '1';
+            
+            // 更新按钮状态
+            const btn = document.getElementById('demoBtn');
+            btn.textContent = '录音中... / RECORDING';
+            btn.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ffcc00 100%)';
+            
+            // 清空之前的内容
+            document.getElementById('finalText').innerHTML = '<span style="opacity: 0.3;">—</span>';
+            currentIndex = 0;
+            
+            // 开始 interim 动画
+            let interimEl = document.getElementById('interimText');
+            interimInterval = setInterval(() => {
+                if (currentIndex < demoTexts.length) {
+                    interimEl.innerHTML = demoTexts[currentIndex] + '<span style="opacity: 0.5;">|</span>';
+                    interimEl.style.opacity = '0.7';
+                    setTimeout(() => {
+                        interimEl.style.opacity = '1';
+                    }, 50);
+                    currentIndex++;
+                }
+            }, 300);
+        }
+        
+        function stopRecording() {
+            if (!isRecording) return;
+            isRecording = false;
+            
+            // 隐藏波形动画
+            document.getElementById('userWaveform').style.opacity = '0';
+            document.getElementById('micWaveform').style.opacity = '0';
+            
+            // 更新按钮状态
+            const btn = document.getElementById('demoBtn');
+            btn.textContent = '按住演示录音流程 / HOLD TO DEMO';
+            btn.style.background = 'linear-gradient(135deg, #00cccc 0%, #00ff88 100%)';
+            
+            // 停止 interim 动画
+            clearInterval(interimInterval);
+            
+            // 显示最终结果
+            let finalText = currentIndex > 0 ? demoTexts[Math.min(currentIndex - 1, demoTexts.length - 1)] : '';
+            let finalEl = document.getElementById('finalText');
+            finalEl.innerHTML = '';
+            
+            // 打字机效果显示最终文本
+            let charIndex = 0;
+            function typeChar() {
+                if (charIndex < finalText.length) {
+                    finalEl.innerHTML += finalText[charIndex];
+                    charIndex++;
+                    setTimeout(typeChar, 30);
+                } else {
+                    finalEl.innerHTML += '<span class="typing-cursor"></span>';
+                }
+            }
+            typeChar();
+            
+            // 清空 interim
+            document.getElementById('interimText').innerHTML = '<span style="opacity: 0.5;">等待语音输入...</span>';
+        }
+    </script>
+</body>
+</html>

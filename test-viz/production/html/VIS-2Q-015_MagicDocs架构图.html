@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MagicDocs 架构图</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0f 0%, #12121a 50%, #0d0d14 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Space Grotesk', sans-serif;
+            padding: 40px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            position: relative;
+        }
+        
+        .diagram-wrapper {
+            background: rgba(20, 20, 30, 0.6);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 
+                0 40px 80px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 28px;
+            background: linear-gradient(135deg, #fff 0%, #a0a0b0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+        
+        .subtitle {
+            color: #6b6b7b;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        
+        .ant-badge {
+            background: linear-gradient(135deg, #ff3366 0%, #cc0033 100%);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(255, 51, 102, 0.3);
+        }
+        
+        svg {
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.3));
+        }
+        
+        .stage {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .stage:hover .stage-bg {
+            filter: brightness(1.15);
+            transform: scale(1.02);
+        }
+        
+        .stage-bg {
+            transition: all 0.3s ease;
+        }
+        
+        .flow-arrow {
+            animation: flow 2s ease-in-out infinite;
+        }
+        
+        @keyframes flow {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+        
+        .code-text {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .diamond {
+            animation: pulse 3s ease-in-out infinite;
+        }
+        
+        .diamond:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+        
+        .diamond:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+        
+        .dashed-line {
+            stroke-dasharray: 6,4;
+            animation: dash 20s linear infinite;
+        }
+        
+        @keyframes dash {
+            to { stroke-dashoffset: -100; }
+        }
+        
+        .agent-icon {
+            animation: float 4s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(30, 30, 40, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 13px;
+            color: #c0c0d0;
+            max-width: 280px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            z-index: 100;
+        }
+        
+        .tooltip.visible {
+            opacity: 1;
+        }
+        
+        .tooltip-title {
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        
+        .file-badge {
+            animation: slideIn 0.6s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .legend {
+            display: flex;
+            gap: 24px;
+            margin-top: 30px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #8b8b9b;
+        }
+        
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 40px;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #6b6b7b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="diagram-wrapper">
+            <div class="header">
+                <div>
+                    <div class="title">MagicDocs 架构图</div>
+                    <div class="subtitle">MagicDocs Architecture • VIS-2Q-015</div>
+                </div>
+                <div class="ant-badge">Ant-Only</div>
+            </div>
+            
+            <svg viewBox="0 0 1100 420" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="detectGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ffcc00"/>
+                        <stop offset="100%" stop-color="#ff9500"/>
+                    </linearGradient>
+                    <linearGradient id="registerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#00d4ff"/>
+                        <stop offset="100%" stop-color="#0099cc"/>
+                    </linearGradient>
+                    <linearGradient id="triggerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#9d7bff"/>
+                        <stop offset="100%" stop-color="#7b61ff"/>
+                    </linearGradient>
+                    <linearGradient id="updateGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#00ff88"/>
+                        <stop offset="100%" stop-color="#00cc6a"/>
+                    </linearGradient>
+                    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="3" result="blur"/>
+                        <feMerge>
+                            <feMergeNode in="blur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+                
+                <!-- Background Grid -->
+                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
+                </pattern>
+                <rect width="1100" height="420" fill="url(#grid)"/>
+                
+                <!-- File Input Preview -->
+                <g class="file-badge" transform="translate(30, 180)">
+                    <rect x="0" y="0" width="140" height="100" rx="8" fill="rgba(255,204,0,0.1)" stroke="#ffcc00" stroke-width="1.5"/>
+                    <text x="70" y="25" text-anchor="middle" fill="#ffcc00" font-size="11" font-family="JetBrains Mono" font-weight="600">example.md</text>
+                    <line x1="15" y1="35" x2="125" y2="35" stroke="rgba(255,204,0,0.3)" stroke-width="1"/>
+                    <text x="15" y="55" fill="#ffcc00" font-size="10" font-family="JetBrains Mono"># MAGIC DOC:</text>
+                    <text x="15" y="70" fill="#ffcc00" font-size="10" font-family="JetBrains Mono">API Reference</text>
+                    <text x="15" y="88" fill="#aa88cc" font-size="9" font-family="JetBrains Mono" font-style="italic">_update hourly_</text>
+                </g>
+                
+                <!-- Dashed Line from File to Detect -->
+                <path class="dashed-line" d="M 170 230 L 210 230" stroke="#ffcc00" stroke-width="1.5" fill="none"/>
+                <polygon points="205,226 215,230 205,234" fill="#ffcc00"/>
+                
+                <!-- Stage 1: Detect -->
+                <g class="stage" data-stage="detect" transform="translate(220, 140)">
+                    <rect class="stage-bg" x="0" y="0" width="180" height="180" rx="16" fill="rgba(255,204,0,0.08)" stroke="url(#detectGrad)" stroke-width="2"/>
+                    <rect x="0" y="0" width="180" height="40" rx="16" fill="url(#detectGrad)"/>
+                    <text x="90" y="25" text-anchor="middle" fill="#0a0a0f" font-size="14" font-weight="700">检测 Detect</text>
+                    
+                    <!-- Magic Header Visualization -->
+                    <rect x="20" y="55" width="140" height="50" rx="6" fill="rgba(10,10,15,0.6)" stroke="rgba(255,204,0,0.3)"/>
+                    <text x="30" y="75" fill="#ffcc00" font-size="9" font-family="JetBrains Mono">/^#\s*MAGIC\s+DOC:/</text>
+                    <text x="30" y="90" fill="#888" font-size="8" font-family="JetBrains Mono">detectMagicDocHeader()</text>
+                    
+                    <text x="90" y="125" text-anchor="middle" fill="#ccc" font-size="11">返回 title + instructions</text>
+                    <text x="90" y="160" text-anchor="middle" fill="#ffcc00" font-size="10" font-weight="600">魔法头部匹配</text>
+                </g>
+                
+                <!-- Arrow 1 -->
+                <g class="flow-arrow" transform="translate(410, 220)">
+                    <line x1="0" y1="0" x2="50" y2="0" stroke="#00d4ff" stroke-width="2"/>
+                    <polygon points="45,-5 55,0 45,5" fill="#00d4ff"/>
+                </g>
+                
+                <!-- Stage 2: Register -->
+                <g class="stage" data-stage="register" transform="translate(470, 140)">
+                    <rect class="stage-bg" x="0" y="0" width="180" height="180" rx="16" fill="rgba(0,212,255,0.08)" stroke="url(#registerGrad)" stroke-width="2"/>
+                    <rect x="0" y="0" width="180" height="40" rx="16" fill="url(#registerGrad)"/>
+                    <text x="90" y="25" text-anchor="middle" fill="#0a0a0f" font-size="14" font-weight="700">注册 Register</text>
+                    
+                    <!-- Listener Icon -->
+                    <circle cx="90" cy="80" r="25" fill="rgba(0,212,255,0.15)" stroke="#00d4ff" stroke-width="1.5"/>
+                    <path d="M 80 80 L 90 70 L 100 80 L 95 80 L 95 90 L 85 90 L 85 80 Z" fill="#00d4ff"/>
+                    
+                    <text x="90" y="125" text-anchor="middle" fill="#ccc" font-size="11">registerMagicDoc()</text>
+                    <text x="90" y="145" text-anchor="middle" fill="#00d4ff" font-size="10" font-family="JetBrains Mono">Map&lt;string, DocInfo&gt;</text>
+                    <text x="90" y="165" text-anchor="middle" fill="#888" font-size="9">幂等性保护</text>
+                </g>
+                
+                <!-- Dashed Line from FileReadTool -->
+                <path class="dashed-line" d="M 50 150 Q 150 80 470 180" stroke="#00d4ff" stroke-width="1.5" fill="none" opacity="0.6"/>
+                <text x="200" y="110" fill="#00d4ff" font-size="10" font-style="italic">读到即追踪</text>
+                
+                <!-- Arrow 2 -->
+                <g class="flow-arrow" transform="translate(660, 220)">
+                    <line x1="0" y1="0" x2="50" y2="0" stroke="#9d7bff" stroke-width="2"/>
+                    <polygon points="45,-5 55,0 45,5" fill="#9d7bff"/>
+                </g>
+                
+                <!-- Stage 3: Trigger -->
+                <g class="stage" data-stage="trigger" transform="translate(720, 140)">
+                    <rect class="stage-bg" x="0" y="0" width="180" height="180" rx="16" fill="rgba(123,97,255,0.08)" stroke="url(#triggerGrad)" stroke-width="2"/>
+                    <rect x="0" y="0" width="180" height="40" rx="16" fill="url(#triggerGrad)"/>
+                    <text x="90" y="25" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">触发 Trigger</text>
+                    
+                    <!-- Three Diamond Filters -->
+                    <g transform="translate(25, 65)">
+                        <polygon class="diamond" points="20,0 40,15 20,30 0,15" fill="rgba(123,97,255,0.2)" stroke="#9d7bff" stroke-width="1.5"/>
+                        <text x="20" y="18" text-anchor="middle" fill="#fff" font-size="7">主线程</text>
+                    </g>
+                    <g transform="translate(70, 65)">
+                        <polygon class="diamond" points="20,0 40,15 20,30 0,15" fill="rgba(123,97,255,0.2)" stroke="#9d7bff" stroke-width="1.5"/>
+                        <text x="20" y="18" text-anchor="middle" fill="#fff" font-size="7">空闲</text>
+                    </g>
+                    <g transform="translate(115, 65)">
+                        <polygon class="diamond" points="20,0 40,15 20,30 0,15" fill="rgba(123,97,255,0.2)" stroke="#9d7bff" stroke-width="1.5"/>
+                        <text x="20" y="18" text-anchor="middle" fill="#fff" font-size="7">有文档</text>
+                    </g>
+                    
+                    <!-- Filter labels -->
+                    <text x="90" y="125" text-anchor="middle" fill="#ccc" font-size="10">post-sampling hook</text>
+                    <text x="90" y="145" text-anchor="middle" fill="#9d7bff" font-size="9">三层过滤条件</text>
+                    <text x="90" y="165" text-anchor="middle" fill="#888" font-size="9">!hasToolCalls...</text>
+                </g>
+                
+                <!-- Arrow 3 with sequential label -->
+                <g transform="translate(910, 220)">
+                    <line x1="0" y1="0" x2="40" y2="0" stroke="#00ff88" stroke-width="2"/>
+                    <polygon points="35,-5 45,0 35,5" fill="#00ff88"/>
+                    <rect x="5" y="-25" width="35" height="18" rx="4" fill="rgba(0,255,136,0.15)" stroke="#00ff88" stroke-width="1"/>
+                    <text x="22" y="-13" text-anchor="middle" fill="#00ff88" font-size="8" font-family="JetBrains Mono">queue</text>
+                </g>
+                
+                <!-- Stage 4: Update -->
+                <g class="stage" data-stage="update" transform="translate(970, 140)">
+                    <rect class="stage-bg" x="0" y="0" width="110" height="180" rx="16" fill="rgba(0,255,136,0.08)" stroke="url(#updateGrad)" stroke-width="2"/>
+                    <rect x="0" y="0" width="110" height="40" rx="16" fill="url(#updateGrad)"/>
+                    <text x="55" y="25" text-anchor="middle" fill="#0a0a0f" font-size="13" font-weight="700">更新</text>
+                    
+                    <!-- Agent Icon -->
+                    <g class="agent-icon" transform="translate(55, 95)">
+                        <circle cx="0" cy="0" r="22" fill="rgba(0,255,136,0.15)" stroke="#00ff88" stroke-width="1.5"/>
+                        <circle cx="0" cy="-5" r="6" fill="#00ff88"/>
+                        <rect x="-8" y="2" width="16" height="10" rx="3" fill="#00ff88"/>
+                        <circle cx="-4" cy="12" r="2" fill="#0a0a0f"/>
+                        <circle cx="4" cy="12" r="2" fill="#0a0a0f"/>
+                    </g>
+                    
+                    <text x="55" y="145" text-anchor="middle" fill="#00ff88" font-size="9">Sonnet Agent</text>
+                    <text x="55" y="162" text-anchor="middle" fill="#888" font-size="8">最小权限</text>
+                </g>
+                
+                <!-- Labels -->
+                <text x="280" y="355" text-anchor="middle" fill="#ffcc00" font-size="11" font-weight="600">两行 Markdown 激活</text>
+                <text x="560" y="355" text-anchor="middle" fill="#00d4ff" font-size="11" font-weight="600">自动追踪</text>
+                <text x="810" y="355" text-anchor="middle" fill="#9d7bff" font-size="11" font-weight="600">空闲触发</text>
+                <text x="1025" y="355" text-anchor="middle" fill="#00ff88" font-size="11" font-weight="600">文档更新</text>
+                
+                <!-- Bottom flow line -->
+                <path d="M 280 340 L 1025 340" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4,4"/>
+            </svg>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #ffcc00;"></div>
+                    <span>魔法头部 Magic Header</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #00d4ff;"></div>
+                    <span>文件监听 File Listener</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #9d7bff;"></div>
+                    <span>触发条件 Trigger Conditions</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #00ff88;"></div>
+                    <span>子 Agent Sub-Agent</span>
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value">254</div>
+                    <div class="stat-label">magicDocs.ts</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">127</div>
+                    <div class="stat-label">prompts.ts</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">2</div>
+                    <div class="stat-label">源文件总数</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">过滤条件</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-title"></div>
+        <div class="tooltip-content"></div>
+    </div>
+    
+    <script>
+        const stages = {
+            detect: {
+                title: '检测阶段 Detection',
+                content: '正则匹配魔法头部: /^#\\s*MAGIC\\s+DOC:\\s*(.+)$/im<br>提取标题与斜体自定义指令'
+            },
+            register: {
+                title: '注册阶段 Registration',
+                content: 'registerFileReadListener 监听所有文件读取<br>自动注册到 Map<string, MagicDocInfo> 实现追踪'
+            },
+            trigger: {
+                title: '触发阶段 Trigger',
+                content: '① querySource === "repl_main_thread"<br>② !hasToolCallsInLastAssistantTurn<br>③ docCount > 0'
+            },
+            update: {
+                title: '更新阶段 Update',
+                content: 'sequential() 包装串行执行<br>Sonnet 子 Agent 最小权限编辑目标文件'
+            }
+        };
+        
+        const tooltip = document.getElementById('tooltip');
+        
+        document.querySelectorAll('.stage').forEach(stage => {
+            stage.addEventListener('mouseenter', (e) => {
+                const key = stage.dataset.stage;
+                const data = stages[key];
+                tooltip.querySelector('.tooltip-title').textContent = data.title;
+                tooltip.querySelector('.tooltip-content').innerHTML = data.content;
+                tooltip.classList.add('visible');
+            });
+            
+            stage.addEventListener('mousemove', (e) => {
+                const rect = document.querySelector('.container').getBoundingClientRect();
+                tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+                tooltip.style.top = (e.clientY - rect.top + 15) + 'px';
+            });
+            
+            stage.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+        });
+    </script>
+</body>
+</html>

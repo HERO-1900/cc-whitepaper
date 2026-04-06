@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>企业锁定矩阵 | Enterprise Lockdown Matrix</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-tertiary: #0f3460;
+    --border-color: #4a4a6a;
+    --text-primary: #e8e8f0;
+    --text-secondary: #a0a0b8;
+    --accent-lock: #ff6b6b;
+    --accent-allow: #48bb78;
+    --accent-condition: #ffd93d;
+    --accent-compatibility: #7b61ff;
+    --glow-lock: rgba(255, 107, 107, 0.3);
+    --glow-allow: rgba(72, 187, 120, 0.3);
+    --glow-condition: rgba(255, 217, 61, 0.3);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Noto Sans SC', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 40px 20px;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(123, 97, 255, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(15, 52, 96, 0.3) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-compatibility) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .announcement-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: rgba(123, 97, 255, 0.15);
+    border: 1px solid var(--accent-compatibility);
+    color: var(--accent-compatibility);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .matrix-section {
+    background: rgba(22, 33, 62, 0.6);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 32px;
+    backdrop-filter: blur(10px);
+  }
+
+  .matrix-wrapper {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 600px;
+  }
+
+  thead th {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    padding: 16px 12px;
+    text-align: center;
+    border-bottom: 2px solid var(--border-color);
+  }
+
+  .col-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .col-icon {
+    width: 32px;
+    height: 32px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    opacity: 0.8;
+  }
+
+  tbody th {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    padding: 20px 16px;
+    text-align: left;
+    border-right: 2px solid var(--border-color);
+    border-bottom: 1px solid rgba(74, 74, 106, 0.3);
+    vertical-align: middle;
+  }
+
+  tbody td {
+    padding: 16px;
+    text-align: center;
+    border-bottom: 1px solid rgba(74, 74, 106, 0.3);
+    transition: all 0.2s ease;
+    cursor: default;
+    position: relative;
+  }
+
+  tbody tr:hover td,
+  tbody tr:hover th {
+    background: rgba(123, 97, 255, 0.05);
+  }
+
+  tbody td:hover {
+    transform: scale(1.02);
+    z-index: 2;
+  }
+
+  .cell-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 8px;
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+  }
+
+  .cell-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .cell-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  .cell-detail {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    line-height: 1.3;
+    max-width: 120px;
+  }
+
+  .locked .cell-content {
+    background: rgba(255, 107, 107, 0.12);
+    border-left-color: var(--accent-lock);
+  }
+
+  .locked .cell-icon {
+    fill: var(--accent-lock);
+  }
+
+  .locked .cell-label {
+    color: var(--accent-lock);
+  }
+
+  .allowed .cell-content {
+    background: rgba(72, 187, 120, 0.12);
+    border-left-color: var(--accent-allow);
+  }
+
+  .allowed .cell-icon {
+    fill: var(--accent-allow);
+  }
+
+  .allowed .cell-label {
+    color: var(--accent-allow);
+  }
+
+  .conditional .cell-content {
+    background: rgba(255, 217, 61, 0.12);
+    border-left-color: var(--accent-condition);
+  }
+
+  .conditional .cell-icon {
+    fill: var(--accent-condition);
+  }
+
+  .conditional .cell-label {
+    color: var(--accent-condition);
+  }
+
+  .na .cell-content {
+    background: rgba(160, 160, 184, 0.08);
+    border-left-color: var(--text-secondary);
+  }
+
+  .na .cell-icon {
+    fill: var(--text-secondary);
+    opacity: 0.5;
+  }
+
+  .na .cell-label {
+    color: var(--text-secondary);
+    opacity: 0.6;
+  }
+
+  .tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 10;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  td:hover .tooltip {
+    opacity: 1;
+  }
+
+  /* Forward compatibility section */
+  .compat-section {
+    margin-top: 32px;
+    padding: 24px;
+    background: rgba(123, 97, 255, 0.08);
+    border: 1px solid rgba(123, 97, 255, 0.3);
+    border-radius: 12px;
+  }
+
+  .compat-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent-compatibility);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .compat-title svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+  }
+
+  .compat-desc {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  .code-block {
+    background: rgba(10, 10, 20, 0.6);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    overflow-x: auto;
+    line-height: 1.6;
+  }
+
+  .code-block .keyword { color: #ff79c6; }
+  .code-block .function { color: #8be9fd; }
+  .code-block .string { color: #f1fa8c; }
+  .code-block .comment { color: #6272a4; }
+
+  /* Scenario cards */
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .scenario-card {
+    background: rgba(22, 33, 62, 0.6);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scenario-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+  }
+
+  .scenario-card.scenario-1::before { background: var(--accent-lock); }
+  .scenario-card.scenario-2::before { background: var(--accent-condition); }
+  .scenario-card.scenario-3::before { background: var(--accent-compatibility); }
+
+  .scenario-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+  }
+
+  .scenario-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+
+  .scenario-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+  }
+
+  .tag-lock { background: rgba(255, 107, 107, 0.15); color: var(--accent-lock); }
+  .tag-allow { background: rgba(72, 187, 120, 0.15); color: var(--accent-allow); }
+  .tag-condition { background: rgba(255, 217, 61, 0.15); color: var(--accent-condition); }
+
+  .legend {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+  }
+
+  @media (max-width: 1100px) {
+    .main-layout {
+      grid-template-columns: 1fr;
+    }
+    .side-panel {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+    .scenario-card {
+      flex: 1;
+      min-width: 280px;
+    }
+    .announcement-badge {
+      position: static;
+      display: inline-block;
+      margin-bottom: 16px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="announcement-badge">companyAnnouncements: 企业公告</div>
+    <h1>Enterprise Lockdown Matrix</h1>
+    <p class="subtitle">企业锁定矩阵 · 理解管理员能锁定什么</p>
+  </header>
+
+  <div class="main-layout">
+    <div class="matrix-section">
+      <div class="matrix-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>
+                <div class="col-header">
+                  <svg class="col-icon" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span>Skills<br><small style="font-weight:400;opacity:0.7">~/.claude/skills/</small></span>
+                </div>
+              </th>
+              <th>
+                <div class="col-header">
+                  <svg class="col-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span>Agents<br><small style="font-weight:400;opacity:0.7">Custom Agents</small></span>
+                </div>
+              </th>
+              <th>
+                <div class="col-header">
+                  <svg class="col-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span>Hooks<br><small style="font-weight:400;opacity:0.7">.claude/hooks/</small></span>
+                </div>
+              </th>
+              <th>
+                <div class="col-header">
+                  <svg class="col-icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="21" x2="16" y2="21" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="17" x2="12" y2="21" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span>MCP<br><small style="font-weight:400;opacity:0.7">.mcp.json</small></span>
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th>
+                strictPluginOnlyCustomization<br>
+                <small style="color:var(--text-secondary);font-weight:400">严格插件定制限定</small>
+              </th>
+              <td class="locked">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M19 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2zm-7-7a3 3 0 0 1 3 3v3H9V7a3 3 0 0 1 3-3z"/></svg>
+                  <span class="cell-label">阻止</span>
+                  <span class="cell-detail">Blocked</span>
+                </div>
+                <div class="tooltip">阻止用户自定义 Skills</div>
+              </td>
+              <td class="locked">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M19 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2zm-7-7a3 3 0 0 1 3 3v3H9V7a3 3 0 0 1 3-3z"/></svg>
+                  <span class="cell-label">阻止</span>
+                  <span class="cell-detail">Blocked</span>
+                </div>
+                <div class="tooltip">阻止用户自定义 Agents</div>
+              </td>
+              <td class="locked">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M19 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2zm-7-7a3 3 0 0 1 3 3v3H9V7a3 3 0 0 1 3-3z"/></svg>
+                  <span class="cell-label">阻止</span>
+                  <span class="cell-detail">Blocked</span>
+                </div>
+                <div class="tooltip">阻止用户自定义 Hooks</div>
+              </td>
+              <td class="locked">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M19 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2zm-7-7a3 3 0 0 1 3 3v3H9V7a3 3 0 0 1 3-3z"/></svg>
+                  <span class="cell-label">阻止</span>
+                  <span class="cell-detail">Blocked</span>
+                </div>
+                <div class="tooltip">阻止用户自定义 MCP</div>
+              </td>
+            </tr>
+            <tr>
+              <th>
+                allowManagedHooksOnly<br>
+                <small style="color:var(--text-secondary);font-weight:400">仅企业策略 Hooks</small>
+              </th>
+              <td class="na">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span class="cell-label">不适用</span>
+                  <span class="cell-detail">N/A</span>
+                </div>
+                <div class="tooltip">不影响 Skills 表面</div>
+              </td>
+              <td class="na">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span class="cell-label">不适用</span>
+                  <span class="cell-detail">N/A</span>
+                </div>
+                <div class="tooltip">不影响 Agents 表面</div>
+              </td>
+              <td class="locked">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M19 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2zm-7-7a3 3 0 0 1 3 3v3H9V7a3 3 0 0 1 3-3z"/></svg>
+                  <span class="cell-label">阻止</span>
+                  <span class="cell-detail">User/Local Ignored</span>
+                </div>
+                <div class="tooltip">用户/项目/本地 hooks 被忽略</div>
+              </td>
+              <td class="na">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span class="cell-label">不适用</span>
+                  <span class="cell-detail">N/A</span>
+                </div>
+                <div class="tooltip">不影响 MCP 表面</div>
+              </td>
+            </tr>
+            <tr>
+              <th>
+                allowManagedPermissionRulesOnly<br>
+                <small style="color:var(--text-secondary);font-weight:400">仅企业策略权限规则</small>
+              </th>
+              <td class="na">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span class="cell-label">不适用</span>
+                  <span class="cell-detail">N/A</span>
+                </div>
+                <div class="tooltip">不影响 Skills 表面</div>
+              </td>
+              <td class="na">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span class="cell-label">不适用</span>
+                  <span class="cell-detail">N/A</span>
+                </div>
+                <div class="tooltip">不影响 Agents 表面</div>
+              </td>
+              <td class="na">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span class="cell-label">不适用</span>
+                  <span class="cell-detail">N/A</span>
+                </div>
+                <div class="tooltip">不影响 Hooks 表面</div>
+              </td>
+              <td class="locked">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M19 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2zm-7-7a3 3 0 0 1 3 3v3H9V7a3 3 0 0 1 3-3z"/></svg>
+                  <span class="cell-label">阻止</span>
+                  <span class="cell-detail">User Rules Ignored</span>
+                </div>
+                <div class="tooltip">用户权限规则被忽略</div>
+              </td>
+            </tr>
+            <tr>
+              <th>
+                allowManagedMcpServersOnly<br>
+                <small style="color:var(--text-secondary);font-weight:400">仅企业策略 MCP</small>
+              </th>
+              <td class="na">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span class="cell-label">不适用</span>
+                  <span class="cell-detail">N/A</span>
+                </div>
+                <div class="tooltip">不影响 Skills 表面</div>
+              </td>
+              <td class="na">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span class="cell-label">不适用</span>
+                  <span class="cell-detail">N/A</span>
+                </div>
+                <div class="tooltip">不影响 Agents 表面</div>
+              </td>
+              <td class="na">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  <span class="cell-label">不适用</span>
+                  <span class="cell-detail">N/A</span>
+                </div>
+                <div class="tooltip">不影响 Hooks 表面</div>
+              </td>
+              <td class="conditional">
+                <div class="cell-content">
+                  <svg class="cell-icon" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="cell-label">条件性</span>
+                  <span class="cell-detail">Whitelist Ignored</span>
+                </div>
+                <div class="tooltip">用户 MCP 白名单被忽略，但 deny 保留</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent-lock)"></div> 阻止 Locked</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent-allow)"></div> 允许 Allowed</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent-condition)"></div> 条件 Conditional</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--text-secondary)"></div> 不适用 N/A</div>
+      </div>
+
+      <div class="compat-section">
+        <div class="compat-title">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          前向兼容降级 Forward Compatibility
+        </div>
+        <p class="compat-desc">
+          旧客户端收到未知 surface 名称时，会<strong>丢弃未知项</strong>，降级为"少锁"而非"全坏"。非数组非布尔值会被捕获为 undefined，最终效果为"不锁"。
+        </p>
+        <div class="code-block">
+<span class="comment">// z.preprocess 丢弃未知 surface，降级方向：少锁</span>
+<span class="keyword">const</span> <span class="function">StrictPluginOnlyCustomizationSchema</span> = z.<span class="function">preprocess</span>((val) => {
+  <span class="keyword">if</span> (Array.<span class="function">isArray</span>(val)) {
+    <span class="keyword">return</span> val.<span class="function">filter</span>((s) => [<span class="string">'skills'</span>, <span class="string">'agents'</span>, <span class="string">'hooks'</span>, <span class="string">'mcp'</span>].<span class="function">includes</span>(s));
+  }
+  <span class="keyword">if</span> (<span class="keyword">typeof</span> val === <span class="string">'boolean'</span>) <span class="keyword">return</span> val;
+  <span class="keyword">return</span> <span class="keyword">undefined</span>;
+}, z.<span class="function">union</span>([z.<span class="function">boolean</span>(), z.<span class="function">array</span>(z.<span class="function">string</span>())]).<span class="function">catch</span>(<span class="keyword">undefined</span>));
+        </div>
+      </div>
+    </div>
+
+    <aside class="side-panel">
+      <div class="scenario-card scenario-1">
+        <div class="scenario-title">场景 A: 端到端管控</div>
+        <div class="scenario-desc">
+          <strong>strict=true</strong> 叠加 <strong>strictKnownMarketplaces</strong> 时，管理员实现对企业环境的端到端控制。所有 4 个定制表面均被锁定，用户只能使用企业分发的内容。
+        </div>
+        <div class="scenario-tags">
+          <span class="tag tag-lock">strictPluginOnly=true</span>
+          <span class="tag tag-lock">marketplace gated</span>
+        </div>
+      </div>
+
+      <div class="scenario-card scenario-2">
+        <div class="scenario-title">场景 B: 用户保留拒绝权</div>
+        <div class="scenario-desc">
+          <strong>allowManagedMcpServersOnly=true</strong> 时，用户配置的 MCP 白名单被忽略，但用户仍然可以<strong>deny（拒绝）</strong>特定的 MCP 服务器。这是安全性与自主权的平衡设计。
+        </div>
+        <div class="scenario-tags">
+          <span class="tag tag-condition">managedMcpOnly=true</span>
+          <span class="tag tag-allow">deny retained</span>
+        </div>
+      </div>
+
+      <div class="scenario-card scenario-3">
+        <div class="scenario-title">场景 C: 精准局部锁定</div>
+        <div class="scenario-desc">
+          管理员可以只锁定特定表面。例如 <code>["skills","hooks"]</code> 仅阻止 Skills 和 Hooks，Agents 与 MCP 仍可由用户自由定制。
+        </div>
+        <div class="scenario-tags">
+          <span class="tag tag-lock">skills locked</span>
+          <span class="tag tag-lock">hooks locked</span>
+          <span class="tag tag-allow">agents free</span>
+          <span class="tag tag-allow">mcp free</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+</body>
+</html>

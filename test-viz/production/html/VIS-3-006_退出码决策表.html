@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hooks 退出码决策矩阵</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0d0d14;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #252542;
+            --bg-quaternary: #303055;
+            --accent-green: #48bb78;
+            --accent-red: #ff6b6b;
+            --accent-gray: #808080;
+            --accent-yellow: #ffd93d;
+            --accent-blue: #6c5ce7;
+            --accent-cyan: #00cec9;
+            --text-primary: #f5f5f5;
+            --text-secondary: #b8b8d1;
+            --text-muted: #6b6b8d;
+            --border-subtle: #2d2d4a;
+            --border-highlight: #3d3d6a;
+            --glow-green: rgba(72, 187, 120, 0.3);
+            --glow-red: rgba(255, 107, 107, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 40px 20px;
+            background-image: 
+                radial-gradient(ellipse 80% 50% at 20% 40%, rgba(108, 92, 231, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(255, 107, 107, 0.06) 0%, transparent 50%),
+                linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent-red), var(--accent-green), transparent);
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header .subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .header .desc {
+            margin-top: 20px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.7;
+        }
+
+        /* Execution Types Bar */
+        .exec-types {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .exec-tag {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .exec-tag:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
+
+        .exec-tag .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .exec-tag.command .dot { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+        .exec-tag.prompt .dot { background: var(--accent-cyan); box-shadow: 0 0 8px var(--accent-cyan); }
+        .exec-tag.agent .dot { background: var(--accent-yellow); box-shadow: 0 0 8px var(--accent-yellow); }
+        .exec-tag.http .dot { background: var(--accent-blue); box-shadow: 0 0 8px var(--accent-blue); }
+
+        /* Table Container */
+        .table-wrapper {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border-subtle);
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            position: relative;
+        }
+
+        .table-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+        }
+
+        /* Custom Scrollbar */
+        .table-scroll {
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .table-scroll::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .table-scroll::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+        }
+
+        .table-scroll::-webkit-scrollbar-thumb {
+            background: var(--border-highlight);
+            border-radius: 4px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: 900px;
+        }
+
+        thead th {
+            background: var(--bg-tertiary);
+            padding: 20px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-bottom: 2px solid var(--border-highlight);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        thead th:first-child {
+            text-align: left;
+            width: 240px;
+            min-width: 240px;
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            background: linear-gradient(90deg, var(--bg-tertiary) 95%, transparent);
+        }
+
+        th.exit-0 { 
+            color: var(--accent-green); 
+            border-bottom: 2px solid var(--accent-green);
+        }
+        th.exit-2 { 
+            color: var(--accent-red); 
+            border-bottom: 2px solid var(--accent-red);
+        }
+        th.exit-other { 
+            color: var(--accent-gray); 
+            border-bottom: 2px solid var(--accent-gray);
+        }
+
+        .exit-code-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .exit-code-desc {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Group Headers */
+        .group-header td {
+            background: var(--bg-quaternary);
+            padding: 14px 20px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .group-header td:first-child {
+            position: sticky;
+            left: 0;
+            background: linear-gradient(90deg, var(--bg-quaternary) 95%, transparent);
+            z-index: 5;
+        }
+
+        /* Data Rows */
+        tbody tr {
+            transition: background 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        tbody td {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            vertical-align: middle;
+        }
+
+        tbody td:first-child {
+            position: sticky;
+            left: 0;
+            background: linear-gradient(90deg, var(--bg-secondary) 95%, transparent);
+            z-index: 5;
+            font-weight: 500;
+        }
+
+        tbody tr:hover td:first-child {
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 95%, transparent);
+        }
+
+        /* Event Name Cell */
+        .event-name {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .event-name .name-cn {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .event-name .name-en {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .event-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+            width: fit-content;
+        }
+
+        .tag-fireforget {
+            background: rgba(128, 128, 128, 0.2);
+            color: var(--accent-gray);
+        }
+
+        /* Cell Content */
+        .cell-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            text-align: center;
+        }
+
+        .cell-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cell-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .cell-text {
+            font-size: 0.8rem;
+            line-height: 1.4;
+            color: var(--text-secondary);
+        }
+
+        .cell-meta {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Special Cell Styles */
+        td.blockable {
+            background: rgba(255, 107, 107, 0.08);
+            border-left: 3px solid var(--accent-red);
+            position: relative;
+        }
+
+        td.blockable::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: radial-gradient(circle at center, var(--glow-red) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        tr:hover td.blockable::after {
+            opacity: 0.3;
+        }
+
+        td.fire-forget {
+            opacity: 0.4;
+            position: relative;
+        }
+
+        td.fire-forget::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 20px;
+            right: 20px;
+            height: 1px;
+            background: var(--text-muted);
+        }
+
+        /* Unix Convention Box */
+        .unix-box {
+            margin-top: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(0, 206, 201, 0.08) 0%, rgba(108, 92, 231, 0.08) 100%);
+            border: 1px solid var(--border-highlight);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .unix-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, var(--accent-cyan), var(--accent-blue));
+        }
+
+        .unix-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .unix-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .unix-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--accent-cyan);
+        }
+
+        .unix-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .unix-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .unix-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .unix-item {
+            background: var(--bg-tertiary);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .unix-item code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-cyan);
+            background: rgba(0, 206, 201, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .unix-item p {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .legend-dot.green { background: var(--accent-green); }
+        .legend-dot.red { background: var(--accent-red); }
+        .legend-dot.gray { background: var(--accent-gray); }
+        .legend-dot.glow-red { 
+            background: rgba(255, 107, 107, 0.3);
+            border: 1px solid var(--accent-red);
+        }
+
+        /* Floating Label */
+        .dual-track-label {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background: linear-gradient(135deg, var(--accent-red), #ff4757);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            transform: rotate(5deg);
+            box-shadow: 0 4px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2rem; }
+            .dual-track-label { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="subtitle">Claude Code Hooks System</div>
+            <h1>退出码决策矩阵</h1>
+            <div class="desc">Exit Code Decision Matrix — 双轨制设计：exit 0 成功路径 / exit 2 阻断路径 / 其他非零 错误路径</div>
+        </header>
+
+        <!-- Execution Types -->
+        <div class="exec-types">
+            <div class="exec-tag command">
+                <span class="dot"></span>
+                <span>command</span>
+            </div>
+            <div class="exec-tag prompt">
+                <span class="dot"></span>
+                <span>prompt</span>
+            </div>
+            <div class="exec-tag agent">
+                <span class="dot"></span>
+                <span>agent</span>
+            </div>
+            <div class="exec-tag http">
+                <span class="dot"></span>
+                <span>http</span>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrapper">
+            <div class="dual-track-label">双轨制核心设计</div>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Hook 事件类型<br><span style="font-size:0.7rem;font-weight:400;color:var(--text-muted)">Event Type</span></th>
+                            <th class="exit-0">
+                                <div class="exit-code-label">exit 0</div>
+                                <div class="exit-code-desc">成功 / Success</div>
+                            </th>
+                            <th class="exit-2">
+                                <div class="exit-code-label">exit 2</div>
+                                <div class="exit-code-desc">阻断 / Block</div>
+                            </th>
+                            <th class="exit-other">
+                                <div class="exit-code-label">exit 1,3,...</div>
+                                <div class="exit-code-desc">错误 / Error</div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Tool Events -->
+                        <tr class="group-header">
+                            <td colspan="4">工具事件 / Tool Events</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">工具使用前</span>
+                                    <span class="name-en">PreToolUse</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">工具调用继续</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻断工具调用</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">工具使用后</span>
+                                    <span class="name-en">PostToolUse</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">stdout 注入模型</div>
+                                    <div class="cell-meta">结果可被修改</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻断并反馈</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">工具调用失败</span>
+                                    <span class="name-en">PostToolUseFailure</span>
+                                    <span class="event-tag tag-fireforget">fire-and-forget</span>
+                                </div>
+                            </td>
+                            <td class="fire-forget">
+                                <div class="cell-content">
+                                    <div class="cell-text">输出被忽略</div>
+                                </div>
+                            </td>
+                            <td class="fire-forget">
+                                <div class="cell-content">
+                                    <div class="cell-text">输出被忽略</div>
+                                </div>
+                            </td>
+                            <td class="fire-forget">
+                                <div class="cell-content">
+                                    <div class="cell-text">输出被忽略</div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Permission Events -->
+                        <tr class="group-header">
+                            <td colspan="4">权限事件 / Permission Events</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">权限被拒绝</span>
+                                    <span class="name-en">PermissionDenied</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">允许继续</div>
+                                    <div class="cell-meta">标准流程</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">要求模型重试</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">权限请求</span>
+                                    <span class="name-en">PermissionRequest</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">允许请求</div>
+                                    <div class="cell-meta">继续标准授权流程</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">hookSpecificOutput</div>
+                                    <div class="cell-meta">替代用户决策</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- AI Turn Events -->
+                        <tr class="group-header">
+                            <td colspan="4">AI 轮次事件 / AI Turn Events</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">停止工作</span>
+                                    <span class="name-en">Stop</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">正常结束</div>
+                                    <div class="cell-meta">AI 停止工作</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻止结束，继续工作</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">停止失败</span>
+                                    <span class="name-en">StopFailure</span>
+                                    <span class="event-tag tag-fireforget">fire-and-forget</span>
+                                </div>
+                            </td>
+                            <td class="fire-forget">
+                                <div class="cell-content">
+                                    <div class="cell-text">输出被忽略</div>
+                                </div>
+                            </td>
+                            <td class="fire-forget">
+                                <div class="cell-content">
+                                    <div class="cell-text">输出被忽略</div>
+                                </div>
+                            </td>
+                            <td class="fire-forget">
+                                <div class="cell-content">
+                                    <div class="cell-text">输出被忽略</div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- User Events -->
+                        <tr class="group-header">
+                            <td colspan="4">用户交互事件 / User Events</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">用户提交</span>
+                                    <span class="name-en">UserPromptSubmit</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">继续处理</div>
+                                    <div class="cell-meta">stdout 可修改 prompt</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻断提交</div>
+                                    <div class="cell-meta">stderr 展示给用户</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">通知</span>
+                                    <span class="name-en">Notification</span>
+                                    <span class="event-tag tag-fireforget">fire-and-forget</span>
+                                </div>
+                            </td>
+                            <td class="fire-forget">
+                                <div class="cell-content">
+                                    <div class="cell-text">输出被忽略</div>
+                                </div>
+                            </td>
+                            <td class="fire-forget">
+                                <div class="cell-content">
+                                    <div class="cell-text">输出被忽略</div>
+                                </div>
+                            </td>
+                            <td class="fire-forget">
+                                <div class="cell-content">
+                                    <div class="cell-text">输出被忽略</div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Subagent Events -->
+                        <tr class="group-header">
+                            <td colspan="4">子代理事件 / Sub-agent Events</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">子代理启动</span>
+                                    <span class="name-en">SubagentStart</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">子代理启动</div>
+                                    <div class="cell-meta">stdout → 子代理</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻断启动</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">子代理停止</span>
+                                    <span class="name-en">SubagentStop</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">子代理正常退出</div>
+                                    <div class="cell-meta">标准流程</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻止子代理退出</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Compact Events -->
+                        <tr class="group-header">
+                            <td colspan="4">压缩事件 / Compact Events</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">压缩前</span>
+                                    <span class="name-en">PreCompact</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">允许压缩</div>
+                                    <div class="cell-meta">标准流程</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻断压缩</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">压缩后</span>
+                                    <span class="name-en">PostCompact</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">压缩完成</div>
+                                    <div class="cell-meta">标准流程</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻断后续</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Team Events -->
+                        <tr class="group-header">
+                            <td colspan="4">团队事件 / Team Events</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">队友空闲</span>
+                                    <span class="name-en">TeammateIdle</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">标准处理</div>
+                                    <div class="cell-meta">流程继续</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻断事件</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">任务创建</span>
+                                    <span class="name-en">TaskCreated</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">允许创建</div>
+                                    <div class="cell-meta">标准流程</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻断创建</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">任务完成</span>
+                                    <span class="name-en">TaskCompleted</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">标准处理</div>
+                                    <div class="cell-meta">流程继续</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻断事件</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Config Events -->
+                        <tr class="group-header">
+                            <td colspan="4">配置事件 / Config Events</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">配置变更</span>
+                                    <span class="name-en">ConfigChange</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">允许变更</div>
+                                    <div class="cell-meta">配置生效</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻断配置应用</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- MCP Events -->
+                        <tr class="group-header">
+                            <td colspan="4">MCP 事件 / MCP Events</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">信息获取请求</span>
+                                    <span class="name-en">Elicitation</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">允许请求</div>
+                                    <div class="cell-meta">标准流程</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻断请求</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="event-name">
+                                    <span class="name-cn">信息获取结果</span>
+                                    <span class="name-en">ElicitationResult</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#48bb78" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">标准处理</div>
+                                    <div class="cell-meta">流程继续</div>
+                                </div>
+                            </td>
+                            <td class="blockable">
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">阻断处理</div>
+                                    <div class="cell-meta">stderr → 模型</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="cell-content">
+                                    <div class="cell-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="#808080" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                        </svg>
+                                    </div>
+                                    <div class="cell-text">脚本错误</div>
+                                    <div class="cell-meta">stderr → 用户</div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot green"></div>
+                <span>exit 0 — 成功路径 / Success</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot red"></div>
+                <span>exit 2 — 阻断路径 / Block</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot gray"></div>
+                <span>其他非零 — 错误路径 / Error</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot glow-red"></div>
+                <span>可阻断单元格 / Blockable</span>
+            </div>
+        </div>
+
+        <!-- Unix Convention Box -->
+        <div class="unix-box">
+            <div class="unix-header">
+                <div class="unix-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="4 17 10 11 4 5"></polyline>
+                        <line x1="12" y1="19" x2="20" y2="19"></line>
+                    </svg>
+                </div>
+                <div>
+                    <div class="unix-title">为什么选择 exit 2？</div>
+                    <div class="unix-subtitle">Why exit 2? — Unix 惯例解读</div>
+                </div>
+            </div>
+            <div class="unix-content">
+                <div class="unix-item">
+                    <code>EXIT_USAGE (sysexits.h)</code>
+                    <p>在 Unix 系统中，exit 2 被定义为 EXIT_USAGE，表示"命令正确调用但条件不满足"。Hooks 系统借用了这一语义：脚本正确执行，但业务逻辑决定阻断操作。</p>
+                </div>
+                <div class="unix-item">
+                    <code>双轨制设计核心</code>
+                    <p>exit 2 区分了"脚本自身错误"与"有意阻断"：非零值(1,3...)表示脚本崩溃，exit 2 表示明确的业务决策，Claude 将 stderr 展示给模型。</p>
+                </div>
+                <div class="unix-item">
+                    <code>fire-and-forget 例外</code>
+                    <p>StopFailure、PostToolUseFailure、Notification 等事件是"发射后不管"模式——所有退出码的输出都会被忽略，不影响 Claude 行为。</p>
+                </div>
+                <div class="unix-item">
+                    <code>PermissionRequest 特殊能力</code>
+                    <p>exit 2 时可通过 hookSpecificOutput 直接提供授权决策，完全替代用户交互，实现无人值守的自动化权限控制。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

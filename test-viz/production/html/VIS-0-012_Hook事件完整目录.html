@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hook事件完整目录 | Complete Hook Event Directory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;
+  --bg-sec:#161b22;
+  --border:#30363d;
+  --text:#c9d1d9;
+  --text-dim:#8b949e;
+  --session:#58a6ff;
+  --query:#bc8cff;
+  --tool:#f0883e;
+  --agent:#3fb950;
+  --glow-session:rgba(88,166,255,0.15);
+  --glow-query:rgba(188,140,255,0.15);
+  --glow-tool:rgba(240,136,62,0.15);
+  --glow-agent:rgba(63,185,80,0.15);
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+html,body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Space Mono',monospace;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* Noise texture overlay */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;
+  z-index:9999;
+}
+
+/* Background gradient mesh */
+.bg-mesh{
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 30%, rgba(88,166,255,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 70%, rgba(188,140,255,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 30% at 50% 90%, rgba(63,185,80,0.05) 0%, transparent 50%);
+}
+
+header{
+  position:relative;
+  padding:80px 24px 48px;
+  text-align:center;
+  border-bottom:1px solid var(--border);
+}
+
+header h1{
+  font-family:'Syncopate',sans-serif;
+  font-size:clamp(1.5rem,4vw,2.5rem);
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  background:linear-gradient(135deg,#ffffff 0%,var(--text-dim) 100%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  margin-bottom:12px;
+}
+
+header .subtitle{
+  font-family:'Noto Serif SC',serif;
+  font-size:1rem;
+  color:var(--text-dim);
+  letter-spacing:0.05em;
+}
+
+.controls{
+  position:sticky;
+  top:0;
+  z-index:100;
+  background:rgba(13,17,23,0.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:20px 24px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:16px;
+  align-items:center;
+  justify-content:center;
+}
+
+.search-box{
+  position:relative;
+  flex:1 1 280px;
+  max-width:400px;
+}
+
+.search-box input{
+  width:100%;
+  padding:12px 16px 12px 44px;
+  background:var(--bg-sec);
+  border:1px solid var(--border);
+  border-radius:8px;
+  color:var(--text);
+  font-family:'Space Mono',monospace;
+  font-size:0.875rem;
+  outline:none;
+  transition:border-color 0.2s,box-shadow 0.2s;
+}
+
+.search-box input:focus{
+  border-color:var(--query);
+  box-shadow:0 0 0 3px var(--glow-query);
+}
+
+.search-box::before{
+  content:"🔍";
+  position:absolute;
+  left:14px;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:0.875rem;
+  opacity:0.7;
+}
+
+.phase-filters{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.phase-btn{
+  padding:10px 18px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:transparent;
+  color:var(--text-dim);
+  font-family:'Space Mono',monospace;
+  font-size:0.75rem;
+  cursor:pointer;
+  transition:all 0.2s;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.phase-btn .dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+}
+
+.phase-btn[data-phase="session"] .dot{ background:var(--session); }
+.phase-btn[data-phase="query"] .dot{ background:var(--query); }
+.phase-btn[data-phase="tool"] .dot{ background:var(--tool); }
+.phase-btn[data-phase="agent"] .dot{ background:var(--agent); }
+
+.phase-btn:hover,.phase-btn.active{
+  color:var(--text);
+}
+
+.phase-btn[data-phase="session"]:hover,.phase-btn[data-phase="session"].active{ border-color:var(--session); background:var(--glow-session); }
+.phase-btn[data-phase="query"]:hover,.phase-btn[data-phase="query"].active{ border-color:var(--query); background:var(--glow-query); }
+.phase-btn[data-phase="tool"]:hover,.phase-btn[data-phase="tool"].active{ border-color:var(--tool); background:var(--glow-tool); }
+.phase-btn[data-phase="agent"]:hover,.phase-btn[data-phase="agent"].active{ border-color:var(--agent); background:var(--glow-agent); }
+
+.timeline-wrap{
+  position:relative;
+  max-width:1200px;
+  margin:0 auto;
+  padding:60px 24px 120px;
+}
+
+/* Central vertical line */
+.timeline-wrap::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:0;
+  bottom:0;
+  width:2px;
+  background:linear-gradient(180deg,transparent 0%,var(--border) 5%,var(--border) 95%,transparent 100%);
+  transform:translateX(-50%);
+}
+
+/* Phase sections */
+.phase-section{
+  position:relative;
+  margin-bottom:80px;
+}
+
+.phase-header{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  margin-bottom:48px;
+  cursor:pointer;
+  user-select:none;
+}
+
+.phase-marker{
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  border:3px solid var(--bg);
+  box-shadow:0 0 0 2px currentColor;
+  z-index:10;
+  background:var(--bg);
+}
+
+.phase-section.session .phase-marker{ background:var(--session); box-shadow:0 0 0 2px var(--session); }
+.phase-section.query .phase-marker{ background:var(--query); box-shadow:0 0 0 2px var(--query); }
+.phase-section.tool .phase-marker{ background:var(--tool); box-shadow:0 0 0 2px var(--tool); }
+.phase-section.agent .phase-marker{ background:var(--agent); box-shadow:0 0 0 2px var(--agent); }
+
+.phase-title{
+  font-family:'Syncopate',sans-serif;
+  font-size:clamp(1.1rem,2.5vw,1.6rem);
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+
+.phase-section.session .phase-title{ color:var(--session); text-shadow:0 0 30px var(--glow-session); }
+.phase-section.query .phase-title{ color:var(--query); text-shadow:0 0 30px var(--glow-query); }
+.phase-section.tool .phase-title{ color:var(--tool); text-shadow:0 0 30px var(--glow-tool); }
+.phase-section.agent .phase-title{ color:var(--agent); text-shadow:0 0 30px var(--glow-agent); }
+
+.phase-count{
+  font-size:0.75rem;
+  padding:4px 12px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  color:var(--text-dim);
+}
+
+.phase-toggle{
+  font-size:0.75rem;
+  color:var(--text-dim);
+  transition:transform 0.3s;
+}
+
+.phase-section.collapsed .phase-toggle{
+  transform:rotate(-90deg);
+}
+
+.events-container{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:32px;
+  transition:opacity 0.3s,max-height 0.5s;
+}
+
+.phase-section.collapsed .events-container{
+  opacity:0;
+  max-height:0;
+  overflow:hidden;
+  pointer-events:none;
+}
+
+.event-card{
+  position:relative;
+  width:calc(50% - 40px);
+  background:var(--bg-sec);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:20px 24px;
+  transition:transform 0.3s,box-shadow 0.3s,border-color 0.3s,opacity 0.3s;
+  opacity:0;
+  transform:translateX(-40px);
+}
+
+.event-card.visible{
+  opacity:1;
+  transform:translateX(0);
+}
+
+.event-card:nth-child(even){
+  align-self:flex-end;
+  transform:translateX(40px);
+}
+
+.event-card:nth-child(even).visible{
+  transform:translateX(0);
+}
+
+.event-card.hidden-card{
+  display:none;
+}
+
+.phase-section.session .event-card{ border-left:4px solid var(--session); }
+.phase-section.query .event-card{ border-left:4px solid var(--query); }
+.phase-section.tool .event-card{ border-left:4px solid var(--tool); }
+.phase-section.agent .event-card{ border-left:4px solid var(--agent); }
+
+.event-card:hover{
+  transform:translateY(-4px);
+  border-color:rgba(255,255,255,0.15);
+}
+
+.phase-section.session .event-card:hover{ box-shadow:0 12px 40px var(--glow-session); }
+.phase-section.query .event-card:hover{ box-shadow:0 12px 40px var(--glow-query); }
+.phase-section.tool .event-card:hover{ box-shadow:0 12px 40px var(--glow-tool); }
+.phase-section.agent .event-card:hover{ box-shadow:0 12px 40px var(--glow-agent); }
+
+.event-name{
+  font-family:'Space Mono',monospace;
+  font-size:1rem;
+  font-weight:700;
+  margin-bottom:8px;
+  letter-spacing:-0.02em;
+}
+
+.phase-section.session .event-name{ color:var(--session); }
+.phase-section.query .event-name{ color:var(--query); }
+.phase-section.tool .event-name{ color:var(--tool); }
+.phase-section.agent .event-name{ color:var(--agent); }
+
+.event-timing{
+  font-family:'Noto Serif SC',serif;
+  font-size:0.8rem;
+  color:var(--text-dim);
+  margin-bottom:14px;
+  line-height:1.5;
+}
+
+.event-params{
+  display:inline-block;
+  background:rgba(255,255,255,0.04);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:6px 10px;
+  font-size:0.7rem;
+  color:var(--text-dim);
+  margin-bottom:12px;
+  font-family:'Space Mono',monospace;
+}
+
+.event-use{
+  font-family:'Noto Serif SC',serif;
+  font-size:0.8rem;
+  color:var(--text);
+  font-style:italic;
+  line-height:1.5;
+  padding-left:12px;
+  border-left:2px solid rgba(255,255,255,0.1);
+}
+
+/* Pair connection arcs */
+.pair-arc-svg{
+  position:absolute;
+  left:0;
+  right:0;
+  top:0;
+  bottom:0;
+  pointer-events:none;
+  z-index:0;
+  overflow:visible;
+}
+
+.pair-arc{
+  fill:none;
+  stroke:var(--border);
+  stroke-width:1.5;
+  stroke-dasharray:6,4;
+  opacity:0.5;
+}
+
+/* Mobile adjustments */
+@media(max-width:768px){
+  .timeline-wrap::before{
+    left:24px;
+  }
+  .phase-header{
+    justify-content:flex-start;
+    padding-left:40px;
+  }
+  .event-card{
+    width:calc(100% - 56px);
+    margin-left:56px;
+    align-self:flex-start !important;
+    transform:translateX(20px);
+  }
+  .event-card:nth-child(even){
+    align-self:flex-start;
+    transform:translateX(20px);
+  }
+}
+
+/* Phase dimming when filtered */
+.phase-section.dimmed{
+  opacity:0.25;
+  pointer-events:none;
+}
+
+/* Decorative corner accents */
+.event-card::after{
+  content:"";
+  position:absolute;
+  top:0;
+  right:0;
+  width:40px;
+  height:40px;
+  background:linear-gradient(135deg,transparent 50%,rgba(255,255,255,0.03) 50%);
+  border-top-right-radius:12px;
+  pointer-events:none;
+}
+
+.summary-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-size:0.65rem;
+  color:var(--text-dim);
+  margin-top:16px;
+  padding:4px 10px;
+  background:rgba(255,255,255,0.03);
+  border-radius:4px;
+}
+
+.pair-indicator::before{
+  content:"↔";
+  color:var(--text-dim);
+  margin-right:6px;
+}
+
+.highlight{
+  background:rgba(188,140,255,0.25);
+  color:#fff;
+  border-radius:2px;
+  padding:0 2px;
+}
+
+footer{
+  text-align:center;
+  padding:40px 24px;
+  border-top:1px solid var(--border);
+  color:var(--text-dim);
+  font-size:0.75rem;
+}
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+
+<header>
+  <h1>Hook Event Directory</h1>
+  <p class="subtitle">Claude Code 完整事件挂载点目录 · 27 Hooks Across 4 Lifecycle Phases</p>
+</header>
+
+<div class="controls">
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="搜索事件名、参数或用途 / Search events...">
+  </div>
+  <div class="phase-filters">
+    <button class="phase-btn active" data-phase="session"><span class="dot"></span>Session</button>
+    <button class="phase-btn active" data-phase="query"><span class="dot"></span>Query</button>
+    <button class="phase-btn active" data-phase="tool"><span class="dot"></span>Tool</button>
+    <button class="phase-btn active" data-phase="agent"><span class="dot"></span>Agent</button>
+  </div>
+</div>
+
+<div class="timeline-wrap">
+
+<!-- SESSION PHASE -->
+<section class="phase-section session" data-phase="session">
+  <div class="phase-header" onclick="togglePhase(this)">
+    <div class="phase-marker"></div>
+    <h2 class="phase-title">Session</h2>
+    <span class="phase-count">4 events</span>
+    <span class="phase-toggle">▼</span>
+  </div>
+  <div class="events-container">
+    <div class="event-card" data-pair="session-lifecycle">
+      <h4 class="event-name">onSessionStart</h4>
+      <p class="event-timing">会话启动时触发 / Fired when a new session begins</p>
+      <code class="event-params">params: (sessionId, config)</code>
+      <p class="event-use">初始化日志系统、加载用户缓存、建立连接上下文</p>
+      <span class="summary-badge pair-indicator">Lifecycle Pair</span>
+    </div>
+    <div class="event-card" data-pair="session-lifecycle">
+      <h4 class="event-name">onSessionEnd</h4>
+      <p class="event-timing">会话结束时触发 / Fired when the session terminates</p>
+      <code class="event-params">params: (sessionId, stats)</code>
+      <p class="event-use">上报使用统计、清理临时文件、持久化会话状态</p>
+      <span class="summary-badge pair-indicator">Lifecycle Pair</span>
+    </div>
+    <div class="event-card">
+      <h4 class="event-name">onAuth</h4>
+      <p class="event-timing">认证流程触发时 / Fired during authentication flow</p>
+      <code class="event-params">params: (provider, token)</code>
+      <p class="event-use">自定义认证逻辑、SSO集成、多因子验证拦截</p>
+    </div>
+    <div class="event-card">
+      <h4 class="event-name">onConfigLoad</h4>
+      <p class="event-timing">配置加载完成后 / Fired after configuration is loaded</p>
+      <code class="event-params">params: (config)</code>
+      <p class="event-use">动态修改运行配置、环境检测与适配、注入默认值</p>
+    </div>
+  </div>
+  <svg class="pair-arc-svg" aria-hidden="true"></svg>
+</section>
+
+<!-- QUERY PHASE -->
+<section class="phase-section query" data-phase="query">
+  <div class="phase-header" onclick="togglePhase(this)">
+    <div class="phase-marker"></div>
+    <h2 class="phase-title">Query</h2>
+    <span class="phase-count">8 events</span>
+    <span class="phase-toggle">▼</span>
+  </div>
+  <div class="events-container">
+    <div class="event-card" data-pair="query-lifecycle">
+      <h4 class="event-name">onQueryStart</h4>
+      <p class="event-timing">查询开始前触发 / Fired before a query is sent</p>
+      <code class="event-params">params: (messages, tools)</code>
+      <p class="event-use">记录查询日志、预处理消息内容、注入系统提示</p>
+      <span class="summary-badge pair-indicator">AOP Pair</span>
+    </div>
+    <div class="event-card" data-pair="query-lifecycle">
+      <h4 class="event-name">onQueryEnd</h4>
+      <p class="event-timing">查询完成后触发 / Fired after query completion</p>
+      <code class="event-params">params: (response, tokenUsage)</code>
+      <p class="event-use">统计Token消耗、后处理响应内容、触发缓存更新</p>
+      <span class="summary-badge pair-indicator">AOP Pair</span>
+    </div>
+    <div class="event-card" data-pair="api-flow">
+      <h4 class="event-name">onApiRequest</h4>
+      <p class="event-timing">API请求发送前 / Fired before API request is sent</p>
+      <code class="event-params">params: (request)</code>
+      <p class="event-use">修改请求体、路由代理、注入自定义Header</p>
+      <span class="summary-badge pair-indicator">Request Pair</span>
+    </div>
+    <div class="event-card" data-pair="api-flow">
+      <h4 class="event-name">onApiResponse</h4>
+      <p class="event-timing">API响应返回后 / Fired after API response arrives</p>
+      <code class="event-params">params: (response)</code>
+      <p class="event-use">响应拦截、缓存结果、错误码转换处理</p>
+      <span class="summary-badge pair-indicator">Request Pair</span>
+    </div>
+    <div class="event-card">
+      <h4 class="event-name">onPromptBuild</h4>
+      <p class="event-timing">Prompt组装时 / Fired during prompt assembly</p>
+      <code class="event-params">params: (system, messages)</code>
+      <p class="event-use">注入额外上下文、动态调整系统提示词模板</p>
+    </div>
+    <div class="event-card">
+      <h4 class="event-name">onStreamChunk</h4>
+      <p class="event-timing">流式块到达时 / Fired on each streaming chunk</p>
+      <code class="event-params">params: (chunk)</code>
+      <p class="event-use">实时日志输出、进度追踪、流式内容转换</p>
+    </div>
+    <div class="event-card">
+      <h4 class="event-name">onError</h4>
+      <p class="event-timing">错误发生时触发 / Fired when an error occurs</p>
+      <code class="event-params">params: (error, context)</code>
+      <p class="event-use">错误上报至监控平台、自动重试策略、降级处理</p>
+    </div>
+    <div class="event-card">
+      <h4 class="event-name">onContextTruncate</h4>
+      <p class="event-timing">上下文裁剪时 / Fired when context is truncated</p>
+      <code class="event-params">params: (before, after)</code>
+      <p class="event-use">自定义裁剪策略、保留关键消息、记录裁剪日志</p>
+    </div>
+  </div>
+  <svg class="pair-arc-svg" aria-hidden="true"></svg>
+</section>
+
+<!-- TOOL PHASE -->
+<section class="phase-section tool" data-phase="tool">
+  <div class="phase-header" onclick="togglePhase(this)">
+    <div class="phase-marker"></div>
+    <h2 class="phase-title">Tool</h2>
+    <span class="phase-count">10 events</span>
+    <span class="phase-toggle">▼</span>
+  </div>
+  <div class="events-container">
+    <div class="event-card" data-pair="tool-lifecycle">
+      <h4 class="event-name">onToolCall</h4>
+      <p class="event-timing">工具调用前触发 / Fired before a tool is invoked</p>
+      <code class="event-params">params: (toolName, params)</code>
+      <p class="event-use">权限检查、参数校验与修改、调用频率限制</p>
+      <span class="summary-badge pair-indicator">AOP切面</span>
+    </div>
+    <div class="event-card" data-pair="tool-lifecycle">
+      <h4 class="event-name">onToolResult</h4>
+      <p class="event-timing">工具结果返回后 / Fired after tool execution</p>
+      <code class="event-params">params: (toolName, result)</code>
+      <p class="event-use">结果过滤、格式转换、敏感信息脱敏</p>
+      <span class="summary-badge pair-indicator">AOP切面</span>
+    </div>
+    <div class="event-card" data-pair="bash-flow">
+      <h4 class="event-name">onBashCommand</h4>
+      <p class="event-timing">Bash命令执行前 / Fired before bash command runs</p>
+      <code class="event-params">params: (command)</code>
+      <p class="event-use">命令安全审查、注入前置环境变量、操作审计</p>
+      <span class="summary-badge pair-indicator">Bash Pair</span>
+    </div>
+    <div class="event-card" data-pair="bash-flow">
+      <h4 class="event-name">onBashResult</h4>
+      <p class="event-timing">Bash命令结果后 / Fired after bash execution</p>
+      <code class="event-params">params: (command, output, exitCode)</code>
+      <p class="event-use">输出过滤、错误码映射、自动重试判定</p>
+      <span class="summary-badge pair-indicator">Bash Pair</span>
+    </div>
+    <div class="event-card" data-pair="file-io">
+      <h4 class="event-name">onFileRead</h4>
+      <p class="event-timing">文件读取前触发 / Fired before file read</p>
+      <code class="event-params">params: (path)</code>
+      <p class="event-use">访问控制、路径重写、敏感文件拦截</p>
+      <span class="summary-badge pair-indicator">File Pair</span>
+    </div>
+    <div class="event-card" data-pair="file-io">
+      <h4 class="event-name">onFileWrite</h4>
+      <p class="event-timing">文件写入前触发 / Fired before file write</p>
+      <code class="event-params">params: (path, content)</code>
+      <p class="event-use">内容审查、自动格式化、写入权限检查</p>
+      <span class="summary-badge pair-indicator">File Pair</span>
+    </div>
+    <div class="event-card">
+      <h4 class="event-name">onFileEdit</h4>
+      <p class="event-timing">文件编辑前触发 / Fired before file edit</p>
+      <code class="event-params">params: (path, edits)</code>
+      <p class="event-use">编辑审查、自动备份、diff预览拦截</p>
+    </div>
+    <div class="event-card">
+      <h4 class="event-name">onGrepSearch</h4>
+      <p class="event-timing">搜索执行前触发 / Fired before grep search</p>
+      <code class="event-params">params: (pattern, path)</code>
+      <p class="event-use">搜索范围限制、正则审查、大目录跳过</p>
+    </div>
+    <div class="event-card">
+      <h4 class="event-name">onWebFetch</h4>
+      <p class="event-timing">网络请求前触发 / Fired before web fetch</p>
+      <code class="event-params">params: (url)</code>
+      <p class="event-use">URL白名单校验、代理路由、内容缓存</p>
+    </div>
+    <div class="event-card">
+      <h4 class="event-name">onToolPermission</h4>
+      <p class="event-timing">权限判定时刻触发 / Fired during permission check</p>
+      <code class="event-params">params: (toolName, mode)</code>
+      <p class="event-use">自定义权限矩阵、环境敏感模式切换</p>
+    </div>
+  </div>
+  <svg class="pair-arc-svg" aria-hidden="true"></svg>
+</section>
+
+<!-- AGENT PHASE -->
+<section class="phase-section agent" data-phase="agent">
+  <div class="phase-header" onclick="togglePhase(this)">
+    <div class="phase-marker"></div>
+    <h2 class="phase-title">Agent</h2>
+    <span class="phase-count">5 events</span>
+    <span class="phase-toggle">▼</span>
+  </div>
+  <div class="events-container">
+    <div class="event-card" data-pair="agent-lifecycle">
+      <h4 class="event-name">onAgentSpawn</h4>
+      <p class="event-timing">子Agent创建时 / Fired when a sub-agent is spawned</p>
+      <code class="event-params">params: (parentId, config)</code>
+      <p class="event-use">资源配额限制、继承上下文配置、嵌套日志标记</p>
+      <span class="summary-badge pair-indicator">Agent Pair</span>
+    </div>
+    <div class="event-card" data-pair="agent-lifecycle">
+      <h4 class="event-name">onAgentComplete</h4>
+      <p class="event-timing">子Agent完成时 / Fired when sub-agent finishes</p>
+      <code class="event-params">params: (agentId, result)</code>
+      <p class="event-use">结果聚合至父Agent、清理子进程句柄、事件冒泡处理</p>
+      <span class="summary-badge pair-indicator">Agent Pair</span>
+    </div>
+    <div class="event-card">
+      <h4 class="event-name">onAgentError</h4>
+      <p class="event-timing">子Agent出错时 / Fired on sub-agent error</p>
+      <code class="event-params">params: (agentId, error)</code>
+      <p class="event-use">错误恢复、降级至本地执行、父级通知</p>
+    </div>
+    <div class="event-card">
+      <h4 class="event-name">onMaxDepthReach</h4>
+      <p class="event-timing">达到最大递归深度时 / Fired at max recursion depth</p>
+      <code class="event-params">params: (depth)</code>
+      <p class="event-use">递归告警、策略调整、强制展平任务</p>
+    </div>
+    <div class="event-card">
+      <h4 class="event-name">onTaskDistribute</h4>
+      <p class="event-timing">任务分发时触发 / Fired when tasks are distributed</p>
+      <code class="event-params">params: (tasks)</code>
+      <p class="event-use">负载均衡、优先级重排、批量合并优化</p>
+    </div>
+  </div>
+  <svg class="pair-arc-svg" aria-hidden="true"></svg>
+</section>
+
+</div>
+
+<footer>
+  <p>VIS-0-012 · Hook事件完整目录 · 27 Events · 4 Lifecycle Phases</p>
+</footer>
+
+<script>
+/* Phase collapsing */
+function togglePhase(header){
+  const section = header.closest('.phase-section');
+  section.classList.toggle('collapsed');
+  setTimeout(drawPairArcs,310);
+}
+
+/* Filter buttons */
+const phaseBtns = document.querySelectorAll('.phase-btn');
+phaseBtns.forEach(btn => {
+  btn.addEventListener('click',()=>{
+    btn.classList.toggle('active');
+    applyFilters();
+  });
+});
+
+/* Search & filter logic */
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('input',applyFilters);
+
+function applyFilters(){
+  const activePhases = Array.from(phaseBtns)
+    .filter(b=>b.classList.contains('active'))
+    .map(b=>b.dataset.phase);
+  const query = searchInput.value.trim().toLowerCase();
+
+  document.querySelectorAll('.phase-section').forEach(section=>{
+    const phase = section.dataset.phase;
+    if(!activePhases.includes(phase)){
+      section.classList.add('dimmed');
+    }else{
+      section.classList.remove('dimmed');
+    }
+  });
+
+  document.querySelectorAll('.event-card').forEach(card=>{
+    const text = card.innerText.toLowerCase();
+    const phase = card.closest('.phase-section').dataset.phase;
+    const matchesSearch = !query || text.includes(query);
+    const matchesPhase = activePhases.includes(phase);
+    if(matchesSearch && matchesPhase){
+      card.classList.remove('hidden-card');
+      if(query){
+        highlightText(card,query);
+      }else{
+        removeHighlights(card);
+      }
+    }else{
+      card.classList.add('hidden-card');
+      removeHighlights(card);
+    }
+  });
+
+  setTimeout(drawPairArcs,50);
+}
+
+function highlightText(card,query){
+  removeHighlights(card);
+  const walker = document.createTreeWalker(card,NodeFilter.SHOW_TEXT,null,false);
+  const nodes = [];
+  while(walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(node=>{
+    const text = node.textContent;
+    const idx = text.toLowerCase().indexOf(query);
+    if(idx>=0){
+      const span = document.createElement('span');
+      span.className='highlight';
+      const before = text.slice(0,idx);
+      const match = text.slice(idx,idx+query.length);
+      const after = text.slice(idx+query.length);
+      const replacement = document.createDocumentFragment();
+      if(before) replacement.appendChild(document.createTextNode(before));
+      span.textContent = match;
+      replacement.appendChild(span);
+      if(after) replacement.appendChild(document.createTextNode(after));
+      node.parentNode.replaceChild(replacement,node);
+    }
+  });
+}
+
+function removeHighlights(card){
+  card.querySelectorAll('.highlight').forEach(span=>{
+    const parent = span.parentNode;
+    parent.insertBefore(document.createTextNode(span.textContent),span);
+    parent.removeChild(span);
+    parent.normalize();
+  });
+}
+
+/* Draw SVG arcs between paired cards */
+function drawPairArcs(){
+  document.querySelectorAll('.phase-section').forEach(section=>{
+    const svg = section.querySelector('.pair-arc-svg');
+    const container = section.querySelector('.events-container');
+    if(!svg || !container) return;
+    svg.innerHTML = '';
+    if(section.classList.contains('collapsed')) return;
+
+    const rect = container.getBoundingClientRect();
+    const svgRect = svg.getBoundingClientRect();
+    if(!rect.width || !svgRect.width) return;
+
+    const pairs = {};
+    container.querySelectorAll('.event-card[data-pair]:not(.hidden-card)').forEach(card=>{
+      const key = card.dataset.pair;
+      if(!pairs[key]) pairs[key]=[];
+      pairs[key].push(card);
+    });
+
+    Object.values(pairs).forEach(group=>{
+      if(group.length!==2) return;
+      const r1 = group[0].getBoundingClientRect();
+      const r2 = group[1].getBoundingClientRect();
+      if(!r1.width || !r2.width) return;
+
+      const x1 = r1.left + r1.width/2 - svgRect.left;
+      const y1 = r1.top + r1.height/2 - svgRect.top;
+      const x2 = r2.left + r2.width/2 - svgRect.left;
+      const y2 = r2.top + r2.height/2 - svgRect.top;
+
+      const midY = (y1+y2)/2;
+      const c1x = x1 + (window.innerWidth > 768 ? (x1 < x2 ? -60 : 60) : -40);
+      const c2x = x2 + (window.innerWidth > 768 ? (x1 < x2 ? -60 : 60) : -40);
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d',`M ${x1} ${y1} C ${c1x} ${y1}, ${c2x} ${y2}, ${x2} ${y2}`);
+      path.setAttribute('class','pair-arc');
+      svg.appendChild(path);
+    });
+  });
+}
+
+/* IntersectionObserver scroll animations */
+const observer = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.classList.add('visible');
+    }
+  });
+},{threshold:0.1,rootMargin:'0px 0px -50px 0px'});
+
+document.querySelectorAll('.event-card').forEach(card=>{
+  observer.observe(card);
+});
+
+window.addEventListener('resize',drawPairArcs);
+window.addEventListener('load',()=>{
+  document.querySelectorAll('.event-card').forEach((c,i)=>{
+    setTimeout(()=>c.classList.add('visible'),i*60);
+  });
+  setTimeout(drawPairArcs,400);
+});
+</script>
+</body>
+</html>

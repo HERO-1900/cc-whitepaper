@@ -1,0 +1,93 @@
+我将逐项审查此图表代码。
+
+## 评分结果
+
+**总分: 11/20**
+
+---
+
+### 布局: 2/5 — SVG 坐标系统存在多处的对齐错误，括号与柱状图顶边偏差20px，注释线与柱体重叠
+
+**具体缺陷:**
+1. **Sequential bracket 错位** — `d="M 50 45 L 50 35 L 660 35 L 660 45"` 括号顶边 y=35，柱状图顶边 y=55，间距达 20px，视觉割裂
+2. **Parallel bracket 错位** — 同上，y=35 vs y=55，间距 20px
+3. **注释虚线越界** — `y1=100, y2=55` 注释线终点停在柱体顶边，应延伸至柱体底部 y=87 以清晰标识并行区间
+4. **Sequential 段 SVG 高度 140 vs Parallel 段 160** — 两段时间线视觉比例不一致
+
+---
+
+### 信息: 2/5 — 核心信息（66%提升）传达清晰，但时序数值与视觉编码严重不符
+
+**具体缺陷:**
+1. **Sequential 总时长矛盾** — 括号标注 "~150ms Total"，但时间轴刻度 0-150ms 跨度仅对应 x=60→660（共 600px）。按刻度比例：600px / 150ms = 4px/ms。然而：
+   - AI Speaking bar 宽 160px → 40ms（标称 80ms）
+   - Parse bar 宽 30px → 7.5ms（标称 10ms）
+   - Tool A/B/C 各宽 120px → 30ms（标称 20ms）
+   - 标称累加 80+10+20+20+20=150ms，但视觉宽度累加仅 430px（≈107.5ms）
+
+2. **Parallel 总时长矛盾** — "~50ms Total"，但按比例换算：
+   - AI Speaking 160px = 40ms
+   - 各 Tool 120px = 30ms
+   - 若真的并行，总时长应为 max(AI, Tools) = 40ms，但并行三工具各 30ms 与 AI 40ms 重叠后，总时长视觉上并非 50ms
+
+3. **时序刻度间距不一致** — Sequential x 轴: 60→260→460→660 (步长 200px)；Parallel x 轴同样步长 200px，但时间轴仅到 x=460 (100ms) 截止，缺少 150ms 刻度标定并行组的结束位置
+
+4. **约束面板信息孤岛** — "isConcurrencySafe 约束" 与主时间线无视觉连接，用户无法直观理解 Edit/Write 标红是因为与哪个时间段冲突
+
+---
+
+### 美学: 4/5 — 配色体系和谐，字体层次分明，动画时序设计考究
+
+**优点:**
+- 深色主题 + 高饱和度霓虹色（蓝/紫/绿）层次分明
+- Space Grotesk + JetBrains Mono + Noto Sans SC 字体组合合理
+- 背景网格 + 噪点 + 径向渐变层次丰富
+- 动画 stagger 设计细腻（slideInRight 序列）
+
+**缺陷:**
+- SVG `<linearGradient>` 的 `stop-color` 使用 `var(--accent-xxx)`，**Firefox 不支持**此写法（Safari 部分支持），会导致渐变色回退为透明或黑色
+
+```css
+/* 问题代码（SVG 内） */
+<stop offset="0%" stop-color="var(--accent-blue)" stop-opacity="0.9"/>
+```
+
+---
+
+### 完整: 3/5 — HTML 结构完整，CSS/JS 语法正确，可直接打开
+
+**优点:**
+- 标签闭合完整
+- Google Fonts CDN 可达
+- JavaScript 事件绑定正确
+
+**缺陷:**
+1. **动画时序错误** — Parallel 柱状图动画最晚到 2.7s 结束，约束面板却在 2.6s 开始淡入，视觉节奏打断
+2. **SVG marker 嵌套** — `<defs>` 内含 `<marker>` 在部分旧版浏览器可能渲染异常
+
+---
+
+## 缺陷汇总
+
+| # | 位置 | 问题 |
+|---|------|------|
+| 1 | `svg sequential bracket path` | y=35 高于柱顶 y=55，间距 20px |
+| 2 | `svg parallel bracket path` | 同上 |
+| 3 | `dashed-line annotation` | y2=55 止于柱顶，应至 y=87 |
+| 4 | Sequential bar widths | 视觉宽度与标称时长大面积不符 |
+| 5 | Parallel bar widths | 视觉宽度与 "~50ms" 标注矛盾 |
+| 6 | Parallel x-axis | 刻度仅到 100ms，缺少 150ms 终边标注 |
+| 7 | `stop-color="var(--...)"` | Firefox 不支持 CSS 变量 |
+| 8 | `.constraint-panel` | animation-delay 2.6s 早于 parallel 动画完成 2.7s |
+
+---
+
+## 修改建议
+
+1. **修正 bracket 坐标** — 将 `M 50 45 L 50 35` 改为 `M 50 57 L 50 47`（紧贴柱顶上方 8px）
+2. **修正注释虚线** — `y2=55` 改为 `y2=95`（延伸至轴线），同时 x1/x2 起点调整以完整穿行三并列柱
+3. **统一 SVG 高度** — 两段 timeline 统一使用 viewBox height="160"
+4. **补全 parallel 时序刻度** — 在 x=660 处添加 150ms 刻度
+5. **渐变色改用固定色值** — 将 SVG 内 `stop-color="var(--accent-blue)"` 替换为 `#00d4ff` 等硬编码色值，确保跨浏览器一致
+6. **延迟约束面板动画** — `animation-delay` 从 `2.6s` 改为 `3.2s`（所有柱状图动画完成后）
+7. **约束面板与时间线连接** — 在 "Edit"/"Write" 危险工具处添加细虚线连接至时间线对应位置，或在面板标题旁标注 "(对并行安全有影响)"

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>扩展性设计模式 — 插件架构的三种模式</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #1a1a2e;
+  --bg-card: rgba(255,255,255,0.03);
+  --border: rgba(255,255,255,0.08);
+  --text: #f0f0f5;
+  --text-dim: #a0a0b0;
+  --hook: #48bb78;
+  --mcp: #00d4ff;
+  --plugin: #7b61ff;
+  --table-bg: rgba(255,255,255,0.05);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+
+body {
+  font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Background atmosphere */
+.bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: 
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(72,187,120,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(123,97,255,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 30% at 50% 100%, rgba(0,212,255,0.06) 0%, transparent 50%),
+    var(--bg);
+}
+
+.noise {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.04;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 60px 24px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+header h1 {
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, var(--hook), var(--mcp), var(--plugin));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+header .subtitle {
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* Columns grid */
+.columns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+  position: relative;
+  margin-bottom: 50px;
+}
+
+.column {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px 26px;
+  position: relative;
+  transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), box-shadow 0.35s ease, background 0.35s ease;
+  backdrop-filter: blur(6px);
+  overflow: hidden;
+}
+
+.column::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(160deg, var(--glow) 0%, transparent 40%, transparent 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.column:hover {
+  transform: scale(1.02) translateY(-4px);
+  box-shadow: 0 20px 60px -20px rgba(0,0,0,0.5);
+  background: rgba(255,255,255,0.05);
+}
+
+.col-hook { --glow: var(--hook); }
+.col-mcp  { --glow: var(--mcp); }
+.col-plugin { --glow: var(--plugin); }
+
+.col-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.col-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.col-hook .col-icon { background: rgba(72,187,120,0.12); color: var(--hook); }
+.col-mcp  .col-icon { background: rgba(0,212,255,0.12); color: var(--mcp); }
+.col-plugin .col-icon { background: rgba(123,97,255,0.12); color: var(--plugin); }
+
+.col-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.col-title small {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-top: 2px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Mini diagram container */
+.mini-dia {
+  width: 100%;
+  height: 160px;
+  margin-bottom: 22px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.section {
+  margin-bottom: 18px;
+}
+.section-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.flow-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.flow-arrow {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(255,255,255,0.06);
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-top: 6px;
+  color: var(--text-dim);
+}
+
+.pros-cons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pros-cons li {
+  list-style: none;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.5;
+}
+.pros-cons .icon {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+.pro { color: var(--hook); }
+.con { color: #ff6b6b; }
+
+.use-case {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+/* Dotted dividers between columns */
+.col-divider {
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  width: 1px;
+  border-left: 1px dashed rgba(255,255,255,0.12);
+  z-index: 0;
+  pointer-events: none;
+}
+.divider-1 { left: calc(33.333% + 15px - 0.5px); }
+.divider-2 { left: calc(66.666% + 15px - 0.5px); }
+
+/* Comparison table */
+.comp-table-wrap {
+  background: var(--table-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow-x: auto;
+  backdrop-filter: blur(6px);
+}
+
+.comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
+}
+.comp-table th, .comp-table td {
+  padding: 16px 20px;
+  text-align: left;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+.comp-table th {
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.75rem;
+  background: rgba(0,0,0,0.15);
+}
+.comp-table tr:last-child td { border-bottom: none; }
+.comp-table td { vertical-align: top; line-height: 1.55; }
+
+.cell-hook { border-left: 3px solid var(--hook); background: rgba(72,187,120,0.04); }
+.cell-mcp  { border-left: 3px solid var(--mcp); background: rgba(0,212,255,0.04); }
+.cell-plugin { border-left: 3px solid var(--plugin); background: rgba(123,97,255,0.04); }
+
+.highlight-hook { color: var(--hook); font-weight: 600; }
+.highlight-mcp  { color: var(--mcp); font-weight: 600; }
+.highlight-plugin { color: var(--plugin); font-weight: 600; }
+
+/* Footer note */
+.footer-note {
+  text-align: center;
+  margin-top: 40px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  opacity: 0.8;
+}
+
+/* Responsive */
+@media (max-width: 980px) {
+  .columns { grid-template-columns: 1fr; gap: 24px; }
+  .col-divider { display: none; }
+  .column:hover { transform: scale(1.01) translateY(-2px); }
+}
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+<div class="noise"></div>
+
+<div class="container">
+  <header>
+    <h1>扩展性设计模式</h1>
+    <p class="subtitle">插件架构的三种模式对比：Hooks · MCP · Plugins<br>Three Extension Patterns: Event-driven, Protocol-driven, Package-driven</p>
+  </header>
+
+  <div class="columns">
+    <div class="col-divider divider-1"></div>
+    <div class="col-divider divider-2"></div>
+
+    <!-- Column 1: Hooks -->
+    <article class="column col-hook">
+      <div class="col-header">
+        <div class="col-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 22a2 2 0 0 1-1.94-2.5A2 2 0 0 1 10 17v-4H4a2 2 0 0 1-2-2V5a2 2 0 0 1 4 0v4h6V5a6 6 0 0 1 12 0c0 2.22-1.21 4.16-3 5.2V21a2 2 0 0 1-2 2h-1"/>
+          </svg>
+        </div>
+        <div class="col-title">
+          Hooks
+          <small>Event-Driven / 事件驱动</small>
+        </div>
+      </div>
+
+      <div class="mini-dia">
+        <svg width="100%" height="100%" viewBox="0 0 320 160" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="gh" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#48bb78" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#48bb78" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <!-- timeline -->
+          <line x1="40" y1="20" x2="40" y2="140" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+          <!-- events -->
+          <circle cx="40" cy="40" r="4" fill="#48bb78"/>
+          <circle cx="40" cy="70" r="4" fill="#48bb78"/>
+          <circle cx="40" cy="100" r="4" fill="#48bb78"/>
+          <circle cx="40" cy="130" r="4" fill="#48bb78"/>
+          <!-- hooks -->
+          <path d="M40 40 Q70 40 90 55" fill="none" stroke="#48bb78" stroke-width="2" stroke-dasharray="4 2"/>
+          <rect x="92" y="45" width="70" height="20" rx="6" fill="url(#gh)" stroke="#48bb78" stroke-width="1"/>
+          <text x="127" y="58" text-anchor="middle" fill="#f0f0f5" font-size="9" font-family="JetBrains Mono">shell</text>
+
+          <path d="M40 70 Q70 70 90 85" fill="none" stroke="#48bb78" stroke-width="2" stroke-dasharray="4 2"/>
+          <rect x="92" y="75" width="70" height="20" rx="6" fill="url(#gh)" stroke="#48bb78" stroke-width="1"/>
+          <text x="127" y="88" text-anchor="middle" fill="#f0f0f5" font-size="9" font-family="JetBrains Mono">script</text>
+
+          <path d="M40 100 Q70 100 90 115" fill="none" stroke="#48bb78" stroke-width="2" stroke-dasharray="4 2"/>
+          <rect x="92" y="105" width="70" height="20" rx="6" fill="url(#gh)" stroke="#48bb78" stroke-width="1"/>
+          <text x="127" y="118" text-anchor="middle" fill="#f0f0f5" font-size="9" font-family="JetBrains Mono">notify</text>
+
+          <!-- arrow flow -->
+          <path d="M180 110 L260 110" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="220" y="102" text-anchor="middle" fill="#a0a0b0" font-size="8" font-family="JetBrains Mono">stdout</text>
+          
+          <path d="M260 90 L180 90" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <text x="220" y="84" text-anchor="middle" fill="#a0a0b0" font-size="8" font-family="JetBrains Mono">stdin JSON</text>
+
+          <rect x="170" y="75" width="100" height="50" rx="8" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+          <text x="220" y="125" text-anchor="middle" fill="#f0f0f5" font-size="9" font-family="JetBrains Mono">Script Executor</text>
+
+          <defs>
+            <marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6" fill="rgba(255,255,255,0.3)"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <div class="section">
+        <div class="section-label">运行机制 Mechanism</div>
+        <p class="flow-text">在 <span class="highlight-hook">27个生命周期事件</span> 上注册 shell 命令</p>
+        <span class="tag">settings.json / hooks</span>
+      </div>
+
+      <div class="section">
+        <div class="section-label">数据流向 Data Flow</div>
+        <p class="flow-text">事件触发 <span class="flow-arrow">→</span> stdin 传入 JSON <span class="flow-arrow">→</span> 执行脚本 <span class="flow-arrow">→</span> stdout 返回结果</p>
+      </div>
+
+      <div class="section">
+        <div class="section-label">优劣势 Pros & Cons</div>
+        <ul class="pros-cons">
+          <li><span class="icon pro">✓</span> 零依赖、任何语言、最简单</li>
+          <li><span class="icon con">✗</span> 仅限事件触发、无状态、不能添加新工具</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-label">适用场景 Use Cases</div>
+        <p class="use-case">自动格式化、通知推送、日志记录、简单自动化脚本</p>
+      </div>
+    </article>
+
+    <!-- Column 2: MCP -->
+    <article class="column col-mcp">
+      <div class="col-header">
+        <div class="col-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 16V4M7 4L3 8M7 4l4 4"/>
+            <path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
+          </svg>
+        </div>
+        <div class="col-title">
+          MCP
+          <small>Protocol-Driven / 协议驱动</small>
+        </div>
+      </div>
+
+      <div class="mini-dia">
+        <svg width="100%" height="100%" viewBox="0 0 320 160" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="gb" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.2"/>
+              <stop offset="100%" stop-color="#00d4ff" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <!-- client -->
+          <rect x="20" y="55" width="70" height="50" rx="8" fill="rgba(0,212,255,0.08)" stroke="#00d4ff" stroke-width="1.5"/>
+          <text x="55" y="80" text-anchor="middle" fill="#f0f0f5" font-size="10" font-family="JetBrains Mono">Claude</text>
+          <text x="55" y="93" text-anchor="middle" fill="#a0a0b0" font-size="8" font-family="JetBrains Mono">Client</text>
+
+          <!-- transport layer -->
+          <rect x="110" y="50" width="100" height="60" rx="8" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1" stroke-dasharray="4 2"/>
+          <text x="160" y="75" text-anchor="middle" fill="#a0a0b0" font-size="9" font-family="JetBrains Mono">Transport</text>
+          <text x="160" y="90" text-anchor="middle" fill="#f0f0f5" font-size="8" font-family="JetBrains Mono">stdio / SSE / HTTP</text>
+
+          <!-- server -->
+          <rect x="230" y="55" width="70" height="50" rx="8" fill="rgba(0,212,255,0.08)" stroke="#00d4ff" stroke-width="1.5"/>
+          <text x="265" y="80" text-anchor="middle" fill="#f0f0f5" font-size="10" font-family="JetBrains Mono">MCP</text>
+          <text x="265" y="93" text-anchor="middle" fill="#a0a0b0" font-size="8" font-family="JetBrains Mono">Server</text>
+
+          <!-- bidirectional arrows -->
+          <path d="M90 72 L110 72" fill="none" stroke="#00d4ff" stroke-width="2" marker-end="url(#ar2)"/>
+          <path d="M210 72 L230 72" fill="none" stroke="#00d4ff" stroke-width="2" marker-end="url(#ar2)"/>
+          <path d="M230 88 L210 88" fill="none" stroke="#00d4ff" stroke-width="2" marker-end="url(#ar2b)"/>
+
+          <!-- protocols -->
+          <text x="160" y="38" text-anchor="middle" fill="#00d4ff" font-size="8" font-family="JetBrains Mono" opacity="0.9">JSON-RPC 2.0</text>
+
+          <!-- bottom capabilities -->
+          <rect x="245" y="120" width="40" height="16" rx="4" fill="rgba(0,212,255,0.1)" stroke="none"/>
+          <text x="265" y="131" text-anchor="middle" fill="#f0f0f5" font-size="7" font-family="JetBrains Mono">tools</text>
+          <rect x="200" y="120" width="40" height="16" rx="4" fill="rgba(0,212,255,0.1)" stroke="none"/>
+          <text x="220" y="131" text-anchor="middle" fill="#f0f0f5" font-size="7" font-family="JetBrains Mono">resources</text>
+          <rect x="155" y="120" width="40" height="16" rx="4" fill="rgba(0,212,255,0.1)" stroke="none"/>
+          <text x="175" y="131" text-anchor="middle" fill="#f0f0f5" font-size="7" font-family="JetBrains Mono">prompts</text>
+
+          <defs>
+            <marker id="ar2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6" fill="#00d4ff"/>
+            </marker>
+            <marker id="ar2b" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6" fill="#00d4ff"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <div class="section">
+        <div class="section-label">运行机制 Mechanism</div>
+        <p class="flow-text">通过 <span class="highlight-mcp">JSON-RPC 2.0</span> 与外部 MCP 服务器通信</p>
+        <span class="tag">.mcp.json</span>
+      </div>
+
+      <div class="section">
+        <div class="section-label">数据流向 Data Flow</div>
+        <p class="flow-text">Claude Code <span class="flow-arrow">→</span> MCP 客户端 <span class="flow-arrow">→</span> Transport <span class="flow-arrow">→</span> MCP 服务器 <span class="flow-arrow">→</span> 返回工具/资源/提示</p>
+      </div>
+
+      <div class="section">
+        <div class="section-label">优劣势 Pros & Cons</div>
+        <ul class="pros-cons">
+          <li><span class="icon pro">✓</span> 标准协议、跨语言、可提供新工具和资源</li>
+          <li><span class="icon con">✗</span> 需要运行外部服务器、配置相对复杂</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-label">适用场景 Use Cases</div>
+        <p class="use-case">数据库访问、API 集成、专业工具扩展、跨平台服务对接</p>
+      </div>
+    </article>
+
+    <!-- Column 3: Plugins -->
+    <article class="column col-plugin">
+      <div class="col-header">
+        <div class="col-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" opacity="0"/>
+            <rect x="6" y="11" width="12" height="8" rx="2" fill="currentColor" fill-opacity="0.15"/>
+            <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+            <circle cx="12" cy="15" r="1.5" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="col-title">
+          Plugins
+          <small>Package-Driven / 包驱动</small>
+        </div>
+      </div>
+
+      <div class="mini-dia">
+        <svg width="100%" height="100%" viewBox="0 0 320 160" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="gp" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#7b61ff" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#7b61ff" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <!-- core system -->
+          <rect x="30" y="40" width="110" height="80" rx="10" fill="rgba(123,97,255,0.08)" stroke="#7b61ff" stroke-width="1.5"/>
+          <text x="85" y="75" text-anchor="middle" fill="#f0f0f5" font-size="11" font-family="JetBrains Mono">Core System</text>
+          <text x="85" y="92" text-anchor="middle" fill="#a0a0b0" font-size="8" font-family="JetBrains Mono">Claude Code Host</text>
+
+          <!-- slot -->
+          <rect x="120" y="65" width="30" height="30" rx="6" fill="#1a1a2e" stroke="#7b61ff" stroke-width="2"/>
+          <text x="135" y="83" text-anchor="middle" fill="#7b61ff" font-size="8" font-family="JetBrains Mono">slot</text>
+
+          <!-- plugin package -->
+          <rect x="170" y="45" width="100" height="70" rx="8" fill="url(#gp)" stroke="#7b61ff" stroke-width="1.5"/>
+          <text x="220" y="70" text-anchor="middle" fill="#f0f0f5" font-size="10" font-family="JetBrains Mono">NPM Package</text>
+          <text x="220" y="85" text-anchor="middle" fill="#a0a0b0" font-size="8" font-family="JetBrains Mono">Plugin Bundle</text>
+
+          <!-- prongs entering slot -->
+          <rect x="150" y="72" width="20" height="4" rx="1" fill="#7b61ff"/>
+          <rect x="150" y="80" width="20" height="4" rx="1" fill="#7b61ff"/>
+          <rect x="150" y="88" width="20" height="4" rx="1" fill="#7b61ff"/>
+
+          <!-- inject arrows -->
+          <path d="M220 115 L220 125" fill="none" stroke="#7b61ff" stroke-width="1.5" marker-end="url(#ar3)"/>
+          <rect x="190" y="125" width="60" height="18" rx="4" fill="rgba(123,97,255,0.12)" stroke="none"/>
+          <text x="220" y="137" text-anchor="middle" fill="#f0f0f5" font-size="8" font-family="JetBrains Mono">inject tools + /commands</text>
+
+          <defs>
+            <marker id="ar3" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6" fill="#7b61ff"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <div class="section">
+        <div class="section-label">运行机制 Mechanism</div>
+        <p class="flow-text">加载 <span class="highlight-plugin">NPM 包</span>，注入 tools 与 slash commands</p>
+        <span class="tag">package.json / claudeCodePlugin</span>
+      </div>
+
+      <div class="section">
+        <div class="section-label">数据流向 Data Flow</div>
+        <p class="flow-text">启动时扫描 <span class="flow-arrow">→</span> require 包 <span class="flow-arrow">→</span> 注册工具+命令 <span class="flow-arrow">→</span> 运行时调用</p>
+      </div>
+
+      <div class="section">
+        <div class="section-label">优劣势 Pros & Cons</div>
+        <ul class="pros-cons">
+          <li><span class="icon pro">✓</span> 最强扩展性、可改变核心行为、类型安全</li>
+          <li><span class="icon con">✗</span> 仅 TypeScript/JavaScript、安全风险高</li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <div class="section-label">适用场景 Use Cases</div>
+        <p class="use-case">深度定制、企业集成、自定义 UI 组件、核心行为改造</p>
+      </div>
+    </article>
+  </div>
+
+  <!-- Comparison Table -->
+  <div class="comp-table-wrap">
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>维度 Dimension</th>
+          <th class="cell-hook">Hooks — 事件驱动</th>
+          <th class="cell-mcp">MCP — 协议驱动</th>
+          <th class="cell-plugin">Plugins — 包驱动</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>复杂度 Complexity</strong></td>
+          <td class="cell-hook"><span class="highlight-hook">低</span> — 单文件脚本即可</td>
+          <td class="cell-mcp"><span class="highlight-mcp">中</span> — 需部署/维护外部服务</td>
+          <td class="cell-plugin"><span class="highlight-plugin">高</span> — 完整 NPM 包开发流程</td>
+        </tr>
+        <tr>
+          <td><strong>能力范围 Capability</strong></td>
+          <td class="cell-hook">事件响应，无状态执行</td>
+          <td class="cell-mcp">提供新工具、资源、提示</td>
+          <td class="cell-plugin">可修改核心行为，UI 级扩展</td>
+        </tr>
+        <tr>
+          <td><strong>安全性 Security</strong></td>
+          <td class="cell-hook"><span class="highlight-hook">最高</span> — 隔离执行，沙箱shell</td>
+          <td class="cell-mcp"><span class="highlight-mcp">中等</span> — 网络边界约束</td>
+          <td class="cell-plugin"><span class="highlight-plugin">较低</span> — 代码注入风险</td>
+        </tr>
+        <tr>
+          <td><strong>典型用例 Typical Use</strong></td>
+          <td class="cell-hook">自动格式化、通知、日志</td>
+          <td class="cell-mcp">数据库、API、专业工具</td>
+          <td class="cell-plugin">企业集成、深度定制</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer-note">
+    Hooks(轻度) ⊂ MCP(中度) ⊂ Plugins(重度) &nbsp;|&nbsp; 三者互补，共同构成完整的扩展生态
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工具执行管线全景图 | Tool Execution Pipeline</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;600;800&family=Space+Grotesk:wght@500;700&display=swap');
+
+:root {
+  --bg-1: #0a0a0f;
+  --bg-2: #12121a;
+  --bg-3: #1a1a26;
+  --accent-blue: #3b82f6;
+  --accent-purple: #8b5cf6;
+  --accent-cyan: #06b6d4;
+  --accent-red: #ef4444;
+  --accent-amber: #f59e0b;
+  --accent-green: #10b981;
+  --text-main: #f1f5f9;
+  --text-sub: #94a3b8;
+  --glass: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg-1);
+  color: var(--text-main);
+  font-family: 'Noto Sans SC', sans-serif;
+  min-height: 100vh;
+  overflow-x: auto;
+  position: relative;
+}
+
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(59,130,246,0.12) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(139,92,246,0.1) 0%, transparent 40%),
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bg-noise {
+  position: fixed;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+header {
+  position: relative;
+  z-index: 10;
+  padding: 48px 64px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+header .subtitle {
+  color: var(--text-sub);
+  font-size: 14px;
+  margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+header .meta {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--text-sub);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+header .meta span {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 4px;
+}
+
+.main {
+  position: relative;
+  z-index: 10;
+  padding: 40px 64px 80px;
+  min-width: 1600px;
+}
+
+.stage-title {
+  font-size: 11px;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+svg {
+  width: 100%;
+  height: 720px;
+  overflow: visible;
+}
+
+.node-rect {
+  fill: var(--bg-3);
+  stroke: url(#gradStroke);
+  stroke-width: 1.5;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.node-rect:hover {
+  filter: drop-shadow(0 0 20px rgba(59,130,246,0.3));
+  stroke-width: 2;
+}
+
+.node-rect.dashed {
+  stroke: var(--accent-cyan);
+  stroke-dasharray: 8 4;
+  fill: rgba(6,182,212,0.06);
+}
+
+.node-rect.dashed:hover {
+  filter: drop-shadow(0 0 20px rgba(6,182,212,0.25));
+}
+
+.node-rect.complex {
+  fill: url(#complexGrad);
+  stroke-width: 2;
+}
+
+.node-title {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  fill: var(--text-main);
+  pointer-events: none;
+}
+
+.node-sub {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  fill: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+
+.node-detail {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  fill: #64748b;
+  pointer-events: none;
+}
+
+.arrow-line {
+  fill: none;
+  stroke: url(#arrowGrad);
+  stroke-width: 2;
+  marker-end: url(#arrowhead);
+}
+
+.arrow-line.red {
+  stroke: var(--accent-red);
+  marker-end: url(#arrowhead-red);
+}
+
+.arrow-line.amber {
+  stroke: var(--accent-amber);
+  marker-end: url(#arrowhead-amber);
+}
+
+.arrow-line.green {
+  stroke: var(--accent-green);
+  marker-end: url(#arrowhead-green);
+}
+
+.arrow-line.cyan {
+  stroke: var(--accent-cyan);
+  marker-end: url(#arrowhead-cyan);
+}
+
+.branch-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.sub-node {
+  fill: var(--bg-2);
+  stroke: var(--border);
+  stroke-width: 1;
+  rx: 4;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sub-node:hover {
+  stroke: var(--accent-purple);
+  fill: var(--bg-3);
+}
+
+.sub-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  fill: var(--text-sub);
+  pointer-events: none;
+}
+
+.sub-num {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  fill: var(--accent-purple);
+  pointer-events: none;
+}
+
+.pulse-dot {
+  fill: var(--accent-cyan);
+  filter: drop-shadow(0 0 8px var(--accent-cyan));
+}
+
+.failure-box {
+  fill: rgba(239,68,68,0.08);
+  stroke: var(--accent-red);
+  stroke-width: 1;
+  rx: 6;
+}
+
+.failure-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  fill: var(--accent-red);
+  pointer-events: none;
+}
+
+.annotation {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 11px;
+  fill: var(--text-sub);
+  font-style: italic;
+  pointer-events: none;
+}
+
+.tooltip {
+  position: fixed;
+  background: rgba(10,10,15,0.95);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--text-main);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 100;
+  max-width: 320px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.tooltip .file {
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.tooltip .func {
+  color: var(--accent-purple);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+.legend {
+  display: flex;
+  gap: 24px;
+  margin-top: 24px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-sub);
+}
+
+.legend-line {
+  width: 24px;
+  height: 2px;
+}
+
+.legend-line.main { background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple)); }
+.legend-line.red { background: var(--accent-red); }
+.legend-line.amber { background: var(--accent-amber); }
+.legend-line.green { background: var(--accent-green); }
+
+@keyframes flowPulse {
+  0% { offset-distance: 0%; opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.8); }
+  100% { offset-distance: 100%; opacity: 0; transform: scale(0.6); }
+}
+
+.particle {
+  fill: var(--accent-cyan);
+  filter: drop-shadow(0 0 6px var(--accent-cyan));
+  opacity: 0;
+}
+
+.particle.anim {
+  animation: flowPulse 2.5s linear infinite;
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-noise"></div>
+
+<header>
+  <h1>工具执行管线全景图</h1>
+  <div class="subtitle">Tool Execution Pipeline · 7-Stage Flow</div>
+  <div class="meta">
+    <span>VIS-2A-013</span>
+    <span>05_工具运行时.md</span>
+    <span>图表预留 2.5-A</span>
+  </div>
+</header>
+
+<div class="main">
+  <div class="stage-title">Pipeline Visualization</div>
+  <svg viewBox="0 0 1520 720" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <linearGradient id="gradStroke" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#3b82f6"/>
+        <stop offset="100%" stop-color="#8b5cf6"/>
+      </linearGradient>
+      <linearGradient id="complexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="rgba(59,130,246,0.15)"/>
+        <stop offset="100%" stop-color="rgba(139,92,246,0.15)"/>
+      </linearGradient>
+      <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#3b82f6"/>
+        <stop offset="100%" stop-color="#8b5cf6"/>
+      </linearGradient>
+      <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#8b5cf6"/>
+      </marker>
+      <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/>
+      </marker>
+      <marker id="arrowhead-amber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b"/>
+      </marker>
+      <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+      </marker>
+      <marker id="arrowhead-cyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#06b6d4"/>
+      </marker>
+    </defs>
+
+    <!-- Entry label -->
+    <text x="60" y="60" class="node-sub">AI Output tool_use block</text>
+    <path d="M60 68 L60 95" class="arrow-line" marker-end="url(#arrowhead)"/>
+
+    <!-- Step 1: Input Validation -->
+    <g class="step-group" data-step="1">
+      <rect x="20" y="105" width="120" height="70" rx="10" class="node-rect"/>
+      <text x="80" y="138" text-anchor="middle" class="node-title">输入验证</text>
+      <text x="80" y="156" text-anchor="middle" class="node-sub">Zod Schema</text>
+      <text x="80" y="168" text-anchor="middle" class="node-detail">validate args</text>
+    </g>
+
+    <!-- Validation fail -->
+    <path d="M80 175 L80 210" class="arrow-line red" marker-end="url(#arrowhead-red)"/>
+    <rect x="20" y="215" width="120" height="36" rx="6" class="failure-box"/>
+    <text x="80" y="238" text-anchor="middle" class="failure-text">返回错误消息</text>
+
+    <!-- Main arrow -->
+    <path d="M140 140 L180 140" class="arrow-line" marker-end="url(#arrowhead)"/>
+
+    <!-- Step 2: Permission Check (Complex) -->
+    <g class="step-group" data-step="2">
+      <rect x="190" y="70" width="220" height="140" rx="14" class="node-rect complex"/>
+      <text x="300" y="100" text-anchor="middle" class="node-title">权限检查</text>
+      <text x="300" y="118" text-anchor="middle" class="node-sub">canUseTool · 9 Steps</text>
+
+      <!-- Sub-flow 9 steps -->
+      <rect x="205" y="135" width="60" height="26" rx="4" class="sub-node"/>
+      <text x="210" y="148" class="sub-num">1</text>
+      <text x="235" y="152" text-anchor="middle" class="sub-text">bypass-immune</text>
+
+      <rect x="270" y="135" width="60" height="26" rx="4" class="sub-node"/>
+      <text x="275" y="148" class="sub-num">2</text>
+      <text x="300" y="152" text-anchor="middle" class="sub-text">PreToolUse</text>
+
+      <rect x="335" y="135" width="60" height="26" rx="4" class="sub-node"/>
+      <text x="340" y="148" class="sub-num">3</text>
+      <text x="365" y="152" text-anchor="middle" class="sub-text">cached?</text>
+
+      <rect x="205" y="165" width="60" height="26" rx="4" class="sub-node"/>
+      <text x="210" y="178" class="sub-num">4</text>
+      <text x="235" y="182" text-anchor="middle" class="sub-text">auto-allow</text>
+
+      <rect x="270" y="165" width="60" height="26" rx="4" class="sub-node"/>
+      <text x="275" y="178" class="sub-num">5</text>
+      <text x="300" y="182" text-anchor="middle" class="sub-text">sandbox</text>
+
+      <rect x="335" y="165" width="60" height="26" rx="4" class="sub-node"/>
+      <text x="340" y="178" class="sub-num">6</text>
+      <text x="365" y="182" text-anchor="middle" class="sub-text">mode</text>
+
+      <rect x="240" y="195" width="60" height="26" rx="4" class="sub-node"/>
+      <text x="245" y="208" class="sub-num">7</text>
+      <text x="270" y="212" text-anchor="middle" class="sub-text">confirm</text>
+
+      <rect x="305" y="195" width="60" height="26" rx="4" class="sub-node"/>
+      <text x="310" y="208" class="sub-num">8</text>
+      <text x="335" y="212" text-anchor="middle" class="sub-text">cache</text>
+
+      <rect x="370" y="195" width="30" height="26" rx="4" class="sub-node"/>
+      <text x="385" y="212" text-anchor="middle" class="sub-text">9</text>
+    </g>
+
+    <!-- Step 2 branches -->
+    <path d="M410 140 L450 140" class="arrow-line green" marker-end="url(#arrowhead-green)"/>
+    <text x="430" y="132" text-anchor="middle" class="branch-label" fill="#10b981">Allow</text>
+
+    <path d="M300 210 L300 250" class="arrow-line amber" marker-end="url(#arrowhead-amber)"/>
+    <text x="280" y="240" text-anchor="end" class="branch-label" fill="#f59e0b">Ask</text>
+
+    <path d="M190 180 L150 180 L150 280 L190 280" class="arrow-line red" marker-end="url(#arrowhead-red)"/>
+    <text x="170" y="172" text-anchor="middle" class="branch-label" fill="#ef4444">Deny</text>
+
+    <!-- Ask confirmation box -->
+    <rect x="245" y="255" width="110" height="40" rx="6" class="failure-box" style="stroke:#f59e0b;fill:rgba(245,158,11,0.08)"/>
+    <text x="300" y="275" text-anchor="middle" class="branch-label" fill="#f59e0b" style="font-size:10px">UI 确认框</text>
+    <text x="300" y="288" text-anchor="middle" class="annotation" style="font-size:9px">阻塞等待用户决策</text>
+
+    <!-- Deny return -->
+    <rect x="20" y="265" width="120" height="36" rx="6" class="failure-box"/>
+    <text x="80" y="288" text-anchor="middle" class="failure-text">返回拒绝消息</text>
+    <text x="80" y="310" text-anchor="middle" class="annotation">管线提前终止</text>
+
+    <!-- Ask resume -->
+    <path d="M300 295 L300 315 L420 315 L420 250" class="arrow-line green" style="stroke:#10b981" marker-end="url(#arrowhead-green)"/>
+
+    <!-- Step 3: File History -->
+    <g class="step-group" data-step="3">
+      <rect x="460" y="105" width="120" height="70" rx="10" class="node-rect dashed"/>
+      <text x="520" y="138" text-anchor="middle" class="node-title">文件历史追踪</text>
+      <text x="520" y="156" text-anchor="middle" class="node-sub">Edit / Write Only</text>
+      <text x="520" y="168" text-anchor="middle" class="node-detail">fileHistoryTrackEdit</text>
+    </g>
+
+    <text x="460" y="95" class="annotation">仅 Edit / Write 工具触发</text>
+
+    <!-- Step 3 snapshot -->
+    <path d="M520 175 L520 210" class="arrow-line cyan" marker-end="url(#arrowhead-cyan)"/>
+    <rect x="460" y="215" width="120" height="36" rx="6" class="failure-box" style="stroke:#06b6d4;fill:rgba(6,182,212,0.08)"/>
+    <text x="520" y="238" text-anchor="middle" class="branch-label" fill="#06b6d4" style="font-size:10px">修改前快照</text>
+
+    <!-- Main arrow 3→4 -->
+    <path d="M580 140 L620 140" class="arrow-line" marker-end="url(#arrowhead)"/>
+
+    <!-- Step 4: Execute -->
+    <g class="step-group" data-step="4">
+      <rect x="630" y="105" width="120" height="70" rx="10" class="node-rect"/>
+      <text x="690" y="138" text-anchor="middle" class="node-title">执行</text>
+      <text x="690" y="156" text-anchor="middle" class="node-sub">tool.call()</text>
+      <text x="690" y="168" text-anchor="middle" class="node-detail">AsyncGenerator</text>
+    </g>
+
+    <!-- Progress yield -->
+    <path d="M690 175 L690 210" class="arrow-line cyan" marker-end="url(#arrowhead-cyan)"/>
+    <rect x="630" y="215" width="120" height="36" rx="6" class="failure-box" style="stroke:#06b6d4;fill:rgba(6,182,212,0.08)"/>
+    <text x="690" y="238" text-anchor="middle" class="branch-label" fill="#06b6d4" style="font-size:10px">yield Progress</text>
+
+    <!-- Step 5: PostToolUse Hooks -->
+    <path d="M750 140 L790 140" class="arrow-line" marker-end="url(#arrowhead)"/>
+    <g class="step-group" data-step="5">
+      <rect x="800" y="105" width="120" height="70" rx="10" class="node-rect"/>
+      <text x="860" y="138" text-anchor="middle" class="node-title">PostToolUse Hooks</text>
+      <text x="860" y="156" text-anchor="middle" class="node-sub">Post Execution</text>
+      <text x="860" y="168" text-anchor="middle" class="node-detail">custom logic</text>
+    </g>
+
+    <!-- Step 6: Serialize Result -->
+    <path d="M920 140 L960 140" class="arrow-line" marker-end="url(#arrowhead)"/>
+    <g class="step-group" data-step="6">
+      <rect x="970" y="105" width="140" height="70" rx="10" class="node-rect"/>
+      <text x="1040" y="138" text-anchor="middle" class="node-title">结果序列化</text>
+      <text x="1040" y="156" text-anchor="middle" class="node-sub">renderResultForAssistant</text>
+      <text x="1040" y="168" text-anchor="middle" class="node-detail">AI-readable text</text>
+    </g>
+
+    <text x="1040" y="95" text-anchor="middle" class="annotation">决定 AI "看到" 什么</text>
+
+    <!-- Truncate branch -->
+    <path d="M1040 175 L1040 210" class="arrow-line red" marker-end="url(#arrowhead-red)"/>
+    <rect x="980" y="215" width="120" height="36" rx="6" class="failure-box"/>
+    <text x="1040" y="238" text-anchor="middle" class="failure-text">超长大截断</text>
+
+    <!-- Step 7: Inject to Messages -->
+    <path d="M1110 140 L1150 140" class="arrow-line" marker-end="url(#arrowhead)"/>
+    <g class="step-group" data-step="7">
+      <rect x="1160" y="105" width="140" height="70" rx="10" class="node-rect"/>
+      <text x="1230" y="138" text-anchor="middle" class="node-title">结果注入</text>
+      <text x="1230" y="156" text-anchor="middle" class="node-sub">UserMessage</text>
+      <text x="1230" y="168" text-anchor="middle" class="node-detail">tool_result wrapper</text>
+    </g>
+
+    <!-- Final arrow -->
+    <path d="M1300 140 L1340 140" class="arrow-line" marker-end="url(#arrowhead)"/>
+    <text x="1360" y="145" class="node-title" style="font-size:13px">消息历史</text>
+    <text x="1360" y="162" class="annotation" style="font-size:10px">下一次心跳发送给 API</text>
+
+    <!-- Key details panel -->
+    <rect x="970" y="320" width="330" height="140" rx="10" class="node-rect" style="fill:rgba(26,26,38,0.6)"/>
+    <text x="990" y="350" class="node-title" style="font-size:13px">关键输出细节</text>
+    <text x="990" y="375" class="node-detail" style="font-size:10px;fill:#94a3b8">Read</text>
+    <text x="1030" y="375" class="sub-text" style="font-size:10px">结果含行号前缀 (1&lt;tab&gt;内容)</text>
+    <text x="990" y="395" class="node-detail" style="font-size:10px;fill:#94a3b8">Bash</text>
+    <text x="1030" y="395" class="sub-text" style="font-size:10px">结果包含 exit code</text>
+    <text x="990" y="415" class="node-detail" style="font-size:10px;fill:#94a3b8">Glob</text>
+    <text x="1030" y="415" class="sub-text" style="font-size:10px">按修改时间排序返回</text>
+    <text x="990" y="440" class="annotation" style="font-size:10px">所有结果经 renderResultForAssistant 转为纯文本</text>
+
+    <!-- Particles -->
+    <circle r="4" class="particle anim" style="animation-delay:0s">
+      <animateMotion path="M60 100 L80 100" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="4" class="particle anim" style="animation-delay:0.4s">
+      <animateMotion path="M140 140 L180 140" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="4" class="particle anim" style="animation-delay:0.8s">
+      <animateMotion path="M410 140 L450 140" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="4" class="particle anim" style="animation-delay:1.2s">
+      <animateMotion path="M580 140 L620 140" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="4" class="particle anim" style="animation-delay:1.6s">
+      <animateMotion path="M750 140 L790 140" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="4" class="particle anim" style="animation-delay:2s">
+      <animateMotion path="M920 140 L960 140" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="4" class="particle anim" style="animation-delay:2.4s">
+      <animateMotion path="M1110 140 L1150 140" dur="2.5s" repeatCount="indefinite"/>
+    </circle>
+  </svg>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-line main"></div>主流程 Main Flow</div>
+    <div class="legend-item"><div class="legend-line green"></div>允许 Allow</div>
+    <div class="legend-item"><div class="legend-line amber"></div>询问 Ask</div>
+    <div class="legend-item"><div class="legend-line red"></div>拒绝/失败 Deny / Fail</div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="title" id="tt-title"></div>
+  <div class="func" id="tt-func"></div>
+  <div class="file" id="tt-file"></div>
+</div>
+
+<script>
+const tooltipData = {
+  1: { title: '步骤1 · 输入验证', func: 'validateToolInput()', file: 'src/lib/tools/validation.ts' },
+  2: { title: '步骤2 · 权限检查', func: 'canUseTool() · 9-step flow', file: 'src/lib/permissions/toolPermissions.ts' },
+  3: { title: '步骤3 · 文件历史追踪', func: 'fileHistoryTrackEdit()', file: 'src/lib/tools/fileHistory.ts' },
+  4: { title: '步骤4 · 执行', func: 'tool.call(args, context, abortSignal)', file: 'src/lib/tools/executor.ts' },
+  5: { title: '步骤5 · PostToolUse Hooks', func: 'runPostToolUseHooks()', file: 'src/lib/hooks/postToolUse.ts' },
+  6: { title: '步骤6 · 结果序列化', func: 'renderResultForAssistant(result)', file: 'src/lib/tools/renderResult.ts' },
+  7: { title: '步骤7 · 结果注入', func: 'appendToolResultMessage()', file: 'src/lib/conversation/messages.ts' }
+};
+
+const tooltip = document.getElementById('tooltip');
+const ttTitle = document.getElementById('tt-title');
+const ttFunc = document.getElementById('tt-func');
+const ttFile = document.getElementById('tt-file');
+
+document.querySelectorAll('.step-group').forEach(g => {
+  g.addEventListener('mouseenter', e => {
+    const step = g.dataset.step;
+    const data = tooltipData[step];
+    if (!data) return;
+    ttTitle.textContent = data.title;
+    ttFunc.textContent = data.func;
+    ttFile.textContent = data.file;
+    tooltip.style.opacity = '1';
+  });
+  g.addEventListener('mousemove', e => {
+    tooltip.style.left = (e.clientX + 16) + 'px';
+    tooltip.style.top = (e.clientY + 16) + 'px';
+  });
+  g.addEventListener('mouseleave', () => {
+    tooltip.style.opacity = '0';
+  });
+});
+</script>
+</body>
+</html>

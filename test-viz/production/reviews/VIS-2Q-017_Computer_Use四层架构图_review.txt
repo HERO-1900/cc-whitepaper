@@ -1,0 +1,23 @@
+**代码审查报告 — Computer Use 四层架构图**
+
+总分: 14/20
+
+布局: 3/5 — 层内排列整齐，但 drain-panel 绝对定位超出容器时可能被 layer-native 的 overflow:hidden 裁剪，且 1200px 断点下 position:static 未重置 right 值导致布局错位
+信息: 4/5 — 四层职责划分清晰，核心信息（MCP、Wrapper、Executor、Native）突出，但 drainRunLoop 作为关键信息位置孤立，与主体流程关联性弱
+美学: 4/5 — 配色方案专业且有层次感，渐变与光晕效果精致；不足之处是 emoji 作为图标在不同平台渲染不一致
+完整: 3/5 — 主体可运行，但 drain-panel 在狭 viewport（<1200px）会因 position:static+right:-220px 导致布局崩溃
+
+**缺陷:**
+
+1. **布局** — `.drain-panel` 在 desktop 布局下绝对定位 `right: -220px` 延伸至 layer-native 容器外，父元素 `.layer-native` 设置了 `overflow: hidden`，在 viewport 宽度不足时（container right edge < drain-panel right edge）会被裁剪
+2. **布局** — 1200px 断点仅覆盖 `position: static` 和 `transform: none`，未重置 `right` 属性；768px 断点同理。当 viewport 收缩至 1000px 时，drain-panel 会向左偏移 220px 而非贴父元素右侧，可能超出左边界或与主内容重叠
+3. **美学** — 使用 emoji（📡🔧🏷️⚡🔒🛡️🔐⚙️📸🖱️⌨️🔥🔌）作为主要图标，跨平台渲染一致性差，建议使用 SVG 图标或 icon font
+4. **代码** — CSS 缩进使用 4 空格，与前端常见 2 空格约定不一致，影响可读性
+
+**修改建议:**
+
+1. 将 `.layer-native` 的 `overflow: hidden` 改为 `overflow: visible`，或在 layer-native 外层再包一个 `position: relative` 的容器来容纳 drain-panel，使 overflow 隔离
+2. 在 1200px 断点中显式添加 `right: auto; width: 100%; margin-left: 0;`，确保从绝对定位切换到流式布局时属性全部重置
+3. 将 emoji 图标替换为内联 SVG 或使用统一 icon font（如 Lucide、Heroicons），确保像素级渲染一致
+4. 考虑将 `drainRunLoop` 信息整合进 Executor 层或 Native 层，而非作为孤立侧边 panel，以强化它作为"阻塞点"与核心流程的关联性
+5. CSS 缩进统一改为 2 空格，与主流项目实践保持一致

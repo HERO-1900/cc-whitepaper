@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Channel Permission Relay 数据流图</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e8e8f0;
+  font-family: 'Noto Sans SC', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+.container {
+  width: 100%;
+  max-width: 1200px;
+}
+svg {
+  width: 100%;
+  height: auto;
+}
+.node-rect {
+  fill: rgba(30, 30, 50, 0.9);
+  stroke-width: 2;
+  rx: 12;
+}
+.node-claude { stroke: #00d4ff; }
+.node-permission { stroke: #7b61ff; }
+.node-channel { stroke: #ff9f43; }
+.node-mobile { stroke: #48bb78; }
+.flow-arrow {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.flow-forward { stroke: #00d4ff; }
+.flow-return-yes { stroke: #48bb78; }
+.flow-return-no { stroke: #ff6b6b; }
+.node-label {
+  fill: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+.node-sublabel {
+  fill: #a0a0b8;
+  font-size: 11px;
+  text-anchor: middle;
+}
+.icon { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icon-claude { stroke: #00d4ff; }
+.icon-permission { stroke: #7b61ff; }
+.icon-channel { stroke: #ff9f43; }
+.icon-mobile { stroke: #48bb78; }
+.chat-bubble {
+  fill: #2d2d44;
+  stroke: #48bb78;
+  stroke-width: 1;
+  rx: 8;
+}
+.chat-text {
+  fill: #e8e8f0;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.id-box {
+  fill: rgba(123, 97, 255, 0.1);
+  stroke: #7b61ff;
+  stroke-width: 2;
+  stroke-dasharray: 4,2;
+  rx: 8;
+}
+.id-letter {
+  fill: #7b61ff;
+  font-size: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  text-anchor: middle;
+}
+.warning-box {
+  fill: rgba(255, 107, 107, 0.08);
+  stroke: #ff6b6b;
+  stroke-width: 2;
+  stroke-dasharray: 6,3;
+  rx: 8;
+}
+.warning-icon { fill: #ff6b6b; }
+.warning-text { fill: #ff6b6b; font-size: 11px; }
+.gate-tag {
+  fill: rgba(0, 212, 255, 0.15);
+  stroke: #00d4ff;
+  stroke-width: 1;
+  rx: 4;
+}
+.gate-text {
+  fill: #00d4ff;
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  text-anchor: middle;
+}
+.flow-particle {
+  fill: #fff;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+.tooltip {
+  position: absolute;
+  background: rgba(20, 20, 35, 0.98);
+  border: 1px solid #7b61ff;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: #e8e8f0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  max-width: 280px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.tooltip.show { opacity: 1; }
+.tooltip-title {
+  color: #7b61ff;
+  font-weight: 700;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+.anim-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.flow-dot {
+  fill: none;
+  stroke-width: 2;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<svg viewBox="0 0 1100 750" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+<feGaussianBlur stdDeviation="3" result="blur"/>
+<feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<marker id="arrow-forward" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+<path d="M0,0 L0,6 L9,3 z" fill="#00d4ff"/>
+</marker>
+<marker id="arrow-return-yes" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+<path d="M0,0 L0,6 L9,3 z" fill="#48bb78"/>
+</marker>
+<marker id="arrow-return-no" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+<path d="M0,0 L0,6 L9,3 z" fill="#ff6b6b"/>
+</marker>
+<linearGradient id="flow-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+<stop offset="0%" stop-color="#00d4ff" stop-opacity="0.2"/>
+<stop offset="50%" stop-color="#00d4ff" stop-opacity="1"/>
+<stop offset="100%" stop-color="#00d4ff" stop-opacity="0.2"/>
+</linearGradient>
+</defs>
+
+<rect width="1100" height="750" fill="#1a1a2e"/>
+
+<text x="550" y="35" text-anchor="middle" fill="#fff" font-size="22" font-weight="700">Channel Permission Relay 数据流图</text>
+<text x="550" y="58" text-anchor="middle" fill="#7b61ff" font-size="13">MCP Permission Relay Flow</text>
+
+<g id="main-flow">
+<path class="flow-arrow flow-forward" d="M180,200 Q280,200 340,200" marker-end="url(#arrow-forward)"/>
+<path class="flow-arrow flow-forward" d="M460,200 Q520,200 580,200" marker-end="url(#arrow-forward)"/>
+<path class="flow-arrow flow-forward" d="M700,200 Q760,200 820,200" marker-end="url(#arrow-forward)"/>
+
+<circle class="flow-particle" cx="200" cy="200" r="3" fill="#00d4ff" filter="url(#glow)">
+<animate attributeName="cx" values="180;340" dur="1.5s" repeatCount="indefinite"/>
+<animate attributeName="opacity" values="1;0" dur="1.5s" repeatCount="indefinite"/>
+</circle>
+<circle class="flow-particle" cx="480" cy="200" r="3" fill="#00d4ff" filter="url(#glow)">
+<animate attributeName="cx" values="460;580" dur="1.5s" begin="0.5s" repeatCount="indefinite"/>
+<animate attributeName="opacity" values="1;0" dur="1.5s" begin="0.5s" repeatCount="indefinite"/>
+</circle>
+<circle class="flow-particle" cx="720" cy="200" r="3" fill="#00d4ff" filter="url(#glow)">
+<animate attributeName="cx" values="700;820" dur="1.5s" begin="1s" repeatCount="indefinite"/>
+<animate attributeName="opacity" values="1;0" dur="1.5s" begin="1s" repeatCount="indefinite"/>
+</circle>
+
+<path class="flow-arrow flow-return-yes" d="M820,260 Q720,320 580,320 Q440,320 340,260" marker-end="url(#arrow-return-yes)"/>
+<circle class="flow-particle" cx="800" cy="290" r="3" fill="#48bb78" filter="url(#glow)">
+<animate attributeName="cx" values="820;580" dur="2s" repeatCount="indefinite"/>
+<animate attributeName="cy" values="260;320;320" dur="2s" repeatCount="indefinite"/>
+<animate attributeName="opacity" values="1;1;0" dur="2s" repeatCount="indefinite"/>
+</circle>
+
+<g class="node-group" data-step="1" style="cursor: pointer;">
+<rect class="node-rect node-claude" x="60" y="140" width="120" height="120"/>
+<rect x="60" y="140" width="120" height="4" fill="#00d4ff"/>
+<g transform="translate(120, 175)">
+<rect class="icon icon-claude" x="-20" y="-15" width="40" height="30" rx="4"/>
+<line class="icon icon-claude" x1="-12" y1="-5" x2="12" y2="-5"/>
+<line class="icon icon-claude" x1="-12" y1="2" x2="8" y2="2"/>
+<line class="icon icon-claude" x1="-12" y1="9" x2="4" y2="9"/>
+</g>
+<text class="node-label" x="120" y="215">Claude Agent</text>
+<text class="node-sublabel" x="120" y="235">执行敏感工具</text>
+<text class="node-sublabel" x="120" y="248">Trigger Permission</text>
+</g>
+
+<g class="node-group" data-step="2" style="cursor: pointer;">
+<rect class="node-rect node-permission" x="340" y="140" width="120" height="120"/>
+<rect x="340" y="140" width="120" height="4" fill="#7b61ff"/>
+<g transform="translate(400, 175)">
+<circle class="icon icon-permission" cx="0" cy="-5" r="12"/>
+<path class="icon icon-permission" d="M-6,-5 L-2,-1 L6,-9"/>
+<rect class="icon icon-permission" x="-15" y="8" width="30" height="18" rx="2"/>
+<line class="icon icon-permission" x1="-8" y1="14" x2="8" y2="14"/>
+<line class="icon icon-permission" x1="-8" y1="20" x2="4" y2="20"/>
+</g>
+<text class="node-label" x="400" y="215">权限系统</text>
+<text class="node-sublabel" x="400" y="235">Permission</text>
+<text class="node-sublabel" x="400" y="248">System</text>
+
+<rect class="gate-tag" x="345" y="105" width="110" height="20"/>
+<text class="gate-text" x="400" y="119">tengu_harbor_ledger</text>
+</g>
+
+<g class="node-group" data-step="3" style="cursor: pointer;">
+<rect class="node-rect node-channel" x="580" y="140" width="120" height="120"/>
+<rect x="580" y="140" width="120" height="4" fill="#ff9f43"/>
+<g transform="translate(640, 175)">
+<rect class="icon icon-channel" x="-18" y="-15" width="36" height="28" rx="3"/>
+<circle class="icon icon-channel" cx="0" cy="-2" r="6"/>
+<line class="icon icon-channel" x1="-10" y1="12" x2="10" y2="12"/>
+</g>
+<text class="node-label" x="640" y="215">Channel Server</text>
+<text class="node-sublabel" x="640" y="235">MCP Protocol</text>
+<text class="node-sublabel" x="640" y="248">Telegram Bot</text>
+
+<rect class="gate-tag" x="585" y="105" width="110" height="20"/>
+<text class="gate-text" x="640" y="119">tengu_harbor</text>
+</g>
+
+<g class="node-group" data-step="4" style="cursor: pointer;">
+<rect class="node-rect node-mobile" x="820" y="120" width="140" height="160" rx="16"/>
+<rect x="820" y="120" width="140" height="4" fill="#48bb78"/>
+<g transform="translate(890, 155)">
+<rect x="-25" y="-20" width="50" height="40" rx="6" fill="none" stroke="#48bb78" stroke-width="2"/>
+<circle cx="0" cy="8" r="3" fill="#48bb78"/>
+</g>
+
+<rect class="chat-bubble" x="835" y="185" width="110" height="35"/>
+<text class="chat-text" x="890" y="205" text-anchor="middle">Allow rm -rf?</text>
+<text class="chat-text" x="890" y="218" text-anchor="middle" fill="#7b61ff">ID: tbxkq</text>
+
+<rect class="chat-bubble" x="835" y="225" width="110" height="28" fill="rgba(72,187,120,0.2)"/>
+<text class="chat-text" x="890" y="243" text-anchor="middle" fill="#48bb78">yes tbxkq ✓</text>
+
+<text class="node-label" x="890" y="275">用户手机</text>
+<text class="node-sublabel" x="890" y="290">User Mobile</text>
+<text class="node-sublabel" x="890" y="303">Telegram</text>
+</g>
+</g>
+
+<rect class="warning-box" x="560" y="350" width="200" height="90"/>
+<g transform="translate(575, 375)">
+<polygon class="warning-icon" points="15,0 30,25 0,25"/>
+<text x="15" y="18" text-anchor="middle" fill="#1a1a2e" font-size="14" font-weight="bold">!</text>
+</g>
+<text class="warning-text" x="620" y="385" font-weight="700">安全警告 / Security Risk</text>
+<text class="warning-text" x="620" y="405" font-size="10">被入侵的 Channel 可伪造审批</text>
+<text class="warning-text" x="620" y="420" font-size="10">Compromised channel can</text>
+<text class="warning-text" x="620" y="435" font-size="10">forge approval (known risk)</text>
+
+<g transform="translate(50, 480)">
+<rect class="id-box" x="0" y="0" width="1000" height="240"/>
+
+<text x="500" y="35" text-anchor="middle" fill="#7b61ff" font-size="16" font-weight="700">5字母ID系统 / 5-Letter ID System</text>
+
+<text x="30" y="65" fill="#a0a0b8" font-size="12">25字母表 (a-z, 去掉 l) / 25-letter alphabet (no 'l')</text>
+
+<g transform="translate(30, 80)">
+<g id="alphabet-grid">
+</g>
+</g>
+
+<g transform="translate(350, 80)">
+<text x="0" y="15" fill="#e8e8f0" font-size="13" font-weight="600">设计特性 / Design Features:</text>
+<text x="0" y="40" fill="#a0a0b8" font-size="11">• 25⁵ ≈ 980万组合空间 / 9.8M combinations</text>
+<text x="0" y="60" fill="#a0a0b8" font-size="11">• 纯字母输入 / Pure letters (no number switching)</text>
+<text x="0" y="80" fill="#a0a0b8" font-size="11">• FNV-1a 哈希生成 / FNV-1a hash generation</text>
+<text x="0" y="100" fill="#a0a0b8" font-size="11">• 24个屏蔽词过滤 / 24 blocked words filtered</text>
+<text x="0" y="120" fill="#a0a0b8" font-size="11">• 最多10次重试 / Max 10 retries</text>
+
+<text x="0" y="155" fill="#ff9f43" font-size="13" font-weight="600">正则匹配 / Regex Pattern:</text>
+<rect x="0" y="165" width="280" height="30" fill="rgba(255,159,67,0.1)" stroke="#ff9f43" stroke-width="1" rx="4"/>
+<text x="140" y="185" text-anchor="middle" fill="#ff9f43" font-family="'JetBrains Mono', monospace" font-size="12">/^\s*(y|yes|n|no)\s+([a-km-z]{5})\s*$/i</text>
+</g>
+
+<g transform="translate(700, 80)">
+<text x="0" y="15" fill="#e8e8f0" font-size="13" font-weight="600">示例ID / Example ID:</text>
+<g transform="translate(0, 35)">
+<rect x="0" y="0" width="50" height="50" fill="rgba(0,212,255,0.15)" stroke="#00d4ff" stroke-width="2" rx="6"/>
+<text x="25" y="35" text-anchor="middle" fill="#00d4ff" font-family="'JetBrains Mono', monospace" font-size="28" font-weight="700">t</text>
+</g>
+<g transform="translate(55, 35)">
+<rect x="0" y="0" width="50" height="50" fill="rgba(0,212,255,0.15)" stroke="#00d4ff" stroke-width="2" rx="6"/>
+<text x="25" y="35" text-anchor="middle" fill="#00d4ff" font-family="'JetBrains Mono', monospace" font-size="28" font-weight="700">b</text>
+</g>
+<g transform="translate(110, 35)">
+<rect x="0" y="0" width="50" height="50" fill="rgba(0,212,255,0.15)" stroke="#00d4ff" stroke-width="2" rx="6"/>
+<text x="25" y="35" text-anchor="middle" fill="#00d4ff" font-family="'JetBrains Mono', monospace" font-size="28" font-weight="700">x</text>
+</g>
+<g transform="translate(165, 35)">
+<rect x="0" y="0" width="50" height="50" fill="rgba(0,212,255,0.15)" stroke="#00d4ff" stroke-width="2" rx="6"/>
+<text x="25" y="35" text-anchor="middle" fill="#00d4ff" font-family="'JetBrains Mono', monospace" font-size="28" font-weight="700">k</text>
+</g>
+<g transform="translate(220, 35)">
+<rect x="0" y="0" width="50" height="50" fill="rgba(0,212,255,0.15)" stroke="#00d4ff" stroke-width="2" rx="6" class="anim-pulse"/>
+<text x="25" y="35" text-anchor="middle" fill="#00d4ff" font-family="'JetBrains Mono', monospace" font-size="28" font-weight="700">q</text>
+</g>
+
+<text x="0" y="115" fill="#48bb78" font-size="12">有效回复格式 / Valid reply: "yes tbxkq"</text>
+</g>
+
+<g transform="translate(30, 195)">
+<text x="0" y="0" fill="#00d4ff" font-size="11" font-weight="600">GrowthBook Gates:</text>
+<rect class="gate-tag" x="0" y="10" width="130" height="18"/>
+<text class="gate-text" x="65" y="22">tengu_harbor (总开关)</text>
+<rect class="gate-tag" x="140" y="10" width="160" height="18"/>
+<text class="gate-text" x="220" y="22">tengu_harbor_ledger (白名单)</text>
+<rect class="gate-tag" x="310" y="10" width="160" height="18"/>
+<text class="gate-text" x="390" y="22">tengu_harbor_permissions (relay)</text>
+</g>
+</g>
+</g>
+
+<text x="1050" y="730" text-anchor="end" fill="#5a5a78" font-size="10">VIS-3-004 | Channel Permission Relay Flow</text>
+</svg>
+
+<div class="tooltip" id="tooltip">
+<div class="tooltip-title"></div>
+<div class="tooltip-desc"></div>
+</div>
+</div>
+
+<script>
+const alphabet = 'abcdefghjkmnpqrstuvwxyz'.split('');
+const grid = document.getElementById('alphabet-grid');
+if (grid) {
+  let html = '';
+  alphabet.forEach((letter, i) => {
+    const x = (i % 5) * 35;
+    const y = Math.floor(i / 5) * 35;
+    html += `<rect x="${x}" y="${y}" width="30" height="30" fill="rgba(123,97,255,0.1)" stroke="#7b61ff" stroke-width="1" rx="4"/>
+             <text x="${x+15}" y="${y+22}" class="id-letter">${letter}</text>`;
+  });
+  html += `<rect x="75" y="70" width="30" height="30" fill="rgba(255,107,107,0.2)" stroke="#ff6b6b" stroke-width="1" stroke-dasharray="3,2" rx="4"/>
+           <text x="90" y="92" text-anchor="middle" fill="#ff6b6b" font-size="14" style="text-decoration: line-through;">l</text>`;
+  grid.innerHTML = html;
+}
+
+const stepInfo = {
+  1: { title: "1. Claude 触发权限请求", desc: "执行敏感工具时弹出权限请求 / Permission request triggered when executing sensitive tools" },
+  2: { title: "2. channelPermissions 检测", desc: "检测是否有活跃 Channel / Check for active channel connection" },
+  3: { title: "3. 通过 MCP 发送权限提示", desc: "将权限请求发送到 Channel Server / Send permission prompt via MCP protocol" },
+  4: { title: "4. 用户手机接收请求", desc: "用户收到消息并回复 'yes <5字母ID>' / User receives and replies with approval code" }
+};
+
+const tooltip = document.getElementById('tooltip');
+document.querySelectorAll('.node-group').forEach(node => {
+  node.addEventListener('mouseenter', (e) => {
+    const step = node.dataset.step;
+    if (stepInfo[step]) {
+      tooltip.querySelector('.tooltip-title').textContent = stepInfo[step].title;
+      tooltip.querySelector('.tooltip-desc').textContent = stepInfo[step].desc;
+      tooltip.classList.add('show');
+    }
+  });
+  node.addEventListener('mousemove', (e) => {
+    tooltip.style.left = e.pageX + 15 + 'px';
+    tooltip.style.top = e.pageY + 15 + 'px';
+  });
+  node.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('show');
+  });
+});
+</script>
+</body>
+</html>

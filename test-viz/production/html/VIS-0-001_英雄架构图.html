@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1400">
+<title>Claude Code 系统架构图</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0d1117;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+}
+.description {
+  color: #8b949e;
+  font-size: 14px;
+  line-height: 1.8;
+  max-width: 1200px;
+  text-align: center;
+  margin-bottom: 30px;
+}
+svg {
+  display: block;
+}
+.node-rect {
+  fill: rgba(22, 27, 34, 0.95);
+  stroke-width: 2;
+}
+.node-label {
+  font-size: 13px;
+  font-weight: 600;
+  fill: #f0f6fc;
+  text-anchor: middle;
+}
+.node-sublabel {
+  font-size: 10px;
+  fill: #8b949e;
+  text-anchor: middle;
+  font-family: monospace;
+}
+.arrow-main {
+  fill: none;
+  stroke: #58a6ff;
+  stroke-width: 2.5;
+  marker-end: url(#arrow-main);
+}
+.arrow-core {
+  fill: none;
+  stroke: #f0883e;
+  stroke-width: 2.5;
+}
+.arrow-loop {
+  fill: none;
+  stroke: #f0883e;
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+.arrow-api {
+  fill: none;
+  stroke: #1f6feb;
+  stroke-width: 2.5;
+  marker-end: url(#arrow-api);
+}
+.dashed-aux {
+  fill: none;
+  stroke: #8b949e;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  opacity: 0.7;
+}
+.particle {
+  fill: #f0883e;
+  r: 3;
+}
+@keyframes flowParticle {
+  0% { offset-distance: 0%; }
+  100% { offset-distance: 100%; }
+}
+.title-main {
+  font-size: 22px;
+  fill: #f0f6fc;
+  font-weight: 600;
+  text-anchor: middle;
+}
+.title-sub {
+  font-size: 12px;
+  fill: #8b949e;
+  text-anchor: middle;
+}
+.legend-text {
+  font-size: 11px;
+  fill: #8b949e;
+}
+</style>
+</head>
+<body>
+<p class="description">
+这张图展示 Claude Code 的全局架构。横向 9 个节点构成主链路：用户输入经过 CLI 解析、权限检查、Prompt 组装，进入核心 Agent Query Loop，然后通过 API 客户端发送请求，解析响应，调度工具，最后渲染输出。底部 6 个支撑子系统（权限/配置/MCP/Hooks/沙箱/上下文）通过虚线连接到主链路的关键节点。橙色虚线表示 Agent Loop 回环，当响应中包含工具调用时，系统会执行工具并把结果回传给 Core，形成循环。
+</p>
+<svg width="1400" height="800" viewBox="0 0 1400 800">
+  <defs>
+    <marker id="arrow-main" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#58a6ff"/>
+    </marker>
+    <marker id="arrow-api" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1f6feb"/>
+    </marker>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#161b22"/>
+      <stop offset="100%" stop-color="#0d1117"/>
+    </linearGradient>
+  </defs>
+  
+  <rect width="1400" height="800" fill="url(#bg-grad)"/>
+  
+  <text x="700" y="40" class="title-main">Claude Code 系统架构图</text>
+  <text x="700" y="66" class="title-sub">Hero Architecture · 从用户输入到最终输出的完整链路</text>
+  
+  <!-- Main chain connections -->
+  <!-- N1 -> N2: (220,128) to (280,128) -->
+  <line x1="220" y1="128" x2="280" y2="128" class="arrow-main"/>
+  <!-- N2 -> N3: (440,128) to (500,128) -->
+  <line x1="440" y1="128" x2="500" y2="128" class="arrow-main"/>
+  <!-- N3 -> N4: (660,128) to (720,128) -->
+  <line x1="660" y1="128" x2="720" y2="128" class="arrow-main"/>
+  <!-- N4 -> N5: (880,128) to (940,128) - orange core -->
+  <line x1="880" y1="128" x2="940" y2="128" class="arrow-core" marker-end="url(#arrow-main)"/>
+  <!-- N5 -> N6: (1100,128) to (1180,128) -->
+  <line x1="1100" y1="128" x2="1180" y2="128" class="arrow-api"/>
+  <!-- N6 -> N7: (1260,156) to (1260,220) - vertical -->
+  <line x1="1260" y1="156" x2="1260" y2="220" class="arrow-api"/>
+  <!-- N7 -> N8: (1180,248) to (1100,248) - reverse -->
+  <line x1="1180" y1="248" x2="1100" y2="248" class="arrow-api" marker-end="url(#arrow-api)"/>
+  <!-- N8 -> N9: (940,248) to (880,248) - reverse -->
+  <line x1="940" y1="248" x2="880" y2="248" class="arrow-api" marker-end="url(#arrow-api)"/>
+  <!-- N8 -> N5 loop: (1020,220) to (1020,156) - vertical up -->
+  <line x1="1020" y1="220" x2="1020" y2="156" class="arrow-loop" marker-end="url(#arrow-main)"/>
+  
+  <!-- Main chain nodes -->
+  <!-- N1: Terminal REPL -->
+  <rect x="60" y="100" width="160" height="56" rx="8" class="node-rect" stroke="#58a6ff"/>
+  <text x="140" y="122" class="node-label">终端 REPL</text>
+  <text x="140" y="140" class="node-sublabel">Terminal REPL</text>
+  
+  <!-- N2: CLI Parser -->
+  <rect x="280" y="100" width="160" height="56" rx="8" class="node-rect" stroke="#58a6ff"/>
+  <text x="360" y="122" class="node-label">CLI 解析器</text>
+  <text x="360" y="140" class="node-sublabel">CLI Parser</text>
+  
+  <!-- N3: Permission Gate -->
+  <rect x="500" y="100" width="160" height="56" rx="8" class="node-rect" stroke="#58a6ff"/>
+  <text x="580" y="122" class="node-label">权限网关</text>
+  <text x="580" y="140" class="node-sublabel">Permission Gate</text>
+  
+  <!-- N4: Prompt Builder -->
+  <rect x="720" y="100" width="160" height="56" rx="8" class="node-rect" stroke="#58a6ff"/>
+  <text x="800" y="122" class="node-label">Prompt 构建器</text>
+  <text x="800" y="140" class="node-sublabel">Prompt Builder</text>
+  
+  <!-- N5: Agent Query Loop (Core) -->
+  <rect x="940" y="100" width="160" height="56" rx="8" class="node-rect" stroke="#f0883e"/>
+  <text x="1020" y="122" class="node-label">Agent Query Loop</text>
+  <text x="1020" y="140" class="node-sublabel">Core Loop</text>
+  
+  <!-- N6: API Client -->
+  <rect x="1180" y="100" width="160" height="56" rx="8" class="node-rect" stroke="#1f6feb"/>
+  <text x="1260" y="122" class="node-label">API 客户端</text>
+  <text x="1260" y="140" class="node-sublabel">API Client</text>
+  
+  <!-- N7: Response Parser -->
+  <rect x="1180" y="220" width="160" height="56" rx="8" class="node-rect" stroke="#1f6feb"/>
+  <text x="1260" y="242" class="node-label">响应解析器</text>
+  <text x="1260" y="260" class="node-sublabel">Response Parser</text>
+  
+  <!-- N8: Tool Dispatcher -->
+  <rect x="940" y="220" width="160" height="56" rx="8" class="node-rect" stroke="#1f6feb"/>
+  <text x="1020" y="242" class="node-label">工具调度器</text>
+  <text x="1020" y="260" class="node-sublabel">Tool Dispatcher</text>
+  
+  <!-- N9: Renderer -->
+  <rect x="720" y="220" width="160" height="56" rx="8" class="node-rect" stroke="#1f6feb"/>
+  <text x="800" y="242" class="node-label">渲染输出</text>
+  <text x="800" y="260" class="node-sublabel">Renderer</text>
+  
+  <!-- Subsystem connections (dashed) -->
+  <!-- S1 -> N3: (150,380) to (580,156) -->
+  <line x1="150" y1="380" x2="580" y2="156" class="dashed-aux"/>
+  <!-- S2 -> N5: (370,380) to (1020,156) -->
+  <line x1="370" y1="380" x2="1020" y2="156" class="dashed-aux"/>
+  <!-- S3 -> N8: (590,380) to (1020,276) -->
+  <line x1="590" y1="380" x2="1020" y2="276" class="dashed-aux"/>
+  <!-- S4 -> N5 (offset): (810,380) to (1000,156) -->
+  <line x1="810" y1="380" x2="1000" y2="156" class="dashed-aux"/>
+  <!-- S5 -> N8 (offset): (1030,380) to (1040,276) -->
+  <line x1="1030" y1="380" x2="1040" y2="276" class="dashed-aux"/>
+  <!-- S6 -> N4: (1250,380) to (800,156) -->
+  <line x1="1250" y1="380" x2="800" y2="156" class="dashed-aux"/>
+  
+  <!-- Subsystem nodes -->
+  <!-- S1: Permission System -->
+  <rect x="60" y="380" width="180" height="64" rx="8" class="node-rect" stroke="#ff7b72"/>
+  <text x="150" y="405" class="node-label">权限系统</text>
+  <text x="150" y="427" class="node-sublabel">Permission System</text>
+  
+  <!-- S2: Settings -->
+  <rect x="280" y="380" width="180" height="64" rx="8" class="node-rect" stroke="#39d0d8"/>
+  <text x="370" y="405" class="node-label">配置系统</text>
+  <text x="370" y="427" class="node-sublabel">Settings</text>
+  
+  <!-- S3: MCP Protocol -->
+  <rect x="500" y="380" width="180" height="64" rx="8" class="node-rect" stroke="#d2a8ff"/>
+  <text x="590" y="405" class="node-label">MCP 协议层</text>
+  <text x="590" y="427" class="node-sublabel">MCP Protocol</text>
+  
+  <!-- S4: Hooks Engine -->
+  <rect x="720" y="380" width="180" height="64" rx="8" class="node-rect" stroke="#e3b341"/>
+  <text x="810" y="405" class="node-label">Hooks 引擎</text>
+  <text x="810" y="427" class="node-sublabel">Hooks Engine</text>
+  
+  <!-- S5: Sandbox -->
+  <rect x="940" y="380" width="180" height="64" rx="8" class="node-rect" stroke="#56d364"/>
+  <text x="1030" y="405" class="node-label">沙箱隔离</text>
+  <text x="1030" y="427" class="node-sublabel">Sandbox</text>
+  
+  <!-- S6: Context -->
+  <rect x="1160" y="380" width="180" height="64" rx="8" class="node-rect" stroke="#ff9ece"/>
+  <text x="1250" y="405" class="node-label">上下文管理</text>
+  <text x="1250" y="427" class="node-sublabel">Context</text>
+  
+  <!-- Agent Loop particle animation -->
+  <circle class="particle">
+    <animateMotion dur="2s" repeatCount="indefinite" path="M 1020 220 L 1020 156"/>
+  </circle>
+  
+  <!-- Legend -->
+  <g transform="translate(100, 480)">
+    <line x1="0" y1="0" x2="40" y2="0" stroke="#58a6ff" stroke-width="2.5"/>
+    <text x="50" y="4" class="legend-text">主数据流 Main Flow</text>
+    
+    <line x1="220" y1="0" x2="260" y2="0" stroke="#f0883e" stroke-width="2.5"/>
+    <text x="270" y="4" class="legend-text">Agent Loop 核心回路</text>
+    
+    <line x1="420" y1="0" x2="460" y2="0" stroke="#1f6feb" stroke-width="2.5"/>
+    <text x="470" y="4" class="legend-text">API 数据流</text>
+    
+    <line x1="580" y1="0" x2="620" y2="0" stroke="#8b949e" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>
+    <text x="630" y="4" class="legend-text">子系统辅助连接</text>
+  </g>
+</svg>
+</body>
+</html>

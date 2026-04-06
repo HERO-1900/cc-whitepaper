@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Source Code Statistics Dashboard | 源码统计仪表盘</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-primary: #0d1117;
+            --bg-card: #161b22;
+            --bg-elevated: #21262d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-purple: #a371f7;
+            --accent-red: #f85149;
+            --border: #30363d;
+        }
+        
+        body {
+            font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+            line-height: 1.5;
+        }
+        
+        .dashboard {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        
+        .header .subtitle {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 4px;
+        }
+        
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        @media (max-width: 1200px) {
+            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        
+        @media (max-width: 768px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+        
+        .kpi-label {
+            color: var(--text-secondary);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+        
+        .kpi-value.accent-blue { color: var(--accent-blue); }
+        .kpi-value.accent-green { color: var(--accent-green); }
+        .kpi-value.accent-orange { color: var(--accent-orange); }
+        .kpi-value.accent-purple { color: var(--accent-purple); }
+        .kpi-value.accent-red { color: var(--accent-red); }
+        
+        .kpi-sub {
+            color: var(--text-secondary);
+            font-size: 11px;
+            margin-top: 6px;
+        }
+        
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 320px);
+            gap: 16px;
+        }
+        
+        @media (max-width: 1200px) {
+            .charts-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 300px); }
+        }
+        
+        @media (max-width: 768px) {
+            .charts-grid { grid-template-columns: 1fr; grid-template-rows: repeat(6, 280px); }
+        }
+        
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .chart-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .chart-title-en {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        
+        .chart-body {
+            flex: 1;
+            position: relative;
+        }
+        
+        /* SVG Chart Styles */
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .bar {
+            transition: opacity 0.2s ease;
+        }
+        
+        .bar:hover {
+            opacity: 0.8;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 100;
+            color: var(--text-primary);
+        }
+        
+        /* Heatmap */
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            height: 100%;
+        }
+        
+        .heatmap-cell {
+            border-radius: 4px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 11px;
+            transition: transform 0.15s ease;
+        }
+        
+        .heatmap-cell:hover {
+            transform: scale(1.05);
+        }
+        
+        .heatmap-name {
+            font-weight: 600;
+        }
+        
+        .heatmap-value {
+            color: var(--text-secondary);
+        }
+        
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 12px;
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            justify-content: center;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>Claude Code 源码统计仪表盘</h1>
+            <div class="subtitle">Source Code Statistics Dashboard · Generated 2026/04/04</div>
+        </div>
+        
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-label">TypeScript Files / TS文件</div>
+                <div class="kpi-value accent-blue" data-value="1884">0</div>
+                <div class="kpi-sub">.ts + .tsx sources</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Lines of Code / 代码行数</div>
+                <div class="kpi-value accent-green" data-value="250000">0</div>
+                <div class="kpi-sub">~250K total lines</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Built-in Tools / 内置工具</div>
+                <div class="kpi-value accent-orange" data-value="43">0</div>
+                <div class="kpi-sub">12 file / 6 search / 4 exec</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Subsystems / 子系统</div>
+                <div class="kpi-value accent-purple" data-value="8">0</div>
+                <div class="kpi-sub">Core modules</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Hook Events / Hook事件</div>
+                <div class="kpi-value" data-value="27">0</div>
+                <div class="kpi-sub">Lifecycle events</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Permission Modes / 权限模式</div>
+                <div class="kpi-value accent-red" data-value="6">0</div>
+                <div class="kpi-sub">Security levels</div>
+            </div>
+        </div>
+        
+        <!-- Charts Grid -->
+        <div class="charts-grid">
+            <!-- File Size Distribution -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">文件行数分布</div>
+                        <div class="chart-title-en">File Size Distribution</div>
+                    </div>
+                </div>
+                <div class="chart-body" id="histogram"></div>
+            </div>
+            
+            <!-- Top 10 Modules -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">模块行数排行 Top 10</div>
+                        <div class="chart-title-en">Largest Modules by Lines</div>
+                    </div>
+                </div>
+                <div class="chart-body" id="barchart"></div>
+            </div>
+            
+            <!-- File Types -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">文件类型占比</div>
+                        <div class="chart-title-en">File Types Distribution</div>
+                    </div>
+                </div>
+                <div class="chart-body" id="donut"></div>
+            </div>
+            
+            <!-- Code Density Heatmap -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">代码密度热力图</div>
+                        <div class="chart-title-en">Code Density by Directory</div>
+                    </div>
+                </div>
+                <div class="chart-body" id="heatmap"></div>
+            </div>
+            
+            <!-- Dependencies -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">依赖统计</div>
+                        <div class="chart-title-en">NPM Dependencies</div>
+                    </div>
+                </div>
+                <div class="chart-body" id="deps"></div>
+            </div>
+            
+            <!-- Test Coverage -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">测试覆盖</div>
+                        <div class="chart-title-en">Test Coverage</div>
+                    </div>
+                </div>
+                <div class="chart-body" id="tests"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip"></div>
+    
+    <script>
+        // Number animation
+        function animateNumbers() {
+            const elements = document.querySelectorAll('[data-value]');
+            elements.forEach(el => {
+                const target = parseInt(el.dataset.value);
+                const duration = 1500;
+                const start = performance.now();
+                
+                function update(now) {
+                    const elapsed = now - start;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const ease = 1 - Math.pow(1 - progress, 3);
+                    const current = Math.floor(ease * target);
+                    el.textContent = current.toLocaleString();
+                    if (progress < 1) requestAnimationFrame(update);
+                }
+                requestAnimationFrame(update);
+            });
+        }
+        
+        // Tooltip
+        const tooltip = document.getElementById('tooltip');
+        function showTooltip(e, text) {
+            tooltip.textContent = text;
+            tooltip.style.opacity = '1';
+            tooltip.style.left = e.pageX + 10 + 'px';
+            tooltip.style.top = e.pageY - 30 + 'px';
+        }
+        function hideTooltip() {
+            tooltip.style.opacity = '0';
+        }
+        
+        // Histogram
+        function renderHistogram() {
+            const container = document.getElementById('histogram');
+            const data = [
+                { range: '0-50', count: 680, pct: 36 },
+                { range: '51-100', count: 420, pct: 22 },
+                { range: '101-200', count: 380, pct: 20 },
+                { range: '201-500', count: 280, pct: 15 },
+                { range: '501-1000', count: 104, pct: 5.5 },
+                { range: '1000+', count: 20, pct: 1.5 }
+            ];
+            
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            const colors = ['#58a6ff', '#58a6ff', '#3fb950', '#d29922', '#a371f7', '#f85149'];
+            
+            data.forEach((d, i) => {
+                const x = (i / data.length) * 100 + 2;
+                const width = (100 / data.length) - 4;
+                const height = (d.pct / 40) * 80;
+                const y = 90 - height;
+                
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', x + '%');
+                rect.setAttribute('y', y + '%');
+                rect.setAttribute('width', width + '%');
+                rect.setAttribute('height', height + '%');
+                rect.setAttribute('fill', colors[i]);
+                rect.setAttribute('rx', 3);
+                rect.classList.add('bar');
+                rect.addEventListener('mousemove', e => showTooltip(e, `${d.range} lines: ${d.count} files`));
+                rect.addEventListener('mouseleave', hideTooltip);
+                svg.appendChild(rect);
+                
+                // Label
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', (x + width/2) + '%');
+                text.setAttribute('y', '98%');
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', '#8b949e');
+                text.setAttribute('font-size', '10');
+                text.textContent = d.range;
+                svg.appendChild(text);
+            });
+            
+            container.appendChild(svg);
+        }
+        
+        // Horizontal Bar Chart - Top 10 Modules
+        function renderBarChart() {
+            const container = document.getElementById('barchart');
+            const data = [
+                { name: 'queryLoop.ts', lines: 2847 },
+                { name: 'Tool.ts', lines: 2156 },
+                { name: 'permissions.ts', lines: 1892 },
+                { name: 'Bash.ts', lines: 1654 },
+                { name: 'Agent.ts', lines: 1489 },
+                { name: 'Git.ts', lines: 1321 },
+                { name: 'Edit.ts', lines: 1205 },
+                { name: 'Read.ts', lines: 987 },
+                { name: 'Grep.ts', lines: 892 },
+                { name: 'Write.ts', lines: 756 }
+            ];
+            
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            const maxLines = data[0].lines;
+            
+            data.forEach((d, i) => {
+                const y = (i / data.length) * 100 + 3;
+                const height = (100 / data.length) - 6;
+                const width = (d.lines / maxLines) * 75;
+                
+                // Bar
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', '25%');
+                rect.setAttribute('y', y + '%');
+                rect.setAttribute('width', width + '%');
+                rect.setAttribute('height', height + '%');
+                rect.setAttribute('fill', '#58a6ff');
+                rect.setAttribute('rx', 2);
+                rect.classList.add('bar');
+                rect.addEventListener('mousemove', e => showTooltip(e, `${d.name}: ${d.lines.toLocaleString()} lines`));
+                rect.addEventListener('mouseleave', hideTooltip);
+                svg.appendChild(rect);
+                
+                // Filename
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', '1%');
+                label.setAttribute('y', (y + height/2 + 3) + '%');
+                label.setAttribute('fill', '#e6edf3');
+                label.setAttribute('font-size', '9');
+                label.textContent = d.name;
+                svg.appendChild(label);
+                
+                // Value
+                const value = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                value.setAttribute('x', (25 + width + 2) + '%');
+                value.setAttribute('y', (y + height/2 + 3) + '%');
+                value.setAttribute('fill', '#8b949e');
+                value.setAttribute('font-size', '9');
+                value.textContent = d.lines.toLocaleString();
+                svg.appendChild(value);
+            });
+            
+            container.appendChild(svg);
+        }
+        
+        // Donut Chart - File Types
+        function renderDonut() {
+            const container = document.getElementById('donut');
+            const data = [
+                { label: '.ts', value: 1420, color: '#58a6ff' },
+                { label: '.tsx', value: 280, color: '#3fb950' },
+                { label: '.json', value: 98, color: '#d29922' },
+                { label: '.md', value: 64, color: '#a371f7' },
+                { label: 'other', value: 22, color: '#8b949e' }
+            ];
+            
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            const total = data.reduce((a, b) => a + b.value, 0);
+            let currentAngle = 0;
+            const centerX = 50, centerY = 50, radius = 35;
+            
+            data.forEach(d => {
+                const angle = (d.value / total) * Math.PI * 2;
+                const x1 = centerX + radius * Math.cos(currentAngle);
+                const y1 = centerY + radius * Math.sin(currentAngle);
+                const x2 = centerX + radius * Math.cos(currentAngle + angle);
+                const y2 = centerY + radius * Math.sin(currentAngle + angle);
+                const largeArc = angle > Math.PI ? 1 : 0;
+                
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const d = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+                path.setAttribute('d', d);
+                path.setAttribute('fill', d.color);
+                path.setAttribute('stroke', '#161b22');
+                path.setAttribute('stroke-width', '2');
+                path.classList.add('bar');
+                path.addEventListener('mousemove', e => showTooltip(e, `${d.label}: ${d.value} files (${Math.round(d.value/total*100)}%)`));
+                path.addEventListener('mouseleave', hideTooltip);
+                svg.appendChild(path);
+                
+                currentAngle += angle;
+            });
+            
+            // Center hole
+            const hole = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            hole.setAttribute('cx', centerX + '%');
+            hole.setAttribute('cy', centerY + '%');
+            hole.setAttribute('r', radius * 0.6 + '%');
+            hole.setAttribute('fill', '#161b22');
+            svg.appendChild(hole);
+            
+            // Center text
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', centerX + '%');
+            text.setAttribute('y', centerY + '%');
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('dominant-baseline', 'middle');
+            text.setAttribute('fill', '#e6edf3');
+            text.setAttribute('font-size', '14');
+            text.setAttribute('font-weight', 'bold');
+            text.textContent = '1,884';
+            svg.appendChild(text);
+            
+            // Legend
+            const legend = document.createElement('div');
+            legend.className = 'legend';
+            data.forEach(d => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `<div class="legend-dot" style="background:${d.color}"></div><span>${d.label}</span>`;
+                legend.appendChild(item);
+            });
+            container.appendChild(svg);
+            container.appendChild(legend);
+        }
+        
+        // Heatmap
+        function renderHeatmap() {
+            const container = document.getElementById('heatmap');
+            const data = [
+                { name: 'commands', lines: 45000, files: 156 },
+                { name: 'tools', lines: 38000, files: 124 },
+                { name: 'utils', lines: 32000, files: 98 },
+                { name: 'core', lines: 28000, files: 87 },
+                { name: 'hooks', lines: 18000, files: 64 },
+                { name: 'agents', lines: 25000, files: 72 },
+                { name: 'permissions', lines: 12000, files: 45 },
+                { name: 'types', lines: 8000, files: 38 }
+            ];
+            
+            const maxLines = Math.max(...data.map(d => d.lines));
+            
+            data.forEach(d => {
+                const cell = document.createElement('div');
+                cell.className = 'heatmap-cell';
+                const intensity = d.lines / maxLines;
+                const opacity = 0.3 + (intensity * 0.7);
+                cell.style.background = `rgba(88, 166, 255, ${opacity})`;
+                cell.innerHTML = `
+                    <div class="heatmap-name">${d.name}/</div>
+                    <div class="heatmap-value">${(d.lines/1000).toFixed(1)}k lines<br>${d.files} files</div>
+                `;
+                container.appendChild(cell);
+            });
+        }
+        
+        // Dependencies
+        function renderDeps() {
+            const container = document.getElementById('deps');
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            
+            const deps = [
+                { type: 'Production', count: 34, color: '#58a6ff' },
+                { type: 'Development', count: 52, color: '#3fb950' },
+                { type: 'Peer', count: 8, color: '#d29922' }
+            ];
+            
+            const maxCount = 60;
+            
+            deps.forEach((d, i) => {
+                const y = 20 + i * 30;
+                const width = (d.count / maxCount) * 70;
+                
+                // Label
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', '5%');
+                label.setAttribute('y', y + 5 + '%');
+                label.setAttribute('fill', '#e6edf3');
+                label.setAttribute('font-size', '11');
+                label.textContent = d.type;
+                svg.appendChild(label);
+                
+                // Bar
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', '25%');
+                rect.setAttribute('y', y + '%');
+                rect.setAttribute('width', width + '%');
+                rect.setAttribute('height', '18');
+                rect.setAttribute('fill', d.color);
+                rect.setAttribute('rx', 3);
+                rect.classList.add('bar');
+                rect.addEventListener('mousemove', e => showTooltip(e, `${d.type}: ${d.count} packages`));
+                rect.addEventListener('mouseleave', hideTooltip);
+                svg.appendChild(rect);
+                
+                // Value
+                const value = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                value.setAttribute('x', (25 + width + 3) + '%');
+                value.setAttribute('y', y + 12);
+                value.setAttribute('fill', '#8b949e');
+                value.setAttribute('font-size', '11');
+                value.textContent = d.count;
+                svg.appendChild(value);
+            });
+            
+            container.appendChild(svg);
+        }
+        
+        // Test Coverage
+        function renderTests() {
+            const container = document.getElementById('tests');
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            
+            const metrics = [
+                { label: 'Test Files', value: 142, color: '#58a6ff' },
+                { label: 'Test Cases', value: 2847, color: '#3fb950' },
+                { label: 'Coverage %', value: 78, color: '#d29922', isPercent: true }
+            ];
+            
+            metrics.forEach((m, i) => {
+                const cx = 20 + i * 30;
+                const cy = 50;
+                const radius = 22;
+                const maxValue = m.isPercent ? 100 : 3000;
+                const percentage = m.value / maxValue;
+                const circumference = 2 * Math.PI * radius;
+                const offset = circumference * (1 - percentage);
+                
+                // Background circle
+                const bg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                bg.setAttribute('cx', cx + '%');
+                bg.setAttribute('cy', cy + '%');
+                bg.setAttribute('r', radius);
+                bg.setAttribute('fill', 'none');
+                bg.setAttribute('stroke', '#30363d');
+                bg.setAttribute('stroke-width', '6');
+                svg.appendChild(bg);
+                
+                // Progress circle
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', cx + '%');
+                circle.setAttribute('cy', cy + '%');
+                circle.setAttribute('r', radius);
+                circle.setAttribute('fill', 'none');
+                circle.setAttribute('stroke', m.color);
+                circle.setAttribute('stroke-width', '6');
+                circle.setAttribute('stroke-dasharray', circumference);
+                circle.setAttribute('stroke-dashoffset', offset);
+                circle.setAttribute('stroke-linecap', 'round');
+                circle.setAttribute('transform', `rotate(-90 ${cx*4} ${cy*2.5})`);
+                circle.style.transformOrigin = 'center';
+                circle.classList.add('bar');
+                svg.appendChild(circle);
+                
+                // Value
+                const value = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                value.setAttribute('x', cx + '%');
+                value.setAttribute('y', cy + 2 + '%');
+                value.setAttribute('text-anchor', 'middle');
+                value.setAttribute('dominant-baseline', 'middle');
+                value.setAttribute('fill', '#e6edf3');
+                value.setAttribute('font-size', '14');
+                value.setAttribute('font-weight', 'bold');
+                value.textContent = m.isPercent ? m.value + '%' : m.value.toLocaleString();
+                svg.appendChild(value);
+                
+                // Label
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', cx + '%');
+                label.setAttribute('y', cy + 35 + '%');
+                label.setAttribute('text-anchor', 'middle');
+                label.setAttribute('fill', '#8b949e');
+                label.setAttribute('font-size', '10');
+                label.textContent = m.label;
+                svg.appendChild(label);
+            });
+            
+            container.appendChild(svg);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            animateNumbers();
+            renderHistogram();
+            renderBarChart();
+            renderDonut();
+            renderHeatmap();
+            renderDeps();
+            renderTests();
+        });
+    </script>
+</body>
+</html>

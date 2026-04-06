@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code 2.1.88 源码全量统计仪表盘</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-card: #131921;
+            --bg-elevated: #1a2130;
+            --bg-hover: #1f2940;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-dim: #5c6370;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-purple: #a371f7;
+            --accent-red: #f85149;
+            --accent-cyan: #39d2c0;
+            --accent-pink: #f778ba;
+            --border: #21262d;
+            --glow-blue: rgba(88, 166, 255, 0.15);
+            --glow-green: rgba(63, 185, 80, 0.15);
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'JetBrains Mono', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .dashboard { max-width: 1800px; margin: 0 auto; }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(88,166,255,0.08), rgba(163,113,247,0.08));
+            border: 1px solid var(--border);
+            border-radius: 16px;
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+        .header .version {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--accent-green);
+            margin-top: 4px;
+        }
+        .header .subtitle {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 8px;
+        }
+        .header .scan-info {
+            display: inline-flex;
+            gap: 16px;
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+        .header .scan-info span { color: var(--text-secondary); }
+
+        /* KPI Strip */
+        .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        @media (max-width: 1400px) { .kpi-strip { grid-template-columns: repeat(4, 1fr); } }
+        @media (max-width: 768px) { .kpi-strip { grid-template-columns: repeat(2, 1fr); } }
+
+        .kpi {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .kpi:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px var(--glow-blue);
+        }
+        .kpi::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            border-radius: 12px 12px 0 0;
+        }
+        .kpi:nth-child(1)::before { background: var(--accent-blue); }
+        .kpi:nth-child(2)::before { background: var(--accent-green); }
+        .kpi:nth-child(3)::before { background: var(--accent-orange); }
+        .kpi:nth-child(4)::before { background: var(--accent-purple); }
+        .kpi:nth-child(5)::before { background: var(--accent-red); }
+        .kpi:nth-child(6)::before { background: var(--accent-cyan); }
+        .kpi:nth-child(7)::before { background: var(--accent-pink); }
+        .kpi:nth-child(8)::before { background: var(--accent-blue); }
+
+        .kpi .number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .kpi .label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        .kpi .sublabel {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        /* Section */
+        .section {
+            margin-bottom: 24px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            padding-left: 12px;
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        /* Grids */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        @media (max-width: 1200px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .card h3 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+
+        /* Bar Chart */
+        .bar-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        .bar-label {
+            width: 120px;
+            flex-shrink: 0;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            text-align: right;
+            padding-right: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .bar-track {
+            flex: 1;
+            height: 20px;
+            background: var(--bg-elevated);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+            position: relative;
+        }
+        .bar-fill::after {
+            content: attr(data-value);
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: rgba(255,255,255,0.9);
+            white-space: nowrap;
+        }
+        .bar-value {
+            width: 70px;
+            flex-shrink: 0;
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dim);
+            padding-left: 8px;
+        }
+
+        /* Donut */
+        .donut-container {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        .donut-svg { flex-shrink: 0; }
+        .donut-legend { flex: 1; }
+        .donut-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+        .donut-legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .donut-legend-value {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+            margin-left: auto;
+        }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .data-table th {
+            text-align: left;
+            padding: 8px 12px;
+            color: var(--text-dim);
+            font-weight: 500;
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .data-table td {
+            padding: 6px 12px;
+            border-bottom: 1px solid rgba(33,38,45,0.5);
+            color: var(--text-secondary);
+        }
+        .data-table td:first-child { color: var(--text-primary); }
+        .data-table .num {
+            font-family: 'JetBrains Mono', monospace;
+            text-align: right;
+        }
+        .data-table tr:hover td { background: var(--bg-hover); }
+
+        /* Stat Grid */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 8px;
+        }
+        .stat-item {
+            padding: 12px;
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-item .stat-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .stat-item .stat-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        /* Tag cloud */
+        .tag-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .tag {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            border: 1px solid;
+        }
+
+        /* Highlight strip */
+        .highlight-strip {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+        .highlight-chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .highlight-chip .chip-icon { font-size: 14px; }
+        .highlight-chip .chip-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--accent-green);
+        }
+        .highlight-chip .chip-label { color: var(--text-secondary); }
+
+        /* Animated counter */
+        .count-up { transition: all 0.5s ease; }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-dim);
+            font-size: 11px;
+            margin-top: 32px;
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <div class="header">
+            <h1>Claude Code 2.1.88 源码全量统计</h1>
+            <div class="version">v2.1.88 | TypeScript + React (Ink)</div>
+            <div class="subtitle">基于源码目录 src/ 的实际 find + wc + grep 扫描，非估算</div>
+            <div class="scan-info">
+                <span>扫描日期: 2026-04-05</span>
+                <span>|</span>
+                <span>扫描方法: 穷举式全量统计</span>
+                <span>|</span>
+                <span>数据来源: cc-recovered-main/src/</span>
+            </div>
+        </div>
+
+        <!-- KPI Strip -->
+        <div class="kpi-strip">
+            <div class="kpi">
+                <div class="number" style="color:var(--accent-blue)" data-target="512695">0</div>
+                <div class="label">总代码行数 (LOC)</div>
+                <div class="sublabel">有效行 476,875</div>
+            </div>
+            <div class="kpi">
+                <div class="number" style="color:var(--accent-green)" data-target="1902">0</div>
+                <div class="label">源码文件数</div>
+                <div class="sublabel">.ts 1,332 + .tsx 552</div>
+            </div>
+            <div class="kpi">
+                <div class="number" style="color:var(--accent-orange)" data-target="40">0</div>
+                <div class="label">AI 工具</div>
+                <div class="sublabel">含 36 个 prompt.ts</div>
+            </div>
+            <div class="kpi">
+                <div class="number" style="color:var(--accent-purple)" data-target="98">0</div>
+                <div class="label">斜杠命令</div>
+                <div class="sublabel">86 子目录 + 12 根命令</div>
+            </div>
+            <div class="kpi">
+                <div class="number" style="color:var(--accent-red)" data-target="621">0</div>
+                <div class="label">安全相关文件</div>
+                <div class="sublabel">占总量 32.7%</div>
+            </div>
+            <div class="kpi">
+                <div class="number" style="color:var(--accent-cyan)" data-target="5718">0</div>
+                <div class="label">MCP 引用</div>
+                <div class="sublabel">横跨 422 个文件</div>
+            </div>
+            <div class="kpi">
+                <div class="number" style="color:var(--accent-pink)" data-target="80">0</div>
+                <div class="label">Prompt 文件</div>
+                <div class="sublabel">537 个文件含 prompt 代码</div>
+            </div>
+            <div class="kpi">
+                <div class="number" style="color:var(--accent-blue)" data-target="94">0</div>
+                <div class="label">自定义 Hook</div>
+                <div class="sublabel">React Hook 模式</div>
+            </div>
+        </div>
+
+        <!-- Highlight Discoveries -->
+        <div class="highlight-strip">
+            <div class="highlight-chip">
+                <span class="chip-icon">&#128274;</span>
+                <span class="chip-value">32.7%</span>
+                <span class="chip-label">文件含安全逻辑</span>
+            </div>
+            <div class="highlight-chip">
+                <span class="chip-icon">&#9889;</span>
+                <span class="chip-value">2,345</span>
+                <span class="chip-label">异步函数</span>
+            </div>
+            <div class="highlight-chip">
+                <span class="chip-icon">&#128230;</span>
+                <span class="chip-value">93</span>
+                <span class="chip-label">生产依赖</span>
+            </div>
+            <div class="highlight-chip">
+                <span class="chip-icon">&#128203;</span>
+                <span class="chip-value">2,363</span>
+                <span class="chip-label">type 定义 (0 enum)</span>
+            </div>
+            <div class="highlight-chip">
+                <span class="chip-icon">&#128196;</span>
+                <span class="chip-value">16,029</span>
+                <span class="chip-label">import 语句</span>
+            </div>
+            <div class="highlight-chip">
+                <span class="chip-icon">&#128172;</span>
+                <span class="chip-value">52,483</span>
+                <span class="chip-label">注释行 (10.2%)</span>
+            </div>
+            <div class="highlight-chip">
+                <span class="chip-icon">&#127919;</span>
+                <span class="chip-value">0</span>
+                <span class="chip-label">测试文件 (构建剥离)</span>
+            </div>
+            <div class="highlight-chip">
+                <span class="chip-icon">&#128187;</span>
+                <span class="chip-value">394</span>
+                <span class="chip-label">React 组件</span>
+            </div>
+        </div>
+
+        <!-- Row 1: Module Distribution + File Types -->
+        <div class="section">
+            <div class="section-title">模块规模分布 (Top 15 子系统)</div>
+            <div class="grid-2">
+                <div class="card">
+                    <h3>按代码行数 (LOC)</h3>
+                    <div id="module-bars"></div>
+                </div>
+                <div class="card">
+                    <h3>按文件数</h3>
+                    <div id="file-bars"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 2: Top 20 Files + Dependencies -->
+        <div class="section">
+            <div class="section-title">代码热力图</div>
+            <div class="grid-2">
+                <div class="card">
+                    <h3>Top 15 最大文件</h3>
+                    <div id="top-files"></div>
+                </div>
+                <div class="card">
+                    <h3>依赖生态</h3>
+                    <div id="deps-chart"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 3: Tools + Commands + Skills -->
+        <div class="section">
+            <div class="section-title">工具 / 命令 / 技能 三维全景</div>
+            <div class="grid-3">
+                <div class="card">
+                    <h3>40 个 AI 工具分类</h3>
+                    <div id="tools-grid"></div>
+                </div>
+                <div class="card">
+                    <h3>98 个斜杠命令</h3>
+                    <div id="commands-cloud"></div>
+                </div>
+                <div class="card">
+                    <h3>17 个内置技能</h3>
+                    <div id="skills-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 4: Security + Prompts + Async -->
+        <div class="section">
+            <div class="section-title">安全 / Prompt / 异步 深度指标</div>
+            <div class="grid-3">
+                <div class="card">
+                    <h3>安全密度</h3>
+                    <div class="stat-grid" id="security-stats"></div>
+                </div>
+                <div class="card">
+                    <h3>Prompt 分布</h3>
+                    <div class="stat-grid" id="prompt-stats"></div>
+                </div>
+                <div class="card">
+                    <h3>异步 / 并发</h3>
+                    <div class="stat-grid" id="async-stats"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 5: Code Quality -->
+        <div class="section">
+            <div class="section-title">代码质量画像</div>
+            <div class="grid-3">
+                <div class="card">
+                    <h3>类型系统</h3>
+                    <div class="stat-grid" id="type-stats"></div>
+                </div>
+                <div class="card">
+                    <h3>错误处理</h3>
+                    <div class="stat-grid" id="error-stats"></div>
+                </div>
+                <div class="card">
+                    <h3>utils/ 子系统拆解 (Top 10)</h3>
+                    <div id="utils-bars"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 6: Services -->
+        <div class="section">
+            <div class="section-title">20 个后端服务</div>
+            <div class="card">
+                <div id="services-table"></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            Claude Code 2.1.88 源码全量统计 | 扫描方法: find + wc + grep 穷举式扫描 | 数据截止: 2026-04-05<br>
+            本仪表盘为《Claude Code 源码深度研究白皮书》配套可视化 | 所有数字均为实际计数，非估算
+        </div>
+    </div>
+
+    <script>
+    // ============================================================
+    // DATA (from cc-source-stats-report.md — actual scan results)
+    // ============================================================
+    const DATA = {
+        version: "2.1.88",
+        scanDate: "2026-04-05",
+        global: { totalFiles: 1902, totalLOC: 512695, effectiveLOC: 476875, blankLines: 35799, totalDirs: 301, maxDepth: 6, topModules: 35 },
+        modules: [
+            { name: "utils", files: 564, loc: 180472, color: "#58a6ff" },
+            { name: "components", files: 389, loc: 81546, color: "#3fb950" },
+            { name: "services", files: 130, loc: 53680, color: "#d29922" },
+            { name: "tools", files: 184, loc: 50828, color: "#a371f7" },
+            { name: "commands", files: 207, loc: 26449, color: "#f85149" },
+            { name: "hooks", files: 104, loc: 19204, color: "#39d2c0" },
+            { name: "ink", files: 96, loc: 19842, color: "#f778ba" },
+            { name: "bridge", files: 31, loc: 12613, color: "#58a6ff" },
+            { name: "cli", files: 19, loc: 12353, color: "#3fb950" },
+            { name: "screens", files: 3, loc: 5977, color: "#d29922" },
+            { name: "skills", files: 20, loc: 4066, color: "#a371f7" },
+            { name: "native-ts", files: 4, loc: 4081, color: "#f85149" },
+            { name: "types", files: 11, loc: 3446, color: "#39d2c0" },
+            { name: "tasks", files: 12, loc: 3286, color: "#f778ba" },
+            { name: "keybindings", files: 14, loc: 3159, color: "#58a6ff" }
+        ],
+        topFiles: [
+            { name: "cli/print.ts", loc: 5594, module: "CLI" },
+            { name: "utils/messages.ts", loc: 5512, module: "Utils" },
+            { name: "utils/sessionStorage.ts", loc: 5105, module: "Utils" },
+            { name: "utils/hooks.ts", loc: 5022, module: "Utils" },
+            { name: "screens/REPL.tsx", loc: 5005, module: "Screens" },
+            { name: "main.tsx", loc: 4684, module: "Root" },
+            { name: "utils/bash/bashParser.ts", loc: 4436, module: "Bash" },
+            { name: "utils/attachments.ts", loc: 3997, module: "Utils" },
+            { name: "services/api/claude.ts", loc: 3419, module: "API" },
+            { name: "services/mcp/client.ts", loc: 3348, module: "MCP" },
+            { name: "utils/plugins/pluginLoader.ts", loc: 3302, module: "Plugins" },
+            { name: "commands/insights.ts", loc: 3200, module: "Commands" },
+            { name: "bridge/bridgeMain.ts", loc: 2999, module: "Bridge" },
+            { name: "utils/bash/ast.ts", loc: 2679, module: "Bash" },
+            { name: "utils/plugins/marketplaceManager.ts", loc: 2643, module: "Plugins" }
+        ],
+        tools: [
+            { name: "AgentTool", cat: "Agent" }, { name: "AskUserQuestion", cat: "UX" },
+            { name: "BashTool", cat: "Exec" }, { name: "BriefTool", cat: "UX" },
+            { name: "ConfigTool", cat: "Config" }, { name: "EnterPlanMode", cat: "Plan" },
+            { name: "EnterWorktree", cat: "Git" }, { name: "ExitPlanMode", cat: "Plan" },
+            { name: "ExitWorktree", cat: "Git" }, { name: "FileEditTool", cat: "File" },
+            { name: "FileReadTool", cat: "File" }, { name: "FileWriteTool", cat: "File" },
+            { name: "GlobTool", cat: "Search" }, { name: "GrepTool", cat: "Search" },
+            { name: "ListMcpResources", cat: "MCP" }, { name: "LSPTool", cat: "LSP" },
+            { name: "McpAuthTool", cat: "MCP" }, { name: "MCPTool", cat: "MCP" },
+            { name: "NotebookEdit", cat: "File" }, { name: "PowerShellTool", cat: "Exec" },
+            { name: "ReadMcpResource", cat: "MCP" }, { name: "RemoteTrigger", cat: "Remote" },
+            { name: "REPLTool", cat: "Exec" }, { name: "ScheduleCron", cat: "Cron" },
+            { name: "SendMessage", cat: "Agent" }, { name: "SkillTool", cat: "Skill" },
+            { name: "SleepTool", cat: "Util" }, { name: "SyntheticOutput", cat: "UX" },
+            { name: "TaskCreate", cat: "Task" }, { name: "TaskGet", cat: "Task" },
+            { name: "TaskList", cat: "Task" }, { name: "TaskOutput", cat: "Task" },
+            { name: "TaskStop", cat: "Task" }, { name: "TaskUpdate", cat: "Task" },
+            { name: "TeamCreate", cat: "Team" }, { name: "TeamDelete", cat: "Team" },
+            { name: "TodoWrite", cat: "Task" }, { name: "ToolSearch", cat: "Search" },
+            { name: "WebFetchTool", cat: "Web" }, { name: "WebSearchTool", cat: "Web" }
+        ],
+        commands: ["remote-setup","ide","vim","sandbox-toggle","perf-issue","btw","upgrade","install-github-app","stickers","tasks","compact","branch","context","autofix-pr","memory","keybindings","add-dir","config","plan","effort","bridge","color","resume","doctor","cost","passes","plugin","output-style","break-cache","fast","teleport","terminalSetup","agents","desktop","diff","logout","usage","rewind","mcp","status","backfill-sessions","remote-env","release-notes","permissions","ctx_viz","reload-plugins","feedback","extra-usage","env","clear","reset-limits","install-slack-app","voice","theme","mobile","issue","hooks","review","chrome","model","rate-limit-options","files","exit","thinkback-play","copy","rename","skills","ant-trace","heapdump","thinkback","export","privacy-settings","mock-limits","good-claude","tag","oauth-refresh","login","bughunter","stats","pr_comments","onboarding","summary","help","share","debug-tool-call","session","advisor","commit","commit-push-pr","init","insights","security-review","version"],
+        skills: ["batch","claudeApi","claudeApiContent","claudeInChrome","debug","keybindings","loop","loremIpsum","remember","scheduleRemoteAgents","simplify","skillify","stuck","updateConfig","verify","verifyContent"],
+        services: [
+            { name: "AgentSummary", desc: "Agent 摘要" },
+            { name: "analytics", desc: "分析追踪" },
+            { name: "api", desc: "API 客户端 (claude.ts 3,419行)" },
+            { name: "autoDream", desc: "自动做梦/灵感" },
+            { name: "compact", desc: "上下文压缩" },
+            { name: "extractMemories", desc: "记忆提取" },
+            { name: "lsp", desc: "语言服务器协议" },
+            { name: "MagicDocs", desc: "魔法文档" },
+            { name: "mcp", desc: "MCP 协议 (client.ts 3,348行)" },
+            { name: "oauth", desc: "OAuth 认证" },
+            { name: "plugins", desc: "插件服务" },
+            { name: "policyLimits", desc: "策略限制" },
+            { name: "PromptSuggestion", desc: "Prompt 建议" },
+            { name: "remoteManagedSettings", desc: "远程设置" },
+            { name: "SessionMemory", desc: "会话记忆" },
+            { name: "settingsSync", desc: "设置同步" },
+            { name: "teamMemorySync", desc: "团队记忆同步" },
+            { name: "tips", desc: "提示系统" },
+            { name: "tools", desc: "工具服务" },
+            { name: "toolUseSummary", desc: "工具使用摘要" }
+        ],
+        utilsSubs: [
+            { name: "plugins", files: 44, loc: 20521 },
+            { name: "bash", files: 23, loc: 12306 },
+            { name: "permissions", files: 24, loc: 9409 },
+            { name: "swarm", files: 22, loc: 7548 },
+            { name: "settings", files: 19, loc: 4562 },
+            { name: "telemetry", files: 9, loc: 4044 },
+            { name: "hooks", files: 17, loc: 3721 },
+            { name: "shell", files: 10, loc: 3069 },
+            { name: "nativeInstaller", files: 5, loc: 3018 },
+            { name: "model", files: 16, loc: 2710 }
+        ],
+        deps: {
+            production: 93, dev: 1, total: 94,
+            anthropic: 7, aws: 5, otel: 18, react: 8, parsing: 8, security: 2, network: 4
+        }
+    };
+
+    // ============================================================
+    // RENDER FUNCTIONS
+    // ============================================================
+
+    function animateCounters() {
+        document.querySelectorAll('.kpi .number').forEach(el => {
+            const target = parseInt(el.dataset.target);
+            const duration = 2000;
+            const start = performance.now();
+            function update(now) {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(target * eased).toLocaleString();
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        });
+    }
+
+    function renderBars(containerId, data, maxVal, labelKey, valueKey, colorKey) {
+        const container = document.getElementById(containerId);
+        data.forEach(item => {
+            const pct = (item[valueKey] / maxVal) * 100;
+            const row = document.createElement('div');
+            row.className = 'bar-row';
+            row.innerHTML = `
+                <div class="bar-label" title="${item[labelKey]}">${item[labelKey]}</div>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:0;background:${item[colorKey] || 'var(--accent-blue)'}" data-value="${item[valueKey].toLocaleString()}"></div>
+                </div>
+                <div class="bar-value">${item[valueKey].toLocaleString()}</div>
+            `;
+            container.appendChild(row);
+        });
+        // Animate
+        setTimeout(() => {
+            container.querySelectorAll('.bar-fill').forEach((bar, i) => {
+                const pct = (data[i][valueKey] / maxVal) * 100;
+                bar.style.width = Math.max(pct, 3) + '%';
+            });
+        }, 100);
+    }
+
+    function renderStatGrid(containerId, items) {
+        const container = document.getElementById(containerId);
+        items.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'stat-item';
+            div.innerHTML = `
+                <div class="stat-num" style="color:${item.color || 'var(--text-primary)'}">${item.value.toLocaleString()}</div>
+                <div class="stat-label">${item.label}</div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function renderToolsGrid() {
+        const container = document.getElementById('tools-grid');
+        const catColors = { Agent: '#a371f7', UX: '#3fb950', Exec: '#f85149', Config: '#d29922', Plan: '#58a6ff', Git: '#39d2c0', File: '#f778ba', Search: '#58a6ff', MCP: '#d29922', LSP: '#a371f7', Remote: '#f85149', Cron: '#3fb950', Skill: '#39d2c0', Util: '#8b949e', Task: '#f778ba', Team: '#58a6ff', Web: '#d29922' };
+        const tagCloud = document.createElement('div');
+        tagCloud.className = 'tag-cloud';
+        DATA.tools.forEach(t => {
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            const c = catColors[t.cat] || '#8b949e';
+            tag.style.borderColor = c;
+            tag.style.color = c;
+            tag.style.background = c + '10';
+            tag.textContent = t.name;
+            tag.title = `Category: ${t.cat}`;
+            tagCloud.appendChild(tag);
+        });
+        container.appendChild(tagCloud);
+    }
+
+    function renderCommandsCloud() {
+        const container = document.getElementById('commands-cloud');
+        const cloud = document.createElement('div');
+        cloud.className = 'tag-cloud';
+        const colors = ['#58a6ff','#3fb950','#d29922','#a371f7','#f85149','#39d2c0','#f778ba'];
+        DATA.commands.forEach((cmd, i) => {
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            const c = colors[i % colors.length];
+            tag.style.borderColor = c + '60';
+            tag.style.color = c;
+            tag.style.background = c + '08';
+            tag.textContent = '/' + cmd;
+            cloud.appendChild(tag);
+        });
+        container.appendChild(cloud);
+    }
+
+    function renderSkillsList() {
+        const container = document.getElementById('skills-list');
+        const cloud = document.createElement('div');
+        cloud.className = 'tag-cloud';
+        DATA.skills.forEach(skill => {
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.style.borderColor = 'var(--accent-cyan)';
+            tag.style.color = 'var(--accent-cyan)';
+            tag.style.background = 'rgba(57,210,192,0.08)';
+            tag.style.fontSize = '13px';
+            tag.style.padding = '6px 14px';
+            tag.textContent = skill;
+            cloud.appendChild(tag);
+        });
+        container.appendChild(cloud);
+    }
+
+    function renderServicesTable() {
+        const container = document.getElementById('services-table');
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        table.innerHTML = `
+            <thead><tr><th>#</th><th>服务名称</th><th>说明</th></tr></thead>
+            <tbody>${DATA.services.map((s, i) => `<tr><td class="num">${i + 1}</td><td><code>${s.name}</code></td><td>${s.desc}</td></tr>`).join('')}</tbody>
+        `;
+        container.appendChild(table);
+    }
+
+    function renderDepsChart() {
+        const container = document.getElementById('deps-chart');
+        const items = [
+            { label: "OpenTelemetry", value: DATA.deps.otel, color: "#58a6ff" },
+            { label: "React/UI", value: DATA.deps.react, color: "#3fb950" },
+            { label: "解析/处理", value: DATA.deps.parsing, color: "#d29922" },
+            { label: "Anthropic SDK", value: DATA.deps.anthropic, color: "#a371f7" },
+            { label: "AWS SDK", value: DATA.deps.aws, color: "#f85149" },
+            { label: "网络", value: DATA.deps.network, color: "#39d2c0" },
+            { label: "安全", value: DATA.deps.security, color: "#f778ba" },
+        ];
+        renderBars('deps-chart', items, 20, 'label', 'value', 'color');
+        // Add total
+        const total = document.createElement('div');
+        total.style.cssText = 'text-align:center;margin-top:16px;padding:8px;background:var(--bg-elevated);border-radius:8px;font-family:JetBrains Mono,monospace;font-size:13px;';
+        total.innerHTML = `生产依赖 <span style="color:var(--accent-green);font-weight:700">${DATA.deps.production}</span> 个 + 开发依赖 <span style="color:var(--accent-orange);font-weight:700">${DATA.deps.dev}</span> 个 = <span style="color:var(--accent-blue);font-weight:700">${DATA.deps.total}</span> 个`;
+        container.appendChild(total);
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        animateCounters();
+
+        // Module bars by LOC
+        renderBars('module-bars', DATA.modules, DATA.modules[0].loc, 'name', 'loc', 'color');
+
+        // Module bars by files
+        const byFiles = [...DATA.modules].sort((a, b) => b.files - a.files);
+        renderBars('file-bars', byFiles, byFiles[0].files, 'name', 'files', 'color');
+
+        // Top files
+        const fileColors = ['#f85149','#f85149','#d29922','#d29922','#d29922','#58a6ff','#a371f7','#58a6ff','#3fb950','#39d2c0','#a371f7','#f778ba','#58a6ff','#a371f7','#a371f7'];
+        renderBars('top-files', DATA.topFiles.map((f, i) => ({...f, color: fileColors[i]})), DATA.topFiles[0].loc, 'name', 'loc', 'color');
+
+        // Deps
+        renderDepsChart();
+
+        // Tools grid
+        renderToolsGrid();
+
+        // Commands cloud
+        renderCommandsCloud();
+
+        // Skills
+        renderSkillsList();
+
+        // Security stats
+        renderStatGrid('security-stats', [
+            { value: 4709, label: '安全关键词', color: 'var(--accent-red)' },
+            { value: 621, label: '安全文件 (32.7%)', color: 'var(--accent-red)' },
+            { value: 5160, label: '权限关键词', color: 'var(--accent-orange)' },
+            { value: 626, label: '权限文件 (32.9%)', color: 'var(--accent-orange)' },
+            { value: 9409, label: '权限系统 LOC', color: 'var(--accent-purple)' },
+            { value: 5213, label: 'BashTool 安全 LOC', color: 'var(--accent-pink)' }
+        ]);
+
+        // Prompt stats
+        renderStatGrid('prompt-stats', [
+            { value: 80, label: 'prompt 文件', color: 'var(--accent-cyan)' },
+            { value: 537, label: '含 prompt 代码的文件', color: 'var(--accent-blue)' },
+            { value: 559, label: 'systemPrompt 出现', color: 'var(--accent-green)' },
+            { value: 36, label: '工具级 prompt.ts', color: 'var(--accent-purple)' },
+            { value: 74, label: 'getSystemPrompt 引用', color: 'var(--accent-orange)' },
+            { value: 111, label: 'systemPrompt 文件', color: 'var(--accent-pink)' }
+        ]);
+
+        // Async stats
+        renderStatGrid('async-stats', [
+            { value: 2345, label: '异步函数', color: 'var(--accent-blue)' },
+            { value: 5469, label: 'await 表达式', color: 'var(--accent-green)' },
+            { value: 2529, label: 'Promise<T>', color: 'var(--accent-purple)' },
+            { value: 1736, label: 'async function', color: 'var(--accent-orange)' },
+            { value: 609, label: 'async 箭头', color: 'var(--accent-cyan)' },
+            { value: 16029, label: 'import 语句', color: 'var(--accent-pink)' }
+        ]);
+
+        // Type stats
+        renderStatGrid('type-stats', [
+            { value: 2363, label: 'type 定义', color: 'var(--accent-blue)' },
+            { value: 83, label: 'interface 定义', color: 'var(--accent-green)' },
+            { value: 0, label: 'enum (不使用)', color: 'var(--text-dim)' },
+            { value: 1666, label: 'Zod schema', color: 'var(--accent-purple)' },
+            { value: 130, label: 'Zod 文件', color: 'var(--accent-orange)' },
+            { value: 1, label: 'const enum', color: 'var(--text-dim)' }
+        ]);
+
+        // Error stats
+        renderStatGrid('error-stats', [
+            { value: 1931, label: 'try 块', color: 'var(--accent-orange)' },
+            { value: 1425, label: 'catch 块', color: 'var(--accent-red)' },
+            { value: 683, label: 'throw new', color: 'var(--accent-pink)' },
+            { value: 44294, label: '// 注释', color: 'var(--text-secondary)' },
+            { value: 7704, label: 'JSDoc', color: 'var(--accent-green)' },
+            { value: 138, label: 'TODO', color: 'var(--accent-cyan)' }
+        ]);
+
+        // Utils bars
+        const utilsColors = ['#58a6ff','#f85149','#a371f7','#3fb950','#d29922','#39d2c0','#f778ba','#58a6ff','#3fb950','#d29922'];
+        renderBars('utils-bars', DATA.utilsSubs.map((u, i) => ({...u, color: utilsColors[i]})), DATA.utilsSubs[0].loc, 'name', 'loc', 'color');
+
+        // Services table
+        renderServicesTable();
+    });
+    </script>
+</body>
+</html>

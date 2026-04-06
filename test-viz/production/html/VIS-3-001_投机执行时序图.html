@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>投机执行时序图 - Speculative Execution Sequence</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+:root {
+  --bg-primary: #0f0f1a;
+  --bg-secondary: #1a1a2e;
+  --user-color: #ff9f43;
+  --agent-color: #00d4ff;
+  --suggestion-color: #7b61ff;
+  --speculation-color: #00d4ff;
+  --overlay-color: #48bb78;
+  --accept-color: #48bb78;
+  --reject-color: #ff6b6b;
+  --pipeline-color: #ffd93d;
+  --text-primary: #e8e8f0;
+  --text-secondary: #a0a0b8;
+  --grid-line: rgba(255,255,255,0.05);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+  background: var(--bg-primary);
+  background-image: 
+    radial-gradient(ellipse at 20% 30%, rgba(0,212,255,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(123,97,255,0.06) 0%, transparent 50%),
+    linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  min-height: 100vh;
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 50px;
+  position: relative;
+}
+
+header::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--agent-color), transparent);
+  opacity: 0.3;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--text-primary), var(--agent-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+  padding: 0 20px;
+  position: relative;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.diagram-container {
+  position: relative;
+  background: rgba(26,26,46,0.6);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.diagram-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(0deg, var(--grid-line) 0px, var(--grid-line) 1px, transparent 1px, transparent 60px),
+    repeating-linear-gradient(90deg, var(--grid-line) 0px, var(--grid-line) 1px, transparent 1px, transparent 100px);
+  pointer-events: none;
+}
+
+#sequence-diagram {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  background: rgba(15,15,26,0.95);
+  border: 1px solid var(--agent-color);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 12px;
+  max-width: 280px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 100;
+  box-shadow: 0 8px 32px rgba(0,212,255,0.2);
+}
+
+.tooltip.show {
+  opacity: 1;
+}
+
+.tooltip-title {
+  color: var(--agent-color);
+  font-weight: 700;
+  margin-bottom: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tooltip-content {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Legend */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 30px;
+  padding: 20px;
+  background: rgba(15,15,26,0.5);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.legend-color {
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.legend-color.user { background: var(--user-color); }
+.legend-color.agent { background: var(--agent-color); }
+.legend-color.suggestion { background: var(--suggestion-color); }
+.legend-color.speculation { background: var(--speculation-color); }
+.legend-color.overlay { background: var(--overlay-color); }
+.legend-color.accept { background: var(--accept-color); }
+.legend-color.reject { background: var(--reject-color); }
+.legend-color.pipeline { background: var(--pipeline-color); }
+
+/* Animations */
+@keyframes flowDot {
+  0% { offset-distance: 0%; }
+  100% { offset-distance: 100%; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes glow {
+  0%, 100% { filter: drop-shadow(0 0 2px currentColor); }
+  50% { filter: drop-shadow(0 0 6px currentColor); }
+}
+
+.flow-particle {
+  animation: flowDot 2s linear infinite;
+}
+
+.pulse-element {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.glow-text {
+  animation: glow 2s ease-in-out infinite;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>投机执行时序图 / Speculative Execution Timeline</h1>
+    <div class="subtitle">"AI在你还没打字时就已经开始干活了"</div>
+  </header>
+  
+  <div class="diagram-container">
+    <svg id="sequence-diagram" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <!-- Gradients -->
+        <linearGradient id="grad-user" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#ff9f43"/>
+          <stop offset="100%" stop-color="#ff6b35"/>
+        </linearGradient>
+        <linearGradient id="grad-agent" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#00d4ff"/>
+          <stop offset="100%" stop-color="#0099cc"/>
+        </linearGradient>
+        <linearGradient id="grad-suggestion" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#7b61ff"/>
+          <stop offset="100%" stop-color="#5a4fcf"/>
+        </linearGradient>
+        <linearGradient id="grad-overlay" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#48bb78"/>
+          <stop offset="100%" stop-color="#38a169"/>
+        </linearGradient>
+        <linearGradient id="grad-pipeline" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#ffd93d"/>
+          <stop offset="100%" stop-color="#ffb800"/>
+        </linearGradient>
+        
+        <!-- Markers -->
+        <marker id="arrow-agent" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#00d4ff"/>
+        </marker>
+        <marker id="arrow-suggestion" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#7b61ff"/>
+        </marker>
+        <marker id="arrow-speculation" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#00d4ff"/>
+        </marker>
+        <marker id="arrow-overlay" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#48bb78"/>
+        </marker>
+        <marker id="arrow-accept" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#48bb78"/>
+        </marker>
+        <marker id="arrow-reject" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#ff6b6b"/>
+        </marker>
+        <marker id="arrow-pipeline" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#ffd93d"/>
+        </marker>
+        <marker id="arrow-user" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" fill="#ff9f43"/>
+        </marker>
+        
+        <!-- Filters -->
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      
+      <!-- Background Overlay Region -->
+      <rect x="380" y="320" width="780" height="320" fill="rgba(0,212,255,0.06)" stroke="none"/>
+      <text x="870" y="340" fill="rgba(0,212,255,0.5)" font-size="11" font-style="italic">隔离执行环境 / Isolated Overlay Environment</text>
+      
+      <!-- Lifelines -->
+      <!-- User -->
+      <line x1="120" y1="100" x2="120" y2="820" stroke="rgba(255,159,67,0.3)" stroke-width="2" stroke-dasharray="8,4"/>
+      <!-- Main Agent -->
+      <line x1="340" y1="100" x2="340" y2="820" stroke="rgba(0,212,255,0.3)" stroke-width="2" stroke-dasharray="8,4"/>
+      <!-- Prompt Suggestion -->
+      <line x1="560" y1="100" x2="560" y2="820" stroke="rgba(123,97,255,0.3)" stroke-width="2" stroke-dasharray="8,4"/>
+      <!-- Speculation Engine -->
+      <line x1="780" y1="100" x2="780" y2="820" stroke="rgba(0,212,255,0.3)" stroke-width="2" stroke-dasharray="8,4"/>
+      <!-- COW Overlay -->
+      <line x1="1000" y1="100" x2="1000" y2="820" stroke="rgba(72,187,120,0.3)" stroke-width="2" stroke-dasharray="8,4"/>
+      
+      <!-- Participants -->
+      <!-- User -->
+      <rect x="60" y="50" width="120" height="40" rx="8" fill="url(#grad-user)" filter="url(#glow)"/>
+      <text x="120" y="75" text-anchor="middle" fill="#1a1a2e" font-size="13" font-weight="700">用户 / User</text>
+      
+      <!-- Main Agent -->
+      <rect x="280" y="50" width="120" height="40" rx="8" fill="url(#grad-agent)" filter="url(#glow)"/>
+      <text x="340" y="75" text-anchor="middle" fill="#1a1a2e" font-size="13" font-weight="700">主Agent</text>
+      
+      <!-- Prompt Suggestion -->
+      <rect x="500" y="50" width="120" height="40" rx="8" fill="url(#grad-suggestion)" filter="url(#glow)"/>
+      <text x="560" y="70" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">Prompt</text>
+      <text x="560" y="82" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">Suggestion</text>
+      
+      <!-- Speculation Engine -->
+      <rect x="720" y="50" width="120" height="40" rx="8" fill="url(#grad-agent)" filter="url(#glow)"/>
+      <text x="780" y="70" text-anchor="middle" fill="#1a1a2e" font-size="11" font-weight="700">Speculation</text>
+      <text x="780" y="82" text-anchor="middle" fill="#1a1a2e" font-size="11" font-weight="700">Engine</text>
+      
+      <!-- COW Overlay -->
+      <rect x="940" y="50" width="120" height="40" rx="8" fill="url(#grad-overlay)" filter="url(#glow)"/>
+      <text x="1000" y="70" text-anchor="middle" fill="#1a1a2e" font-size="11" font-weight="700">COW Overlay</text>
+      <text x="1000" y="82" text-anchor="middle" fill="#1a1a2e" font-size="10">文件系统</text>
+      
+      <!-- Messages -->
+      
+      <!-- 1. AI Response Complete -->
+      <line x1="340" y1="130" x2="560" y2="130" stroke="#00d4ff" stroke-width="2" marker-end="url(#arrow-agent)" class="message-line" data-tooltip="AI响应完成后触发建议生成"/>
+      <rect x="400" y="118" width="100" height="20" fill="rgba(0,212,255,0.1)" rx="4"/>
+      <text x="450" y="132" text-anchor="middle" fill="#00d4ff" font-size="10">executePromptSuggestion()</text>
+      
+      <!-- 2. Six-layer Check -->
+      <line x1="560" y1="160" x2="560" y2="180" stroke="#7b61ff" stroke-width="2" stroke-dasharray="4,2"/>
+      <rect x="480" y="165" width="160" height="40" fill="rgba(123,97,255,0.1)" stroke="#7b61ff" stroke-width="1" stroke-dasharray="4,2" rx="4"/>
+      <text x="560" y="180" text-anchor="middle" fill="#7b61ff" font-size="9">六层启用检查</text>
+      <text x="560" y="192" text-anchor="middle" fill="#a0a0b8" font-size="8">env → GrowthBook → 交互 → Swarm → settings → 分析</text>
+      
+      <!-- 3. Suppression Check -->
+      <rect x="480" y="215" width="160" height="30" fill="rgba(255,107,107,0.1)" stroke="#ff6b6b" stroke-width="1" stroke-dasharray="4,2" rx="4"/>
+      <text x="560" y="228" text-anchor="middle" fill="#ff6b6b" font-size="8">抑制条件检查: disabled/pending_permission/</text>
+      <text x="560" y="238" text-anchor="middle" fill="#ff6b6b" font-size="8">elicitation/plan_mode/rate_limit</text>
+      
+      <!-- 4. tryGenerateSuggestion -->
+      <line x1="560" y1="260" x2="560" y2="280" stroke="#7b61ff" stroke-width="2"/>
+      <rect x="480" y="265" width="160" height="18" fill="rgba(123,97,255,0.15)" rx="4"/>
+      <text x="560" y="277" text-anchor="middle" fill="#7b61ff" font-size="10" font-weight="600">tryGenerateSuggestion()</text>
+      
+      <!-- CacheSafeParams Box -->
+      <rect x="590" y="295" width="150" height="55" fill="rgba(123,97,255,0.08)" stroke="#7b61ff" stroke-width="1.5" stroke-dasharray="5,3" rx="6"/>
+      <text x="665" y="312" text-anchor="middle" fill="#7b61ff" font-size="11" font-weight="700">CacheSafeParams</text>
+      <text x="665" y="328" text-anchor="middle" fill="#a0a0b8" font-size="8">system prompt / tools / model</text>
+      <text x="665" y="340" text-anchor="middle" fill="#a0a0b8" font-size="8">messages前缀不可变 → 92.7%缓存命中</text>
+      
+      <!-- 5. Cache Suppression Check -->
+      <rect x="590" y="360" width="150" height="22" fill="rgba(255,159,67,0.1)" stroke="#ff9f43" stroke-width="1" stroke-dasharray="3,2" rx="4"/>
+      <text x="665" y="375" text-anchor="middle" fill="#ff9f43" font-size="8">未缓存token > 10000则抑制</text>
+      
+      <!-- 6. Start Speculation -->
+      <line x1="560" y1="400" x2="780" y2="400" stroke="#00d4ff" stroke-width="2" marker-end="url(#arrow-speculation)"/>
+      <rect x="640" y="388" width="100" height="20" fill="rgba(0,212,255,0.1)" rx="4"/>
+      <text x="690" y="402" text-anchor="middle" fill="#00d4ff" font-size="10">startSpeculation()</text>
+      
+      <!-- 7. Create Overlay Directory -->
+      <line x1="780" y1="430" x2="1000" y2="430" stroke="#48bb78" stroke-width="2" marker-end="url(#arrow-overlay)"/>
+      <rect x="860" y="418" width="140" height="20" fill="rgba(72,187,120,0.1)" rx="4"/>
+      <text x="930" y="432" text-anchor="middle" fill="#48bb78" font-size="9">~/.claude/tmp/speculation/&lt;PID&gt;/&lt;UUID&gt;/</text>
+      
+      <!-- 8. Run Forked Agent -->
+      <line x1="780" y1="460" x2="1000" y2="460" stroke="#00d4ff" stroke-width="2" marker-end="url(#arrow-speculation)"/>
+      <rect x="850" y="448" width="140" height="20" fill="rgba(0,212,255,0.1)" rx="4"/>
+      <text x="920" y="462" text-anchor="middle" fill="#00d4ff" font-size="10">runForkedAgent() in overlay</text>
+      
+      <!-- 9. Agent Parameters -->
+      <rect x="850" y="480" width="140" height="28" fill="rgba(0,212,255,0.08)" stroke="#00d4ff" stroke-width="1" rx="4"/>
+      <text x="920" y="492" text-anchor="middle" fill="#a0a0b8" font-size="8">maxTurns=20, maxMessages=100</text>
+      <text x="920" y="502" text-anchor="middle" fill="#a0a0b8" font-size="8">timeout: 30s initial, 120s extended</text>
+      
+      <!-- 10. Tool Calls with Path Rewrite -->
+      <line x1="1000" y1="520" x2="1000" y2="540" stroke="#48bb78" stroke-width="2" stroke-dasharray="4,2"/>
+      <rect x="920" y="525" width="140" height="30" fill="rgba(72,187,120,0.1)" rx="4"/>
+      <text x="990" y="540" text-anchor="middle" fill="#48bb78" font-size="9">canUseTool() → 路径重写</text>
+      <text x="990" y="550" text-anchor="middle" fill="#a0a0b8" font-size="8">bash/read-only检查 / edit/acceptEdits检查</text>
+      
+      <!-- 11. Boundary Detection -->
+      <rect x="920" y="570" width="140" height="40" fill="rgba(255,107,107,0.1)" stroke="#ff6b6b" stroke-width="1" stroke-dasharray="4,2" rx="4"/>
+      <text x="990" y="585" text-anchor="middle" fill="#ff6b6b" font-size="9">边界检测 / Boundary</text>
+      <text x="990" y="595" text-anchor="middle" fill="#a0a0b8" font-size="7">bash(非只读) | edit(非acceptEdits)</text>
+      <text x="990" y="603" text-anchor="middle" fill="#a0a0b8" font-size="7">denied_tool | complete</text>
+      
+      <!-- User Decision Point -->
+      <ellipse cx="120" cy="640" rx="15" ry="25" fill="rgba(255,159,67,0.2)" stroke="#ff9f43" stroke-width="2"/>
+      <text x="120" y="645" text-anchor="middle" fill="#ff9f43" font-size="10" font-weight="700">?</text>
+      <text x="120" y="680" text-anchor="middle" fill="#ff9f43" font-size="10">用户决策点</text>
+      
+      <!-- ACCEPT Path (Green) -->
+      <path d="M 120 665 Q 200 665 280 665" stroke="#48bb78" stroke-width="2.5" fill="none" marker-end="url(#arrow-accept)"/>
+      <text x="200" y="658" text-anchor="middle" fill="#48bb78" font-size="10" font-weight="600">接受 / Accept</text>
+      
+      <!-- Accept to Main Agent -->
+      <line x1="340" y1="665" x2="560" y2="700" stroke="#48bb78" stroke-width="2" marker-end="url(#arrow-accept)"/>
+      <rect x="420" y="675" width="110" height="18" fill="rgba(72,187,120,0.1)" rx="4"/>
+      <text x="475" y="688" text-anchor="middle" fill="#48bb78" font-size="9">acceptSpeculation()</text>
+      
+      <!-- Copy Overlay to Main -->
+      <line x1="560" y1="700" x2="780" y2="700" stroke="#48bb78" stroke-width="2" marker-end="url(#arrow-accept)"/>
+      <rect x="640" y="688" width="120" height="18" fill="rgba(72,187,120,0.1)" rx="4"/>
+      <text x="700" y="701" text-anchor="middle" fill="#48bb78" font-size="9">copyOverlayToMain()</text>
+      
+      <!-- timeSavedMs Calculation -->
+      <circle cx="700" cy="725" r="12" fill="rgba(72,187,120,0.15)" stroke="#48bb78" stroke-width="1.5"/>
+      <text x="700" y="729" text-anchor="middle" fill="#48bb78" font-size="10">⏱</text>
+      <text x="700" y="750" text-anchor="middle" fill="#48bb78" font-size="9">timeSavedMs计算</text>
+      
+      <!-- REJECT Path (Red) -->
+      <path d="M 120 615 Q 200 615 280 580" stroke="#ff6b6b" stroke-width="2.5" fill="none" marker-end="url(#arrow-reject)"/>
+      <text x="200" y="605" text-anchor="middle" fill="#ff6b6b" font-size="10" font-weight="600">拒绝 / Reject</text>
+      <text x="200" y="615" text-anchor="middle" fill="#a0a0b8" font-size="8">或用户开始输入</text>
+      
+      <!-- Abort Speculation -->
+      <line x1="340" y1="580" x2="560" y2="550" stroke="#ff6b6b" stroke-width="2" marker-end="url(#arrow-reject)"/>
+      <rect x="420" y="555" width="110" height="18" fill="rgba(255,107,107,0.1)" rx="4"/>
+      <text x="475" y="568" text-anchor="middle" fill="#ff6b6b" font-size="9">abortSpeculation()</text>
+      
+      <!-- Terminate & Delete -->
+      <line x1="560" y1="550" x2="780" y2="520" stroke="#ff6b6b" stroke-width="2" marker-end="url(#arrow-reject)"/>
+      <line x1="780" y1="520" x2="1000" y2="520" stroke="#ff6b6b" stroke-width="2" marker-end="url(#arrow-reject)"/>
+      <rect x="850" y="508" width="140" height="30" fill="rgba(255,107,107,0.1)" rx="4"/>
+      <text x="920" y="522" text-anchor="middle" fill="#ff6b6b" font-size="9">terminateAgent() + 删除overlay</text>
+      <text x="920" y="532" text-anchor="middle" fill="#a0a0b8" font-size="8">状态重置为IDLE</text>
+      
+      <!-- Pipelined Prediction Chain -->
+      <rect x="720" y="770" width="280" height="45" fill="rgba(255,217,61,0.08)" stroke="#ffd93d" stroke-width="1.5" stroke-dasharray="6,3" rx="8"/>
+      <text x="860" y="790" text-anchor="middle" fill="#ffd93d" font-size="11" font-weight="700">管道化预测链 / Pipelined Prediction</text>
+      <text x="860" y="805" text-anchor="middle" fill="#a0a0b8" font-size="9">generatePipelinedSuggestion() → 预测下一步</text>
+      
+      <!-- Pipeline Arrow looping back -->
+      <path d="M 720 792 Q 600 792 560 750" stroke="#ffd93d" stroke-width="2" fill="none" stroke-dasharray="8,4" marker-end="url(#arrow-pipeline)"/>
+      <text x="630" y="785" text-anchor="middle" fill="#ffd93d" font-size="9" font-style="italic">循环继续...</text>
+      
+      <!-- Timeline markers -->
+      <text x="20" y="135" fill="#606080" font-size="10">T+0</text>
+      <text x="20" y="405" fill="#606080" font-size="10">T+1</text>
+      <text x="20" y="645" fill="#606080" font-size="10">T+2</text>
+      <text x="20" y="795" fill="#606080" font-size="10">T+3</text>
+      
+      <!-- Flow particles on main flow -->
+      <circle r="3" fill="#00d4ff" filter="url(#glow)">
+        <animateMotion dur="2s" repeatCount="indefinite" path="M 340 130 L 560 130"/>
+      </circle>
+      <circle r="3" fill="#7b61ff" filter="url(#glow)">
+        <animateMotion dur="2s" begin="0.5s" repeatCount="indefinite" path="M 560 400 L 780 400"/>
+      </circle>
+      <circle r="3" fill="#00d4ff" filter="url(#glow)">
+        <animateMotion dur="2s" begin="1s" repeatCount="indefinite" path="M 780 460 L 1000 460"/>
+      </circle>
+    </svg>
+    
+    <div class="tooltip" id="tooltip">
+      <div class="tooltip-title"></div>
+      <div class="tooltip-content"></div>
+    </div>
+  </div>
+  
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-color user"></div>
+      <span>用户 / User</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color agent"></div>
+      <span>主Agent / Main Agent</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color suggestion"></div>
+      <span>建议系统 / Prompt Suggestion</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color speculation"></div>
+      <span>投机引擎 / Speculation Engine</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color overlay"></div>
+      <span>Overlay文件系统 / COW Overlay</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color accept"></div>
+      <span>接受路径 / Accept Path</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color reject"></div>
+      <span>拒绝路径 / Reject Path</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color pipeline"></div>
+      <span>管道化预测 / Pipeline Chain</span>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const tooltip = document.getElementById('tooltip');
+  const messageLines = document.querySelectorAll('.message-line');
+  
+  const tooltipData = {
+    'executePromptSuggestion': {
+      title: 'AI响应完成触发',
+      content: '当AI完成响应后，系统自动调用executePromptSuggestion()开始分析用户可能的下一步操作。'
+    },
+    'tryGenerateSuggestion': {
+      title: '建议生成',
+      content: '经过六层启用检查和抑制条件验证后，系统生成prompt建议。CacheSafeParams确保与父请求共享prompt cache，实现92.7%的缓存命中率。'
+    },
+    'startSpeculation': {
+      title: '启动投机执行',
+      content: '在overlay文件系统中创建隔离环境，启动forked agent预执行预测的操作。maxTurns=20, maxMessages=100限制资源使用。'
+    },
+    'runForkedAgent': {
+      title: '分叉Agent运行',
+      content: '在COW(copy-on-write) overlay文件系统中运行隔离的agent实例。所有工具调用经过canUseTool()路径重写和边界检查。'
+    }
+  };
+  
+  messageLines.forEach(line => {
+    line.addEventListener('mouseenter', function(e) {
+      const key = this.getAttribute('data-tooltip');
+      const data = tooltipData[key];
+      if (data) {
+        tooltip.querySelector('.tooltip-title').textContent = data.title;
+        tooltip.querySelector('.tooltip-content').textContent = data.content;
+        tooltip.classList.add('show');
+      }
+    });
+    
+    line.addEventListener('mousemove', function(e) {
+      const rect = document.querySelector('.diagram-container').getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+      tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
+    });
+    
+    line.addEventListener('mouseleave', function() {
+      tooltip.classList.remove('show');
+    });
+  });
+});
+</script>
+</body>
+</html>

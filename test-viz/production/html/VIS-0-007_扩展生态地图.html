@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Extension Ecosystem Map | 扩展生态地图</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1117;
+  --bg-2:#161b22;
+  --mcp:#bc8cff;
+  --hooks:#f0883e;
+  --claude:#58a6ff;
+  --skills:#3fb950;
+  --cmd:#d29922;
+  --text:#e6edf3;
+  --text-dim:#8b949e;
+  --line:rgba(139,148,158,0.15);
+}
+*{
+  margin:0;padding:0;box-sizing:border-box;
+}
+html,body{
+  width:100%;height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:"Space Grotesk","Noto Serif SC",sans-serif;
+  overflow-x:hidden;
+}
+.bg-grid{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background-image:
+    radial-gradient(circle at 20% 30%,rgba(188,140,255,0.08) 0%,transparent 40%),
+    radial-gradient(circle at 80% 70%,rgba(88,166,255,0.06) 0%,transparent 45%),
+    radial-gradient(circle at 60% 20%,rgba(240,136,62,0.05) 0%,transparent 35%);
+}
+.bg-grid::before{
+  content:"";
+  position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z' fill='%238b949e' fill-opacity='0.03'/%3E%3C/g%3E%3C/svg%3E");
+  opacity:.6;
+}
+.container{
+  position:relative;
+  width:100%;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:clamp(1rem,3vw,3rem);
+}
+header{
+  text-align:center;
+  margin-bottom:clamp(1rem,2vw,2rem);
+  z-index:10;
+}
+header h1{
+  font-family:"Space Grotesk",sans-serif;
+  font-size:clamp(1.8rem,4vw,3.2rem);
+  font-weight:700;
+  letter-spacing:-0.02em;
+  background:linear-gradient(135deg,#fff 0%,var(--text-dim) 100%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  margin-bottom:.4rem;
+}
+header p{
+  font-family:"Noto Serif SC",serif;
+  font-size:clamp(.9rem,1.5vw,1.1rem);
+  color:var(--text-dim);
+  font-weight:400;
+}
+.map-wrapper{
+  position:relative;
+  width:100%;
+  max-width:1400px;
+  aspect-ratio:16/10;
+  z-index:5;
+}
+@media(max-width:900px){
+  .map-wrapper{
+    aspect-ratio:auto;
+    height:auto;
+  }
+}
+svg{
+  width:100%;
+  height:100%;
+  display:block;
+}
+@media(max-width:900px){
+  svg{display:none;}
+}
+.axis-label{
+  font-family:"JetBrains Mono",monospace;
+  font-size:11px;
+  fill:var(--text-dim);
+  text-transform:uppercase;
+  letter-spacing:0.12em;
+}
+.axis-title{
+  font-family:"Space Grotesk",sans-serif;
+  font-size:13px;
+  font-weight:600;
+  fill:var(--text-dim);
+}
+.region-shape{
+  stroke-width:1.5;
+  stroke-opacity:0.6;
+  fill-opacity:0.14;
+  transition:all .4s cubic-bezier(0.4,0,0.2,1);
+  cursor:pointer;
+  filter:url(#glow);
+}
+.region-shape:hover{
+  fill-opacity:0.28;
+  stroke-opacity:1;
+  filter:url(#glow-strong);
+}
+.region-label{
+  font-family:"Space Grotesk",sans-serif;
+  font-weight:700;
+  font-size:clamp(16px,1.8vw,26px);
+  fill:#fff;
+  pointer-events:none;
+  text-anchor:middle;
+  letter-spacing:-0.01em;
+}
+.region-sub{
+  font-family:"Noto Serif SC",serif;
+  font-size:clamp(10px,1vw,13px);
+  fill:var(--text-dim);
+  pointer-events:none;
+  text-anchor:middle;
+}
+.tag{
+  font-family:"JetBrains Mono",monospace;
+  font-size:clamp(8px,0.85vw,11px);
+  fill:var(--text);
+  pointer-events:none;
+  text-anchor:middle;
+  font-weight:500;
+}
+.combo-label{
+  font-family:"Noto Serif SC",serif;
+  font-size:clamp(9px,0.9vw,12px);
+  fill:#fff;
+  font-weight:600;
+  pointer-events:none;
+  text-anchor:middle;
+}
+.combo-desc{
+  font-family:"Space Grotesk",sans-serif;
+  font-size:clamp(7px,0.75vw,10px);
+  fill:var(--text-dim);
+  pointer-events:none;
+  text-anchor:middle;
+}
+.dashed-line{
+  stroke:var(--line);
+  stroke-width:1;
+  stroke-dasharray:4 4;
+  fill:none;
+}
+.guide-dot{
+  fill:var(--text-dim);
+  fill-opacity:0.4;
+}
+.info-panel{
+  position:absolute;
+  bottom:1rem;
+  right:1rem;
+  max-width:320px;
+  background:rgba(13,17,23,0.92);
+  border:1px solid rgba(139,148,158,0.2);
+  border-radius:12px;
+  padding:1.2rem;
+  backdrop-filter:blur(12px);
+  transform:translateY(10px);
+  opacity:0;
+  transition:all .3s ease;
+  pointer-events:none;
+}
+.info-panel.active{
+  opacity:1;
+  transform:translateY(0);
+}
+.info-panel h3{
+  font-family:"Space Grotesk",sans-serif;
+  font-size:1.1rem;
+  margin-bottom:.4rem;
+  color:#fff;
+}
+.info-panel p{
+  font-family:"Noto Serif SC",serif;
+  font-size:.85rem;
+  color:var(--text-dim);
+  line-height:1.6;
+}
+.legend{
+  position:absolute;
+  top:1rem;
+  right:1rem;
+  display:flex;
+  flex-direction:column;
+  gap:.5rem;
+}
+.legend-item{
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  font-size:12px;
+  color:var(--text-dim);
+  font-family:"JetBrains Mono",monospace;
+}
+.legend-dot{
+  width:8px;height:8px;border-radius:50%;
+}
+.mobile-cards{
+  display:none;
+}
+@media(max-width:900px){
+  .mobile-cards{
+    display:flex;
+    flex-direction:column;
+    gap:1rem;
+    width:100%;
+    max-width:600px;
+    margin-top:1rem;
+  }
+  .card{
+    background:var(--bg-2);
+    border:1px solid rgba(139,148,158,0.15);
+    border-radius:16px;
+    padding:1.5rem;
+    position:relative;
+    overflow:hidden;
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    top:0;left:0;right:0;height:3px;
+  }
+  .card-mcp::before{background:var(--mcp);}
+  .card-hooks::before{background:var(--hooks);}
+  .card-claude::before{background:var(--claude);}
+  .card-skills::before{background:var(--skills);}
+  .card-cmd::before{background:var(--cmd);}
+  .card h2{
+    font-family:"Space Grotesk",sans-serif;
+    font-size:1.3rem;
+    margin-bottom:.2rem;
+  }
+  .card h2 span{
+    font-family:"Noto Serif SC",serif;
+    font-size:.9rem;
+    color:var(--text-dim);
+    display:block;
+    font-weight:400;
+    margin-top:.1rem;
+  }
+  .card-tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.4rem;
+    margin:.8rem 0;
+  }
+  .card-tag{
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;
+    padding:.25rem .6rem;
+    border-radius:99px;
+    background:rgba(139,148,158,0.12);
+  }
+  .card p{
+    font-size:.85rem;
+    color:var(--text-dim);
+    line-height:1.6;
+    margin-bottom:.3rem;
+  }
+  .legend{display:none;}
+  .info-panel{display:none;}
+}
+@keyframes pulse{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.015);}
+}
+.region-group{
+  transform-origin:center;
+  animation:pulse 6s ease-in-out infinite;
+}
+.region-group:nth-child(1){animation-delay:0s;}
+.region-group:nth-child(2){animation-delay:1.2s;}
+.region-group:nth-child(3){animation-delay:2.4s;}
+.region-group:nth-child(4){animation-delay:3.6s;}
+.region-group:nth-child(5){animation-delay:4.8s;}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="container">
+  <header>
+    <h1>Extension Ecosystem Map</h1>
+    <p>Claude Code 扩展机制生态地图 · 不修改源码即可定制行为的完整扩展体系</p>
+  </header>
+  
+  <div class="map-wrapper">
+    <svg viewBox="0 0 1200 750" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+        </filter>
+        <filter id="glow-strong" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="8" result="blur"/>
+          <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+        </filter>
+        <linearGradient id="mcpGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#bc8cff" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#a371f7" stop-opacity="0.1"/>
+        </linearGradient>
+        <linearGradient id="hooksGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#f0883e" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#da3633" stop-opacity="0.1"/>
+        </linearGradient>
+        <linearGradient id="claudeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#58a6ff" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#388bfd" stop-opacity="0.1"/>
+        </linearGradient>
+        <linearGradient id="skillsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#3fb950" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#2ea043" stop-opacity="0.1"/>
+        </linearGradient>
+        <linearGradient id="cmdGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#d29922" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#bb8009" stop-opacity="0.1"/>
+        </linearGradient>
+      </defs>
+      
+      <!-- Axes -->
+      <line x1="80" y1="680" x2="1120" y2="680" class="dashed-line"/>
+      <line x1="100" y1="700" x2="100" y2="60" class="dashed-line"/>
+      <text x="600" y="725" class="axis-title" text-anchor="middle">Scope 范围 · 内部 → 外部</text>
+      <text x="40" y="380" class="axis-title" text-anchor="middle" transform="rotate(-90 40 380)">Complexity 复杂度 · 简单 → 复杂</text>
+      
+      <!-- Guide dots -->
+      <circle cx="100" cy="680" r="3" class="guide-dot"/>
+      <circle cx="1120" cy="680" r="3" class="guide-dot"/>
+      <circle cx="100" cy="60" r="3" class="guide-dot"/>
+      
+      <!-- CLAUDE.md Region (bottom-left, blue) -->
+      <g class="region-group" data-region="claude">
+        <path class="region-shape" d="M120,520 C180,480 320,460 420,500 C480,525 500,620 450,660 C380,710 220,700 150,670 C90,640 80,560 120,520 Z" fill="url(#claudeGrad)" stroke="#58a6ff"/>
+        <text x="270" y="570" class="region-label">CLAUDE.md</text>
+        <text x="270" y="595" class="region-sub">自然语言配置 | Natural Language Config</text>
+        <text x="270" y="625" class="tag">项目级 · 用户级 · 目录级</text>
+        <text x="270" y="642" class="tag">编码规范 / 项目上下文 / 团队约定</text>
+      </g>
+      
+      <!-- Custom Commands Region (bottom-right, yellow) -->
+      <g class="region-group" data-region="cmd">
+        <path class="region-shape" d="M750,540 C820,500 950,490 1020,520 C1080,550 1100,630 1060,670 C1000,710 860,700 790,660 C730,620 720,570 750,540 Z" fill="url(#cmdGrad)" stroke="#d29922"/>
+        <text x="910" y="590" class="region-label">Custom Commands</text>
+        <text x="910" y="615" class="region-sub">自定义斜杠命令 | User Shortcuts</text>
+        <text x="910" y="645" class="tag">.claude/commands/ · Markdown模板</text>
+        <text x="910" y="662" class="tag">常用操作快捷化 / 团队共享工作流</text>
+      </g>
+      
+      <!-- Skills Region (center, green) -->
+      <g class="region-group" data-region="skills">
+        <path class="region-shape" d="M480,420 C540,380 660,380 720,420 C780,460 780,540 720,580 C660,620 540,620 480,580 C420,540 420,460 480,420 Z" fill="url(#skillsGrad)" stroke="#3fb950"/>
+        <text x="600" y="490" class="region-label">Skills</text>
+        <text x="600" y="515" class="region-sub">可复用能力模块 | Reusable Modules</text>
+        <text x="600" y="545" class="tag">预定义能力 · 可参数化调用</text>
+        <text x="600" y="562" class="tag">代码审查 / 提交 / 部署流程</text>
+      </g>
+      
+      <!-- Hooks Region (top-left, orange) -->
+      <g class="region-group" data-region="hooks">
+        <path class="region-shape" d="M140,180 C220,130 380,120 460,170 C540,220 560,340 480,390 C400,440 240,430 170,380 C100,330 80,230 140,180 Z" fill="url(#hooksGrad)" stroke="#f0883e"/>
+        <text x="310" y="240" class="region-label">Hooks Engine</text>
+        <text x="310" y="265" class="region-sub">生命周期事件拦截 | Event Interception</text>
+        <text x="310" y="295" class="tag">27个事件钩子 · 4个生命周期阶段</text>
+        <text x="310" y="315" class="tag">自动格式化 / CI集成 / 通知 / 日志</text>
+        <text x="310" y="335" class="tag">复杂度中 · 灵活度高</text>
+      </g>
+      
+      <!-- MCP Region (top-right, purple, largest) -->
+      <g class="region-group" data-region="mcp">
+        <path class="region-shape" d="M620,120 C720,80 920,70 1020,120 C1120,170 1140,340 1060,400 C980,460 780,450 680,400 C580,350 560,200 620,120 Z" fill="url(#mcpGrad)" stroke="#bc8cff"/>
+        <text x="860" y="200" class="region-label">MCP Protocol</text>
+        <text x="860" y="225" class="region-sub">外部工具集成 | External Tool Integration</text>
+        <text x="860" y="255" class="tag">8种传输方式 · 工具/资源/提示</text>
+        <text x="860" y="275" class="tag">数据库 / API调用 / IDE集成</text>
+        <text x="860" y="295" class="tag">复杂度高 · 能力强 · 范围大</text>
+      </g>
+      
+      <!-- Overlap / Combo areas -->
+      <!-- MCP + Hooks -->
+      <ellipse cx="570" cy="280" rx="50" ry="35" fill="#d4aaff" fill-opacity="0.12" style="mix-blend-mode:screen;pointer-events:none;"/>
+      <text x="570" y="275" class="combo-label">MCP + Hooks</text>
+      <text x="570" y="290" class="combo-desc">工具调用前后Hook处理</text>
+      
+      <!-- CLAUDE.md + Skills -->
+      <ellipse cx="420" cy="520" rx="45" ry="30" fill="#8bcfff" fill-opacity="0.12" style="mix-blend-mode:screen;pointer-events:none;"/>
+      <text x="420" y="515" class="combo-label">CLAUDE.md + Skills</text>
+      <text x="420" y="530" class="combo-desc">文档定义何时调用Skill</text>
+      
+      <!-- Hooks + Commands (via Skills area visual bridge) -->
+      <ellipse cx="640" cy="380" rx="45" ry="28" fill="#c9d86a" fill-opacity="0.12" style="mix-blend-mode:screen;pointer-events:none;"/>
+      <text x="640" y="375" class="combo-label">Hooks + Commands</text>
+      <text x="640" y="390" class="combo-desc">命令触发后Hook记录日志</text>
+      
+      <!-- Central nexus -->
+      <circle cx="600" cy="420" r="25" fill="#fff" fill-opacity="0.04" style="mix-blend-mode:screen;pointer-events:none;"/>
+      <text x="600" y="425" class="combo-desc">生态交汇点</text>
+    </svg>
+    
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#bc8cff;"></div>MCP · 外部集成</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f0883e;"></div>Hooks · 事件拦截</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#58a6ff;"></div>CLAUDE.md · 配置</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3fb950;"></div>Skills · 能力模块</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#d29922;"></div>Commands · 快捷命令</div>
+    </div>
+    
+    <div class="info-panel" id="infoPanel">
+      <h3 id="infoTitle">Region</h3>
+      <p id="infoDesc">Hover over a region to see details.</p>
+    </div>
+    
+    <div class="mobile-cards">
+      <div class="card card-claude">
+        <h2>CLAUDE.md <span>自然语言配置 | Natural Language Config</span></h2>
+        <div class="card-tags"><span class="card-tag">项目级</span><span class="card-tag">用户级</span><span class="card-tag">目录级</span></div>
+        <p>适用场景：编码规范、项目上下文、团队约定</p>
+        <p>特性：自然语言定义行为 · 复杂度低 · 最易上手</p>
+      </div>
+      <div class="card card-cmd">
+        <h2>Custom Commands <span>自定义斜杠命令 | User Shortcuts</span></h2>
+        <div class="card-tags"><span class="card-tag">.claude/commands/</span><span class="card-tag">Markdown模板</span></div>
+        <p>适用场景：常用操作快捷化、团队共享工作流</p>
+        <p>特性：本质是预定义的Prompt模板 · 复杂度低 · 个性化强</p>
+      </div>
+      <div class="card card-skills">
+        <h2>Skills <span>可复用能力模块 | Reusable Modules</span></h2>
+        <div class="card-tags"><span class="card-tag">预定义能力</span><span class="card-tag">可参数化调用</span></div>
+        <p>适用场景：代码审查、提交、部署流程</p>
+        <p>特性：作为特殊命令注册 · 复杂度低 · 标准化高</p>
+      </div>
+      <div class="card card-hooks">
+        <h2>Hooks Engine <span>生命周期事件拦截 | Event Interception</span></h2>
+        <div class="card-tags"><span class="card-tag">27个事件钩子</span><span class="card-tag">4个生命周期阶段</span></div>
+        <p>适用场景：自动格式化、CI集成、通知、日志</p>
+        <p>特性：在查询循环关键节点触发 · 复杂度中 · 灵活度高</p>
+      </div>
+      <div class="card card-mcp">
+        <h2>MCP Protocol <span>外部工具集成 | External Tool Integration</span></h2>
+        <div class="card-tags"><span class="card-tag">8种传输方式</span><span class="card-tag">工具/资源/提示</span></div>
+        <p>适用场景：连接数据库、调用API、IDE集成</p>
+        <p>特性：工具注册到调度器统一管理 · 复杂度高 · 能力强</p>
+      </div>
+      <div class="card" style="border-top:2px solid rgba(139,148,158,0.3);">
+        <h2 style="font-size:1.1rem;">组合场景 <span style="font-size:.8rem;">Combo Scenarios</span></h2>
+        <p style="margin-top:.6rem;">MCP + Hooks：工具调用前后Hook处理</p>
+        <p>CLAUDE.md + Skills：文档定义何时调用哪个Skill</p>
+        <p>Hooks + 命令：命令触发后Hook记录日志</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const regionData={
+  claude:{
+    title:"CLAUDE.md",
+    desc:"项目级/用户级/目录级三层配置体系。自然语言定义行为，内容被注入System Prompt影响模型。适用场景：编码规范、项目上下文、团队约定。复杂度低，最易上手。"
+  },
+  cmd:{
+    title:"Custom Commands",
+    desc:"通过.claude/commands/目录下的Markdown模板定义。本质是预定义的Prompt模板，支持常用操作快捷化和团队共享工作流。复杂度低，个性化强。"
+  },
+  skills:{
+    title:"Skills",
+    desc:"预定义的可复用能力模块，可参数化调用。作为特殊命令注册到命令系统，可通过斜杠命令触发。适用场景：代码审查、提交、部署流程。复杂度低，标准化高。"
+  },
+  hooks:{
+    title:"Hooks Engine",
+    desc:"27个事件钩子分布在4个生命周期阶段，在查询循环的关键节点触发。可拦截、修改、记录行为。适用场景：自动格式化、CI集成、通知、日志。复杂度中，灵活度高。"
+  },
+  mcp:{
+    title:"MCP Protocol",
+    desc:"模型上下文协议，提供8种传输方式，支持工具/资源/提示三类能力。将外部工具注册到工具调度器与内置工具统一管理。适用场景：数据库连接、API调用、IDE集成。复杂度高，能力最强。"
+  }
+};
+
+const infoPanel=document.getElementById('infoPanel');
+const infoTitle=document.getElementById('infoTitle');
+const infoDesc=document.getElementById('infoDesc');
+const groups=document.querySelectorAll('.region-group');
+
+groups.forEach(g=>{
+  g.addEventListener('mouseenter',()=>{
+    const key=g.dataset.region;
+    const data=regionData[key];
+    if(data){
+      infoTitle.textContent=data.title;
+      infoDesc.textContent=data.desc;
+      infoPanel.classList.add('active');
+    }
+    groups.forEach(og=>{
+      if(og!==g) og.style.opacity='0.45';
+    });
+  });
+  g.addEventListener('mouseleave',()=>{
+    infoPanel.classList.remove('active');
+    groups.forEach(og=>{
+      og.style.opacity='1';
+    });
+  });
+  g.addEventListener('click',()=>{
+    const key=g.dataset.region;
+    const urls={
+      mcp:'#mcp',
+      hooks:'#hooks',
+      claude:'#claude-md',
+      skills:'#skills',
+      cmd:'#custom-commands'
+    };
+    if(urls[key]) window.location.href=urls[key];
+  });
+});
+</script>
+</body>
+</html>

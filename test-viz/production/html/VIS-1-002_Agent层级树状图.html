@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent 层级树状图</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Noto Sans SC', sans-serif;
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
+  min-height: 100vh;
+  padding: 40px;
+  color: #e6edf3;
+}
+
+.container {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #7b61ff, #a78bff, #e3b341);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #8b949e;
+  margin-bottom: 20px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.description {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #c9d1d9;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: left;
+  padding: 16px 20px;
+  background: rgba(22,27,34,0.6);
+  border-radius: 8px;
+  border-left: 3px solid #7b61ff;
+}
+
+.concept-table {
+  margin-bottom: 30px;
+  background: rgba(22,27,34,0.8);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid rgba(123,97,255,0.2);
+}
+
+.concept-table h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e3b341;
+  margin-bottom: 16px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.concept-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.concept-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: rgba(123,97,255,0.15);
+  color: #a78bff;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(123,97,255,0.3);
+}
+
+.concept-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(139,148,158,0.1);
+  color: #c9d1d9;
+}
+
+.concept-table td:first-child {
+  font-family: 'JetBrains Mono', monospace;
+  color: #7b61ff;
+  font-weight: 500;
+}
+
+.concept-table td:last-child {
+  color: #e3b341;
+  font-style: italic;
+}
+
+.concept-table tr:hover td {
+  background: rgba(123,97,255,0.05);
+}
+
+.diagram-container {
+  background: rgba(13,17,23,0.5);
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid rgba(123,97,255,0.15);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+
+svg {
+  display: block;
+  margin: 0 auto;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Agent 层级树状图</h1>
+    <p class="subtitle">Multi-Agent Orchestration · Claude Code 不是一个 AI 在干活，而是一个 AI 团队</p>
+    <p class="description">
+      Claude Code 不是单线程 AI，而是支持多 Agent 协作。把它想象成一家公司：Coordinator (CEO) 接到用户任务后，派给 3 个部门经理 (Worker A/B/C)，Worker B 还可以再派给员工 (Sub-Worker)。3 种 Worker 隔离级别从弱到强：共享内存 < Git Worktree < 远程进程。所有 Agent 通过底部的 Scratchpad (共享白板) 同步进度，互相知道彼此在做什么。
+    </p>
+  </header>
+
+  <div class="concept-table">
+    <h3>读懂这张图必须知道的 5 个词</h3>
+    <table>
+      <tr><th>术语</th><th>大白话解释</th><th>类比</th></tr>
+      <tr><td>Coordinator</td><td>主 Agent，接收用户任务后负责任务分发</td><td>公司 CEO</td></tr>
+      <tr><td>Worker</td><td>子 Agent，接受 Coordinator 派发的子任务</td><td>部门经理 / 员工</td></tr>
+      <tr><td>Worktree</td><td>Git 的独立工作目录，让每个 Worker 有自己一份代码副本</td><td>每个人一份打印资料，互不污染</td></tr>
+      <tr><td>Scratchpad</td><td>共享内存空间，Agent 们读写状态用的中间区</td><td>办公室白板，大家都能看</td></tr>
+      <tr><td>IPC</td><td>Inter-Process Communication，进程间通信</td><td>同事之间用对讲机说话</td></tr>
+    </table>
+  </div>
+
+  <div class="diagram-container">
+    <svg width="1200" height="900" viewBox="0 0 1200 900">
+      <defs>
+        <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="#7b61ff"/>
+        </marker>
+        <linearGradient id="coordGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#7b61ff;stop-opacity:0.3" />
+          <stop offset="100%" style="stop-color:#7b61ff;stop-opacity:0.1" />
+        </linearGradient>
+        <linearGradient id="workerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#a78bff;stop-opacity:0.2" />
+          <stop offset="100%" style="stop-color:#a78bff;stop-opacity:0.05" />
+        </linearGradient>
+        <linearGradient id="subWorkerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#9370ff;stop-opacity:0.25" />
+          <stop offset="100%" style="stop-color:#9370ff;stop-opacity:0.08" />
+        </linearGradient>
+        <linearGradient id="scratchpadGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#e3b341;stop-opacity:0.25" />
+          <stop offset="100%" style="stop-color:#e3b341;stop-opacity:0.08" />
+        </linearGradient>
+      </defs>
+
+      <!-- Background grid -->
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(123,97,255,0.03)" stroke-width="1"/>
+      </pattern>
+      <rect width="1200" height="900" fill="url(#grid)"/>
+
+      <!-- Scratchpad vertical dashed lines -->
+      <!-- Worker A to Scratchpad -->
+      <line x1="230" y1="420" x2="230" y2="700" stroke="#e3b341" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>
+      <!-- Worker B (offset) to Scratchpad -->
+      <line x1="560" y1="420" x2="560" y2="700" stroke="#e3b341" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>
+      <!-- Sub-Worker to Scratchpad -->
+      <line x1="600" y1="580" x2="600" y2="700" stroke="#e3b341" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>
+      <!-- Worker C to Scratchpad -->
+      <line x1="970" y1="420" x2="970" y2="700" stroke="#e3b341" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>
+
+      <!-- Coordinator to Worker connections -->
+      <!-- Coordinator -> Worker A -->
+      <path d="M 560 200 L 560 260 L 230 260 L 230 320" fill="none" stroke="#7b61ff" stroke-width="2.5" marker-end="url(#arrow)"/>
+      <!-- Coordinator -> Worker B -->
+      <line x1="600" y1="200" x2="600" y2="320" stroke="#7b61ff" stroke-width="2.5" marker-end="url(#arrow)"/>
+      <!-- Coordinator -> Worker C -->
+      <path d="M 640 200 L 640 260 L 970 260 L 970 320" fill="none" stroke="#7b61ff" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+      <!-- Worker B to Sub-Worker -->
+      <line x1="600" y1="420" x2="600" y2="500" stroke="#9370ff" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+      <!-- Scratchpad -->
+      <rect x="100" y="700" width="1000" height="100" rx="12" fill="rgba(22,27,34,0.95)" stroke="#e3b341" stroke-width="2.5"/>
+      <rect x="100" y="700" width="1000" height="100" rx="12" fill="url(#scratchpadGrad)"/>
+      <!-- Scratchpad title -->
+      <text x="600" y="725" font-size="14" font-weight="700" fill="#1c1f26" text-anchor="middle" font-family="'Noto Sans SC', sans-serif">共享白板 Scratchpad · 所有 Agent 通过它交换状态 (IPC 共享内存)</text>
+      <!-- Scratchpad content -->
+      <text x="120" y="750" font-size="11" font-family="'JetBrains Mono', monospace" fill="#1c1f26">{</text>
+      <text x="135" y="765" font-size="11" font-family="'JetBrains Mono', monospace" fill="#1c1f26">"shared_memory": {</text>
+      <text x="150" y="780" font-size="11" font-family="'JetBrains Mono', monospace" fill="#1c1f26">"files_modified": ["src/index.ts", "test/main.test.ts"],</text>
+      <text x="150" y="795" font-size="11" font-family="'JetBrains Mono', monospace" fill="#1c1f26">"agent_status": { "A": "done", "B": "running", "C": "queued" },</text>
+
+      <!-- Coordinator -->
+      <rect x="480" y="120" width="240" height="80" rx="12" fill="rgba(22,27,34,0.92)" stroke="#7b61ff" stroke-width="4"/>
+      <rect x="480" y="120" width="240" height="80" rx="12" fill="url(#coordGrad)"/>
+      <text x="600" y="155" font-size="16" font-weight="700" fill="#7b61ff" text-anchor="middle" font-family="'Noto Sans SC', sans-serif">主 Agent</text>
+      <text x="600" y="175" font-size="12" font-family="'JetBrains Mono', monospace" fill="#8b949e" text-anchor="middle">Coordinator</text>
+      <!-- Coordinator badge -->
+      <circle cx="710" cy="135" r="12" fill="#7b61ff"/>
+      <text x="710" y="139" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">CEO</text>
+
+      <!-- Worker A -->
+      <rect x="120" y="320" width="220" height="100" rx="12" fill="rgba(22,27,34,0.92)" stroke="#a78bff" stroke-width="2.5"/>
+      <rect x="120" y="320" width="220" height="100" rx="12" fill="url(#workerGrad)"/>
+      <text x="230" y="360" font-size="14" font-weight="700" fill="#a78bff" text-anchor="middle" font-family="'Noto Sans SC', sans-serif">同进程 Worker</text>
+      <text x="230" y="385" font-size="11" font-family="'JetBrains Mono', monospace" fill="#8b949e" text-anchor="middle">in_process</text>
+      <!-- Worker A isolation -->
+      <text x="230" y="440" font-size="11" fill="#8b949e" text-anchor="middle">无隔离 · 共享内存</text>
+      <!-- Worker A badge -->
+      <rect x="140" y="450" width="180" height="22" rx="11" fill="rgba(86,211,100,0.15)" stroke="#56d364" stroke-width="1"/>
+      <text x="230" y="465" font-size="10" fill="#56d364" text-anchor="middle">skip CLAUDE.md ✓ 节省 token</text>
+
+      <!-- Worker B -->
+      <rect x="480" y="320" width="240" height="100" rx="12" fill="rgba(22,27,34,0.92)" stroke="#a78bff" stroke-width="2.5"/>
+      <rect x="480" y="320" width="240" height="100" rx="12" fill="url(#workerGrad)"/>
+      <text x="600" y="360" font-size="14" font-weight="700" fill="#a78bff" text-anchor="middle" font-family="'Noto Sans SC', sans-serif">工作树 Worker</text>
+      <text x="600" y="385" font-size="11" font-family="'JetBrains Mono', monospace" fill="#8b949e" text-anchor="middle">local_agent</text>
+      <!-- Worker B isolation -->
+      <text x="600" y="440" font-size="11" fill="#8b949e" text-anchor="middle">Git Worktree 隔离</text>
+      <!-- Worker B badge -->
+      <rect x="520" y="450" width="160" height="22" rx="11" fill="rgba(240,136,62,0.15)" stroke="#f0883e" stroke-width="1"/>
+      <text x="600" y="465" font-size="10" fill="#f0883e" text-anchor="middle">120s 后自动后台化</text>
+
+      <!-- Worker C -->
+      <rect x="860" y="320" width="220" height="100" rx="12" fill="rgba(22,27,34,0.92)" stroke="#a78bff" stroke-width="2.5"/>
+      <rect x="860" y="320" width="220" height="100" rx="12" fill="url(#workerGrad)"/>
+      <text x="970" y="360" font-size="14" font-weight="700" fill="#a78bff" text-anchor="middle" font-family="'Noto Sans SC', sans-serif">远程 Worker</text>
+      <text x="970" y="385" font-size="11" font-family="'JetBrains Mono', monospace" fill="#8b949e" text-anchor="middle">remote_agent</text>
+      <!-- Worker C isolation -->
+      <text x="970" y="440" font-size="11" fill="#8b949e" text-anchor="middle">完全隔离 · 远程进程</text>
+
+      <!-- Sub-Worker -->
+      <rect x="500" y="500" width="200" height="80" rx="12" fill="rgba(22,27,34,0.92)" stroke="#9370ff" stroke-width="2.5"/>
+      <rect x="500" y="500" width="200" height="80" rx="12" fill="url(#subWorkerGrad)"/>
+      <text x="600" y="535" font-size="14" font-weight="700" fill="#9370ff" text-anchor="middle" font-family="'Noto Sans SC', sans-serif">子 Worker</text>
+      <text x="600" y="555" font-size="11" font-family="'JetBrains Mono', monospace" fill="#8b949e" text-anchor="middle">sub-agent</text>
+      <!-- Sub-Worker isolation -->
+      <text x="600" y="600" font-size="11" fill="#8b949e" text-anchor="middle">嵌套派生 · 继承父级</text>
+
+      <!-- Connection point indicators (small dots) -->
+      <circle cx="560" cy="200" r="3" fill="#7b61ff"/>
+      <circle cx="600" cy="200" r="3" fill="#7b61ff"/>
+      <circle cx="640" cy="200" r="3" fill="#7b61ff"/>
+      <circle cx="230" cy="320" r="3" fill="#a78bff"/>
+      <circle cx="600" cy="320" r="3" fill="#a78bff"/>
+      <circle cx="970" cy="320" r="3" fill="#a78bff"/>
+      <circle cx="600" cy="420" r="3" fill="#9370ff"/>
+      <circle cx="600" cy="500" r="3" fill="#9370ff"/>
+
+      <!-- IPC labels near scratchpad lines -->
+      <text x="230" y="680" font-size="9" fill="#e3b341" text-anchor="middle" opacity="0.8">IPC</text>
+      <text x="560" y="680" font-size="9" fill="#e3b341" text-anchor="middle" opacity="0.8">IPC</text>
+      <text x="600" y="680" font-size="9" fill="#e3b341" text-anchor="middle" opacity="0.8">IPC</text>
+      <text x="970" y="680" font-size="9" fill="#e3b341" text-anchor="middle" opacity="0.8">IPC</text>
+    </svg>
+  </div>
+</div>
+</body>
+</html>

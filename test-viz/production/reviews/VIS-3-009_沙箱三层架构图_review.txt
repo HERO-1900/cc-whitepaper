@@ -1,0 +1,33 @@
+总分: 12/20
+
+**布局: 3/5** — 三层纵向堆叠清晰，但企业策略箭头超出viewBox边界(820+x负坐标)，interface标签与层标题存在重叠
+
+**信息: 3/5** — 架构层次分明，但adapter层内"985 lines core"与中文标题位置冲突，决策层检查链信息略显拥挤
+
+**美学: 3/5** — 配色体系协调，暗色背景配霓虹色层次感强，但多处文字直接使用内联font属性而非CSS类(约17处)，视觉一致性不足
+
+**完整: 3/5** — 语法完整可运行，但部分SVG元素位置超出画布，且HTML popup内容与SVG信息有重复
+
+---
+
+**缺陷:**
+1. **行200-204**: 企业策略箭头路径使用负坐标(`d="M 10 15 L -50 35"`)，最远延伸至x=770，超出viewBox=900范围，但SVG容器宽度仅900px
+2. **行163**: `985 lines core`文字x=430，与上层中文标题x=295在同一y=235位置，可能重叠
+3. **行175-182**: ISandboxManager组件内文字使用硬编码`font-family="'Playfair Display', serif"`而非.layer-title类
+4. **行164**: macOS platform box的platform-box样式stroke-width=1.5，但父layer-rect stroke-width=2，视觉层次不一致
+5. **行199**: macOS section内seatbelt图标使用fill="none"但容器box无fill，导致透明
+6. **行229**: runtime layer的nvidia tag在x=680，若runtime rect宽度700+x=100=800，tag可能贴近边缘
+7. **行251**: `path class="gear-icon"`的stroke属性未生效，因为class定义了`fill: none`但stroke-width在.gear-icon中声明
+8. **行145-147**: Tool Layer宽度700但内部组件(decision diamond 80px + function name + check chain)约450px宽度，左侧bash输入图标在x=40处，与层边框x=100间距较大显得空旷
+9. **行267**: Warning box的⚠符号后无空格，与"警告"紧贴
+10. **行281-283**: Legend的opacity=0.3与layer实际fill-opacity=0.12不匹配
+
+**修改建议:**
+1. 将enterprise policy arrows组移入viewBox内(x从820→750，或调整path d属性为正坐标)
+2. "985 lines core"文字右移至少50px或调整y值错开
+3. 统一使用CSS class定义字体，减少17处内联font属性
+4. ISandboxManager rect增加rx圆角与layer-title-cn的rx=12呼应
+5. seatbelt图标组加透明背景fill以覆盖网格线
+6. nvidia tag右移15-20px避出边缘
+7. Legend opacity改为0.12与实际layer一致
+8. Warning text加空格: `⚠ 警告`

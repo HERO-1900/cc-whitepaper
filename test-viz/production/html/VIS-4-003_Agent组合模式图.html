@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent 组合模式图 - LEGO积木哲学</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            overflow-x: hidden;
+        }
+        
+        .title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .title h1 {
+            color: #fff;
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            text-shadow: 0 2px 20px rgba(255,255,255,0.1);
+        }
+        
+        .title p {
+            color: #888;
+            font-size: 0.95rem;
+            margin-top: 8px;
+            font-weight: 400;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            position: relative;
+        }
+        
+        /* Background texture */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(86, 119, 252, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(138, 43, 226, 0.06) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(255, 165, 0, 0.04) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        /* LEGO Blocks Section */
+        .blocks-section {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            flex-wrap: wrap;
+            margin-bottom: 50px;
+            padding: 30px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .lego-block {
+            width: 140px;
+            height: 100px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        .lego-block:hover {
+            transform: translateY(-10px) scale(1.05);
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        .lego-block:nth-child(2) { animation-delay: 0.2s; }
+        .lego-block:nth-child(3) { animation-delay: 0.4s; }
+        .lego-block:nth-child(4) { animation-delay: 0.6s; }
+        .lego-block:nth-child(5) { animation-delay: 0.8s; }
+        .lego-block:nth-child(6) { animation-delay: 1s; }
+        
+        .block-body {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 
+                0 8px 25px rgba(0,0,0,0.4),
+                inset 0 2px 0 rgba(255,255,255,0.3),
+                inset 0 -4px 0 rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        
+        /* Block colors with 3D gradient */
+        .block-search { background: linear-gradient(180deg, #4a9eff 0%, #1e6fd6 50%, #0d5bb8 100%); }
+        .block-edit { background: linear-gradient(180deg, #4ade80 0%, #22c55e 50%, #16a34a 100%); }
+        .block-execute { background: linear-gradient(180deg, #fb923c 0%, #f97316 50%, #ea580c 100%); }
+        .block-analyze { background: linear-gradient(180deg, #c084fc 0%, #a855f7 50%, #9333ea 100%); }
+        .block-web { background: linear-gradient(180deg, #22d3ee 0%, #06b6d4 50%, #0891b2 100%); }
+        .block-mcp { background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%); }
+        
+        .block-studs {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+        }
+        
+        .stud {
+            width: 20px;
+            height: 14px;
+            border-radius: 4px 4px 2px 2px;
+            box-shadow: 
+                0 2px 4px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.4);
+        }
+        
+        .block-search .stud { background: linear-gradient(180deg, #6bb3ff 0%, #4a9eff 100%); }
+        .block-edit .stud { background: linear-gradient(180deg, #6ee7b7 0%, #4ade80 100%); }
+        .block-execute .stud { background: linear-gradient(180deg, #fdba74 0%, #fb923c 100%); }
+        .block-analyze .stud { background: linear-gradient(180deg, #d8b4fe 0%, #c084fc 100%); }
+        .block-web .stud { background: linear-gradient(180deg, #67e8f9 0%, #22d3ee 100%); }
+        .block-mcp .stud { background: linear-gradient(180deg, #fcd34d 0%, #fbbf24 100%); }
+        
+        .block-icon {
+            font-size: 28px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+        
+        .block-label {
+            color: #fff;
+            font-weight: 700;
+            font-size: 14px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        }
+        
+        .block-eng {
+            color: rgba(255,255,255,0.7);
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        /* Tooltip */
+        .tooltip {
+            position: fixed;
+            background: rgba(0,0,0,0.95);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.2s ease;
+            z-index: 1000;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            max-width: 250px;
+        }
+        
+        .tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .tooltip-title {
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: #4a9eff;
+        }
+        
+        .tooltip-tools {
+            color: #aaa;
+            line-height: 1.6;
+        }
+        
+        /* Patterns Section */
+        .patterns-section {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+        
+        .pattern {
+            background: rgba(255,255,255,0.02);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255,255,255,0.05);
+            position: relative;
+        }
+        
+        .pattern::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: 30px;
+            right: 30px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        }
+        
+        .pattern-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .pattern-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #fff;
+            font-size: 18px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .pattern-title {
+            flex: 1;
+        }
+        
+        .pattern-title h3 {
+            color: #fff;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .pattern-title p {
+            color: #888;
+            font-size: 0.85rem;
+            margin-top: 2px;
+        }
+        
+        .pattern-scene {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 120px;
+            position: relative;
+            gap: 20px;
+        }
+        
+        /* Mini blocks for patterns */
+        .mini-block {
+            width: 80px;
+            height: 55px;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            position: relative;
+            box-shadow: 
+                0 4px 15px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.3),
+                inset 0 -3px 0 rgba(0,0,0,0.3);
+        }
+        
+        .mini-block::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            width: 14px;
+            height: 10px;
+            border-radius: 3px 3px 1px 1px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+        }
+        
+        .mini-block.search { background: linear-gradient(180deg, #4a9eff, #0d5bb8); }
+        .mini-block.search::before { background: #6bb3ff; }
+        
+        .mini-block.edit { background: linear-gradient(180deg, #4ade80, #16a34a); }
+        .mini-block.edit::before { background: #6ee7b7; }
+        
+        .mini-block.execute { background: linear-gradient(180deg, #fb923c, #ea580c); }
+        .mini-block.execute::before { background: #fdba74; }
+        
+        .mini-block.analyze { background: linear-gradient(180deg, #c084fc, #9333ea); }
+        .mini-block.analyze::before { background: #d8b4fe; }
+        
+        .mini-icon {
+            font-size: 16px;
+        }
+        
+        .mini-label {
+            color: #fff;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        /* Connection arrows */
+        .arrow {
+            width: 40px;
+            height: 2px;
+            background: rgba(255,255,255,0.3);
+            position: relative;
+        }
+        
+        .arrow::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid rgba(255,255,255,0.3);
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+        
+        /* Fan out pattern */
+        .fan-out-container {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+        
+        .fan-branches {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative;
+        }
+        
+        .fan-branches::before {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: 50%;
+            width: 20px;
+            height: 2px;
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .fan-branches::after {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: 27px;
+            bottom: 27px;
+            width: 2px;
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .fan-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Nested pattern */
+        .nested-container {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+        
+        .nesting-level {
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px dashed rgba(255,255,255,0.15);
+            position: relative;
+        }
+        
+        .nesting-label {
+            position: absolute;
+            top: -10px;
+            left: 15px;
+            background: #1a1a2e;
+            padding: 0 10px;
+            color: #666;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .nesting-inner {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        /* Code snippet badges */
+        .code-badge {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: 11px;
+            color: #7dd3fc;
+            margin-top: 15px;
+            display: inline-block;
+        }
+        
+        .philosophy-box {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+            border-radius: 15px;
+            margin-top: 40px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        
+        .philosophy-box p {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .philosophy-box span {
+            color: #888;
+            font-size: 0.9rem;
+            display: block;
+            margin-top: 8px;
+            font-weight: 400;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .blocks-section {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+            }
+            
+            .lego-block {
+                width: 100%;
+                height: 80px;
+            }
+            
+            .block-icon {
+                font-size: 20px;
+            }
+            
+            .block-label {
+                font-size: 11px;
+            }
+            
+            .pattern-scene {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .arrow {
+                transform: rotate(90deg);
+                width: 30px;
+            }
+            
+            .fan-out-container {
+                flex-direction: column;
+            }
+            
+            .fan-branches::before,
+            .fan-branches::after {
+                display: none;
+            }
+            
+            .nested-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    
+    <div class="title">
+        <h1>🔧 把 AI 当乐高积木</h1>
+        <p>Agent Composition Patterns — 组合优于继承</p>
+    </div>
+    
+    <div class="container">
+        <!-- Atomic Building Blocks -->
+        <div class="blocks-section">
+            <div class="lego-block" data-type="search" data-tools="Grep, Glob, Agent (explore), WebSearch">
+                <div class="block-studs">
+                    <div class="stud"></div>
+                    <div class="stud"></div>
+                </div>
+                <div class="block-body block-search">
+                    <div class="block-icon">🔍</div>
+                    <div class="block-label">搜索</div>
+                    <div class="block-eng">Search</div>
+                </div>
+            </div>
+            
+            <div class="lego-block" data-type="edit" data-tools="Edit, Write, MultiEdit">
+                <div class="block-studs">
+                    <div class="stud"></div>
+                    <div class="stud"></div>
+                </div>
+                <div class="block-body block-edit">
+                    <div class="block-icon">✏️</div>
+                    <div class="block-label">编辑</div>
+                    <div class="block-eng">Edit</div>
+                </div>
+            </div>
+            
+            <div class="lego-block" data-type="execute" data-tools="Bash, BashTool">
+                <div class="block-studs">
+                    <div class="stud"></div>
+                    <div class="stud"></div>
+                </div>
+                <div class="block-body block-execute">
+                    <div class="block-icon">💻</div>
+                    <div class="block-label">执行</div>
+                    <div class="block-eng">Execute</div>
+                </div>
+            </div>
+            
+            <div class="lego-block" data-type="analyze" data-tools="Read, 推理分析, 思考链">
+                <div class="block-studs">
+                    <div class="stud"></div>
+                    <div class="stud"></div>
+                </div>
+                <div class="block-body block-analyze">
+                    <div class="block-icon">🧠</div>
+                    <div class="block-label">分析</div>
+                    <div class="block-eng">Analyze</div>
+                </div>
+            </div>
+            
+            <div class="lego-block" data-type="web" data-tools="WebFetch, WebSearch">
+                <div class="block-studs">
+                    <div class="stud"></div>
+                    <div class="stud"></div>
+                </div>
+                <div class="block-body block-web">
+                    <div class="block-icon">🌐</div>
+                    <div class="block-label">Web</div>
+                    <div class="block-eng">Web Access</div>
+                </div>
+            </div>
+            
+            <div class="lego-block" data-type="mcp" data-tools="MCP Tools, 外部服务">
+                <div class="block-studs">
+                    <div class="stud"></div>
+                    <div class="stud"></div>
+                </div>
+                <div class="block-body block-mcp">
+                    <div class="block-icon">🔌</div>
+                    <div class="block-label">MCP</div>
+                    <div class="block-eng">Plugin</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Composition Patterns -->
+        <div class="patterns-section">
+            <!-- Pattern 1: Linear Pipeline -->
+            <div class="pattern">
+                <div class="pattern-header">
+                    <div class="pattern-number">1</div>
+                    <div class="pattern-title">
+                        <h3>线性管道 Linear Pipeline</h3>
+                        <p>顺序执行，数据流经每个阶段 → 适用于代码重构场景</p>
+                    </div>
+                </div>
+                <div class="pattern-scene">
+                    <div class="mini-block search">
+                        <div class="mini-icon">🔍</div>
+                        <div class="mini-label">搜索</div>
+                    </div>
+                    <div class="arrow"></div>
+                    <div class="mini-block analyze">
+                        <div class="mini-icon">🧠</div>
+                        <div class="mini-label">分析</div>
+                    </div>
+                    <div class="arrow"></div>
+                    <div class="mini-block edit">
+                        <div class="mini-icon">✏️</div>
+                        <div class="mini-label">编辑</div>
+                    </div>
+                </div>
+                <div class="code-badge">queryLoop → tool_use 顺序调用</div>
+            </div>
+            
+            <!-- Pattern 2: Fan-out Parallel -->
+            <div class="pattern">
+                <div class="pattern-header">
+                    <div class="pattern-number">2</div>
+                    <div class="pattern-title">
+                        <h3>扇出并行 Fan-out Parallel</h3>
+                        <p>主Agent分派多个子Agent并行处理 → 适用于代码审查场景</p>
+                    </div>
+                </div>
+                <div class="pattern-scene">
+                    <div class="fan-out-container">
+                        <div class="mini-block analyze">
+                            <div class="mini-icon">🧠</div>
+                            <div class="mini-label">主Agent</div>
+                        </div>
+                        <div class="arrow"></div>
+                        <div class="fan-branches">
+                            <div class="fan-row">
+                                <div class="mini-block search">
+                                    <div class="mini-icon">🔍</div>
+                                    <div class="mini-label">搜索-A</div>
+                                </div>
+                            </div>
+                            <div class="fan-row">
+                                <div class="mini-block analyze">
+                                    <div class="mini-icon">🧠</div>
+                                    <div class="mini-label">分析-B</div>
+                                </div>
+                            </div>
+                            <div class="fan-row">
+                                <div class="mini-block execute">
+                                    <div class="mini-icon">💻</div>
+                                    <div class="mini-label">测试-C</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="code-badge">TaskTool.create() 并行创建子Agent</div>
+            </div>
+            
+            <!-- Pattern 3: Nested Recursive -->
+            <div class="pattern">
+                <div class="pattern-header">
+                    <div class="pattern-number">3</div>
+                    <div class="pattern-title">
+                        <h3>嵌套递归 Nested Recursive</h3>
+                        <p>Agent中调用Agent，层层分解 → 适用于复杂项目场景</p>
+                    </div>
+                </div>
+                <div class="pattern-scene">
+                    <div class="nested-container">
+                        <div class="nesting-level">
+                            <span class="nesting-label">Outer Agent</span>
+                            <div class="nesting-inner">
+                                <div class="mini-block analyze">
+                                    <div class="mini-icon">🧠</div>
+                                    <div class="mini-label">规划</div>
+                                </div>
+                                <div class="arrow"></div>
+                                <div class="nesting-level" style="border-color: rgba(255,255,255,0.25);">
+                                    <span class="nesting-label">TaskTool</span>
+                                    <div class="nesting-inner">
+                                        <div class="mini-block search">
+                                            <div class="mini-icon">🔍</div>
+                                            <div class="mini-label">内层</div>
+                                        </div>
+                                        <div class="arrow" style="width: 20px;"></div>
+                                        <div class="nesting-level" style="border-color: rgba(255,255,255,0.35); padding: 12px;">
+                                            <span class="nesting-label">Sub-Task</span>
+                                            <div class="mini-block edit" style="width: 60px; height: 40px;">
+                                                <div class="mini-icon" style="font-size: 12px;">✏️</div>
+                                                <div class="mini-label" style="font-size: 8px;">最内层</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="code-badge">TaskTool → 子Agent可继续调用TaskTool</div>
+            </div>
+        </div>
+        
+        <!-- Philosophy Statement -->
+        <div class="philosophy-box">
+            <p>"组合优于继承" — Composition over Inheritance</p>
+            <span>不要构建全能Agent，而是让简单Agent互相配合，像乐高积木一样灵活组装</span>
+        </div>
+    </div>
+    
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-title"></div>
+        <div class="tooltip-tools"></div>
+    </div>
+    
+    <script>
+        // Tooltip functionality
+        const tooltip = document.getElementById('tooltip');
+        const blocks = document.querySelectorAll('.lego-block');
+        
+        blocks.forEach(block => {
+            block.addEventListener('mouseenter', (e) => {
+                const type = block.dataset.type;
+                const tools = block.dataset.tools;
+                const title = block.querySelector('.block-label').textContent;
+                
+                tooltip.querySelector('.tooltip-title').textContent = `${title} 积木`;
+                tooltip.querySelector('.tooltip-tools').textContent = `包含工具: ${tools}`;
+                tooltip.classList.add('visible');
+            });
+            
+            block.addEventListener('mousemove', (e) => {
+                tooltip.style.left = `${e.clientX + 15}px`;
+                tooltip.style.top = `${e.clientY + 15}px`;
+            });
+            
+            block.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>processUserInput 决策树</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap');
+
+:root {
+  --bg: #1a1a2e;
+  --bg-sub: #16213e;
+  --bg-card: #0f3460;
+  --accent-entry: #00d4ff;
+  --accent-bash: #ff8844;
+  --accent-slash: #7b61ff;
+  --accent-text: #48bb78;
+  --accent-short: #ff6b6b;
+  --accent-hook: #ffd93d;
+  --text-main: #f0f0f0;
+  --text-sub: #b0b0b0;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--text-main);
+  font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+}
+
+h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--text-sub);
+  margin-bottom: 24px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+#diagram-wrap {
+  width: 100%;
+  max-width: 1100px;
+  position: relative;
+}
+
+svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.node-rect {
+  rx: 10;
+  ry: 10;
+  stroke-width: 2;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+.node-rect:hover {
+  filter: brightness(1.2);
+  stroke-width: 3;
+}
+
+.node-diamond {
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+.node-diamond:hover {
+  filter: brightness(1.2);
+  stroke-width: 3;
+}
+
+.node-circle {
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+.node-circle:hover {
+  filter: brightness(1.2);
+  r: 16;
+}
+
+.path-line {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.flow-pulse {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0;
+  stroke-dasharray: 10 20;
+  animation: flow 2s linear infinite;
+}
+
+@keyframes flow {
+  0% { stroke-dashoffset: 30; opacity: 0.6; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+.label-group { pointer-events: none; }
+.label-cn { font-size: 12px; font-weight: 700; fill: #fff; text-anchor: middle; }
+.label-en { font-size: 9px; fill: rgba(255,255,255,0.75); text-anchor: middle; font-family: 'JetBrains Mono', monospace; }
+.label-small { font-size: 10px; fill: #fff; text-anchor: middle; }
+.label-tiny { font-size: 8px; fill: rgba(255,255,255,0.7); text-anchor: middle; }
+
+.short-label {
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--accent-short);
+  text-anchor: start;
+}
+
+.param-panel {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 220px;
+  background: rgba(15, 52, 96, 0.95);
+  border: 1px solid var(--accent-entry);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  backdrop-filter: blur(6px);
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+  max-height: 460px;
+  overflow: hidden;
+}
+
+.param-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 8px;
+  font-weight: 700;
+  color: var(--accent-entry);
+}
+
+.param-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  line-height: 1.4;
+}
+
+.param-item { color: var(--text-sub); border-bottom: 1px dotted rgba(255,255,255,0.1); padding-bottom: 2px; }
+
+#param-toggle { display: none; }
+#param-toggle:checked ~ .param-panel .param-list { display: none; }
+#param-toggle:checked ~ .param-panel { max-height: 36px; }
+
+.toggle-btn {
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  background: var(--accent-entry);
+  color: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+
+.tooltip {
+  position: absolute;
+  background: rgba(0,0,0,0.9);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #fff;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  max-width: 280px;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.tooltip strong { color: var(--accent-entry); }
+
+.hidden-msg {
+  opacity: 0.55;
+}
+</style>
+</head>
+<body>
+
+<h1>processUserInput 决策树</h1>
+<div class="subtitle">Decision Tree · processUserInput.ts:85-270</div>
+
+<div id="diagram-wrap">
+  <input type="checkbox" id="param-toggle">
+  <div class="param-panel">
+    <label for="param-toggle" class="param-header">
+      <span>18 输入参数</span>
+      <span class="toggle-btn">−</span>
+    </label>
+    <div class="param-list">
+      <div class="param-item">input</div>
+      <div class="param-item">mode</div>
+      <div class="param-item">contextPaths</div>
+      <div class="param-item">query</div>
+      <div class="param-item">imageFilePath</div>
+      <div class="param-item">imageBlocks</div>
+      <div class="param-item">abortSignal</div>
+      <div class="param-item">tools</div>
+      <div class="param-item">additionalProviderTools</div>
+      <div class="param-item">allowedTools</div>
+      <div class="param-item">toolChoice</div>
+      <div class="param-item">model</div>
+      <div class="param-item">effort</div>
+      <div class="param-item">isMeta</div>
+      <div class="param-item">skipAttachments</div>
+      <div class="param-item">skipSlashCommands</div>
+      <div class="param-item">span</div>
+      <div class="param-item">remoteControl</div>
+    </div>
+  </div>
+
+  <svg viewBox="0 0 1000 900" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="glow-blue" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+        <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 L0,0" fill="#00d4ff"/>
+      </marker>
+      <marker id="arrow-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 L0,0" fill="#ff8844"/>
+      </marker>
+      <marker id="arrow-purple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 L0,0" fill="#7b61ff"/>
+      </marker>
+      <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 L0,0" fill="#48bb78"/>
+      </marker>
+      <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 L0,0" fill="#ff6b6b"/>
+      </marker>
+      <marker id="arrow-gold" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 L0,0" fill="#ffd93d"/>
+      </marker>
+    </defs>
+
+    <!-- 背景网格 -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+    </pattern>
+    <rect width="1000" height="900" fill="url(#grid)"/>
+
+    <!-- === 路径 === -->
+    <!-- 入口到菱形 -->
+    <path class="path-line" d="M500,85 L500,130" stroke="#00d4ff" marker-end="url(#arrow-blue)"/>
+    <path class="flow-pulse" d="M500,85 L500,130" stroke="#00d4ff"/>
+
+    <!-- 菱形分发到三条路径 -->
+    <path class="path-line" d="M500,170 L220,210" stroke="#ff8844" marker-end="url(#arrow-orange)"/>
+    <path class="path-line" d="M500,170 L500,210" stroke="#7b61ff" marker-end="url(#arrow-purple)"/>
+    <path class="path-line" d="M500,170 L780,210" stroke="#48bb78" marker-end="url(#arrow-green)"/>
+
+    <!-- Bash路径 -->
+    <path class="path-line" d="M220,245 L220,290" stroke="#ff8844" marker-end="url(#arrow-orange)"/>
+    <path class="flow-pulse" d="M220,245 L220,290" stroke="#ff8844"/>
+    <path class="path-line" d="M220,325 L220,380" stroke="#ff8844" marker-end="url(#arrow-orange)"/>
+    <path class="flow-pulse" d="M220,325 L220,380" stroke="#ff8844"/>
+
+    <!-- 短路1分支 -->
+    <path class="path-line" d="M260,400 L320,400" stroke="#ff6b6b" marker-end="url(#arrow-red)"/>
+
+    <!-- 斜杠路径 -->
+    <path class="path-line" d="M500,245 L500,290" stroke="#7b61ff" marker-end="url(#arrow-purple)"/>
+    <path class="flow-pulse" d="M500,245 L500,290" stroke="#7b61ff"/>
+    <path class="path-line" d="M500,325 L500,370" stroke="#7b61ff" marker-end="url(#arrow-purple)"/>
+    <path class="flow-pulse" d="M500,325 L500,370" stroke="#7b61ff"/>
+    <path class="path-line" d="M500,405 L500,450" stroke="#7b61ff" marker-end="url(#arrow-purple)"/>
+    <path class="flow-pulse" d="M500,405 L500,450" stroke="#7b61ff"/>
+
+    <!-- 短路2分支 -->
+    <path class="path-line" d="M540,390 L620,390" stroke="#ff6b6b" marker-end="url(#arrow-red)"/>
+    <!-- 短路3分支 -->
+    <path class="path-line" d="M540,480 L620,480" stroke="#ff6b6b" marker-end="url(#arrow-red)"/>
+
+    <!-- ultraplan虚线绕回 -->
+    <path class="path-line" d="M780,290 L880,290 L880,430 L560,430" stroke="#48bb78" stroke-dasharray="6,4" marker-end="url(#arrow-purple)" opacity="0.8"/>
+
+    <!-- 普通文本路径 -->
+    <path class="path-line" d="M780,245 L780,290" stroke="#48bb78" marker-end="url(#arrow-green)"/>
+    <path class="flow-pulse" d="M780,245 L780,290" stroke="#48bb78"/>
+    <path class="path-line" d="M780,325 L780,370" stroke="#48bb78" marker-end="url(#arrow-green)"/>
+    <path class="flow-pulse" d="M780,325 L780,370" stroke="#48bb78"/>
+    <path class="path-line" d="M780,405 L780,480" stroke="#48bb78" marker-end="url(#arrow-green)"/>
+    <path class="flow-pulse" d="M780,405 L780,480" stroke="#48bb78"/>
+
+    <!-- 三条路径汇聚到Hook -->
+    <path class="path-line" d="M220,415 L220,540 L350,540" stroke="#ff8844" marker-end="url(#arrow-gold)"/>
+    <path class="path-line" d="M500,485 L500,540" stroke="#7b61ff" marker-end="url(#arrow-gold)"/>
+    <path class="path-line" d="M780,515 L780,540 L650,540" stroke="#48bb78" marker-end="url(#arrow-gold)"/>
+
+    <!-- Hook出口 -->
+    <path class="path-line" d="M380,580 L280,630" stroke="#ff6b6b" marker-end="url(#arrow-red)"/>
+    <path class="path-line" d="M500,580 L500,630" stroke="#ff6b6b" marker-end="url(#arrow-red)"/>
+    <path class="path-line" d="M620,580 L720,630" stroke="#48bb78" marker-end="url(#arrow-green)"/>
+
+    <!-- Hook到最终输出 -->
+    <path class="path-line" d="M500,665 L500,720" stroke="#ffd93d" marker-end="url(#arrow-gold)"/>
+    <path class="flow-pulse" d="M500,665 L500,720" stroke="#ffd93d"/>
+
+    <!-- isMeta隐形消息分支 -->
+    <path class="path-line" d="M700,785 L780,785" stroke="#00d4ff" opacity="0.5" stroke-dasharray="4,3" marker-end="url(#arrow-blue)"/>
+
+    <!-- === 节点 === -->
+    <!-- 入口 -->
+    <g class="node-group" data-tip="processUserInput.ts:85-270 &#10;函数入口，接收18个输入参数">
+      <rect class="node-rect" x="380" y="35" width="240" height="50" fill="#0f3460" stroke="#00d4ff" filter="url(#glow-blue)"/>
+      <text class="label-cn" x="500" y="58">processUserInput</text>
+      <text class="label-en" x="500" y="72">Entry Point · 18 params</text>
+    </g>
+
+    <!-- 类型判断菱形 -->
+    <g class="node-group" transform="translate(500,150)" data-tip="判断 input 类型 &#10;string | Array&lt;ContentBlockParam&gt;">
+      <polygon class="node-diamond" points="0,-20 60,0 0,20 -60,0" fill="#16213e" stroke="#00d4ff"/>
+      <text class="label-small" y="1">输入类型判断</text>
+      <text class="label-tiny" y="12">InputType</text>
+    </g>
+
+    <!-- 即时反馈 -->
+    <g class="node-group" data-tip="processUserInput.ts:145-147 &#10;setUserInputOnProcessing(inputString)">
+      <rect class="node-rect" x="360" y="95" width="120" height="28" fill="#1a1a2e" stroke="#00d4ff" stroke-dasharray="4,2" opacity="0.8"/>
+      <text class="label-tiny" x="420" y="108">即时反馈</text>
+      <text class="label-tiny" x="420" y="117" style="font-size:7px;">setUserInputOnProcessing</text>
+    </g>
+
+    <!-- 图片预处理 -->
+    <g class="node-group" data-tip="图片处理 · maybeResizeAndDownsampleImageBlock &#10;剪贴板存盘 storeImages &#10;iOS 兼容性修正 &#10;Promise.all 并行处理 · lines 317-388">
+      <rect class="node-rect" x="620" y="88" width="140" height="36" fill="#0f3460" stroke="#00d4ff"/>
+      <text class="label-tiny" x="690" y="102">图片预处理</text>
+      <text class="label-tiny" x="690" y="113" style="font-size:7px;">Resize / Store / Fix / Parallel</text>
+    </g>
+
+    <!-- 附件提取 -->
+    <g class="node-group" data-tip="getAttachmentMessages 异步生成器 &#10;lines 499-514 &#10;三种跳过条件 + agent_mention 特殊类型">
+      <rect class="node-rect" x="620" y="138" width="140" height="32" fill="#0f3460" stroke="#00d4ff" opacity="0.7"/>
+      <text class="label-tiny" x="690" y="152">附件提取</text>
+      <text class="label-tiny" x="690" y="162" style="font-size:7px;">getAttachmentMessages</text>
+    </g>
+
+    <!-- Bash 路径 -->
+    <g class="node-group" data-tip="Bash 模式分支 &#10;mode === 'bash'">
+      <rect class="node-rect" x="140" y="210" width="160" height="36" fill="#16213e" stroke="#ff8844"/>
+      <text class="label-cn" x="220" y="227">Bash 模式</text>
+      <text class="label-en" x="220" y="238">mode === 'bash'</text>
+    </g>
+
+    <g class="node-group" data-tip="processBashCommand &#10;PowerShell 检测 &#10;&lt;bash-input&gt; XML 包装">
+      <rect class="node-rect" x="140" y="290" width="160" height="36" fill="#0f3460" stroke="#ff8844"/>
+      <text class="label-cn" x="220" y="307">processBashCommand</text>
+      <text class="label-en" x="220" y="318">Local Execution</text>
+    </g>
+
+    <!-- 短路1 -->
+    <g class="node-group" data-tip="短路出口 ① &#10;本地执行，不调AI &#10;shouldQuery = false">
+      <circle class="node-circle" cx="340" cy="400" r="14" fill="#ff6b6b" stroke="#fff" stroke-width="2"/>
+      <text class="label-cn" x="340" y="404" style="font-size:11px; fill:#1a1a2e;">①</text>
+    </g>
+    <text class="short-label" x="360" y="395">本地执行 shouldQuery=false</text>
+
+    <!-- 斜杠命令路径 -->
+    <g class="node-group" data-tip="斜杠命令分支 &#10;inputString.startsWith('/')">
+      <rect class="node-rect" x="420" y="210" width="160" height="36" fill="#16213e" stroke="#7b61ff"/>
+      <text class="label-cn" x="500" y="227">斜杠命令</text>
+      <text class="label-en" x="500" y="238">startsWith('/')</text>
+    </g>
+
+    <!-- 桥接安全过滤菱形 -->
+    <g class="node-group" transform="translate(500,340)" data-tip="桥接安全过滤 &#10;lines 429-453 &#10;isBridgeSafeCommand() ?">
+      <polygon class="node-diamond" points="0,-25 70,0 0,25 -70,0" fill="#16213e" stroke="#7b61ff"/>
+      <text class="label-small" y="-2">桥接安全过滤</text>
+      <text class="label-tiny" y="10">isBridgeSafeCommand?</text>
+    </g>
+
+    <!-- 短路2 -->
+    <g class="node-group" data-tip="短路出口 ② &#10;不安全命令 &#10;isn't available over Remote Control">
+      <circle class="node-circle" cx="640" cy="390" r="14" fill="#ff6b6b" stroke="#fff" stroke-width="2"/>
+      <text class="label-cn" x="640" y="394" style="font-size:11px; fill:#1a1a2e;">②</text>
+    </g>
+    <text class="short-label" x="660" y="385">Remote Control 拦截</text>
+
+    <g class="node-group" data-tip="processSlashCommand &#10;某些命令 shouldQuery=false">
+      <rect class="node-rect" x="420" y="450" width="160" height="36" fill="#0f3460" stroke="#7b61ff"/>
+      <text class="label-cn" x="500" y="467">processSlashCommand</text>
+      <text class="label-en" x="500" y="478">Command Processing</text>
+    </g>
+
+    <!-- 短路3 -->
+    <g class="node-group" data-tip="短路出口 ③ &#10;某些命令 shouldQuery=false">
+      <circle class="node-circle" cx="640" cy="480" r="14" fill="#ff6b6b" stroke="#fff" stroke-width="2"/>
+      <text class="label-cn" x="640" y="484" style="font-size:11px; fill:#1a1a2e;">③</text>
+    </g>
+    <text class="short-label" x="660" y="475">命令直接返回</text>
+
+    <!-- 普通文本路径 -->
+    <g class="node-group" data-tip="普通文本分支 &#10;默认路径">
+      <rect class="node-rect" x="700" y="210" width="160" height="36" fill="#16213e" stroke="#48bb78"/>
+      <text class="label-cn" x="780" y="227">普通文本</text>
+      <text class="label-en" x="780" y="238">Normal Text</text>
+    </g>
+
+    <!-- ultraplan菱形 -->
+    <g class="node-group" transform="translate(780,340)" data-tip="Ultraplan 关键词检测 &#10;lines 467-493 &#10;feature('ULTRAPLAN') + 交互模式 + 无活跃 ultraplan">
+      <polygon class="node-diamond" points="0,-25 70,0 0,25 -70,0" fill="#16213e" stroke="#48bb78"/>
+      <text class="label-small" y="-2">Ultraplan 检测</text>
+      <text class="label-tiny" y="10">Keyword Rewrite?</text>
+    </g>
+
+    <!-- ultraplan 标签 -->
+    <text class="short-label" x="890" y="350" style="fill:#48bb78; font-size:9px;">rewrite to /ultraplan</text>
+
+    <g class="node-group" data-tip="processTextPrompt &#10;100+行逻辑 &#10;生成 promptId / OTel / 关键词检测 / UserMessage">
+      <rect class="node-rect" x="700" y="370" width="160" height="36" fill="#0f3460" stroke="#48bb78"/>
+      <text class="label-cn" x="780" y="387">processTextPrompt</text>
+      <text class="label-en" x="780" y="398">Text Processing</text>
+    </g>
+
+    <!-- Hook拦截层 -->
+    <g class="node-group" data-tip="Hook 拦截 · lines 182-264 &#10;UserPromptSubmitHooks &#10;MAX_HOOK_OUTPUT_LENGTH = 10000">
+      <rect class="node-rect" x="350" y="540" width="300" height="40" fill="#16213e" stroke="#ffd93d" filter="url(#glow-blue)"/>
+      <text class="label-cn" x="500" y="558">Hook 拦截层</text>
+      <text class="label-en" x="500" y="571">UserPromptSubmitHooks · MAX 10000 chars</text>
+    </g>
+
+    <!-- 短路4 -->
+    <g class="node-group" data-tip="短路出口 ④ &#10;blockingError &#10;替换消息 + shouldQuery=false">
+      <circle class="node-circle" cx="260" cy="640" r="14" fill="#ff6b6b" stroke="#fff" stroke-width="2"/>
+      <text class="label-cn" x="260" y="644" style="font-size:11px; fill:#1a1a2e;">④</text>
+    </g>
+    <text class="short-label" x="150" y="635">blockingError</text>
+
+    <!-- 短路5 -->
+    <g class="node-group" data-tip="短路出口 ⑤ &#10;preventContinuation &#10;shouldQuery=false 保留消息">
+      <circle class="node-circle" cx="500" cy="640" r="14" fill="#ff6b6b" stroke="#fff" stroke-width="2"/>
+      <text class="label-cn" x="500" y="644" style="font-size:11px; fill:#1a1a2e;">⑤</text>
+    </g>
+    <text class="short-label" x="520" y="635">preventContinuation</text>
+
+    <!-- 继续 -->
+    <g class="node-group" data-tip="additionalContexts &#10;追加额外消息，继续执行">
+      <rect class="node-rect" x="660" y="620" width="120" height="36" fill="#0f3460" stroke="#48bb78"/>
+      <text class="label-cn" x="720" y="637">追加并继续</text>
+      <text class="label-en" x="720" y="648">additionalContexts</text>
+    </g>
+
+    <!-- 最终输出 -->
+    <g class="node-group" data-tip="ProcessUserInputBaseResult &#10;messages[] + shouldQuery + allowedTools + model + effort + resultText + nextInput">
+      <rect class="node-rect" x="300" y="720" width="400" height="65" fill="#0f3460" stroke="#ffd93d"/>
+      <text class="label-cn" x="500" y="745">ProcessUserInputBaseResult</text>
+      <text class="label-en" x="500" y="760" style="font-size:8px;">messages[] · shouldQuery · allowedTools · model · effort · resultText · nextInput</text>
+    </g>
+
+    <!-- 隐形消息 -->
+    <g class="node-group hidden-msg" data-tip="addImageMetadataMessage &#10;lines 592-605 &#10;isMeta=true 隐形消息">
+      <rect class="node-rect" x="780" y="767" width="140" height="36" fill="#1a1a2e" stroke="#00d4ff" stroke-dasharray="4,2"/>
+      <text class="label-tiny" x="850" y="782">图片元数据隐形消息</text>
+      <text class="label-tiny" x="850" y="793" style="font-size:7px;">addImageMetadataMessage · isMeta</text>
+    </g>
+
+  </svg>
+
+  <div class="tooltip" id="tooltip"></div>
+</div>
+
+<script>
+  const tooltip = document.getElementById('tooltip');
+  const svg = document.querySelector('svg');
+
+  document.querySelectorAll('.node-group').forEach(group => {
+    group.addEventListener('mouseenter', e => {
+      const tip = group.getAttribute('data-tip');
+      if (!tip) return;
+      tooltip.innerHTML = tip.replace(/\n/g, '<br>');
+      tooltip.style.opacity = '1';
+    });
+    group.addEventListener('mousemove', e => {
+      const rect = document.getElementById('diagram-wrap').getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + 14) + 'px';
+      tooltip.style.top = (e.clientY - rect.top + 14) + 'px';
+    });
+    group.addEventListener('mouseleave', () => {
+      tooltip.style.opacity = '0';
+    });
+  });
+</script>
+
+</body>
+</html>

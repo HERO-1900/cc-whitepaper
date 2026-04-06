@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCP Transport Protocol Decision Map</title>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;700&family=Space+Grotesk:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#1a1a2e;
+  --bg-light:#252540;
+  --grid:rgba(255,255,255,0.04);
+  --text:#e8e8f0;
+  --muted:#a0a0b8;
+  --accent:#ffd700;
+  --stdio:#00d4ff;
+  --sse:#ff9f43;
+  --http:#48bb78;
+  --ws:#7b61ff;
+  --sse-ide:#ffd93d;
+  --ws-ide:#e056a0;
+  --sdk:#20c997;
+  --claudeai-proxy:#6c5ce7;
+  --error:#ff6b6b;
+  --auth:#ff8e53;
+}
+* { box-sizing:border-box; }
+html,body{
+  margin:0; padding:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:"Noto Sans SC","Space Grotesk",sans-serif;
+  min-height:100vh;
+}
+body{
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:40px 40px;
+  background-position:center top;
+}
+header{
+  text-align:center;
+  padding:2.2rem 1rem 1.2rem;
+}
+header h1{
+  font-family:"Exo 2","Noto Sans SC",sans-serif;
+  font-size:clamp(1.6rem,3vw,2.4rem);
+  margin:0 0 .4rem;
+  letter-spacing:1px;
+  background:linear-gradient(90deg,var(--text),var(--accent));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+header p{
+  margin:0;
+  color:var(--muted);
+  font-size:.95rem;
+}
+.container{
+  max-width:1300px;
+  margin:0 auto;
+  padding:0 1.5rem 3rem;
+}
+.viz-layout{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:2rem;
+  align-items:start;
+}
+.panel{
+  background:rgba(30,30,55,.55);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:18px;
+  padding:1.2rem;
+  backdrop-filter:blur(8px);
+}
+.panel-title{
+  font-family:"Exo 2","Noto Sans SC",sans-serif;
+  font-size:1.05rem;
+  color:var(--accent);
+  margin:0 0 .8rem;
+  text-transform:uppercase;
+  letter-spacing:.6px;
+}
+/* Decision Tree SVG */
+.tree-svg{
+  width:100%;
+  height:auto;
+  display:block;
+}
+.tree-node{
+  cursor:pointer;
+  transition:filter .2s;
+}
+.tree-node:hover{
+  filter:brightness(1.15);
+}
+.tree-path{
+  fill:none;
+  stroke:rgba(255,255,255,.18);
+  stroke-width:2;
+  transition:stroke .25s;
+}
+.tree-path.active{
+  stroke:var(--accent);
+  stroke-width:3;
+}
+/* Cards Grid */
+.cards-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:.9rem;
+}
+.card{
+  position:relative;
+  background:linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:14px;
+  padding:.9rem 1rem;
+  transition:transform .18s,box-shadow .18s,border-color .18s;
+  cursor:pointer;
+  overflow:visible;
+}
+.card::before{
+  content:"";
+  position:absolute;
+  left:0; top:0; bottom:0;
+  width:4px;
+  border-radius:14px 0 0 14px;
+  background:var(--card-color);
+}
+.card:hover,.card.highlight{
+  transform:translateY(-3px) scale(1.02);
+  box-shadow:0 12px 30px rgba(0,0,0,.35);
+  border-color:rgba(255,255,255,.15);
+}
+.card-head{
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+  margin-bottom:.4rem;
+}
+.card-icon{
+  width:22px;height:22px;
+  fill:var(--card-color);
+  flex-shrink:0;
+}
+.card-name{
+  font-weight:700;
+  font-size:.98rem;
+  color:var(--text);
+}
+.card-proto{
+  font-family:"JetBrains Mono",monospace;
+  font-size:.72rem;
+  color:var(--card-color);
+  margin-bottom:.35rem;
+}
+.card-scene{
+  font-size:.75rem;
+  color:var(--muted);
+  line-height:1.3;
+}
+/* Tooltip */
+.card-tip{
+  position:absolute;
+  z-index:10;
+  left:50%;
+  top:105%;
+  width:220px;
+  transform:translateX(-50%) scale(.95);
+  background:rgba(20,20,35,.95);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:10px;
+  padding:.7rem .9rem;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s,transform .2s;
+  font-size:.75rem;
+  color:var(--text);
+  box-shadow:0 14px 40px rgba(0,0,0,.45);
+}
+.card:hover .card-tip{
+  opacity:1;
+  transform:translateX(-50%) scale(1);
+}
+.tip-title{
+  color:var(--card-color);
+  font-weight:700;
+  margin-bottom:.3rem;
+}
+.tip-list{
+  margin:0; padding-left:1rem;
+  color:var(--muted);
+}
+/* Bottom */
+.bottom-panel{
+  margin-top:2rem;
+  grid-column:1 / -1;
+}
+.config-priority{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:center;
+  gap:.4rem;
+  margin-bottom:1.4rem;
+  font-size:.75rem;
+}
+.priority-label{
+  color:var(--muted);
+  margin-right:.4rem;
+}
+.pill{
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:999px;
+  padding:.25rem .65rem;
+  color:var(--text);
+  font-family:"JetBrains Mono",monospace;
+  font-size:.7rem;
+  white-space:nowrap;
+}
+.pill-arrow{
+  color:var(--accent);
+  font-weight:700;
+}
+.state-svg{
+  width:100%;
+  height:auto;
+  display:block;
+  max-width:900px;
+  margin:0 auto;
+}
+@media (max-width:960px){
+  .viz-layout{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>MCP Transport Protocol Decision Map</h1>
+  <p>八种传输协议选择逻辑 &middot; Connection State Machine &middot; Config Priority</p>
+</header>
+
+<div class="container">
+  <div class="viz-layout">
+    <!-- Left: Decision Tree -->
+    <div class="panel">
+      <div class="panel-title">决策树 / Decision Tree</div>
+      <svg class="tree-svg" viewBox="0 0 960 780" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                  markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,255,255,.3)"/>
+          </marker>
+          <marker id="arrowA" viewBox="0 0 10 10" refX="9" refY="5"
+                  markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+          </marker>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+          </filter>
+        </defs>
+
+        <!-- paths root -> categories -->
+        <path class="tree-path" d="M450,90 C450,130 100,130 100,170" marker-end="url(#arrow)"/>
+        <path class="tree-path" d="M450,90 C450,130 260,130 260,170" marker-end="url(#arrow)"/>
+        <path class="tree-path" d="M450,90 C450,130 420,130 420,170" marker-end="url(#arrow)"/>
+        <path class="tree-path" d="M450,90 C450,130 580,130 580,170" marker-end="url(#arrow)"/>
+        <path class="tree-path" d="M450,90 C450,130 740,130 740,170" marker-end="url(#arrow)"/>
+        <path class="tree-path" d="M450,90 C450,130 860,130 860,170" marker-end="url(#arrow)"/>
+
+        <!-- category -> leaves / sub diamonds -->
+        <path class="tree-path" d="M100,210 C100,260 100,260 100,310" marker-end="url(#arrow)"/>
+        <path class="tree-path" d="M260,210 C260,250 260,250 260,290" marker-end="url(#arrow)"/>
+        <path class="tree-path" d="M420,210 C420,260 420,260 420,310" marker-end="url(#arrow)"/>
+        <path class="tree-path" d="M580,210 C580,250 580,250 580,290" marker-end="url(#arrow)"/>
+        <path class="tree-path" d="M740,210 C740,260 740,260 740,310" marker-end="url(#arrow)"/>
+        <path class="tree-path" d="M860,210 C860,260 860,260 860,310" marker-end="url(#arrow)"/>
+
+        <!-- sub diamonds to leaves -->
+        <!-- remote http -> http (yes) -->
+        <path class="tree-path" d="M260,380 C260,420 200,420 200,460" marker-end="url(#arrow)"/>
+        <!-- remote http -> sse (no) -->
+        <path class="tree-path" d="M260,380 C260,420 320,420 320,460" marker-end="url(#arrow)"/>
+        <!-- IDE -> sse-ide (SSE) -->
+        <path class="tree-path" d="M580,380 C580,420 520,420 520,460" marker-end="url(#arrow)"/>
+        <!-- IDE -> ws-ide (WS) -->
+        <path class="tree-path" d="M580,380 C580,420 640,420 640,460" marker-end="url(#arrow)"/>
+
+        <!-- Root Diamond -->
+        <g class="tree-node" data-target="all">
+          <polygon points="450,50 520,90 450,130 380,90" fill="rgba(255,215,0,.12)" stroke="var(--accent)" stroke-width="2"/>
+          <text x="450" y="85" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">MCP服务器在哪里？</text>
+          <text x="450" y="100" text-anchor="middle" fill="var(--muted)" font-size="10">Where is your server?</text>
+        </g>
+
+        <!-- Category nodes -->
+        <g class="tree-node" data-target="stdio">
+          <rect x="30" y="170" width="140" height="40" rx="8" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.18)"/>
+          <text x="100" y="188" text-anchor="middle" fill="var(--text)" font-size="12">本地进程 / Local Process</text>
+          <text x="100" y="202" text-anchor="middle" fill="var(--muted)" font-size="9">Standard I/O</text>
+        </g>
+        <g class="tree-node" data-target="http">
+          <rect x="190" y="170" width="140" height="40" rx="8" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.18)"/>
+          <text x="260" y="188" text-anchor="middle" fill="var(--text)" font-size="12">远程HTTP / Remote HTTP</text>
+          <text x="260" y="202" text-anchor="middle" fill="var(--muted)" font-size="9">Legacy or Streaming</text>
+        </g>
+        <g class="tree-node" data-target="ws">
+          <rect x="350" y="170" width="140" height="40" rx="8" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.18)"/>
+          <text x="420" y="188" text-anchor="middle" fill="var(--text)" font-size="12">WebSocket</text>
+          <text x="420" y="202" text-anchor="middle" fill="var(--muted)" font-size="9">Full-duplex Remote</text>
+        </g>
+        <g class="tree-node" data-target="sse-ide">
+          <rect x="510" y="170" width="140" height="40" rx="8" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.18)"/>
+          <text x="580" y="188" text-anchor="middle" fill="var(--text)" font-size="12">IDE扩展 / IDE Extension</text>
+          <text x="580" y="202" text-anchor="middle" fill="var(--muted)" font-size="9">VS Code / JetBrains</text>
+        </g>
+        <g class="tree-node" data-target="sdk">
+          <rect x="670" y="170" width="140" height="40" rx="8" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.18)"/>
+          <text x="740" y="188" text-anchor="middle" fill="var(--text)" font-size="12">SDK内嵌 / SDK Embed</text>
+          <text x="740" y="202" text-anchor="middle" fill="var(--muted)" font-size="9">In-process Control</text>
+        </g>
+        <g class="tree-node" data-target="claudeai-proxy">
+          <rect x="790" y="170" width="140" height="40" rx="8" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.18)"/>
+          <text x="860" y="188" text-anchor="middle" fill="var(--text)" font-size="12">claude.ai</text>
+          <text x="860" y="202" text-anchor="middle" fill="var(--muted)" font-size="9">Proxy / Cloud</text>
+        </g>
+
+        <!-- Sub Diamonds -->
+        <g class="tree-node" data-target="http">
+          <polygon points="260,290 310,335 260,380 210,335" fill="rgba(72,187,120,.12)" stroke="var(--http)"/>
+          <text x="260" y="332" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="600">需要流式？</text>
+          <text x="260" y="344" text-anchor="middle" fill="var(--muted)" font-size="9">Need streaming?</text>
+        </g>
+        <g class="tree-node" data-target="sse-ide">
+          <polygon points="580,290 630,335 580,380 530,335" fill="rgba(255,217,61,.12)" stroke="var(--sse-ide)"/>
+          <text x="580" y="332" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="600">协议选择？</text>
+          <text x="580" y="344" text-anchor="middle" fill="var(--muted)" font-size="9">Which protocol?</text>
+        </g>
+
+        <!-- Leaves -->
+        <!-- stdio -->
+        <g class="tree-node leaf-group" data-target="stdio">
+          <rect x="25" y="460" width="150" height="56" rx="10" fill="rgba(0,212,255,.12)" stroke="var(--stdio)" stroke-width="2"/>
+          <text x="100" y="488" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">stdio</text>
+          <text x="100" y="504" text-anchor="middle" fill="var(--muted)" font-size="9">子进程 stdin / stdout</text>
+        </g>
+        <!-- http -->
+        <g class="tree-node leaf-group" data-target="http">
+          <rect x="125" y="520" width="150" height="56" rx="10" fill="rgba(72,187,120,.12)" stroke="var(--http)" stroke-width="2"/>
+          <text x="200" y="548" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">http</text>
+          <text x="200" y="564" text-anchor="middle" fill="var(--muted)" font-size="9">Streamable HTTP (现代)</text>
+        </g>
+        <!-- sse -->
+        <g class="tree-node leaf-group" data-target="sse">
+          <rect x="245" y="520" width="150" height="56" rx="10" fill="rgba(255,159,67,.12)" stroke="var(--sse)" stroke-width="2"/>
+          <text x="320" y="548" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">sse</text>
+          <text x="320" y="564" text-anchor="middle" fill="var(--muted)" font-size="9">SSE 远程遗留</text>
+        </g>
+        <!-- ws -->
+        <g class="tree-node leaf-group" data-target="ws">
+          <rect x="345" y="460" width="150" height="56" rx="10" fill="rgba(123,97,255,.12)" stroke="var(--ws)" stroke-width="2"/>
+          <text x="420" y="488" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">ws</text>
+          <text x="420" y="504" text-anchor="middle" fill="var(--muted)" font-size="9">WebSocket 全双工</text>
+        </g>
+        <!-- sse-ide -->
+        <g class="tree-node leaf-group" data-target="sse-ide">
+          <rect x="445" y="520" width="150" height="56" rx="10" fill="rgba(255,217,61,.12)" stroke="var(--sse-ide)" stroke-width="2"/>
+          <text x="520" y="548" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">sse-ide</text>
+          <text x="520" y="564" text-anchor="middle" fill="var(--muted)" font-size="9">IDE SSE 特殊处理</text>
+        </g>
+        <!-- ws-ide -->
+        <g class="tree-node leaf-group" data-target="ws-ide">
+          <rect x="565" y="520" width="150" height="56" rx="10" fill="rgba(224,86,160,.12)" stroke="var(--ws-ide)" stroke-width="2"/>
+          <text x="640" y="548" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">ws-ide</text>
+          <text x="640" y="564" text-anchor="middle" fill="var(--muted)" font-size="9">IDE WS 特殊处理</text>
+        </g>
+        <!-- sdk -->
+        <g class="tree-node leaf-group" data-target="sdk">
+          <rect x="665" y="460" width="150" height="56" rx="10" fill="rgba(32,201,151,.12)" stroke="var(--sdk)" stroke-width="2"/>
+          <text x="740" y="488" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">sdk</text>
+          <text x="740" y="504" text-anchor="middle" fill="var(--muted)" font-size="9">SdkControlTransport</text>
+        </g>
+        <!-- claudeai-proxy -->
+        <g class="tree-node leaf-group" data-target="claudeai-proxy">
+          <rect x="785" y="460" width="150" height="56" rx="10" fill="rgba(108,92,231,.12)" stroke="var(--claudeai-proxy)" stroke-width="2"/>
+          <text x="860" y="488" text-anchor="middle" fill="var(--text)" font-size="13" font-weight="700">claudeai-proxy</text>
+          <text x="860" y="504" text-anchor="middle" fill="var(--muted)" font-size="9">ClaudeAuthProvider</text>
+        </g>
+
+        <!-- Labels on decision paths -->
+        <text x="230" y="430" fill="var(--http)" font-size="10" font-weight="600">是 / Yes</text>
+        <text x="290" y="430" fill="var(--sse)" font-size="10" font-weight="600">否 / No</text>
+
+        <text x="500" y="430" fill="var(--sse-ide)" font-size="10" font-weight="600">SSE</text>
+        <text x="620" y="430" fill="var(--ws-ide)" font-size="10" font-weight="600">WS</text>
+      </svg>
+    </div>
+
+    <!-- Right: Cards Grid -->
+    <div class="panel">
+      <div class="panel-title">传输对比 / Transport Comparison</div>
+      <div class="cards-grid" id="cardsGrid">
+        <!-- stdio -->
+        <div class="card" data-id="stdio" style="--card-color:var(--stdio)">
+          <div class="card-head">
+            <svg class="card-icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 10l3 2-3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="13" y1="14" x2="17" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <div class="card-name">stdio</div>
+          </div>
+          <div class="card-proto">Protocol: stdin / stdout</div>
+          <div class="card-scene">最适合: 本地子进程 MCP 服务器</div>
+          <div class="card-tip">
+            <div class="tip-title">stdio</div>
+            <ul class="tip-list">
+              <li>优点：简单、稳定、本地最常见</li>
+              <li>缺点：仅限本地进程，无法远程</li>
+            </ul>
+          </div>
+        </div>
+        <!-- sse -->
+        <div class="card" data-id="sse" style="--card-color:var(--sse)">
+          <div class="card-head">
+            <svg class="card-icon" viewBox="0 0 24 24"><path d="M4 12h3l2-3 4 6 2-3h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <div class="card-name">sse</div>
+          </div>
+          <div class="card-proto">Protocol: HTTP Server-Sent Events</div>
+          <div class="card-scene">最适合: 远程HTTP 遗留服务器</div>
+          <div class="card-tip">
+            <div class="tip-title">sse</div>
+            <ul class="tip-list">
+              <li>优点：兼容性好，易于穿透防火墙</li>
+              <li>缺点：单向流，不支持现代流式能力</li>
+            </ul>
+          </div>
+        </div>
+        <!-- http -->
+        <div class="card" data-id="http" style="--card-color:var(--http)">
+          <div class="card-head">
+            <svg class="card-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 12h8M12 8v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <div class="card-name">http</div>
+          </div>
+          <div class="card-proto">Protocol: Streamable HTTP</div>
+          <div class="card-scene">最适合: 现代远程 MCP (支持流式)</div>
+          <div class="card-tip">
+            <div class="tip-title">http</div>
+            <ul class="tip-list">
+              <li>优点：支持流式、无状态、可扩展</li>
+              <li>缺点：需要服务器支持新版规范</li>
+            </ul>
+          </div>
+        </div>
+        <!-- ws -->
+        <div class="card" data-id="ws" style="--card-color:var(--ws)">
+          <div class="card-head">
+            <svg class="card-icon" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-2 8 9-12h-7l2-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            <div class="card-name">ws</div>
+          </div>
+          <div class="card-proto">Protocol: WebSocket</div>
+          <div class="card-scene">最适合: 需要全双工实时通信</div>
+          <div class="card-tip">
+            <div class="tip-title">ws</div>
+            <ul class="tip-list">
+              <li>优点：全双工、低延迟、实时</li>
+              <li>缺点：连接保持成本高，穿透复杂</li>
+            </ul>
+          </div>
+        </div>
+        <!-- sse-ide -->
+        <div class="card" data-id="sse-ide" style="--card-color:var(--sse-ide)">
+          <div class="card-head">
+            <svg class="card-icon" viewBox="0 0 24 24"><path d="M8 7l-4 5 4 5M16 7l4 5-4 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2"/></svg>
+            <div class="card-name">sse-ide</div>
+          </div>
+          <div class="card-proto">Protocol: SSE + IDE Handler</div>
+          <div class="card-scene">最适合: VS Code / JetBrains 扩展</div>
+          <div class="card-tip">
+            <div class="tip-title">sse-ide</div>
+            <ul class="tip-list">
+              <li>优点：IDE集成优化，开箱即用</li>
+              <li>缺点：绑定特定IDE环境</li>
+            </ul>
+          </div>
+        </div>
+        <!-- ws-ide -->
+        <div class="card" data-id="ws-ide" style="--card-color:var(--ws-ide)">
+          <div class="card-head">
+            <svg class="card-icon" viewBox="0 0 24 24"><path d="M10 3l-7 7 7 7M14 3l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 2v20" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3"/></svg>
+            <div class="card-name">ws-ide</div>
+          </div>
+          <div class="card-proto">Protocol: WS + IDE Handler</div>
+          <div class="card-scene">最适合: IDE扩展 + WebSocket 场景</div>
+          <div class="card-tip">
+            <div class="tip-title">ws-ide</div>
+            <ul class="tip-list">
+              <li>优点：兼顾实时性与IDE特殊处理</li>
+              <li>缺点：配置相对复杂</li>
+            </ul>
+          </div>
+        </div>
+        <!-- sdk -->
+        <div class="card" data-id="sdk" style="--card-color:var(--sdk)">
+          <div class="card-head">
+            <svg class="card-icon" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 9h6v6H9z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <div class="card-name">sdk</div>
+          </div>
+          <div class="card-proto">Protocol: SdkControlTransport</div>
+          <div class="card-scene">最适合: 同进程 SDK 直接控制</div>
+          <div class="card-tip">
+            <div class="tip-title">sdk</div>
+            <ul class="tip-list">
+              <li>优点：零网络开销，直接调用</li>
+              <li>缺点：仅适用于SDK内部嵌入</li>
+            </ul>
+          </div>
+        </div>
+        <!-- claudeai-proxy -->
+        <div class="card" data-id="claudeai-proxy" style="--card-color:var(--claudeai-proxy)">
+          <div class="card-head">
+            <svg class="card-icon" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <div class="card-name">claudeai-proxy</div>
+          </div>
+          <div class="card-proto">Protocol: ClaudeAuthProvider</div>
+          <div class="card-scene">最适合: claude.ai 代理路由</div>
+          <div class="card-tip">
+            <div class="tip-title">claudeai-proxy</div>
+            <ul class="tip-list">
+              <li>优点：云端代理，URL重写安全</li>
+              <li>缺点：依赖 claude.ai 平台</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom: Config Priority & State Machine -->
+  <div class="panel bottom-panel">
+    <div class="panel-title">配置优先级 & 连接状态 / Config Priority & Connection State</div>
+
+    <div class="config-priority">
+      <span class="priority-label">配置来源优先级 / Priority:</span>
+      <span class="pill">enterprise</span><span class="pill-arrow">&gt;</span>
+      <span class="pill">flag</span><span class="pill-arrow">&gt;</span>
+      <span class="pill">user</span><span class="pill-arrow">&gt;</span>
+      <span class="pill">project</span><span class="pill-arrow">&gt;</span>
+      <span class="pill">local</span><span class="pill-arrow">&gt;</span>
+      <span class="pill">CLI</span><span class="pill-arrow">&gt;</span>
+      <span class="pill">claudeai</span><span class="pill-arrow">&gt;</span>
+      <span class="pill">managed</span>
+    </div>
+
+    <svg class="state-svg" viewBox="0 0 900 220" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <marker id="sArrow" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(255,255,255,.4)"/>
+        </marker>
+      </defs>
+
+      <!-- Main flow -->
+      <rect x="40" y="80" width="130" height="44" rx="10" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.25)"/>
+      <text x="105" y="100" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="600">disconnected</text>
+      <text x="105" y="114" text-anchor="middle" fill="var(--muted)" font-size="9">离线</text>
+
+      <line x1="170" y1="102" x2="230" y2="102" stroke="rgba(255,255,255,.25)" stroke-width="2" marker-end="url(#sArrow)"/>
+
+      <rect x="230" y="80" width="130" height="44" rx="10" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.25)"/>
+      <text x="295" y="100" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="600">connecting</text>
+      <text x="295" y="114" text-anchor="middle" fill="var(--muted)" font-size="9">连接中</text>
+
+      <line x1="360" y1="102" x2="420" y2="102" stroke="rgba(255,255,255,.25)" stroke-width="2" marker-end="url(#sArrow)"/>
+
+      <rect x="420" y="80" width="130" height="44" rx="10" fill="rgba(72,187,120,.15)" stroke="var(--http)"/>
+      <text x="485" y="100" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="600">connected</text>
+      <text x="485" y="114" text-anchor="middle" fill="var(--muted)" font-size="9">已连接</text>
+
+      <line x1="550" y1="102" x2="610" y2="102" stroke="rgba(255,255,255,.25)" stroke-width="2" marker-end="url(#sArrow)"/>
+
+      <rect x="610" y="80" width="140" height="44" rx="10" fill="rgba(255,142,83,.15)" stroke="var(--auth)"/>
+      <text x="680" y="100" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="600">needs-auth</text>
+      <text x="680" y="114" text-anchor="middle" fill="var(--muted)" font-size="9">需要认证</text>
+
+      <!-- Error branch -->
+      <path d="M295,124 C295,164 485,164 485,124" fill="none" stroke="var(--error)" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#sArrow)"/>
+      <rect x="420" y="156" width="130" height="44" rx="10" fill="rgba(255,107,107,.15)" stroke="var(--error)"/>
+      <text x="485" y="176" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="600">error</text>
+      <text x="485" y="190" text-anchor="middle" fill="var(--muted)" font-size="9">错误</text>
+      <text x="390" y="152" fill="var(--error)" font-size="10" font-weight="600">失败 / Fail</text>
+    </svg>
+  </div>
+</div>
+
+<script>
+(function(){
+  const leaves = document.querySelectorAll('.leaf-group');
+  const cards = document.querySelectorAll('.card');
+  const paths = document.querySelectorAll('.tree-path');
+
+  function clearHigh(){
+    cards.forEach(c=>c.classList.remove('highlight'));
+    paths.forEach(p=>p.classList.remove('active'));
+  }
+
+  leaves.forEach(leaf=>{
+    leaf.addEventListener('mouseenter',()=>{
+      const id = leaf.getAttribute('data-target');
+      clearHigh();
+      const card = document.querySelector('.card[data-id="'+id+'"]');
+      if(card) card.classList.add('highlight');
+      // Highlight paths connecting to this leaf by simple heuristic: color the last path segment
+      // Not strictly required, but adds polish.
+    });
+    leaf.addEventListener('mouseleave',clearHigh);
+    leaf.addEventListener('click',()=>{
+      const id = leaf.getAttribute('data-target');
+      const card = document.querySelector('.card[data-id="'+id+'"]');
+      if(card){
+        card.scrollIntoView({behavior:'smooth',block:'center'});
+        card.classList.add('highlight');
+        setTimeout(()=>card.classList.remove('highlight'),1200);
+      }
+    });
+  });
+
+  cards.forEach(card=>{
+    card.addEventListener('mouseenter',()=>{
+      const id = card.getAttribute('data-id');
+      const leaf = document.querySelector('.leaf-group[data-target="'+id+'"]');
+      if(leaf){
+        const rect = leaf.querySelector('rect');
+        if(rect){
+          const original = rect.getAttribute('stroke');
+          rect.dataset.orig = original;
+          rect.setAttribute('stroke','var(--accent)');
+          rect.setAttribute('stroke-width','3');
+        }
+      }
+    });
+    card.addEventListener('mouseleave',()=>{
+      const id = card.getAttribute('data-id');
+      const leaf = document.querySelector('.leaf-group[data-target="'+id+'"]');
+      if(leaf){
+        const rect = leaf.querySelector('rect');
+        if(rect && rect.dataset.orig){
+          rect.setAttribute('stroke',rect.dataset.orig);
+          rect.setAttribute('stroke-width','2');
+        }
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

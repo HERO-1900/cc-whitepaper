@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code 技术栈全景</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-cyan: #39d0d8;
+            --accent-green: #3fb950;
+            --accent-yellow: #d29922;
+            --accent-orange: #f85149;
+            --accent-purple: #a371f7;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: auto;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(88, 166, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(63, 185, 80, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(163, 113, 247, 0.03) 0%, transparent 50%);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 60px 40px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, var(--accent-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .stack-container {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+        }
+
+        .layer {
+            border-radius: 16px;
+            padding: 24px 32px;
+            position: relative;
+            animation: slideUp 0.6s ease-out backwards;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .layer:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        .layer-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .layer-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.8);
+        }
+
+        .layer-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .layer-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        .tech-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.25s ease;
+            cursor: pointer;
+            position: relative;
+            min-width: 200px;
+        }
+
+        .tech-item:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.15);
+            transform: translateY(-2px);
+        }
+
+        .tech-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .tech-icon svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .tech-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .tech-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .tech-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            max-width: 200px;
+            line-height: 1.4;
+        }
+
+        /* Layer specific colors */
+        .layer-1 {
+            background: linear-gradient(135deg, rgba(88, 166, 255, 0.15) 0%, rgba(88, 166, 255, 0.05) 100%);
+            animation-delay: 0.1s;
+        }
+
+        .layer-2 {
+            background: linear-gradient(135deg, rgba(57, 208, 216, 0.15) 0%, rgba(57, 208, 216, 0.05) 100%);
+            animation-delay: 0.2s;
+        }
+
+        .layer-3 {
+            background: linear-gradient(135deg, rgba(57, 197, 180, 0.15) 0%, rgba(57, 197, 180, 0.05) 100%);
+            animation-delay: 0.3s;
+        }
+
+        .layer-4 {
+            background: linear-gradient(135deg, rgba(63, 185, 80, 0.15) 0%, rgba(63, 185, 80, 0.05) 100%);
+            animation-delay: 0.4s;
+        }
+
+        .layer-5 {
+            background: linear-gradient(135deg, rgba(163, 185, 80, 0.15) 0%, rgba(163, 185, 80, 0.05) 100%);
+            animation-delay: 0.5s;
+        }
+
+        .layer-6 {
+            background: linear-gradient(135deg, rgba(210, 153, 34, 0.15) 0%, rgba(210, 153, 34, 0.05) 100%);
+            animation-delay: 0.6s;
+        }
+
+        .layer-7 {
+            background: linear-gradient(135deg, rgba(248, 81, 73, 0.15) 0%, rgba(248, 81, 73, 0.05) 100%);
+            animation-delay: 0.7s;
+        }
+
+        .layer-8 {
+            background: linear-gradient(135deg, rgba(163, 113, 247, 0.15) 0%, rgba(163, 113, 247, 0.05) 100%);
+            animation-delay: 0.8s;
+        }
+
+        /* Connections */
+        .connection {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 20px;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(255,255,255,0.2) 0px,
+                rgba(255,255,255,0.2) 4px,
+                transparent 4px,
+                transparent 8px
+            );
+            z-index: -1;
+        }
+
+        .arrow-down {
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid rgba(255,255,255,0.3);
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: fixed;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            max-width: 320px;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            pointer-events: none;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .tooltip-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .tooltip-version {
+            font-size: 0.75rem;
+            color: var(--accent-green);
+            margin-bottom: 10px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .tooltip-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* WASM special indicator */
+        .wasm-indicator {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: linear-gradient(135deg, #654ea3, #eaafc8);
+            color: white;
+            font-size: 0.6rem;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .layer {
+                padding: 18px 20px;
+            }
+            
+            .tech-item {
+                min-width: 100%;
+            }
+            
+            .layer-content {
+                flex-direction: column;
+            }
+        }
+
+        /* Glow effects */
+        .glow-blue { filter: drop-shadow(0 0 8px rgba(88, 166, 255, 0.4)); }
+        .glow-cyan { filter: drop-shadow(0 0 8px rgba(57, 208, 216, 0.4)); }
+        .glow-green { filter: drop-shadow(0 0 8px rgba(63, 185, 80, 0.4)); }
+        .glow-orange { filter: drop-shadow(0 0 8px rgba(248, 81, 73, 0.4)); }
+        .glow-purple { filter: drop-shadow(0 0 8px rgba(163, 113, 247, 0.4)); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>技术栈全景</h1>
+            <p class="subtitle">Technology Stack Panorama · Claude Code Architecture</p>
+        </header>
+
+        <div class="stack-container">
+            <!-- Layer 8: Security -->
+            <div class="layer layer-8">
+                <div class="layer-header">
+                    <span class="layer-number">L8</span>
+                    <span class="layer-title">安全隔离层 / Security Layer</span>
+                </div>
+                <div class="layer-content">
+                    <div class="tech-item" data-tech="seatbelt" data-version="macOS Built-in" data-desc="macOS Seatbelt 沙箱机制，限制子进程的文件系统和网络访问权限，确保代码执行安全。">
+                        <div class="tech-icon glow-purple">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" stroke="#a371f7" stroke-width="2" fill="none"/>
+                                <path d="M12 7v6l3 3" stroke="#a371f7" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">Seatbelt</span>
+                            <span class="tech-desc">macOS 沙箱安全 / Sandbox</span>
+                        </div>
+                    </div>
+                    <div class="tech-item" data-tech="namespace" data-version="Linux Kernel" data-desc="Linux Namespace 隔离技术，为子进程创建独立的进程、网络和文件系统视图。">
+                        <div class="tech-icon glow-purple">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="3" y="3" width="7" height="7" rx="1" stroke="#a371f7" stroke-width="2"/>
+                                <rect x="14" y="3" width="7" height="7" rx="1" stroke="#a371f7" stroke-width="2"/>
+                                <rect x="3" y="14" width="7" height="7" rx="1" stroke="#a371f7" stroke-width="2"/>
+                                <rect x="14" y="14" width="7" height="7" rx="1" stroke="#a371f7" stroke-width="2"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">Namespace</span>
+                            <span class="tech-desc">Linux 命名空间隔离 / Isolation</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrow-down"></div>
+            </div>
+
+            <!-- Layer 7: API & Protocol -->
+            <div class="layer layer-7">
+                <div class="layer-header">
+                    <span class="layer-number">L7</span>
+                    <span class="layer-title">AI 服务层 / AI Services</span>
+                </div>
+                <div class="layer-content">
+                    <div class="tech-item" data-tech="anthropic-api" data-version="Messages API v1" data-desc="Anthropic Messages API，通过流式 SSE 与 Claude 模型实时通信，支持多模态输入和工具调用。">
+                        <div class="tech-icon glow-orange">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke="#f85149" stroke-width="2" fill="none"/>
+                                <path d="M8 12l3 3 5-6" stroke="#f85149" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">Anthropic API</span>
+                            <span class="tech-desc">Claude 模型接口 / Messages API</span>
+                        </div>
+                    </div>
+                    <div class="tech-item" data-tech="sse" data-version="HTTP/1.1" data-desc="Server-Sent Events 流式协议，实现模型响应的实时流式传输，降低首字节延迟。">
+                        <div class="tech-icon glow-orange">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 12h2l2-6 4 12 4-12 2 6h2" stroke="#f85149" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">SSE Stream</span>
+                            <span class="tech-desc">流式传输协议 / Real-time</span>
+                        </div>
+                    </div>
+                    <div class="tech-item" data-tech="mcp" data-version="Protocol v2025" data-desc="Model Context Protocol，标准化工具服务器通信协议，支持 stdio/SSE/HTTP 多种传输方式。">
+                        <div class="tech-icon glow-orange">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="12" cy="12" r="3" stroke="#f85149" stroke-width="2"/>
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="#f85149" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">MCP</span>
+                            <span class="tech-desc">模型上下文协议 / JSON-RPC 2.0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrow-down"></div>
+            </div>
+
+            <!-- Layer 6: Parsing -->
+            <div class="layer layer-6">
+                <div class="layer-header">
+                    <span class="layer-number">L6</span>
+                    <span class="layer-title">代码解析层 / Parsing Layer</span>
+                </div>
+                <div class="layer-content">
+                    <div class="tech-item" data-tech="tree-sitter" data-version="WASM v0.20+" data-desc="Tree-sitter 语法解析器，WASM 编译后在沙箱中运行，提供代码结构分析和语法感知能力。" style="position: relative;">
+                        <span class="wasm-indicator">WASM</span>
+                        <div class="tech-icon glow-cyan">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 4h16v16H4z" stroke="#d29922" stroke-width="2" fill="none"/>
+                                <path d="M7 16l3-8 3 8M8.5 13h3" stroke="#d29922" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M14 16V8l3 8 3-8v8" stroke="#d29922" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">Tree-sitter</span>
+                            <span class="tech-desc">语法解析引擎 / Grammar Parsing</span>
+                        </div>
+                    </div>
+                    <div class="tech-item" data-tech="unified" data-version="v11.x" data-desc="Unified 生态，通过 remark 插件系统解析和处理 Markdown 文档，支持 MDX。">
+                        <div class="tech-icon glow-cyan">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#d29922" stroke-width="2" fill="none"/>
+                                <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="#d29922" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">unified/remark</span>
+                            <span class="tech-desc">Markdown 处理器 / MD Parser</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrow-down"></div>
+            </div>
+
+            <!-- Layer 5: Utilities -->
+            <div class="layer layer-5">
+                <div class="layer-header">
+                    <span class="layer-number">L5</span>
+                    <span class="layer-title">工具库层 / Utilities</span>
+                </div>
+                <div class="layer-content">
+                    <div class="tech-item" data-tech="execa" data-version="v8.x" data-desc="Execa 是现代子进程管理库，提供 Promise API、更好的错误处理和跨平台支持。">
+                        <div class="tech-icon glow-green">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="2" y="6" width="20" height="12" rx="2" stroke="#a3b950" stroke-width="2" fill="none"/>
+                                <path d="M6 10v4M10 10v4M14 10l4 4M18 10l-4 4" stroke="#a3b950" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">execa</span>
+                            <span class="tech-desc">子进程管理 / Process Manager</span>
+                        </div>
+                    </div>
+                    <div class="tech-item" data-tech="globby" data-version="v14.x" data-desc="Globby 提供快速文件匹配功能，基于 fast-glob，支持多模式匹配和 gitignore 集成。">
+                        <div class="tech-icon glow-green">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" stroke="#a3b950" stroke-width="2" fill="none"/>
+                                <circle cx="7" cy="7" r="1" fill="#a3b950"/>
+                                <circle cx="17" cy="17" r="1" fill="#a3b950"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">globby</span>
+                            <span class="tech-desc">文件匹配工具 / File Glob</span>
+                        </div>
+                    </div>
+                    <div class="tech-item" data-tech="chokidar" data-version="v3.x" data-desc="Chokidar 是高效的文件监听库，封装了原生 fsevents/inotify，支持递归监听和防抖。">
+                        <div class="tech-icon glow-green">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2a10 10 0 100 20 10 10 0 000-20z" stroke="#a3b950" stroke-width="2" fill="none"/>
+                                <path d="M12 6v6l4 2" stroke="#a3b950" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">chokidar</span>
+                            <span class="tech-desc">文件监听 / File Watcher</span>
+                        </div>
+                    </div>
+                    <div class="tech-item" data-tech="chalk" data-version="v5.x" data-desc="Chalk 是终端颜色库，提供链式 API 为 CLI 输出添加 ANSI 颜色和样式。">
+                        <div class="tech-icon glow-green">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M5 3l3 18 4-9 4 9 3-18" stroke="#a3b950" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">chalk</span>
+                            <span class="tech-desc">终端样式 / ANSI Colors</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrow-down"></div>
+            </div>
+
+            <!-- Layer 4: Framework -->
+            <div class="layer layer-4">
+                <div class="layer-header">
+                    <span class="layer-number">L4</span>
+                    <span class="layer-title">核心框架层 / Core Framework</span>
+                </div>
+                <div class="layer-content">
+                    <div class="tech-item" data-tech="react-ink" data-version="React 18 + Ink 5" data-desc="Ink 将 React 组件渲染为终端 ANSI 序列，实现声明式 TUI 开发，支持 Flexbox 布局。">
+                        <div class="tech-icon glow-green">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="12" cy="12" r="2" stroke="#3fb950" stroke-width="2"/>
+                                <ellipse cx="12" cy="12" rx="10" ry="4" stroke="#3fb950" stroke-width="2" fill="none" transform="rotate(0 12 12)"/>
+                                <ellipse cx="12" cy="12" rx="10" ry="4" stroke="#3fb950" stroke-width="2" fill="none" transform="rotate(60 12 12)"/>
+                                <ellipse cx="12" cy="12" rx="10" ry="4" stroke="#3fb950" stroke-width="2" fill="none" transform="rotate(120 12 12)"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">React + Ink</span>
+                            <span class="tech-desc">终端 UI 框架 / Terminal UI</span>
+                        </div>
+                    </div>
+                    <div class="tech-item" data-tech="zod" data-version="v3.22+" data-desc="Zod 是 TypeScript 优先的模式验证库，用于校验 API 响应、配置文件和工具参数。">
+                        <div class="tech-icon glow-green">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#3fb950" stroke-width="2" fill="none"/>
+                                <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#3fb950" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">Zod</span>
+                            <span class="tech-desc">数据校验 / Schema Validation</span>
+                        </div>
+                    </div>
+                    <div class="tech-item" data-tech="commander" data-version="v12.x" data-desc="Commander.js 是 Node.js CLI 命令解析库，支持子命令、选项解析和自动生成帮助文档。">
+                        <div class="tech-icon glow-green">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 6h16M4 12h16M4 18h10" stroke="#3fb950" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">Commander.js</span>
+                            <span class="tech-desc">CLI 解析器 / Command Parser</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrow-down"></div>
+            </div>
+
+            <!-- Layer 3: Build -->
+            <div class="layer layer-3">
+                <div class="layer-header">
+                    <span class="layer-number">L3</span>
+                    <span class="layer-title">构建工具层 / Build Tools</span>
+                </div>
+                <div class="layer-content">
+                    <div class="tech-item" data-tech="tsup" data-version="v8.x" data-desc="Tsup 是基于 esbuild 的快速打包工具，专为 TypeScript 库设计，支持 ESM/CJS 双格式输出。">
+                        <div class="tech-icon glow-cyan">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#39c5b4" stroke-width="2" fill="none"/>
+                                <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#39c5b4" stroke-width="2" fill="none"/>
+                                <circle cx="12" cy="12" r="3" stroke="#39c5b4" stroke-width="2"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">tsup</span>
+                            <span class="tech-desc">打包工具 / Bundler</span>
+                        </div>
+                    </div>
+                    <div class="tech-item" data-tech="esbuild" data-version="v0.19+" data-desc="Esbuild 是极快的 JavaScript 打包器和转译器，Go 编写，比传统工具快 10-100 倍。">
+                        <div class="tech-icon glow-cyan">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#39c5b4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">esbuild</span>
+                            <span class="tech-desc">转译器 / Transpiler</span>
+                        </div>
+                    </div>
+                    <div class="tech-item" data-tech="npm-workspace" data-version="npm v10+" data-desc="npm workspace 管理多包仓库结构，支持依赖共享和统一版本控制。">
+                        <div class="tech-icon glow-cyan">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#39c5b4" stroke-width="2" fill="none"/>
+                                <path d="M2 12l10 5 10-5" stroke="#39c5b4" stroke-width="2" fill="none"/>
+                                <path d="M2 17l10 5 10-5" stroke="#39c5b4" stroke-width="2" fill="none"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">npm workspace</span>
+                            <span class="tech-desc">工作区 / Monorepo</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrow-down"></div>
+            </div>
+
+            <!-- Layer 2: Language -->
+            <div class="layer layer-2">
+                <div class="layer-header">
+                    <span class="layer-number">L2</span>
+                    <span class="layer-title">语言层 / Language</span>
+                </div>
+                <div class="layer-content">
+                    <div class="tech-item" data-tech="typescript" data-version="v5.3+ (Strict Mode)" data-desc="TypeScript 是带有静态类型的 JavaScript 超集，Claude Code 启用严格模式确保类型安全。">
+                        <div class="tech-icon glow-blue">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="2" y="2" width="20" height="20" rx="2" stroke="#39d0d8" stroke-width="2" fill="none"/>
+                                <path d="M12 12h5M14.5 10v5M8 10.5h3a1.5 1.5 0 000-3H8v8" stroke="#39d0d8" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">TypeScript</span>
+                            <span class="tech-desc">类型安全语言 / Strict ESM</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrow-down"></div>
+            </div>
+
+            <!-- Layer 1: Runtime -->
+            <div class="layer layer-1">
+                <div class="layer-header">
+                    <span class="layer-number">L1</span>
+                    <span class="layer-title">运行时层 / Runtime</span>
+                </div>
+                <div class="layer-content">
+                    <div class="tech-item" data-tech="nodejs" data-version="v18+ LTS" data-desc="Node.js 是 JavaScript 运行时，Claude Code 要求 v18+ 以支持现代 ESM 和 fetch API。">
+                        <div class="tech-icon glow-blue">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2L4 6v12l8 4 8-4V6l-8-4z" stroke="#58a6ff" stroke-width="2" fill="none"/>
+                                <path d="M12 6v8M8 8l4-2 4 2" stroke="#58a6ff" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">Node.js</span>
+                            <span class="tech-desc">JavaScript 运行时 / v18+ LTS</span>
+                        </div>
+                    </div>
+                    <div class="tech-item" data-tech="wasm" data-version="WebAssembly MVP" data-desc="WebAssembly 允许在沙箱中运行 C/Rust 编译的高性能代码，tree-sitter 解析器通过 WASM 加载。" style="position: relative;">
+                        <span class="wasm-indicator">WASM</span>
+                        <div class="tech-icon glow-blue">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 20L7 4l3 16M14 20l3-16 3 16" stroke="#58a6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M10 14h4" stroke="#58a6ff" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="tech-info">
+                            <span class="tech-name">WASM Runtime</span>
+                            <span class="tech-desc">沙箱执行环境 / Sandboxed</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend" style="margin-top: 50px; padding: 20px 30px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border-color); max-width: 800px;">
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;">依赖关系图例 / Dependency Legend</div>
+            <div style="display: flex; gap: 30px; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-secondary);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 2px; background: repeating-linear-gradient(to right, rgba(255,255,255,0.3) 0px, rgba(255,255,255,0.3) 3px, transparent 3px, transparent 6px);"></div>
+                    <span>垂直依赖 / Depends on</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="background: linear-gradient(135deg, #654ea3, #eaafc8); padding: 2px 8px; border-radius: 6px; font-size: 0.65rem; color: white; font-weight: 600;">WASM</span>
+                    <span>WebAssembly 编译路径 / Compiled to WASM</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-title" id="tooltip-title"></div>
+        <div class="tooltip-version" id="tooltip-version"></div>
+        <div class="tooltip-desc" id="tooltip-desc"></div>
+    </div>
+
+    <script>
+        const tooltip = document.getElementById('tooltip');
+        const tooltipTitle = document.getElementById('tooltip-title');
+        const tooltipVersion = document.getElementById('tooltip-version');
+        const tooltipDesc = document.getElementById('tooltip-desc');
+
+        document.querySelectorAll('.tech-item').forEach(item => {
+            item.addEventListener('mouseenter', (e) => {
+                const tech = item.dataset.tech;
+                const version = item.dataset.version;
+                const desc = item.dataset.desc;
+                
+                tooltipTitle.textContent = tech;
+                tooltipVersion.textContent = version;
+                tooltipDesc.textContent = desc;
+                
+                tooltip.classList.add('visible');
+            });
+
+            item.addEventListener('mousemove', (e) => {
+                const x = e.clientX + 15;
+                const y = e.clientY + 15;
+                
+                // Keep tooltip within viewport
+                const rect = tooltip.getBoundingClientRect();
+                const maxX = window.innerWidth - rect.width - 20;
+                const maxY = window.innerHeight - rect.height - 20;
+                
+                tooltip.style.left = Math.min(x, maxX) + 'px';
+                tooltip.style.top = Math.min(y, maxY) + 'px';
+            });
+
+            item.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+        });
+
+        // Staggered animation on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const layers = document.querySelectorAll('.layer');
+            layers.forEach((layer, index) => {
+                layer.style.opacity = '0';
+                layer.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    layer.style.transition = 'all 0.5s ease';
+                    layer.style.opacity = '1';
+                    layer.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>命令四象限分类图 - Command Quadrant Classification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-navy: #0d1321;
+  --color-user: #00ff88;
+  --color-remote: #00d4ff;
+  --color-internal: #7b61ff;
+  --color-experimental: #ff8844;
+  --text-primary: #e8eef5;
+  --text-secondary: #8b9bb4;
+  --glass-bg: rgba(13, 19, 33, 0.7);
+  --water-line: rgba(100, 150, 200, 0.15);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+  background: var(--bg-deep);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  overflow-x: hidden;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(ellipse at 20% 30%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(123, 97, 255, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, rgba(0, 255, 136, 0.05) 0%, transparent 40%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.title {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.title h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.title p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.iceberg-container {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  aspect-ratio: 16/11;
+  z-index: 10;
+}
+
+.water-surface {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(100, 200, 255, 0.3) 20%, 
+    rgba(100, 200, 255, 0.5) 50%, 
+    rgba(100, 200, 255, 0.3) 80%, 
+    transparent 100%
+  );
+  z-index: 5;
+  box-shadow: 
+    0 0 20px rgba(100, 200, 255, 0.3),
+    0 0 40px rgba(100, 200, 255, 0.1);
+}
+
+.water-surface::before,
+.water-surface::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(100, 200, 255, 0.2) 30%, 
+    rgba(100, 200, 255, 0.3) 50%, 
+    rgba(100, 200, 255, 0.2) 70%, 
+    transparent 100%
+  );
+}
+
+.water-surface::before {
+  top: -8px;
+  opacity: 0.6;
+}
+
+.water-surface::after {
+  top: 8px;
+  opacity: 0.4;
+}
+
+.quadrant-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.quadrant {
+  position: relative;
+  padding: 25px;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.quadrant::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.quadrant:hover::before {
+  opacity: 1;
+}
+
+.q1 {
+  background: linear-gradient(135deg, 
+    rgba(0, 255, 136, 0.12) 0%, 
+    rgba(0, 255, 136, 0.05) 100%
+  );
+  border: 1px solid rgba(0, 255, 136, 0.25);
+}
+
+.q1::before {
+  background: linear-gradient(135deg, 
+    rgba(0, 255, 136, 0.18) 0%, 
+    rgba(0, 255, 136, 0.08) 100%
+  );
+  box-shadow: 
+    inset 0 0 60px rgba(0, 255, 136, 0.1),
+    0 0 40px rgba(0, 255, 136, 0.15);
+}
+
+.q2 {
+  background: linear-gradient(225deg, 
+    rgba(255, 136, 68, 0.1) 0%, 
+    rgba(255, 136, 68, 0.04) 100%
+  );
+  border: 1px solid rgba(255, 136, 68, 0.2);
+  position: relative;
+}
+
+.q2::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, 
+    transparent 0%, 
+    rgba(10, 14, 26, 0.3) 100%
+  );
+  pointer-events: none;
+}
+
+.q3 {
+  background: linear-gradient(315deg, 
+    rgba(0, 212, 255, 0.1) 0%, 
+    rgba(0, 212, 255, 0.04) 100%
+  );
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  position: relative;
+}
+
+.q3::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, 
+    rgba(10, 14, 26, 0.4) 0%, 
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.q4 {
+  background: linear-gradient(45deg, 
+    rgba(123, 97, 255, 0.1) 0%, 
+    rgba(123, 97, 255, 0.04) 100%
+  );
+  border: 1px solid rgba(123, 97, 255, 0.2);
+  position: relative;
+}
+
+.q4::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, 
+    rgba(10, 14, 26, 0.4) 0%, 
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.quadrant-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  position: relative;
+  z-index: 2;
+}
+
+.quadrant-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  position: relative;
+  overflow: hidden;
+}
+
+.q1 .quadrant-icon {
+  background: rgba(0, 255, 136, 0.15);
+  color: var(--color-user);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+.q2 .quadrant-icon {
+  background: rgba(255, 136, 68, 0.12);
+  color: var(--color-experimental);
+}
+
+.q3 .quadrant-icon {
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--color-remote);
+}
+
+.q4 .quadrant-icon {
+  background: rgba(123, 97, 255, 0.12);
+  color: var(--color-internal);
+}
+
+.quadrant-title {
+  flex: 1;
+}
+
+.quadrant-title h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.q1 .quadrant-title h3 { color: var(--color-user); }
+.q2 .quadrant-title h3 { color: var(--color-experimental); }
+.q3 .quadrant-title h3 { color: var(--color-remote); }
+.q4 .quadrant-title h3 { color: var(--color-internal); }
+
+.quadrant-title span {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.command-count {
+  font-size: 2rem;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.q1 .command-count { color: var(--color-user); }
+.q2 .command-count { color: var(--color-experimental); }
+.q3 .command-count { color: var(--color-remote); }
+.q4 .command-count { color: var(--color-internal); }
+
+.command-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  position: relative;
+  z-index: 2;
+  max-height: calc(100% - 70px);
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.command-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: 'Space Grotesk', monospace;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  white-space: nowrap;
+}
+
+.q1 .command-tag {
+  background: rgba(0, 255, 136, 0.1);
+  color: var(--color-user);
+  border: 1px solid rgba(0, 255, 136, 0.25);
+}
+
+.q1 .command-tag:hover {
+  background: rgba(0, 255, 136, 0.2);
+  border-color: rgba(0, 255, 136, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 255, 136, 0.25);
+}
+
+.q2 .command-tag {
+  background: rgba(255, 136, 68, 0.08);
+  color: var(--color-experimental);
+  border: 1px solid rgba(255, 136, 68, 0.18);
+}
+
+.q2 .command-tag:hover {
+  background: rgba(255, 136, 68, 0.15);
+  border-color: rgba(255, 136, 68, 0.4);
+}
+
+.q3 .command-tag {
+  background: rgba(0, 212, 255, 0.08);
+  color: var(--color-remote);
+  border: 1px solid rgba(0, 212, 255, 0.18);
+}
+
+.q3 .command-tag:hover {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: rgba(0, 212, 255, 0.4);
+}
+
+.q4 .command-tag {
+  background: rgba(123, 97, 255, 0.08);
+  color: var(--color-internal);
+  border: 1px solid rgba(123, 97, 255, 0.18);
+}
+
+.q4 .command-tag:hover {
+  background: rgba(123, 97, 255, 0.15);
+  border-color: rgba(123, 97, 255, 0.4);
+}
+
+.tag-category {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+  margin-bottom: 8px;
+  margin-top: 4px;
+  width: 100%;
+  color: var(--text-secondary);
+}
+
+.center-total {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  text-align: center;
+  pointer-events: none;
+}
+
+.total-number {
+  font-size: 4rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, 
+    var(--text-primary) 0%, 
+    var(--text-secondary) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.total-number::before {
+  content: '101';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.3) 0%, 
+    transparent 50%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: blur(8px);
+  opacity: 0.5;
+}
+
+.total-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.axis-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.axis-label {
+  position: absolute;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.axis-label::before {
+  content: '';
+  width: 20px;
+  height: 1px;
+  background: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.axis-top { top: -25px; left: 50%; transform: translateX(-50%); flex-direction: column; }
+.axis-top::before { width: 1px; height: 15px; }
+.axis-bottom { bottom: -25px; left: 50%; transform: translateX(-50%); flex-direction: column; }
+.axis-bottom::before { width: 1px; height: 15px; }
+.axis-left { left: -80px; top: 50%; transform: translateY(-50%); flex-direction: row-reverse; }
+.axis-right { right: -80px; top: 50%; transform: translateY(-50%); }
+
+.axis-divider-v {
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(to bottom, 
+    transparent 0%, 
+    rgba(139, 155, 180, 0.3) 20%, 
+    rgba(139, 155, 180, 0.3) 80%, 
+    transparent 100%
+  );
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.axis-divider-h {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(to right, 
+    transparent 0%, 
+    rgba(139, 155, 180, 0.3) 20%, 
+    rgba(139, 155, 180, 0.3) 80%, 
+    transparent 100%
+  );
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.iceberg-hint {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 20;
+}
+
+.iceberg-hint::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(to bottom, 
+    rgba(255, 255, 255, 0.8) 0%, 
+    rgba(100, 200, 255, 0.4) 50%,
+    transparent 100%
+  );
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(100, 200, 255, 0.5);
+}
+
+.tooltip {
+  position: fixed;
+  background: rgba(13, 19, 33, 0.95);
+  border: 1px solid rgba(139, 155, 180, 0.2);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  max-width: 280px;
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.tooltip.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tooltip-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--color-user);
+}
+
+.tooltip-desc {
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.visibility-hint {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  z-index: 20;
+}
+
+.visibility-hint span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.visible-indicator {
+  width: 10px;
+  height: 10px;
+  background: var(--color-user);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--color-user);
+}
+
+.hidden-indicator {
+  width: 10px;
+  height: 10px;
+  background: var(--text-secondary);
+  border-radius: 50%;
+  opacity: 0.5;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.water-ripple {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 100px;
+  transform: translateY(-50%);
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 8px,
+    rgba(100, 200, 255, 0.03) 8px,
+    rgba(100, 200, 255, 0.03) 9px
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
+@media (max-width: 900px) {
+  .iceberg-container {
+    aspect-ratio: auto;
+    min-height: 800px;
+  }
+  
+  .quadrant-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, auto);
+    gap: 15px;
+  }
+  
+  .water-surface,
+  .water-ripple,
+  .axis-divider-v,
+  .axis-divider-h {
+    display: none;
+  }
+  
+  .axis-labels {
+    display: none;
+  }
+  
+  .center-total {
+    position: static;
+    transform: none;
+    margin: 20px 0;
+  }
+  
+  .quadrant {
+    min-height: 200px;
+  }
+  
+  .command-tags {
+    max-height: none;
+  }
+}
+</style>
+</head>
+<body>
+  <div class="title">
+    <h1>命令四象限分类图</h1>
+    <p>Command Quadrant Classification · 101 Commands Iceberg Model</p>
+  </div>
+
+  <div class="iceberg-hint">
+    <span>冰山效应 Iceberg Effect</span>
+  </div>
+
+  <div class="iceberg-container">
+    <div class="water-ripple"></div>
+    <div class="water-surface"></div>
+    
+    <div class="axis-labels">
+      <div class="axis-label axis-top">用户可见 Visible</div>
+      <div class="axis-label axis-bottom">用户隐藏 Hidden</div>
+      <div class="axis-label axis-left">对外 External</div>
+      <div class="axis-label axis-right">对内 Internal</div>
+    </div>
+
+    <div class="axis-divider-v"></div>
+    <div class="axis-divider-h"></div>
+
+    <div class="center-total">
+      <div class="total-number">101</div>
+      <div class="total-label">Total Commands</div>
+    </div>
+
+    <div class="quadrant-grid">
+      <!-- Q1: User Interaction (Visible + External) -->
+      <div class="quadrant q1" data-quadrant="user">
+        <div class="quadrant-header">
+          <div class="quadrant-icon">Q1</div>
+          <div class="quadrant-title">
+            <h3>用户交互命令</h3>
+            <span>User Interaction</span>
+          </div>
+          <div class="command-count">~45</div>
+        </div>
+        <div class="command-tags">
+          <div class="tag-category">对话管理 Conversation</div>
+          <span class="command-tag" data-desc="分支管理：创建、切换或查看对话分支">/branch</span>
+          <span class="command-tag" data-desc="时光回溯：回退到之前的状态点">/rewind</span>
+          <span class="command-tag" data-desc="顺便一提：在不打断当前上下文的情况下插入内容">/btw</span>
+          <span class="command-tag" data-desc="压缩对话：压缩历史消息以节省tokens">/compact</span>
+          <span class="command-tag" data-desc="恢复对话：从保存点恢复对话">/resume</span>
+          <span class="command-tag" data-desc="导出内容：将对话导出为文件">/export</span>
+          
+          <div class="tag-category">模型控制 Model Control</div>
+          <span class="command-tag" data-desc="切换模型：选择不同的Claude模型">/model</span>
+          <span class="command-tag" data-desc="努力程度：设置推理深度">/effort</span>
+          <span class="command-tag" data-desc="快速模式：启用快速响应模式">/fast</span>
+          <span class="command-tag" data-desc="顾问模式：启用专业顾问模式">/advisor</span>
+          
+          <div class="tag-category">用户界面 UI</div>
+          <span class="command-tag" data-desc="颜色方案：切换界面配色">/color</span>
+          <span class="command-tag" data-desc="主题设置：切换深色/浅色主题">/theme</span>
+          <span class="command-tag" data-desc="Vim模式：切换Vim键位绑定">/vim</span>
+          <span class="command-tag" data-desc="快捷键：查看或修改键盘绑定">/keybindings</span>
+          
+          <div class="tag-category">信息查看 Info</div>
+          <span class="command-tag" data-desc="成本查询：查看API调用成本">/cost</span>
+          <span class="command-tag" data-desc="使用情况：查看使用统计">/usage</span>
+          <span class="command-tag" data-desc="统计数据：显示会话统计">/stats</span>
+          <span class="command-tag" data-desc="文件列表：查看工作区文件">/files</span>
+          <span class="command-tag" data-desc="差异对比：显示文件变更">/diff</span>
+          <span class="command-tag" data-desc="状态检查：查看系统状态">/status</span>
+          
+          <div class="tag-category">系统管理 System</div>
+          <span class="command-tag" data-desc="配置设置：查看和修改配置">/config</span>
+          <span class="command-tag" data-desc="权限管理：管理工具权限">/permissions</span>
+          <span class="command-tag" data-desc="钩子设置：配置自动化钩子">/hooks</span>
+          <span class="command-tag" data-desc="记忆管理：管理持久化记忆">/memory</span>
+          <span class="command-tag" data-desc="MCP服务器：管理MCP集成">/mcp</span>
+        </div>
+      </div>
+
+      <!-- Q2: Experimental (Visible + Internal) -->
+      <div class="quadrant q2" data-quadrant="experimental">
+        <div class="quadrant-header">
+          <div class="quadrant-icon">Q2</div>
+          <div class="quadrant-title">
+            <h3>实验性功能</h3>
+            <span>Experimental</span>
+          </div>
+          <div class="command-count">~33</div>
+        </div>
+        <div class="command-tags">
+          <div class="tag-category">Feature Flag 控制</div>
+          <span class="command-tag" data-desc="启用实验性功能标志">/feature</span>
+          <span class="command-tag" data-desc="Beta功能预览">/beta</span>
+          <span class="command-tag" data-desc="A/B测试功能">/ab-test</span>
+          <span class="command-tag" data-desc="预览新功能">/preview</span>
+          
+          <div class="tag-category">原型功能 Prototype</div>
+          <span class="command-tag" data-desc="AI代理原型">/agent-proto</span>
+          <span class="command-tag" data-desc="多模态实验">/multimodal</span>
+          <span class="command-tag" data-desc="语音交互实验">/voice-exp</span>
+          <span class="command-tag" data-desc="代码生成增强">/code-v2</span>
+        </div>
+      </div>
+
+      <!-- Q3: Remote Integration (Hidden + External) -->
+      <div class="quadrant q3" data-quadrant="remote">
+        <div class="quadrant-header">
+          <div class="quadrant-icon">Q3</div>
+          <div class="quadrant-title">
+            <h3>远程集成命令</h3>
+            <span>Remote Integration</span>
+          </div>
+          <div class="command-count">~13</div>
+        </div>
+        <div class="command-tags">
+          <div class="tag-category">多端协同 Multi-Platform</div>
+          <span class="command-tag" data-desc="桥接模式：连接本地和远程环境">/bridge</span>
+          <span class="command-tag" data-desc="Chrome扩展：浏览器集成">/chrome</span>
+          <span class="command-tag" data-desc="桌面应用：桌面端同步">/desktop</span>
+          <span class="command-tag" data-desc="IDE集成：开发环境连接">/ide</span>
+          <span class="command-tag" data-desc="移动设备：手机端协同">/mobile</span>
+          <span class="command-tag" data-desc="远程环境：云端工作区">/remote-env</span>
+          <span class="command-tag" data-desc="传送：跨设备会话迁移">/teleport</span>
+          
+          <div class="tag-category">应用集成 Apps</div>
+          <span class="command-tag" data-desc="安装GitHub应用">install-github-app</span>
+          <span class="command-tag" data-desc="安装Slack应用">install-slack-app</span>
+        </div>
+      </div>
+
+      <!-- Q4: Internal Debug (Hidden + Internal) -->
+      <div class="quadrant q4" data-quadrant="internal">
+        <div class="quadrant-header">
+          <div class="quadrant-icon">Q4</div>
+          <div class="quadrant-title">
+            <h3>内部调试命令</h3>
+            <span>Internal Debug (ant-only)</span>
+          </div>
+          <div class="command-count">~10</div>
+        </div>
+        <div class="command-tags">
+          <div class="tag-category">Anthropic 内部</div>
+          <span class="command-tag" data-desc="追踪分析：内部性能追踪">/ant-trace</span>
+          <span class="command-tag" data-desc="调试模式：详细日志输出">/debug</span>
+          <span class="command-tag" data-desc="内部指标：系统性能指标">/metrics</span>
+          <span class="command-tag" data-desc="日志审查：内部日志查看">/audit-log</span>
+          <span class="command-tag" data-desc="系统诊断：健康检查">/health-check</span>
+          <span class="command-tag" data-desc="性能分析：瓶颈检测">/profile</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="visibility-hint">
+    <span><span class="visible-indicator"></span> 水面之上 /help 可见 (~45%)</span>
+    <span><span class="hidden-indicator"></span> 水面之下 隐藏 (~55%)</span>
+  </div>
+
+  <div class="tooltip" id="tooltip">
+    <div class="tooltip-title"></div>
+    <div class="tooltip-desc"></div>
+  </div>
+
+<script>
+const tooltip = document.getElementById('tooltip');
+const tooltipTitle = tooltip.querySelector('.tooltip-title');
+const tooltipDesc = tooltip.querySelector('.tooltip-desc');
+const commandTags = document.querySelectorAll('.command-tag');
+
+commandTags.forEach(tag => {
+  tag.addEventListener('mouseenter', (e) => {
+    const desc = tag.getAttribute('data-desc');
+    const text = tag.textContent;
+    
+    tooltipTitle.textContent = text;
+    tooltipDesc.textContent = desc;
+    tooltip.classList.add('show');
+    
+    updateTooltipPosition(e);
+  });
+  
+  tag.addEventListener('mousemove', updateTooltipPosition);
+  
+  tag.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('show');
+  });
+});
+
+function updateTooltipPosition(e) {
+  const x = e.clientX + 15;
+  const y = e.clientY + 15;
+  
+  const rect = tooltip.getBoundingClientRect();
+  const maxX = window.innerWidth - rect.width - 20;
+  const maxY = window.innerHeight - rect.height - 20;
+  
+  tooltip.style.left = Math.min(x, maxX) + 'px';
+  tooltip.style.top = Math.min(y, maxY) + 'px';
+}
+
+// Quadrant hover effects
+const quadrants = document.querySelectorAll('.quadrant');
+quadrants.forEach(q => {
+  q.addEventListener('mouseenter', () => {
+    quadrants.forEach(other => {
+      if (other !== q) {
+        other.style.opacity = '0.6';
+      }
+    });
+  });
+  
+  q.addEventListener('mouseleave', () => {
+    quadrants.forEach(other => {
+      other.style.opacity = '1';
+    });
+  });
+});
+</script>
+</body>
+</html>

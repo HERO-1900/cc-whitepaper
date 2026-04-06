@@ -1,0 +1,30 @@
+总分: 14/20
+
+**布局: 3/5** — 整体栅格对齐良好，但 Stats Bar 数据（43/12/8）与实际工具数量（29）严重不符，造成信息错位。
+
+**信息: 3/5** — 层次清晰、分类合理，但统计数据与实际数据不一致，且某些标签状态计算有误。
+
+**美学: 4/5** — 配色体系完整、字体搭配合理、交互反馈细腻，但 emoji 作为 icon 在跨平台一致性上略有风险。
+
+**完整: 4/5** — 代码可独立运行，但数据统计与代码实现不匹配。
+
+---
+
+## 缺陷
+
+1. **数据不一致** — `toolsData` 中 6 个分类总计 **29** 个工具，但 `stats-bar` 显示 43Total / 12File Ops / 8Read-Only 均不匹配
+2. **Read-Only 统计错误** — 代码中 `readonly: true` 的工具仅 19 个（file:7, search:5, web:2, other:5），而 "8 Read-Only" stat 不准确
+3. **搜索过滤逻辑缺陷** — `filterTools('all')` 时用 `style.display: 'block'` 判断，但 `checkResults()` 用 `style!="display: none;"` 判断，初始状态下两个都不生效，结果判断可能错误
+4. **tag--auto 缺失** — CSS 中定义了 `.tag--auto` 样式（line 307），但工具数据中 confirm 为 false 时渲染的是 `'auto'` class，而样式文件未定义该 class
+5. **modal 背景色未跟随分类** — `modalCategory` 有颜色，但 modal 整体边框、背景未随分类色变化，缺乏视觉关联
+6. **Emoji icon 兼容风险** — `content: "🔍"` 等 emoji 作为 icon 在某些字体/平台可能显示异常
+
+---
+
+## 修改建议
+
+1. 将 stats-bar 数据改为动态计算：`total = Object.values(toolsData).reduce((sum, cat) => sum + cat.tools.length, 0)`
+2. 修复 `checkResults()` 函数，改用 `getComputedStyle` 或 data 属性判断可见性，而非依赖 style 属性
+3. 为 `confirm: false` 且 `destructive: false` 的工具添加 `tag--auto` 样式或改为默认无 tag
+4. Modal 的顶部边框或 header 背景添加对应分类色 accent
+5. 将 emoji icon 替换为 SVG 或统一的 icon font，确保跨平台一致性

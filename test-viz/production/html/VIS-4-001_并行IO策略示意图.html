@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>并行I/O策略示意图 - 在等待时间里藏工作</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-tertiary: #0f3460;
+  --accent-blue: #00d4ff;
+  --accent-green: #48bb78;
+  --accent-red: #ff6b6b;
+  --accent-yellow: #ffd93d;
+  --gray-idle: #4a4a6a;
+  --gray-stripe: #3a3a5a;
+  --text-primary: #eaeaea;
+  --text-secondary: #a0a0b0;
+  --task-1: #00d4ff;
+  --task-2: #00b4d8;
+  --task-3: #0096c7;
+  --task-4: #48bb78;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Noto Serif SC', monospace;
+  background: var(--bg-primary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--text-primary);
+}
+
+.container {
+  max-width: 1200px;
+  width: 100%;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.title h1 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 32px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-green) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.title .subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  letter-spacing: 2px;
+}
+
+.chart-wrapper {
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+              0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 30px;
+  align-items: center;
+}
+
+.panel {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  padding: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.panel-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.panel-title span {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  margin-left: 8px;
+}
+
+.serial-badge {
+  background: var(--accent-red);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.parallel-badge {
+  background: var(--accent-green);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.timeline {
+  position: relative;
+  height: 280px;
+}
+
+.time-axis {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--gray-idle) 50%, transparent 100%);
+}
+
+.time-labels {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 10px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.tasks-container {
+  position: relative;
+  height: 240px;
+}
+
+.task-row {
+  position: absolute;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.task-row:nth-child(1) { top: 0; }
+.task-row:nth-child(2) { top: 55px; }
+.task-row:nth-child(3) { top: 110px; }
+.task-row:nth-child(4) { top: 165px; }
+
+.task-bar {
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.task-bar:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+
+.task-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 100%);
+}
+
+.task-bar.readConfig { background: linear-gradient(135deg, var(--task-1), #0088cc); }
+.task-bar.loadMCP { background: linear-gradient(135deg, var(--task-2), #0077b3); }
+.task-bar.checkUpdate { background: linear-gradient(135deg, var(--task-3), #006699); }
+.task-bar.initUI { background: linear-gradient(135deg, var(--task-4), #3a9d5d); }
+
+.serial .task-bar {
+  animation: slideIn 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.serial .task-bar:nth-child(1) { animation-delay: 0.1s; }
+.serial .task-bar:nth-child(2) { animation-delay: 0.3s; }
+.serial .task-bar:nth-child(3) { animation-delay: 0.5s; }
+.serial .task-bar:nth-child(4) { animation-delay: 0.7s; }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Parallel animations */
+.parallel .task-bar {
+  animation: expandWidth 0.8s ease-out forwards;
+  transform-origin: left;
+}
+
+.parallel .task-bar.readConfig {
+  width: 0;
+  animation: expandTo50 0.8s ease-out 0.2s forwards;
+}
+
+.parallel .task-bar.loadMCP {
+  width: 0;
+  animation: expandTo200 0.8s ease-out 0.2s forwards;
+}
+
+.parallel .task-bar.checkUpdate {
+  width: 0;
+  animation: expandTo150 0.8s ease-out 0.2s forwards;
+}
+
+.parallel .task-bar.initUI {
+  opacity: 0;
+  animation: fadeSlideIn 0.6s ease-out 1s forwards;
+}
+
+@keyframes expandTo50 { to { width: 50px; } }
+@keyframes expandTo200 { to { width: 200px; } }
+@keyframes expandTo150 { to { width: 150px; } }
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.task-name {
+  white-space: nowrap;
+}
+
+.task-time {
+  font-size: 10px;
+  opacity: 0.8;
+  margin-left: 6px;
+  font-weight: 400;
+}
+
+.idle-gap {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--gray-stripe),
+    var(--gray-stripe) 4px,
+    var(--gray-idle) 4px,
+    var(--gray-idle) 8px
+  );
+  height: 36px;
+  border-radius: 4px;
+  margin: 0 2px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+
+.waste-label {
+  position: absolute;
+  font-size: 9px;
+  color: var(--accent-red);
+  top: -18px;
+  white-space: nowrap;
+}
+
+.parallel-lane {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.parallel-lane:nth-child(1) { top: 0; }
+.parallel-lane:nth-child(2) { top: 55px; }
+.parallel-lane:nth-child(3) { top: 110px; }
+
+.lane-label {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 9px;
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.parallel .task-row {
+  position: absolute;
+}
+
+.parallel .task-row:nth-child(1) { top: 7px; }
+.parallel .task-row:nth-child(2) { top: 62px; }
+.parallel .task-row:nth-child(3) { top: 117px; }
+.parallel .task-row:nth-child(4) { top: 172px; }
+
+.arrow-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.arrow {
+  width: 60px;
+  height: 40px;
+  position: relative;
+}
+
+.arrow::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+  transform: translateY(-50%);
+}
+
+.arrow::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 8px solid transparent;
+  border-left: 12px solid var(--accent-blue);
+}
+
+.savings-badge {
+  background: linear-gradient(135deg, var(--accent-green), #2d7a5a);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(72, 187, 120, 0.3);
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 10px 30px rgba(72, 187, 120, 0.3); }
+  50% { transform: scale(1.05); box-shadow: 0 15px 40px rgba(72, 187, 120, 0.5); }
+}
+
+.savings-badge .percent {
+  font-size: 20px;
+  display: block;
+  line-height: 1;
+}
+
+.savings-badge .label {
+  font-size: 10px;
+  opacity: 0.9;
+  margin-top: 2px;
+  font-weight: 400;
+}
+
+.total-time {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.total-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.total-value {
+  font-size: 36px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.serial .total-value {
+  color: var(--accent-red);
+}
+
+.parallel .total-value {
+  color: var(--accent-green);
+}
+
+.code-hint {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent-yellow);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.code-hint code {
+  color: var(--accent-yellow);
+  font-weight: 700;
+}
+
+.hidden-work {
+  position: absolute;
+  bottom: 30px;
+  left: 30px;
+  right: 30px;
+  height: 30px;
+  background: linear-gradient(90deg, 
+    rgba(0, 212, 255, 0.2) 0%, 
+    rgba(0, 212, 255, 0.1) 50%,
+    rgba(0, 212, 255, 0.2) 100%);
+  border-radius: 4px;
+  border: 1px dashed var(--accent-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--accent-blue);
+  animation: hiddenWorkPulse 3s ease-in-out infinite;
+}
+
+@keyframes hiddenWorkPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.legend-color.active { background: var(--accent-blue); }
+.legend-color.idle { background: var(--gray-idle); }
+.legend-color.saved { background: var(--accent-green); }
+
+@media (max-width: 900px) {
+  .comparison {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .arrow-container {
+    flex-direction: row;
+    transform: rotate(90deg);
+    margin: 10px 0;
+  }
+  
+  .savings-badge {
+    transform: rotate(-90deg);
+  }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="title">
+    <h1>在等待时间里藏工作</h1>
+    <div class="subtitle">Hide Work in Waiting Time — Parallel I/O Strategy</div>
+  </div>
+  
+  <div class="chart-wrapper">
+    <div class="comparison">
+      <!-- Serial Panel -->
+      <div class="panel serial">
+        <div class="panel-header">
+          <div class="panel-title">
+            串行模式
+            <span>Serial Mode</span>
+          </div>
+          <div class="serial-badge">BEFORE</div>
+        </div>
+        
+        <div class="timeline">
+          <div class="tasks-container">
+            <div class="task-row">
+              <div class="task-bar readConfig" style="width: 50px;">
+                <span class="task-name">readConfig</span>
+                <span class="task-time">50ms</span>
+              </div>
+              <div class="idle-gap" style="width: 20px; position: relative;">
+                <span class="waste-label">CPU 空闲 CPU Idle</span>
+              </div>
+            </div>
+            
+            <div class="task-row">
+              <div style="width: 70px;"></div>
+              <div class="task-bar loadMCP" style="width: 200px;">
+                <span class="task-name">loadMCP</span>
+                <span class="task-time">200ms</span>
+              </div>
+              <div class="idle-gap" style="width: 20px; position: relative;">
+                <span class="waste-label">等待 I/O Waiting</span>
+              </div>
+            </div>
+            
+            <div class="task-row">
+              <div style="width: 290px;"></div>
+              <div class="task-bar checkUpdate" style="width: 150px;">
+                <span class="task-name">checkUpdate</span>
+                <span class="task-time">150ms</span>
+              </div>
+              <div class="idle-gap" style="width: 20px; position: relative;">
+                <span class="waste-label">阻塞 Blocking</span>
+              </div>
+            </div>
+            
+            <div class="task-row">
+              <div style="width: 460px;"></div>
+              <div class="task-bar initUI" style="width: 80px;">
+                <span class="task-name">initUI</span>
+                <span class="task-time">80ms</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="time-axis"></div>
+          <div class="time-labels">
+            <span>0ms</span>
+            <span>100ms</span>
+            <span>200ms</span>
+            <span>300ms</span>
+            <span>400ms</span>
+            <span>480ms</span>
+          </div>
+        </div>
+        
+        <div class="total-time">
+          <span class="total-label">总耗时 Total:</span>
+          <span class="total-value">~480ms</span>
+        </div>
+        
+        <div class="code-hint">
+          // 串行执行：一个接一个<br>
+          await readConfig();<br>
+          await loadMCP();<br>
+          await checkUpdate();<br>
+          await initUI();
+        </div>
+      </div>
+      
+      <!-- Arrow & Badge -->
+      <div class="arrow-container">
+        <div class="arrow"></div>
+        <div class="savings-badge">
+          <span class="percent">-42%</span>
+          <span class="label">时间节省 Time Saved</span>
+        </div>
+      </div>
+      
+      <!-- Parallel Panel -->
+      <div class="panel parallel">
+        <div class="panel-header">
+          <div class="panel-title">
+            并行模式
+            <span>Parallel Mode</span>
+          </div>
+          <div class="parallel-badge">AFTER</div>
+        </div>
+        
+        <div class="timeline">
+          <div class="tasks-container">
+            <!-- Lanes -->
+            <div class="parallel-lane"><span class="lane-label">Lane 1</span></div>
+            <div class="parallel-lane"><span class="lane-label">Lane 2</span></div>
+            <div class="parallel-lane"><span class="lane-label">Lane 3</span></div>
+            
+            <!-- Tasks -->
+            <div class="task-row">
+              <div class="task-bar readConfig" style="width: 50px;">
+                <span class="task-name">readConfig</span>
+                <span class="task-time">50ms</span>
+              </div>
+            </div>
+            
+            <div class="task-row">
+              <div class="task-bar loadMCP" style="width: 200px;">
+                <span class="task-name">loadMCP</span>
+                <span class="task-time">200ms</span>
+                <span style="position: absolute; right: -80px; font-size: 9px; color: var(--accent-blue);">← 关键路径 Critical Path</span>
+              </div>
+            </div>
+            
+            <div class="task-row">
+              <div class="task-bar checkUpdate" style="width: 150px;">
+                <span class="task-name">checkUpdate</span>
+                <span class="task-time">150ms</span>
+              </div>
+            </div>
+            
+            <div class="task-row">
+              <div style="width: 200px;"></div>
+              <div class="task-bar initUI" style="width: 80px;">
+                <span class="task-name">initUI</span>
+                <span class="task-time">80ms</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="hidden-work">
+            ★ 藏进去的工作 Hidden Work ★
+          </div>
+          
+          <div class="time-axis"></div>
+          <div class="time-labels">
+            <span>0ms</span>
+            <span>100ms</span>
+            <span>200ms</span>
+            <span>280ms</span>
+          </div>
+        </div>
+        
+        <div class="total-time">
+          <span class="total-label">总耗时 Total:</span>
+          <span class="total-value">~280ms</span>
+        </div>
+        
+        <div class="code-hint">
+          // 并行执行：Promise.allSettled<br>
+          await Promise.allSettled([<br>
+          &nbsp;&nbsp;readConfig(),<br>
+          &nbsp;&nbsp;loadMCP(),<br>
+          &nbsp;&nbsp;checkUpdate()<br>
+          ]);<br>
+          await initUI();
+        </div>
+      </div>
+    </div>
+    
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-color active"></div>
+        <span>执行中 Executing</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color idle"></div>
+        <span>空闲等待 Idle / Wasted</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color saved"></div>
+        <span>节省的时间 Time Saved</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

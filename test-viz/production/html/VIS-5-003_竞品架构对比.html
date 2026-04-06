@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Coding Tools Architecture Comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Serif+SC:wght@600&family=Space+Grotesk:wght@400;500;600&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-deep:#1a1a2e;
+  --bg-panel:#16213e;
+  --border:rgba(255,255,255,0.10);
+  --text-main:#f0f0f5;
+  --text-sub:#a0a0b0;
+  
+  --cc:#00d4ff;
+  --cursor:#7b61ff;
+  --copilot:#48bb78;
+  --windsurf:#ffa94d;
+  
+  --adv:rgba(0,212,255,0.18);
+  --avg:rgba(160,160,176,0.10);
+  --weak:rgba(255,129,60,0.12);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  height:100%;
+  background:var(--bg-deep);
+  color:var(--text-main);
+  font-family:"Space Grotesk","Noto Sans SC",sans-serif;
+  line-height:1.5;
+}
+
+body{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:48px 20px;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(0,212,255,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(123,97,255,0.06) 0%, transparent 50%),
+    var(--bg-deep);
+}
+
+.title{
+  font-family:"Playfair Display","Noto Serif SC",serif;
+  font-size:clamp(1.6rem,4vw,2.4rem);
+  font-weight:700;
+  text-align:center;
+  margin-bottom:8px;
+  letter-spacing:0.02em;
+}
+.subtitle{
+  font-size:0.95rem;
+  color:var(--text-sub);
+  text-align:center;
+  margin-bottom:40px;
+}
+
+.table-wrap{
+  width:100%;
+  max-width:1100px;
+  overflow:auto;
+  border-radius:16px;
+  border:1px solid var(--border);
+  background:var(--bg-panel);
+  box-shadow:0 24px 64px rgba(0,0,0,0.35);
+}
+
+table{
+  width:100%;
+  min-width:720px;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:0.92rem;
+}
+
+thead th{
+  position:sticky;
+  top:0;
+  z-index:20;
+  background:linear-gradient(180deg,#1e2a4a 0%,#16213e 100%);
+  padding:18px 14px;
+  text-align:center;
+  border-bottom:1px solid var(--border);
+  font-weight:600;
+}
+thead th:first-child{
+  position:sticky;
+  left:0;
+  z-index:30;
+  background:linear-gradient(180deg,#1e2a4a 0%,#16213e 100%);
+  text-align:left;
+  width:150px;
+  min-width:150px;
+}
+
+.product-header{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+}
+.product-header .icon{
+  width:32px;
+  height:32px;
+  border-radius:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.product-header .name-zh{
+  font-size:1rem;
+  font-family:"Noto Sans SC",sans-serif;
+  font-weight:500;
+}
+.product-header .name-en{
+  font-size:0.75rem;
+  color:var(--text-sub);
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+}
+
+.cc-col{background:rgba(0,212,255,0.08)}
+.cc-col .icon{background:rgba(0,212,255,0.15);color:var(--cc)}
+.cursor-col .icon{background:rgba(123,97,255,0.15);color:var(--cursor)}
+.copilot-col .icon{background:rgba(72,187,120,0.15);color:var(--copilot)}
+.windsurf-col .icon{background:rgba(255,169,77,0.15);color:var(--windsurf)}
+
+tbody td{
+  padding:14px 16px;
+  vertical-align:top;
+  border-bottom:1px solid var(--border);
+  height:86px;
+  position:relative;
+  transition:background 0.2s ease;
+}
+tbody td:first-child{
+  position:sticky;
+  left:0;
+  z-index:10;
+  background:var(--bg-panel);
+  font-weight:600;
+  border-right:1px solid var(--border);
+}
+tbody tr:hover td{
+  background:rgba(255,255,255,0.04);
+}
+tbody tr:hover td:first-child{
+  background:#1a2540;
+}
+
+.cc-col{width:24%}
+.cursor-col,.copilot-col,.windsurf-col{width:19%}
+
+.cell-content{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  position:relative;
+}
+.cell-text{
+  font-size:0.85rem;
+  line-height:1.55;
+  color:var(--text-main);
+}
+.cell-text .zh{display:block}
+.cell-text .en{
+  display:block;
+  font-size:0.75rem;
+  color:var(--text-sub);
+  margin-top:2px;
+}
+
+.badge{
+  position:absolute;
+  top:-4px;
+  right:-4px;
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  font-weight:700;
+}
+.advantage{background:var(--adv);color:var(--cc);border:1px solid rgba(0,212,255,0.35)}
+.average{background:var(--avg);color:var(--text-sub);border:1px solid rgba(255,255,255,0.12)}
+.weakness{background:var(--weak);color:#ff9f6b;border:1px solid rgba(255,129,60,0.35)}
+
+.cc-highlight{
+  background:linear-gradient(180deg,rgba(0,212,255,0.10) 0%,rgba(0,212,255,0.02) 100%);
+}
+tbody tr:hover .cc-highlight{
+  background:linear-gradient(180deg,rgba(0,212,255,0.14) 0%,rgba(0,212,255,0.05) 100%);
+}
+
+.row-label{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.row-label .zh{font-size:0.95rem;font-weight:600}
+.row-label .en{font-size:0.75rem;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.06em}
+
+/* sticky overlap border fix */
+thead th:first-child::after,
+tbody td:first-child::after{
+  content:"";
+  position:absolute;
+  right:0;
+  top:0;
+  bottom:0;
+  width:1px;
+  background:var(--border);
+}
+
+@media(max-width:760px){
+  body{padding:28px 12px}
+  .subtitle{margin-bottom:28px}
+  table{min-width:680px}
+  tbody td{padding:12px}
+}
+</style>
+</head>
+<body>
+
+<h1 class="title">AI 编程工具架构对比矩阵</h1>
+<p class="subtitle">Architecture Comparison Matrix — Claude Code vs Cursor vs Copilot vs Windsurf</p>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+  <th>维度 / Dimension</th>
+  <th class="cc-col">
+    <div class="product-header">
+      <div class="icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+      </div>
+      <span class="name-zh">Claude Code</span>
+      <span class="name-en">CLI Native</span>
+    </div>
+  </th>
+  <th class="cursor-col">
+    <div class="product-header">
+      <div class="icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+      </div>
+      <span class="name-zh">Cursor</span>
+      <span class="name-en">AI Native IDE</span>
+    </div>
+  </th>
+  <th class="copilot-col">
+    <div class="product-header">
+      <div class="icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"></path></svg>
+      </div>
+      <span class="name-zh">GitHub Copilot</span>
+      <span class="name-en">Microsoft / OpenAI</span>
+    </div>
+  </th>
+  <th class="windsurf-col">
+    <div class="product-header">
+      <div class="icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"></path></svg>
+      </div>
+      <span class="name-zh">Windsurf</span>
+      <span class="name-en">Codeium Agent IDE</span>
+    </div>
+  </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>
+    <div class="row-label">
+      <span class="zh">Agent 模式</span>
+      <span class="en">Agent Mode</span>
+    </div>
+  </td>
+  <td class="cc-highlight">
+    <div class="cell-content">
+      <span class="badge advantage">★</span>
+      <div class="cell-text">
+        <span class="zh">完整 Agent Loop，无限轮次，TaskTool 嵌套</span>
+        <span class="en">Full queryLoop, unlimited turns, nested TaskTool</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge average">●</span>
+      <div class="cell-text">
+        <span class="zh">Composer Agent，有轮次限制</span>
+        <span class="en">Composer Agent with turn limits</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge weakness">▲</span>
+      <div class="cell-text">
+        <span class="zh">Agent 模式较新，仍以代码补全为主</span>
+        <span class="en">Newer agent mode, completion-first</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge average">●</span>
+      <div class="cell-text">
+        <span class="zh">Cascade Agent，流式操作体验</span>
+        <span class="en">Cascade Agent, streaming operations</span>
+      </div>
+    </div>
+  </td>
+</tr>
+<tr>
+  <td>
+    <div class="row-label">
+      <span class="zh">工具系统</span>
+      <span class="en">Tool System</span>
+    </div>
+  </td>
+  <td class="cc-highlight">
+    <div class="cell-content">
+      <span class="badge advantage">★</span>
+      <div class="cell-text">
+        <span class="zh">43 个内置工具 + MCP 无限扩展，统一 Tool 接口</span>
+        <span class="en">43 built-in + MCP extensions, unified Tool API</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge average">●</span>
+      <div class="cell-text">
+        <span class="zh">内置工具较少，主要依赖 IDE 原生功能</span>
+        <span class="en">Few built-in tools, relies on IDE features</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge average">●</span>
+      <div class="cell-text">
+        <span class="zh">工具扩展通过 VS Code API 实现</span>
+        <span class="en">Tool ext via VS Code APIs</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge average">●</span>
+      <div class="cell-text">
+        <span class="zh">内置工具中等规模，Flows 系统</span>
+        <span class="en">Medium toolset with Flows system</span>
+      </div>
+    </div>
+  </td>
+</tr>
+<tr>
+  <td>
+    <div class="row-label">
+      <span class="zh">权限模型</span>
+      <span class="en">Permission Model</span>
+    </div>
+  </td>
+  <td class="cc-highlight">
+    <div class="cell-content">
+      <span class="badge advantage">★</span>
+      <div class="cell-text">
+        <span class="zh">最精细：6 种模式 + 九步链 + 企业级覆盖</span>
+        <span class="en">Finest: 6 modes + 9-step chain + enterprise</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge weakness">▲</span>
+      <div class="cell-text">
+        <span class="zh">基本权限控制：允许 / 拒绝</span>
+        <span class="en">Basic allow / deny permissions</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge weakness">▲</span>
+      <div class="cell-text">
+        <span class="zh">权限模型相对简单</span>
+        <span class="en">Simple permission model</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge average">●</span>
+      <div class="cell-text">
+        <span class="zh">中等粒度权限控制</span>
+        <span class="en">Medium permission controls</span>
+      </div>
+    </div>
+  </td>
+</tr>
+<tr>
+  <td>
+    <div class="row-label">
+      <span class="zh">扩展机制</span>
+      <span class="en">Extension</span>
+    </div>
+  </td>
+  <td class="cc-highlight">
+    <div class="cell-content">
+      <span class="badge advantage">★</span>
+      <div class="cell-text">
+        <span class="zh">Hooks + MCP + Plugins + Skills 四种途径</span>
+        <span class="en">Hooks + MCP + Plugins + Skills</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge average">●</span>
+      <div class="cell-text">
+        <span class="zh">兼容 VS Code 插件生态</span>
+        <span class="en">VS Code extension compatible</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge advantage">★</span>
+      <div class="cell-text">
+        <span class="zh">背靠 VS Code / JetBrains 庞大插件生态</span>
+        <span class="en">Massive VS Code / JetBrains ecosystem</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge weakness">▲</span>
+      <div class="cell-text">
+        <span class="zh">扩展性相对封闭</span>
+        <span class="en">Relatively closed extensibility</span>
+      </div>
+    </div>
+  </td>
+</tr>
+<tr>
+  <td>
+    <div class="row-label">
+      <span class="zh">上下文管理</span>
+      <span class="en">Context Management</span>
+    </div>
+  </td>
+  <td class="cc-highlight">
+    <div class="cell-content">
+      <span class="badge average">●</span>
+      <div class="cell-text">
+        <span class="zh">Prompt Cache + ConversationCompactor + 智能截断</span>
+        <span class="en">Prompt Cache + Compactor + smart truncation</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge advantage">★</span>
+      <div class="cell-text">
+        <span class="zh">@ 符号引用 + 全项目索引，体验领先</span>
+        <span class="en">@ references + full-project index, best-in-class</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge weakness">▲</span>
+      <div class="cell-text">
+        <span class="zh">上下文窗口相对有限</span>
+        <span class="en">Limited context window</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge average">●</span>
+      <div class="cell-text">
+        <span class="zh">自动上下文收集机制</span>
+        <span class="en">Automatic context gathering</span>
+      </div>
+    </div>
+  </td>
+</tr>
+<tr>
+  <td>
+    <div class="row-label">
+      <span class="zh">部署形态</span>
+      <span class="en">Deployment</span>
+    </div>
+  </td>
+  <td class="cc-highlight">
+    <div class="cell-content">
+      <span class="badge advantage">★</span>
+      <div class="cell-text">
+        <span class="zh">纯 CLI 终端原生，零 IDE 依赖</span>
+        <span class="en">Pure CLI native, zero IDE dependency</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge average">●</span>
+      <div class="cell-text">
+        <span class="zh">独立 IDE（VS Code fork）</span>
+        <span class="en">Standalone IDE (VS Code fork)</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge average">●</span>
+      <div class="cell-text">
+        <span class="zh">IDE 插件（VS Code / JetBrains / Vim）</span>
+        <span class="en">IDE plugin across editors</span>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div class="cell-content">
+      <span class="badge average">●</span>
+      <div class="cell-text">
+        <span class="zh">独立 IDE</span>
+        <span class="en">Standalone IDE</span>
+      </div>
+    </div>
+  </td>
+</tr>
+</tbody>
+</table>
+</div>
+
+</body>
+</html>

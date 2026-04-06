@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Computer Use 操作时序图</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #0a0f1c;
+  color: #e2e8f0;
+  font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+h1 {
+  font-weight: 700;
+  font-size: 1.5rem;
+  margin: 0 0 16px 0;
+  letter-spacing: 0.05em;
+  background: linear-gradient(90deg, #00d4ff, #00ff88);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.subtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 24px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.svg-container {
+  width: 100%;
+  max-width: 1000px;
+  overflow-x: auto;
+  border: 1px solid rgba(148,163,184,0.1);
+  border-radius: 12px;
+  background: radial-gradient(ellipse at top, rgba(30,41,59,0.4) 0%, rgba(10,15,28,0.2) 60%), #0a0f1c;
+  box-shadow: 0 0 40px rgba(0,212,255,0.05);
+}
+svg {
+  display: block;
+  width: 100%;
+  min-width: 800px;
+}
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(15,23,42,0.95);
+  border: 1px solid rgba(148,163,184,0.2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  color: #e2e8f0;
+  max-width: 260px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 100;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  backdrop-filter: blur(6px);
+}
+.message-group { cursor: pointer; }
+.message-group:hover .message-line { stroke-width: 3; filter: drop-shadow(0 0 4px currentColor); }
+.message-group:hover .message-text { fill: #fff; font-weight: 500; }
+.step-box { transition: all 0.2s; cursor: pointer; }
+.step-box:hover { filter: drop-shadow(0 0 6px rgba(255,136,68,0.5)); }
+.escape-line { animation: pulseRed 2s infinite; }
+@keyframes pulseRed { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+.lifeline { stroke-dasharray: 4 4; }
+</style>
+</head>
+<body>
+<h1>Computer Use 操作时序图</h1>
+<div class="subtitle">VIS-2Q-018 / Sequence Diagram</div>
+<div class="svg-container">
+<svg viewBox="0 0 1000 1650" preserveAspectRatio="xMidYMin meet">
+  <defs>
+    <filter id="glow-blue" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#00d4ff" flood-opacity="0.5"/>
+    </filter>
+    <filter id="glow-green" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#00ff88" flood-opacity="0.5"/>
+    </filter>
+    <filter id="glow-pink" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#ff88cc" flood-opacity="0.5"/>
+    </filter>
+    <filter id="glow-orange" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#ff8844" flood-opacity="0.5"/>
+    </filter>
+    <filter id="glow-violet" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#a78bfa" flood-opacity="0.5"/>
+    </filter>
+    <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#22d3ee" flood-opacity="0.5"/>
+    </filter>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+    </marker>
+    <marker id="arrowhead-dashed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+    </marker>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(148,163,184,0.03)" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect x="0" y="0" width="1000" height="1650" fill="url(#grid)" />
+
+  <rect x="10" y="90" width="980" height="430" rx="8" fill="rgba(0,212,255,0.04)" stroke="rgba(0,212,255,0.1)" stroke-width="1" />
+  <rect x="10" y="540" width="980" height="320" rx="8" fill="rgba(0,255,136,0.04)" stroke="rgba(0,255,136,0.1)" stroke-width="1" />
+  <rect x="10" y="880" width="980" height="600" rx="8" fill="rgba(255,136,68,0.04)" stroke="rgba(255,136,68,0.1)" stroke-width="1" />
+
+  <text x="30" y="120" fill="#00d4ff" font-size="12" font-weight="700" font-family="'Space Grotesk', sans-serif" opacity="0.8">01 截图 / Screenshot</text>
+  <text x="30" y="570" fill="#00ff88" font-size="12" font-weight="700" font-family="'Space Grotesk', sans-serif" opacity="0.8">02 鼠标 / Mouse</text>
+  <text x="30" y="910" fill="#ff8844" font-size="12" font-weight="700" font-family="'Space Grotesk', sans-serif" opacity="0.8">03 键盘 / Keyboard</text>
+
+  <g id="participants">
+    <rect x="40" y="25" width="120" height="50" rx="6" fill="rgba(10,15,28,0.8)" stroke="#00d4ff" stroke-width="1.5" filter="url(#glow-blue)"/>
+    <text x="100" y="48" text-anchor="middle" fill="#00d4ff" font-size="13" font-weight="700">AI 模型</text>
+    <text x="100" y="64" text-anchor="middle" fill="#00d4ff" font-size="9" opacity="0.8" font-family="'JetBrains Mono', monospace">AI Model</text>
+
+    <rect x="200" y="25" width="120" height="50" rx="6" fill="rgba(10,15,28,0.8)" stroke="#a78bfa" stroke-width="1.5" filter="url(#glow-violet)"/>
+    <text x="260" y="48" text-anchor="middle" fill="#a78bfa" font-size="13" font-weight="700">MCP Server</text>
+    <text x="260" y="64" text-anchor="middle" fill="#a78bfa" font-size="9" opacity="0.8" font-family="'JetBrains Mono', monospace">MCP Server</text>
+
+    <rect x="360" y="25" width="120" height="50" rx="6" fill="rgba(10,15,28,0.8)" stroke="#00ff88" stroke-width="1.5" filter="url(#glow-green)"/>
+    <text x="420" y="48" text-anchor="middle" fill="#00ff88" font-size="13" font-weight="700">Executor</text>
+    <text x="420" y="64" text-anchor="middle" fill="#00ff88" font-size="9" opacity="0.8" font-family="'JetBrains Mono', monospace">Executor</text>
+
+    <rect x="520" y="25" width="120" height="50" rx="6" fill="rgba(10,15,28,0.8)" stroke="#ff88cc" stroke-width="1.5" filter="url(#glow-pink)"/>
+    <text x="580" y="48" text-anchor="middle" fill="#ff88cc" font-size="13" font-weight="700">Swift Native</text>
+    <text x="580" y="64" text-anchor="middle" fill="#ff88cc" font-size="9" opacity="0.8" font-family="'JetBrains Mono', monospace">Swift Native</text>
+
+    <rect x="680" y="25" width="120" height="50" rx="6" fill="rgba(10,15,28,0.8)" stroke="#ff8844" stroke-width="1.5" filter="url(#glow-orange)"/>
+    <text x="740" y="48" text-anchor="middle" fill="#ff8844" font-size="13" font-weight="700">Rust Native</text>
+    <text x="740" y="64" text-anchor="middle" fill="#ff8844" font-size="9" opacity="0.8" font-family="'JetBrains Mono', monospace">Rust Native</text>
+
+    <rect x="840" y="25" width="120" height="50" rx="6" fill="rgba(10,15,28,0.8)" stroke="#22d3ee" stroke-width="1.5" filter="url(#glow-cyan)"/>
+    <text x="900" y="48" text-anchor="middle" fill="#22d3ee" font-size="12" font-weight="700">drainRunLoop</text>
+    <text x="900" y="64" text-anchor="middle" fill="#22d3ee" font-size="9" opacity="0.8" font-family="'JetBrains Mono', monospace">RunLoop Pump</text>
+  </g>
+
+  <g opacity="0.5">
+    <line x1="100" y1="75" x2="100" y2="520" stroke="#00d4ff" stroke-width="1" class="lifeline"/>
+    <line x1="100" y1="540" x2="100" y2="860" stroke="#00d4ff" stroke-width="1" class="lifeline"/>
+    <line x1="100" y1="880" x2="100" y2="1480" stroke="#00d4ff" stroke-width="1" class="lifeline"/>
+
+    <line x1="260" y1="75" x2="260" y2="520" stroke="#a78bfa" stroke-width="1" class="lifeline"/>
+    <line x1="260" y1="540" x2="260" y2="860" stroke="#a78bfa" stroke-width="1" class="lifeline"/>
+    <line x1="260" y1="880" x2="260" y2="1480" stroke="#a78bfa" stroke-width="1" class="lifeline"/>
+
+    <line x1="420" y1="75" x2="420" y2="520" stroke="#00ff88" stroke-width="1" class="lifeline"/>
+    <line x1="420" y1="540" x2="420" y2="860" stroke="#00ff88" stroke-width="1" class="lifeline"/>
+    <line x1="420" y1="880" x2="420" y2="1480" stroke="#00ff88" stroke-width="1" class="lifeline"/>
+
+    <line x1="580" y1="75" x2="580" y2="520" stroke="#ff88cc" stroke-width="1" class="lifeline"/>
+    <line x1="580" y1="540" x2="580" y2="860" stroke="#ff88cc" stroke-width="1" class="lifeline"/>
+    <line x1="580" y1="880" x2="580" y2="1480" stroke="#ff88cc" stroke-width="1" class="lifeline"/>
+
+    <line x1="740" y1="75" x2="740" y2="520" stroke="#ff8844" stroke-width="1" class="lifeline"/>
+    <line x1="740" y1="540" x2="740" y2="860" stroke="#ff8844" stroke-width="1" class="lifeline"/>
+    <line x1="740" y1="880" x2="740" y2="1480" stroke="#ff8844" stroke-width="1" class="lifeline"/>
+
+    <line x1="900" y1="75" x2="900" y2="520" stroke="#22d3ee" stroke-width="1" class="lifeline"/>
+  </g>
+
+  <g class="message-group" data-tip="AI 请求截图工具调用">
+    <line x1="100" y1="120" x2="260" y2="120" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="180" y="112" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">请求 screenshot</text>
+    <text x="180" y="124" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">screenshot()</text>
+  </g>
+
+  <g class="message-group" data-tip="MCP Server 将操作分发给 Executor">
+    <line x1="260" y1="155" x2="420" y2="155" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="340" y="147" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">分发操作</text>
+    <text x="340" y="159" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">dispatch</text>
+  </g>
+
+  <g class="message-group" data-tip="通过 SCContentFilter 捕获屏幕，排除终端窗口">
+    <line x1="420" y1="195" x2="580" y2="195" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="500" y="187" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">SCContentFilter(排除终端)</text>
+    <text x="500" y="199" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">capture(excludeTerminal)</text>
+  </g>
+
+  <g class="message-group" data-tip="Swift 侧需要泵送 macOS 主 RunLoop">
+    <line x1="580" y1="245" x2="900" y2="245" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="740" y="237" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">需要 CFRunLoop 泵送</text>
+    <text x="740" y="249" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">pumpRunLoop()</text>
+  </g>
+
+  <g opacity="0.7">
+    <line x1="460" y1="275" x2="940" y2="275" stroke="#fbbf24" stroke-width="1" stroke-dasharray="4 4"/>
+    <text x="950" y="279" fill="#fbbf24" font-size="9" font-family="'JetBrains Mono', monospace">30s timeout protection</text>
+    <text x="950" y="268" fill="#fbbf24" font-size="9">30秒超时保护</text>
+  </g>
+
+  <g class="message-group" data-tip="每 1ms 泵送一次，直到 Promise resolve">
+    <line x1="900" y1="290" x2="580" y2="290" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowhead-dashed)" class="message-line"/>
+    <text x="740" y="305" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">1ms 泵送 / resolve</text>
+    <text x="740" y="317" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">1ms pump → resolve</text>
+  </g>
+
+  <g transform="translate(900, 330)">
+    <circle cx="0" cy="0" r="18" fill="none" stroke="#22d3ee" stroke-width="1.5" opacity="0.8"/>
+    <path d="M -8,-4 A 10,10 0 1,1 -8,4" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+    <text x="0" y="28" text-anchor="middle" fill="#22d3ee" font-size="8" font-family="'JetBrains Mono', monospace">1ms loop</text>
+  </g>
+
+  <g class="message-group" data-tip="计算目标图片尺寸 targetImageSize">
+    <path d="M 580,345 C 610,345 610,365 580,365" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="600" y="340" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">尺寸计算</text>
+    <text x="600" y="380" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">targetImageSize</text>
+  </g>
+
+  <g class="message-group" data-tip="JPEG 质量 0.75 压缩">
+    <path d="M 580,395 C 610,395 610,415 580,415" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="600" y="390" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">JPEG 0.75 压缩</text>
+    <text x="600" y="430" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">compress(width, height)</text>
+  </g>
+
+  <g class="message-group" data-tip="返回压缩后的图片和尺寸元数据">
+    <line x1="580" y1="455" x2="420" y2="455" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowhead-dashed)" class="message-line"/>
+    <text x="500" y="447" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">图片 + 元数据</text>
+    <text x="500" y="459" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">image + metadata</text>
+  </g>
+
+  <g class="message-group" data-tip="Executor 将结果返回给 MCP Server">
+    <line x1="420" y1="490" x2="260" y2="490" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowhead-dashed)" class="message-line"/>
+    <text x="340" y="482" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">返回结果</text>
+    <text x="340" y="494" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">result</text>
+  </g>
+
+  <g class="message-group" data-tip="MCP Server 将截图结果返回给 AI">
+    <line x1="260" y1="520" x2="100" y2="520" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowhead-dashed)" class="message-line"/>
+    <text x="180" y="512" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">图片 + 元数据</text>
+    <text x="180" y="524" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">image + metadata</text>
+  </g>
+
+  <g class="message-group" data-tip="AI 决定点击位置并请求 click 操作">
+    <line x1="100" y1="570" x2="260" y2="570" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="180" y="562" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">请求点击 (x,y)</text>
+    <text x="180" y="574" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">click(x, y)</text>
+  </g>
+
+  <g class="message-group" data-tip="MCP 分发鼠标点击操作">
+    <line x1="260" y1="605" x2="420" y2="605" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="340" y="597" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">分发操作</text>
+    <text x="340" y="609" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">dispatch</text>
+  </g>
+
+  <g class="message-group" data-tip="移动鼠标到目标位置并等待稳定">
+    <line x1="420" y1="645" x2="740" y2="645" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="580" y="637" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">moveAndSettle</text>
+    <text x="580" y="649" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">move + wait</text>
+  </g>
+
+  <g>
+    <rect x="410" y="660" width="20" height="40" rx="4" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="1"/>
+    <text x="445" y="685" fill="#fbbf24" font-size="10" font-weight="700" font-family="'JetBrains Mono', monospace">50ms</text>
+    <text x="445" y="672" fill="#fbbf24" font-size="9">等待</text>
+  </g>
+
+  <g transform="translate(780, 670)">
+    <rect x="0" y="0" width="190" height="48" rx="6" fill="rgba(10,15,28,0.9)" stroke="rgba(0,255,136,0.3)" stroke-width="1"/>
+    <text x="95" y="16" text-anchor="middle" fill="#00ff88" font-size="9" font-weight="700">拖拽 / Drag</text>
+    <text x="95" y="30" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace">ease-out-cubic, 60fps</text>
+    <text x="95" y="40" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace">2000px/sec</text>
+  </g>
+
+  <g class="message-group" data-tip="执行鼠标点击，包含修饰键处理">
+    <line x1="420" y1="730" x2="740" y2="730" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="580" y="722" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">mouseButton('click')</text>
+    <text x="580" y="734" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">click</text>
+  </g>
+
+  <g class="message-group" data-tip="按下修饰键 → 执行点击 → finally 释放">
+    <path d="M 740,765 C 770,765 770,785 740,785" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="760" y="760" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">withModifiers</text>
+    <text x="760" y="800" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">press→act→release</text>
+  </g>
+
+  <g class="message-group" data-tip="Rust 完成鼠标操作并返回">
+    <line x1="740" y1="830" x2="420" y2="830" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowhead-dashed)" class="message-line"/>
+    <text x="580" y="822" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">操作完成</text>
+    <text x="580" y="834" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">done</text>
+  </g>
+
+  <g class="message-group" data-tip="AI 请求输入文本或组合键">
+    <line x1="100" y1="910" x2="260" y2="910" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="180" y="902" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">请求输入</text>
+    <text x="180" y="914" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">type(text)</text>
+  </g>
+
+  <g class="message-group" data-tip="MCP 分发键盘输入操作">
+    <line x1="260" y1="945" x2="420" y2="945" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="340" y="937" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">分发操作</text>
+    <text x="340" y="949" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">dispatch</text>
+  </g>
+
+  <g class="message-group" data-tip="组合键输入，键之间间隔 8ms">
+    <line x1="420" y1="990" x2="740" y2="990" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="580" y="982" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">组合键 (8ms间隔)</text>
+    <text x="580" y="994" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">keyCombo (8ms)</text>
+  </g>
+
+  <g class="message-group" data-tip="通过剪贴板协议输入长文本">
+    <line x1="420" y1="1030" x2="740" y2="1030" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" class="message-line"/>
+    <text x="580" y="1022" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">typeViaClipboard</text>
+    <text x="580" y="1034" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">clipboard protocol</text>
+  </g>
+
+  <g transform="translate(620, 1055)">
+    <g data-tip="保存原始剪贴板内容" class="step-box">
+      <rect x="0" y="0" width="180" height="36" rx="4" fill="rgba(255,136,68,0.08)" stroke="rgba(255,136,68,0.4)" stroke-width="1"/>
+      <text x="10" y="15" fill="#ff8844" font-size="10" font-weight="700" font-family="'JetBrains Mono', monospace">1</text>
+      <text x="24" y="15" fill="#e2e8f0" font-size="10">保存剪贴板</text>
+      <text x="24" y="27" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace">saveClipboard</text>
+    </g>
+
+    <g data-tip="写入待输入文本到剪贴板" class="step-box">
+      <rect x="0" y="44" width="180" height="36" rx="4" fill="rgba(255,136,68,0.08)" stroke="rgba(255,136,68,0.4)" stroke-width="1"/>
+      <text x="10" y="59" fill="#ff8844" font-size="10" font-weight="700" font-family="'JetBrains Mono', monospace">2</text>
+      <text x="24" y="59" fill="#e2e8f0" font-size="10">写入文本</text>
+      <text x="24" y="71" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace">writeText</text>
+    </g>
+
+    <g data-tip="回读剪贴板验证写入成功" class="step-box">
+      <rect x="0" y="88" width="180" height="36" rx="4" fill="rgba(255,136,68,0.08)" stroke="rgba(255,136,68,0.4)" stroke-width="1"/>
+      <text x="10" y="103" fill="#ff8844" font-size="10" font-weight="700" font-family="'JetBrains Mono', monospace">3</text>
+      <text x="24" y="103" fill="#e2e8f0" font-size="10">回读验证</text>
+      <text x="24" y="115" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace">read back verify</text>
+    </g>
+
+    <g data-tip="触发 Cmd+V 粘贴操作" class="step-box">
+      <rect x="0" y="132" width="180" height="36" rx="4" fill="rgba(255,136,68,0.08)" stroke="rgba(255,136,68,0.4)" stroke-width="1"/>
+      <text x="10" y="147" fill="#ff8844" font-size="10" font-weight="700" font-family="'JetBrains Mono', monospace">4</text>
+      <text x="24" y="147" fill="#e2e8f0" font-size="10">Cmd+V 粘贴</text>
+      <text x="24" y="159" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace">paste</text>
+    </g>
+
+    <g data-tip="等待 100ms 确保粘贴完成" class="step-box">
+      <rect x="0" y="176" width="180" height="36" rx="4" fill="rgba(251,191,36,0.12)" stroke="rgba(251,191,36,0.5)" stroke-width="1"/>
+      <text x="10" y="191" fill="#fbbf24" font-size="10" font-weight="700" font-family="'JetBrains Mono', monospace">5</text>
+      <text x="24" y="191" fill="#e2e8f0" font-size="10">100ms 等待</text>
+      <text x="24" y="203" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace">wait 100ms</text>
+    </g>
+
+    <g data-tip="在 finally 中恢复原始剪贴板" class="step-box">
+      <rect x="0" y="220" width="180" height="36" rx="4" fill="rgba(255,136,68,0.08)" stroke="rgba(255,136,68,0.4)" stroke-width="1"/>
+      <text x="10" y="235" fill="#ff8844" font-size="10" font-weight="700" font-family="'JetBrains Mono', monospace">6</text>
+      <text x="24" y="235" fill="#e2e8f0" font-size="10">恢复剪贴板</text>
+      <text x="24" y="247" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace">finally restore</text>
+    </g>
+  </g>
+
+  <g class="message-group" data-tip="键盘操作全部完成">
+    <line x1="740" y1="1330" x2="420" y2="1330" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowhead-dashed)" class="message-line"/>
+    <text x="580" y="1322" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">操作完成</text>
+    <text x="580" y="1334" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">done</text>
+  </g>
+
+  <g class="message-group" data-tip="返回键盘操作结果">
+    <line x1="420" y1="1370" x2="260" y2="1370" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowhead-dashed)" class="message-line"/>
+    <text x="340" y="1362" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">返回结果</text>
+    <text x="340" y="1374" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">result</text>
+  </g>
+
+  <g class="message-group" data-tip="MCP 向 AI 确认输入完成">
+    <line x1="260" y1="1410" x2="100" y2="1410" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowhead-dashed)" class="message-line"/>
+    <text x="180" y="1402" text-anchor="middle" fill="#e2e8f0" font-size="10" class="message-text">完成确认</text>
+    <text x="180" y="1414" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', monospace" class="message-text">confirm</text>
+  </g>
+
+  <g class="escape-line">
+    <line x1="80" y1="750" x2="960" y2="750" stroke="#ff6b6b" stroke-width="2" stroke-dasharray="6 4" opacity="0.8"/>
+    <g transform="translate(970, 730)">
+      <path d="M 0,0 L 12,0 L 4,14 L 16,14 L -4,36 L 2,18 L -8,18 Z" fill="#ff6b6b" stroke="none" opacity="0.9"/>
+    </g>
+    <text x="980" y="765" fill="#ff6b6b" font-size="10" font-weight="700">Escape 中止</text>
+    <text x="980" y="777" fill="#ff6b6b" font-size="8" font-family="'JetBrains Mono', monospace">Abort</text>
+    <text x="80" y="742" fill="#ff6b6b" font-size="9" font-family="'JetBrains Mono', monospace">CGEventTap 全系统拦截</text>
+  </g>
+
+</svg>
+</div>
+<div class="tooltip" id="tooltip"></div>
+<script>
+  const tooltip = document.getElementById('tooltip');
+  const groups = document.querySelectorAll('.message-group, .step-box');
+  groups.forEach(g => {
+    g.addEventListener('mouseenter', e => {
+      const tip = g.getAttribute('data-tip');
+      if (!tip) return;
+      tooltip.textContent = tip;
+      tooltip.style.opacity = '1';
+    });
+    g.addEventListener('mousemove', e => {
+      tooltip.style.left = (e.pageX + 12) + 'px';
+      tooltip.style.top = (e.pageY + 12) + 'px';
+    });
+    g.addEventListener('mouseleave', () => {
+      tooltip.style.opacity = '0';
+    });
+  });
+</script>
+</body>
+</html>

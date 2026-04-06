@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Token Cost Calculation | 缓存成本可视化</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  :root {
+    --bg-deep: #03050a;
+    --bg-panel: rgba(12, 18, 35, 0.55);
+    --green: #00ff88;
+    --green-dim: rgba(0, 255, 136, 0.15);
+    --red: #ff2a6d;
+    --red-dim: rgba(255, 42, 109, 0.15);
+    --cyan: #00f0ff;
+    --cyan-dim: rgba(0, 240, 255, 0.1);
+    --orange: #ffaa00;
+    --orange-dim: rgba(255, 170, 0, 0.1);
+    --purple: #bc13fe;
+    --purple-dim: rgba(188, 19, 254, 0.1);
+    --text-main: #e8ecf1;
+    --text-muted: #8a93a8;
+  }
+  body {
+    background-color: var(--bg-deep);
+    color: var(--text-main);
+    font-family: 'Noto Sans SC', sans-serif;
+    overflow-x: hidden;
+  }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+  .noise-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.04;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .glow-green { filter: drop-shadow(0 0 12px rgba(0,255,136,0.4)); }
+  .glow-red { filter: drop-shadow(0 0 12px rgba(255,42,109,0.4)); }
+  .card {
+    background: var(--bg-panel);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    background: transparent;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: var(--text-main);
+    cursor: pointer;
+    margin-top: -8px;
+    box-shadow: 0 0 10px rgba(255,255,255,0.3);
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+  }
+  .bar { transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .axis-line { stroke: rgba(255,255,255,0.1); stroke-width: 1; }
+  .grid-line { stroke: rgba(255,255,255,0.05); stroke-width: 1; stroke-dasharray: 4 4; }
+</style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-12 px-4">
+<div class="noise-bg"></div>
+
+<div id="barTooltip" class="fixed pointer-events-none opacity-0 transition-opacity duration-200 z-50 rounded-lg p-3 border border-white/10 shadow-2xl" style="background: var(--bg-panel); backdrop-filter: blur(12px);">
+  <div id="btTitle" class="text-xs font-bold mb-1">Cache Hit</div>
+  <div id="btCost" class="font-mono text-sm font-bold text-white mb-1">$0.04</div>
+  <div id="btBreakdown" class="text-[10px] text-[var(--text-muted)]">20 rounds × $0.002</div>
+</div>
+
+<div class="w-full max-w-5xl space-y-10">
+
+  <!-- Header -->
+  <header class="text-center space-y-2">
+    <h1 class="text-3xl md:text-4xl font-bold tracking-tight">Token 成本计算图</h1>
+    <p class="text-sm md:text-base text-[var(--text-muted)] font-mono tracking-widest uppercase">Prompt Cache Cost Comparison // 20 Rounds</p>
+  </header>
+
+  <!-- Price Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="card p-4 border-t-2 border-t-[var(--cyan)]">
+      <div class="text-xs text-[var(--text-muted)] mb-1">Input Tokens</div>
+      <div class="font-mono text-xl font-bold text-[var(--cyan)]">$15<span class="text-sm text-[var(--text-muted)]">/M</span></div>
+      <div class="text-[10px] text-[var(--text-muted)] mt-1">基准价格 1x</div>
+    </div>
+    <div class="card p-4 border-t-2 border-t-[var(--orange)]">
+      <div class="text-xs text-[var(--text-muted)] mb-1">Output Tokens</div>
+      <div class="font-mono text-xl font-bold text-[var(--orange)]">$75<span class="text-sm text-[var(--text-muted)]">/M</span></div>
+      <div class="text-[10px] text-[var(--text-muted)] mt-1">5x 基准</div>
+    </div>
+    <div class="card p-4 border-t-2 border-t-[var(--green)]">
+      <div class="text-xs text-[var(--text-muted)] mb-1">Cache Read</div>
+      <div class="font-mono text-xl font-bold text-[var(--green)]">$1.5<span class="text-sm text-[var(--text-muted)]">/M</span></div>
+      <div class="text-[10px] text-[var(--text-muted)] mt-1">命中价 0.1x</div>
+    </div>
+    <div class="card p-4 border-t-2 border-t-[var(--purple)]">
+      <div class="text-xs text-[var(--text-muted)] mb-1">Cache Write</div>
+      <div class="font-mono text-xl font-bold text-[var(--purple)]">$18.75<span class="text-sm text-[var(--text-muted)]">/M</span></div>
+      <div class="text-[10px] text-[var(--text-muted)] mt-1">写入价 1.25x</div>
+    </div>
+  </div>
+
+  <!-- Main Bar Chart -->
+  <div class="card p-6 md:p-10 relative overflow-hidden">
+    <div class="absolute top-0 right-0 p-4 opacity-10 font-mono text-6xl font-bold select-none pointer-events-none">$</div>
+    
+    <div class="flex justify-between items-end mb-4">
+      <h2 class="text-lg font-semibold">单轮成本对比<span class="block text-xs text-[var(--text-muted)] font-normal font-mono mt-1">Cost Per API Call (System Prompt Only)</span></h2>
+      <div class="text-right">
+        <div class="text-xs text-[var(--text-muted)]">System Prompt 规模</div>
+        <div class="font-mono text-sm">15,000 ~ 34,000 tokens</div>
+      </div>
+    </div>
+
+    <svg id="barChart" viewBox="0 0 800 340" class="w-full h-auto overflow-visible">
+      <g id="barGrid"></g>
+      <rect id="barHit" x="220" y="300" width="100" height="0" rx="4" fill="url(#gradGreen)" class="bar glow-green cursor-pointer"/>
+      <rect id="barMiss" x="480" y="300" width="100" height="0" rx="4" fill="url(#gradRed)" class="bar glow-red cursor-pointer"/>
+      
+      <text id="labelHit" x="270" y="290" text-anchor="middle" class="font-mono text-sm fill-[var(--text-main)] opacity-0 transition-opacity duration-700">$0.002</text>
+      <text id="labelMiss" x="530" y="290" text-anchor="middle" class="font-mono text-sm fill-[var(--text-main)] opacity-0 transition-opacity duration-700">$0.050</text>
+      
+      <g id="multiplierBadge" transform="translate(400, 160)" opacity="0" class="transition-opacity duration-700">
+        <rect x="-55" y="-24" width="110" height="48" rx="24" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)"/>
+        <text x="0" y="4" text-anchor="middle" class="font-mono font-bold text-xl fill-white tracking-wider">25x</text>
+        <text x="0" y="18" text-anchor="middle" class="font-mono text-[10px] fill-[var(--text-muted)]">节省 96% / Save 96%</text>
+      </g>
+      
+      <text x="270" y="325" text-anchor="middle" class="fill-[var(--green)] text-sm font-bold">Cache Hit</text>
+      <text x="270" y="342" text-anchor="middle" class="fill-[var(--text-muted)] text-xs">缓存命中</text>
+      <text x="530" y="325" text-anchor="middle" class="fill-[var(--red)] text-sm font-bold">Cache Miss</text>
+      <text x="530" y="342" text-anchor="middle" class="fill-[var(--text-muted)] text-xs">缓存未命中</text>
+      
+      <line x1="80" y1="300" x2="720" y2="300" class="axis-line"/>
+      
+      <defs>
+        <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--green)"/>
+          <stop offset="100%" stop-color="rgba(0,255,136,0.2)"/>
+        </linearGradient>
+        <linearGradient id="gradRed" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--red)"/>
+          <stop offset="100%" stop-color="rgba(255,42,109,0.2)"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+
+  <!-- Interactive Slider -->
+  <div class="card p-6 flex flex-col md:flex-row items-center gap-6">
+    <div class="flex-1 w-full">
+      <div class="flex justify-between mb-2">
+        <label class="text-sm font-medium">对话轮次<span class="text-[var(--text-muted)] font-mono text-xs ml-2">Dialogue Rounds</span></label>
+        <span id="roundValue" class="font-mono text-lg font-bold text-white">20</span>
+      </div>
+      <input type="range" id="roundSlider" min="5" max="50" value="20" step="1">
+      <div class="flex justify-between text-[10px] text-[var(--text-muted)] font-mono mt-1">
+        <span>5</span><span>50</span>
+      </div>
+    </div>
+    <div class="w-full md:w-px h-px md:h-12 bg-white/10"></div>
+    <div class="text-center md:text-left">
+      <div class="text-xs text-[var(--text-muted)] mb-1">累计节省估算<span class="font-mono ml-1">Est. Savings</span></div>
+      <div class="font-mono text-2xl font-bold text-[var(--green)]" id="savingsValue">$0.96</div>
+      <div class="text-xs text-[var(--text-muted)] font-mono mt-0.5" id="savingsPercent">节省 96% / Save 96%</div>
+    </div>
+  </div>
+
+  <!-- Line Chart -->
+  <div class="card p-6 md:p-10">
+    <h2 class="text-lg font-semibold mb-2">累积成本曲线<span class="block text-xs text-[var(--text-muted)] font-normal font-mono mt-1">Cumulative Cost Over Rounds</span></h2>
+    <svg id="lineChart" viewBox="0 0 800 260" class="w-full h-auto overflow-visible">
+      <g id="lineGrid"></g>
+      <path id="areaHit" d="" fill="var(--green-dim)" opacity="0.6"/>
+      <path id="areaMiss" d="" fill="var(--red-dim)" opacity="0.6"/>
+      <path id="lineHit" d="" fill="none" stroke="var(--green)" stroke-width="3" class="glow-green"/>
+      <path id="lineMiss" d="" fill="none" stroke="var(--red)" stroke-width="3" class="glow-red"/>
+      
+      <g transform="translate(400, 245)">
+        <text text-anchor="middle" class="fill-[var(--text-muted)] text-xs">对话轮次 / Rounds</text>
+      </g>
+      <g transform="translate(20, 130) rotate(-90)">
+        <text text-anchor="middle" class="fill-[var(--text-muted)] text-xs">累计成本 / Cumulative Cost ($)</text>
+      </g>
+      
+      <g id="tooltipGroup" opacity="0" pointer-events="none">
+        <line x1="0" y1="20" x2="0" y2="210" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-dasharray="3 3"/>
+        <circle id="tooltipCircleHit" r="5" fill="var(--bg-deep)" stroke="var(--green)" stroke-width="2"/>
+        <circle id="tooltipCircleMiss" r="5" fill="var(--bg-deep)" stroke="var(--red)" stroke-width="2"/>
+        <rect x="10" y="10" width="150" height="58" rx="6" fill="var(--bg-panel)" stroke="rgba(255,255,255,0.1)"/>
+        <text id="tooltipRound" x="20" y="30" class="font-mono text-xs fill-white">Round 1</text>
+        <text id="tooltipHit" x="20" y="46" class="font-mono text-[10px] fill-[var(--green)]">Hit: $0.00</text>
+        <text id="tooltipMiss" x="20" y="62" class="font-mono text-[10px] fill-[var(--red)]">Miss: $0.00</text>
+      </g>
+      
+      <line x1="60" y1="220" x2="740" y2="220" class="axis-line"/>
+      <line x1="60" y1="220" x2="60" y2="20" class="axis-line"/>
+    </svg>
+  </div>
+
+  <!-- Footer Note -->
+  <div class="text-center border-t border-white/5 pt-6">
+    <p class="text-sm text-[var(--text-muted)]">
+      这就是为什么提示词排列顺序如此重要
+      <span class="block font-mono text-xs mt-1 text-white/30">THIS IS WHY PROMPT ORDERING MATTERS</span>
+    </p>
+  </div>
+</div>
+
+<script>
+  const costHitPerRound = 0.002;
+  const costMissPerRound = 0.05;
+  const baseRounds = 20;
+  const maxRounds = 50;
+
+  const bt = document.getElementById("barTooltip");
+  const btTitle = document.getElementById("btTitle");
+  const btCost = document.getElementById("btCost");
+  const btBreakdown = document.getElementById("btBreakdown");
+
+  function showBarTooltip(e, type, rounds, cost) {
+    bt.style.opacity = "1";
+    bt.style.left = (e.clientX + 12) + "px";
+    bt.style.top = (e.clientY - 12) + "px";
+    const perRound = type === 'hit' ? costHitPerRound : costMissPerRound;
+    btTitle.textContent = type === 'hit' ? 'Cache Hit (缓存命中)' : 'Cache Miss (缓存未命中)';
+    btTitle.className = `text-xs font-bold mb-1 ${type === 'hit' ? 'text-[var(--green)]' : 'text-[var(--red)]'}`;
+    btCost.textContent = `$${cost.toFixed(cost < 0.01 ? 3 : 2)}`;
+    btBreakdown.textContent = `${rounds} rounds × $${perRound.toFixed(3)}`;
+  }
+
+  // Bar Chart
+  const baseY = 300;
+  const maxCost = maxRounds * costMissPerRound; // $2.50
+  const maxBarHeight = 280;
+  const barScale = d3.scaleLinear().domain([0, maxCost]).range([0, maxBarHeight]);
+
+  const barHit = d3.select("#barHit");
+  const barMiss = d3.select("#barMiss");
+  const labelHit = d3.select("#labelHit");
+  const labelMiss = d3.select("#labelMiss");
+  const badge = d3.select("#multiplierBadge");
+
+  // Bar grid lines
+  const barGrid = d3.select("#barGrid");
+  barGrid.selectAll(".bar-grid-line")
+    .data([0.5, 1.0, 1.5, 2.0, 2.5])
+    .enter()
+    .append("line")
+    .attr("class", "grid-line bar-grid-line")
+    .attr("x1", 100)
+    .attr("x2", 700)
+    .attr("y1", d => baseY - barScale(d))
+    .attr("y2", d => baseY - barScale(d));
+
+  function updateBarChart(rounds) {
+    const hitCost = rounds * costHitPerRound;
+    const missCost = rounds * costMissPerRound;
+    const hitH = barScale(hitCost);
+    const missH = barScale(missCost);
+    
+    barHit.attr("y", baseY - hitH).attr("height", hitH);
+    barMiss.attr("y", baseY - missH).attr("height", missH);
+    
+    labelHit.attr("y", baseY - hitH - 10).text(`$${hitCost.toFixed(3)}`);
+    labelMiss.attr("y", baseY - missH - 10).text(`$${missCost.toFixed(2)}`);
+    
+    const badgeY = baseY - (hitH + (missH - hitH) * 0.45);
+    badge.attr("transform", `translate(400, ${Math.max(50, Math.min(badgeY, 260))})`);
+  }
+
+  barHit
+    .on("mouseenter", function(event) {
+      const rounds = parseInt(document.getElementById("roundSlider").value);
+      showBarTooltip(event, 'hit', rounds, rounds * costHitPerRound);
+    })
+    .on("mousemove", function(event) {
+      const rounds = parseInt(document.getElementById("roundSlider").value);
+      showBarTooltip(event, 'hit', rounds, rounds * costHitPerRound);
+    })
+    .on("mouseleave", () => bt.style.opacity = "0");
+
+  barMiss
+    .on("mouseenter", function(event) {
+      const rounds = parseInt(document.getElementById("roundSlider").value);
+      showBarTooltip(event, 'miss', rounds, rounds * costMissPerRound);
+    })
+    .on("mousemove", function(event) {
+      const rounds = parseInt(document.getElementById("roundSlider").value);
+      showBarTooltip(event, 'miss', rounds, rounds * costMissPerRound);
+    })
+    .on("mouseleave", () => bt.style.opacity = "0");
+
+  // Line Chart
+  const width = 800, height = 260;
+  const margin = {top: 20, right: 50, bottom: 40, left: 60};
+  const innerW = width - margin.left - margin.right;
+  const innerH = height - margin.top - margin.bottom;
+
+  const xScale = d3.scaleLinear().domain([1, maxRounds]).range([0, innerW]);
+  const yScale = d3.scaleLinear().domain([0, maxCost]).range([innerH, 0]);
+
+  const gridG = d3.select("#lineGrid");
+  gridG.selectAll(".h-grid").data(yScale.ticks(5)).enter().append("line")
+    .attr("class", "grid-line h-grid")
+    .attr("x1", margin.left)
+    .attr("x2", width - margin.right)
+    .attr("y1", d => margin.top + yScale(d))
+    .attr("y2", d => margin.top + yScale(d));
+  gridG.selectAll(".v-grid").data(xScale.ticks(10)).enter().append("line")
+    .attr("class", "grid-line v-grid")
+    .attr("x1", d => margin.left + xScale(d))
+    .attr("x2", d => margin.left + xScale(d))
+    .attr("y1", margin.top)
+    .attr("y2", height - margin.bottom);
+
+  function updateLineChart(rounds) {
+    const data = d3.range(1, rounds + 1).map(i => ({
+      round: i,
+      hit: i * costHitPerRound,
+      miss: i * costMissPerRound
+    }));
+
+    const lineHitGen = d3.line()
+      .x(d => margin.left + xScale(d.round))
+      .y(d => margin.top + yScale(d.hit));
+    const lineMissGen = d3.line()
+      .x(d => margin.left + xScale(d.round))
+      .y(d => margin.top + yScale(d.miss));
+
+    const areaHitGen = d3.area()
+      .x(d => margin.left + xScale(d.round))
+      .y0(margin.top + yScale(0))
+      .y1(d => margin.top + yScale(d.hit));
+    const areaMissGen = d3.area()
+      .x(d => margin.left + xScale(d.round))
+      .y0(margin.top + yScale(0))
+      .y1(d => margin.top + yScale(d.miss));
+
+    d3.select("#lineHit").transition().duration(600).attr("d", lineHitGen(data));
+    d3.select("#lineMiss").transition().duration(600).attr("d", lineMissGen(data));
+    d3.select("#areaHit").transition().duration(600).attr("d", areaHitGen(data));
+    d3.select("#areaMiss").transition().duration(600).attr("d", areaMissGen(data));
+  }
+
+  const slider = document.getElementById("roundSlider");
+  const roundValue = document.getElementById("roundValue");
+  const savingsValue = document.getElementById("savingsValue");
+  const savingsPercent = document.getElementById("savingsPercent");
+
+  function updateAll(rounds) {
+    roundValue.textContent = rounds;
+    const hitTotal = rounds * costHitPerRound;
+    const missTotal = rounds * costMissPerRound;
+    const saving = missTotal - hitTotal;
+    const pct = (saving / missTotal) * 100;
+    savingsValue.textContent = `$${saving.toFixed(2)}`;
+    savingsPercent.textContent = `节省 ${pct.toFixed(0)}% / Save ${pct.toFixed(0)}%`;
+    updateBarChart(rounds);
+    updateLineChart(rounds);
+  }
+
+  slider.addEventListener("input", (e) => {
+    updateAll(parseInt(e.target.value));
+  });
+
+  setTimeout(() => {
+    labelHit.style("opacity", 1);
+    labelMiss.style("opacity", 1);
+    badge.style("opacity", 1);
+    updateAll(baseRounds);
+  }, 200);
+
+  // Line chart tooltip
+  const tooltipGroup = d3.select("#tooltipGroup");
+  const overlay = d3.select("#lineChart").append("rect")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("fill", "transparent")
+    .style("cursor", "crosshair");
+
+  overlay.on("mousemove", function(event) {
+    const [mx] = d3.pointer(event);
+    const relativeX = mx - margin.left;
+    if (relativeX < 0 || relativeX > innerW) {
+      tooltipGroup.attr("opacity", 0);
+      return;
+    }
+    const round = Math.min(maxRounds, Math.max(1, Math.round(xScale.invert(relativeX))));
+    const currentRounds = parseInt(slider.value);
+    if (round > currentRounds) {
+      tooltipGroup.attr("opacity", 0);
+      return;
+    }
+    
+    const xPos = margin.left + xScale(round);
+    const hitVal = round * costHitPerRound;
+    const missVal = round * costMissPerRound;
+    const yHit = margin.top + yScale(hitVal);
+    const yMiss = margin.top + yScale(missVal);
+
+    tooltipGroup.attr("opacity", 1).attr("transform", `translate(${xPos},0)`);
+    const tx = xPos > width - 180 ? -165 : 12;
+    tooltipGroup.select("rect").attr("x", tx);
+    tooltipGroup.select("#tooltipRound").attr("x", tx + 10).text(`Round ${round}`);
+    tooltipGroup.select("#tooltipHit").attr("x", tx + 10).text(`Cache Hit: $${hitVal.toFixed(3)}`);
+    tooltipGroup.select("#tooltipMiss").attr("x", tx + 10).text(`Miss: $${missVal.toFixed(2)}`);
+    tooltipGroup.select("#tooltipCircleHit").attr("cy", yHit);
+    tooltipGroup.select("#tooltipCircleMiss").attr("cy", yMiss);
+  }).on("mouseleave", () => tooltipGroup.attr("opacity", 0));
+</script>
+</body>
+</html>

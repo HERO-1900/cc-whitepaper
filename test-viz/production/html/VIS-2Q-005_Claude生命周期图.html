@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code 生命周期图 — 27 Hooks</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-deep:#0a0c10;
+  --bg-panel:#11141a;
+  --line:#1e2330;
+  --text-main:#e6e9f0;
+  --text-dim:#8a94a8;
+  --tool:#00d4ff;
+  --perm:#7b61ff;
+  --input:#00ff88;
+  --session:#ff8844;
+  --ai:#ff6b6b;
+  --sub:#00cccc;
+  --compact:#a855f7;
+  --config:#f472b6;
+  --team:#38bdf8;
+  --mcp:#fb923c;
+  --fs:#ffcc00;
+  --glow:rgba(0,212,255,0.15);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg-deep);
+  color:var(--text-main);
+  font-family:'Space Grotesk','Noto Sans SC',sans-serif;
+  overflow-x:hidden;
+}
+
+.bg-grid{
+  position:fixed;
+  inset:0;
+  background-image:
+    radial-gradient(circle at 20% 30%,rgba(0,212,255,0.08) 0%,transparent 40%),
+    radial-gradient(circle at 80% 70%,rgba(123,97,255,0.06) 0%,transparent 40%),
+    linear-gradient(90deg,transparent 49.5%,rgba(30,35,48,0.4) 50%,transparent 50.5%),
+    linear-gradient(0deg,transparent 49.5%,rgba(30,35,48,0.4) 50%,transparent 50.5%);
+  background-size:100% 100%,100% 100%,60px 60px,60px 60px;
+  pointer-events:none;
+  z-index:0;
+}
+
+.container{
+  position:relative;
+  z-index:1;
+  max-width:1400px;
+  margin:0 auto;
+  padding:40px 24px 100px;
+  min-height:100vh;
+}
+
+header{
+  text-align:center;
+  margin-bottom:48px;
+}
+header h1{
+  font-size:clamp(28px,4vw,48px);
+  font-weight:700;
+  letter-spacing:-0.02em;
+  background:linear-gradient(135deg,var(--text-main) 0%,var(--tool) 100%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  margin-bottom:8px;
+}
+header p{
+  font-size:15px;
+  color:var(--text-dim);
+  font-family:'JetBrains Mono',monospace;
+}
+
+.lifecycle-wrap{
+  position:relative;
+  width:100%;
+  overflow-x:auto;
+  padding:20px 0 40px;
+}
+
+svg{
+  display:block;
+  margin:0 auto;
+  min-width:1200px;
+  filter:drop-shadow(0 0 40px rgba(0,0,0,0.6));
+}
+
+.phase-label{
+  font-size:14px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.15em;
+  fill:var(--text-dim);
+}
+.phase-glow-start{filter:drop-shadow(0 0 12px rgba(255,136,68,0.5))}
+.phase-glow-run{filter:drop-shadow(0 0 12px rgba(0,212,255,0.5))}
+.phase-glow-end{filter:drop-shadow(0 0 12px rgba(255,107,107,0.5))}
+
+.timeline-track{
+  stroke:var(--line);
+  stroke-width:3;
+  stroke-linecap:round;
+}
+.timeline-core{
+  stroke:url(#gradRun);
+  stroke-width:3;
+  stroke-linecap:round;
+  stroke-dasharray:8,6;
+  animation:dashFlow 20s linear infinite;
+}
+
+@keyframes dashFlow{
+  to{stroke-dashoffset:-200}
+}
+
+.node-circle{
+  stroke:var(--bg-deep);
+  stroke-width:2;
+  cursor:pointer;
+  transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.node-circle:hover{
+  r:14;
+  stroke-width:3;
+  filter:brightness(1.3);
+}
+
+.node-label{
+  font-size:11px;
+  font-weight:600;
+  fill:var(--text-main);
+  pointer-events:none;
+  text-anchor:middle;
+}
+.node-label-en{
+  font-size:9px;
+  fill:var(--text-dim);
+  pointer-events:none;
+  text-anchor:middle;
+  font-family:'JetBrains Mono',monospace;
+}
+
+.loop-arrow{
+  fill:none;
+  stroke:var(--tool);
+  stroke-width:2;
+  stroke-dasharray:4,3;
+  opacity:0.6;
+  animation:dashFlow 15s linear infinite reverse;
+}
+
+.legend{
+  position:absolute;
+  top:20px;
+  right:20px;
+  background:rgba(17,20,26,0.85);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:16px 20px;
+  backdrop-filter:blur(10px);
+  min-width:180px;
+}
+.legend h3{
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:0.1em;
+  color:var(--text-dim);
+  margin-bottom:12px;
+}
+.legend-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-size:12px;
+  margin-bottom:8px;
+  color:var(--text-main);
+}
+.legend-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  flex-shrink:0;
+}
+
+.tooltip{
+  position:fixed;
+  background:rgba(17,20,26,0.95);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:16px;
+  max-width:320px;
+  pointer-events:none;
+  opacity:0;
+  transform:translateY(8px);
+  transition:opacity 0.2s,transform 0.2s;
+  z-index:100;
+  backdrop-filter:blur(12px);
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.tooltip.visible{
+  opacity:1;
+  transform:translateY(0);
+}
+.tooltip h4{
+  font-size:14px;
+  margin-bottom:6px;
+  color:var(--text-main);
+}
+.tooltip p{
+  font-size:12px;
+  color:var(--text-dim);
+  line-height:1.6;
+  margin-bottom:8px;
+}
+.tooltip code{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  background:rgba(255,255,255,0.05);
+  padding:2px 6px;
+  border-radius:4px;
+  color:var(--tool);
+}
+.tooltip pre{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  background:#0d1016;
+  padding:10px;
+  border-radius:8px;
+  overflow-x:auto;
+  color:#a5b4fc;
+  margin-top:8px;
+}
+
+.detail-panel{
+  position:fixed;
+  inset:0;
+  background:rgba(10,12,16,0.85);
+  backdrop-filter:blur(8px);
+  z-index:200;
+  display:none;
+  place-items:center;
+  padding:24px;
+}
+.detail-panel.open{
+  display:grid;
+}
+.detail-card{
+  background:var(--bg-panel);
+  border:1px solid var(--line);
+  border-radius:20px;
+  max-width:560px;
+  width:100%;
+  max-height:80vh;
+  overflow:auto;
+  padding:28px 32px;
+  box-shadow:0 40px 100px rgba(0,0,0,0.6);
+  position:relative;
+}
+.detail-close{
+  position:absolute;
+  top:16px;
+  right:16px;
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--text-dim);
+  cursor:pointer;
+  font-size:18px;
+  display:grid;
+  place-items:center;
+  transition:all 0.2s;
+}
+.detail-close:hover{
+  background:var(--line);
+  color:var(--text-main);
+}
+.detail-card h2{
+  font-size:22px;
+  margin-bottom:4px;
+}
+.detail-card .subtitle{
+  font-size:13px;
+  color:var(--text-dim);
+  margin-bottom:20px;
+  font-family:'JetBrains Mono',monospace;
+}
+.detail-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:20px;
+}
+.detail-meta span{
+  font-size:11px;
+  padding:4px 10px;
+  border-radius:20px;
+  background:rgba(255,255,255,0.05);
+  color:var(--text-dim);
+}
+.detail-desc{
+  font-size:14px;
+  line-height:1.7;
+  color:var(--text-main);
+  margin-bottom:20px;
+}
+.detail-card h3{
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:0.1em;
+  color:var(--text-dim);
+  margin-bottom:10px;
+}
+.detail-card pre{
+  font-family:'JetBrains Mono',monospace;
+  font-size:12px;
+  background:#0d1016;
+  padding:16px;
+  border-radius:12px;
+  overflow-x:auto;
+  color:#a5b4fc;
+  line-height:1.6;
+}
+
+.trust-bar{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  background:linear-gradient(90deg,rgba(255,107,107,0.15),rgba(255,136,68,0.15));
+  border-top:1px solid rgba(255,107,107,0.3);
+  padding:14px 24px;
+  text-align:center;
+  font-size:13px;
+  color:#ffb4b4;
+  z-index:50;
+  backdrop-filter:blur(6px);
+}
+.trust-bar code{
+  font-family:'JetBrains Mono',monospace;
+  background:rgba(255,107,107,0.15);
+  padding:2px 8px;
+  border-radius:4px;
+}
+
+.connector{
+  stroke:var(--line);
+  stroke-width:1;
+  fill:none;
+  opacity:0.6;
+}
+
+.category-group-label{
+  font-size:10px;
+  fill:var(--text-dim);
+  text-anchor:middle;
+  font-family:'JetBrains Mono',monospace;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  opacity:0.7;
+}
+
+@media(max-width:900px){
+  .legend{position:relative;top:auto;right:auto;margin:24px auto 0;width:fit-content}
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<div class="container">
+  <header>
+    <h1>Claude Code 生命周期图</h1>
+    <p>27 Hook Events · Full Session Timeline</p>
+  </header>
+
+  <div class="legend">
+    <h3>类别 / Categories</h3>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--tool)"></div>工具层 Tools</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--perm)"></div>权限层 Permissions</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--input)"></div>用户输入 Input</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--session)"></div>Session</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--ai)"></div>AI轮次 AI Turn</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--sub)"></div>子Agent Subagent</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--compact)"></div>压缩 Compact</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--config)"></div>配置 Config</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--team)"></div>团队协作 Team</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--mcp)"></div>MCP交互</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--fs)"></div>文件系统 Filesystem</div>
+  </div>
+
+  <div class="lifecycle-wrap">
+    <svg viewBox="0 0 1200 620" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="gradRun" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="rgba(0,212,255,0.4)"/>
+          <stop offset="50%" stop-color="rgba(0,212,255,0.8)"/>
+          <stop offset="100%" stop-color="rgba(0,212,255,0.4)"/>
+        </linearGradient>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+
+      <!-- Phase backgrounds -->
+      <rect x="40" y="80" width="300" height="460" rx="12" fill="rgba(255,136,68,0.04)" stroke="rgba(255,136,68,0.12)"/>
+      <rect x="360" y="80" width="480" height="460" rx="12" fill="rgba(0,212,255,0.03)" stroke="rgba(0,212,255,0.1)"/>
+      <rect x="860" y="80" width="300" height="460" rx="12" fill="rgba(255,107,107,0.04)" stroke="rgba(255,107,107,0.12)"/>
+
+      <!-- Phase labels -->
+      <text x="190" y="110" text-anchor="middle" class="phase-label phase-glow-start">启动 / Startup</text>
+      <text x="600" y="110" text-anchor="middle" class="phase-label phase-glow-run">运行(循环) / Running Loop</text>
+      <text x="1010" y="110" text-anchor="middle" class="phase-label phase-glow-end">结束 / Shutdown</text>
+
+      <!-- Main timeline -->
+      <line x1="80" y1="310" x2="300" y2="310" class="timeline-track"/>
+      <line x1="300" y1="310" x2="900" y2="310" class="timeline-core"/>
+      <line x1="900" y1="310" x2="1120" y2="310" class="timeline-track"/>
+
+      <!-- Loop arrow in running phase -->
+      <path d="M 420 380 Q 600 450 780 380" class="loop-arrow" marker-end="url(#arrowhead)"/>
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="var(--tool)" opacity="0.6"/>
+        </marker>
+      </defs>
+
+      <!-- Category group labels -->
+      <text x="170" y="145" class="category-group-label">Config &amp; Session</text>
+      <text x="500" y="145" class="category-group-label">User Input &amp; AI Turn</text>
+      <text x="750" y="145" class="category-group-label">Tools &amp; Permissions</text>
+      <text x="1010" y="145" class="category-group-label">Lifecycle End</text>
+
+      <!-- Nodes will be rendered by JS -->
+      <g id="nodes-group"></g>
+      <g id="connectors-group"></g>
+    </svg>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <h4 id="tt-title"></h4>
+  <p id="tt-desc"></p>
+  <div>执行方式: <code id="tt-exec"></code></div>
+  <pre id="tt-code"></pre>
+</div>
+
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-card">
+    <button class="detail-close" onclick="closeDetail()">×</button>
+    <h2 id="dt-title"></h2>
+    <div class="subtitle" id="dt-subtitle"></div>
+    <div class="detail-meta" id="dt-meta"></div>
+    <div class="detail-desc" id="dt-desc"></div>
+    <h3>配置示例 / Config Example</h3>
+    <pre id="dt-code"></pre>
+  </div>
+</div>
+
+<div class="trust-bar">
+  All hooks require workspace trust · 所有钩子都需要工作区信任
+  <code>hasTrustDialogAccepted()</code>
+</div>
+
+<script>
+const hooks=[
+  {id:'Setup',zh:'Setup / 初始化',cat:'config',x:120,y:220,exec:'command',desc:'Claude Code首次启动时的初始化钩子，用于设置环境变量和基本配置。',matcher:'无',code:'{\n  "hooks": {\n    "Setup": "echo \'Welcome to Claude Code\'"\n  }\n}'},
+  {id:'InstructionsLoaded',zh:'InstructionsLoaded',cat:'config',x:120,y:400,exec:'prompt',desc:'当系统指令(instructions)加载完成时触发，可用于动态注入上下文。',matcher:'无',code:'{\n  "hooks": {\n    "InstructionsLoaded": {\n      "prompt": "Remember to always run tests after editing code."\n    }\n  }\n}'},
+  {id:'ConfigChange',zh:'ConfigChange',cat:'config',x:200,y:220,exec:'command',desc:'当settings.json或CLAUDE.md等配置发生变更时触发。',matcher:'文件路径',code:'{\n  "hooks": {\n    "ConfigChange": {\n      "command": "git diff --name-only"\n    }\n  }\n}'},
+  {id:'SessionStart',zh:'SessionStart',cat:'session',x:260,y:310,exec:'command',desc:'会话开始时触发。支持startup/resume/clear/compact四种原因区分。',matcher:'$SESSION_START_REASON',code:'{\n  "hooks": {\n    "SessionStart": {\n      "command": "echo \'Session started: $REASON\'"\n    }\n  }\n}'},
+
+  {id:'UserPromptSubmit',zh:'UserPromptSubmit',cat:'input',x:380,y:180,exec:'prompt',desc:'用户按下Enter提交输入时触发，可在此修改或审查用户消息。',matcher:'无',code:'{\n  "hooks": {\n    "UserPromptSubmit": {\n      "prompt": "Analyze the user intent before proceeding."\n    }\n  }\n}'},
+  {id:'Notification',zh:'Notification',cat:'input',x:380,y:440,exec:'prompt',desc:'当系统通知(如文件变更通知)到达时触发。',matcher:'无',code:'{\n  "hooks": {\n    "Notification": {\n      "prompt": "Acknowledge the notification."\n    }\n  }\n}'},
+  {id:'TeammateIdle',zh:'TeammateIdle',cat:'team',x:450,y:250,exec:'agent',desc:'当团队成员(其他Claude实例)进入空闲状态时触发。',matcher:' teammate ID',code:'{\n  "hooks": {\n    "TeammateIdle": {\n      "agent": "summarize-last-task"\n    }\n  }\n}'},
+  {id:'TaskCreated',zh:'TaskCreated',cat:'team',x:450,y:370,exec:'command',desc:'新任务被创建时触发，用于任务跟踪或项目管理集成。',matcher:'无',code:'{\n  "hooks": {\n    "TaskCreated": {\n      "command": "echo \'Task $TASK_ID created\' >> tasks.log"\n    }\n  }\n}'},
+  {id:'TaskCompleted',zh:'TaskCompleted',cat:'team',x:520,y:250,exec:'command',desc:'任务完成时触发，可用于发送通知或更新状态板。',matcher:'无',code:'{\n  "hooks": {\n    "TaskCompleted": {\n      "command": "notify-send \'Claude task done\'"\n    }\n  }\n}'},
+  {id:'Stop',zh:'Stop / AI轮次结束',cat:'ai',x:520,y:370,exec:'command',desc:'AI回答完毕时触发。exit 2可让Claude继续思考(阻断式)。',matcher:'无',code:'{\n  "hooks": {\n    "Stop": {\n      "command": "verify-readiness.sh"\n    }\n  }\n}'},
+  {id:'StopFailure',zh:'StopFailure',cat:'ai',x:580,y:180,exec:'command',desc:'Stop钩子执行失败时触发，fire-and-forget模式，不阻断流程。',matcher:'无',code:'{\n  "hooks": {\n    "StopFailure": {\n      "command": "logger -t claude \'stop hook failed\'"\n    }\n  }\n}'},
+  {id:'Elicitation',zh:'Elicitation',cat:'mcp',x:580,y:440,exec:'prompt',desc:'MCP服务器需要向用户请求额外信息时触发。',matcher:'server name',code:'{\n  "hooks": {\n    "Elicitation": {\n      "prompt": "Help clarify the user\'s intent for the MCP tool."\n    }\n  }\n}'},
+  {id:'ElicitationResult',zh:'ElicitationResult',cat:'mcp',x:640,y:440,exec:'prompt',desc:'用户回应MCPelicitation后触发。',matcher:'server name',code:'{\n  "hooks": {\n    "ElicitationResult": {\n      "prompt": "Process the elicitation result."\n    }\n  }\n}'},
+  {id:'SubagentStart',zh:'SubagentStart',cat:'sub',x:640,y:180,exec:'command',desc:'子Agent启动时触发，可用于日志记录或资源限制检查。',matcher:'agent type',code:'{\n  "hooks": {\n    "SubagentStart": {\n      "command": "echo \'Subagent $NAME started\'"\n    }\n  }\n}'},
+  {id:'SubagentStop',zh:'SubagentStop',cat:'sub',x:700,y:180,exec:'command',desc:'子Agent停止时触发。',matcher:'agent type',code:'{\n  "hooks": {\n    "SubagentStop": {\n      "command": "echo \'Subagent $NAME stopped\'"\n    }\n  }\n}'},
+  {id:'PreCompact',zh:'PreCompact',cat:'compact',x:700,y:440,exec:'command',desc:'上下文压缩前触发，可用于备份当前会话状态。',matcher:'无',code:'{\n  "hooks": {\n    "PreCompact": {\n      "command": "cp session.log session.log.bak"\n    }\n  }\n}'},
+  {id:'PostCompact',zh:'PostCompact',cat:'compact',x:760,y:440,exec:'command',desc:'上下文压缩后触发。',matcher:'无',code:'{\n  "hooks": {\n    "PostCompact": {\n      "command": "echo \'Compact completed\'"\n    }\n  }\n}'},
+  {id:'PreToolUse',zh:'PreToolUse',cat:'tool',x:760,y:180,exec:'command',desc:'工具调用前触发，matcher可匹配特定工具名称。',matcher:'tool name',code:'{\n  "hooks": {\n    "PreToolUse:Bash": {\n      "command": "echo \'About to run bash\'"\n    }\n  }\n}'},
+  {id:'PostToolUse',zh:'PostToolUse',cat:'tool',x:820,y:180,exec:'command',desc:'工具调用成功后触发，常用于自动lint或格式化。',matcher:'tool name',code:'{\n  "hooks": {\n    "PostToolUse:Edit": {\n      "command": "npm run lint:fix"\n    }\n  }\n}'},
+  {id:'PostToolUseFailure',zh:'PostToolUseFailure',cat:'tool',x:820,y:250,exec:'command',desc:'工具调用失败时触发，可用于错误通知或重试。',matcher:'tool name',code:'{\n  "hooks": {\n    "PostToolUseFailure": {\n      "command": "notify-send \'Tool failed\'"\n    }\n  }\n}'},
+  {id:'PermissionRequest',zh:'PermissionRequest',cat:'perm',x:820,y:370,exec:'prompt',desc:'需要用户权限确认时触发，可返回hookSpecificOutput替代手动确认。',matcher:'permission type',code:'{\n  "hooks": {\n    "PermissionRequest:Bash": {\n      "prompt": "Determine if this bash command is safe to run."\n    }\n  }\n}'},
+  {id:'PermissionDenied',zh:'PermissionDenied',cat:'perm',x:820,y:440,exec:'prompt',desc:'权限被拒绝时触发。',matcher:'permission type',code:'{\n  "hooks": {\n    "PermissionDenied": {\n      "prompt": "Explain why the permission was denied."\n    }\n  }\n}'},
+  {id:'CwdChanged',zh:'CwdChanged',cat:'fs',x:880,y:180,exec:'command',desc:'当前工作目录变更时触发。',matcher:'无',code:'{\n  "hooks": {\n    "CwdChanged": {\n      "command": "direnv allow"\n    }\n  }\n}'},
+  {id:'FileChanged',zh:'FileChanged',cat:'fs',x:880,y:250,exec:'command',desc:'监视的文件发生变更时触发，如.envrc、package.json等。',matcher:'glob pattern',code:'{\n  "hooks": {\n    "FileChanged:*.json": {\n      "command": "echo \'JSON file changed\'"\n    }\n  }\n}'},
+  {id:'WorktreeCreate',zh:'WorktreeCreate',cat:'fs',x:880,y:370,exec:'command',desc:'新建git worktree时触发。',matcher:'无',code:'{\n  "hooks": {\n    "WorktreeCreate": {\n      "command": "echo \'Worktree $PATH created\'"\n    }\n  }\n}'},
+  {id:'WorktreeRemove',zh:'WorktreeRemove',cat:'fs',x:880,y:440,exec:'command',desc:'移除git worktree时触发。',matcher:'无',code:'{\n  "hooks": {\n    "WorktreeRemove": {\n      "command": "echo \'Worktree $PATH removed\'"\n    }\n  }\n}'},
+  {id:'SessionEnd',zh:'SessionEnd / 结束',cat:'session',x:1060,y:310,exec:'command',desc:'会话结束时触发，默认1500ms超时(可通过环境变量覆盖)。',matcher:'无',code:'{\n  "hooks": {\n    "SessionEnd": {\n      "command": "echo \'Goodbye!\'",\n      "timeout": 3000\n    }\n  }\n}'}
+];
+
+const colors={
+  tool:'#00d4ff',
+  perm:'#7b61ff',
+  input:'#00ff88',
+  session:'#ff8844',
+  ai:'#ff6b6b',
+  sub:'#00cccc',
+  compact:'#a855f7',
+  config:'#f472b6',
+  team:'#38bdf8',
+  mcp:'#fb923c',
+  fs:'#ffcc00'
+};
+
+const svg=document.querySelector('svg');
+const nodesGroup=document.getElementById('nodes-group');
+const connectorsGroup=document.getElementById('connectors-group');
+
+hooks.forEach(h=>{
+  // connector line
+  const isTop=h.y<310;
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  const midY=isTop?h.y+25:h.y-25;
+  path.setAttribute('d',`M ${h.x} ${h.y} L ${h.x} ${midY} L ${h.x} 310`);
+  path.setAttribute('class','connector');
+  connectorsGroup.appendChild(path);
+
+  // node group
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.style.cursor='pointer';
+  g.addEventListener('mouseenter',e=>showTooltip(e,h));
+  g.addEventListener('mouseleave',hideTooltip);
+  g.addEventListener('mousemove',moveTooltip);
+  g.addEventListener('click',()=>openDetail(h));
+
+  // circle
+  const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  c.setAttribute('cx',h.x);
+  c.setAttribute('cy',h.y);
+  c.setAttribute('r',10);
+  c.setAttribute('fill',colors[h.cat]);
+  c.setAttribute('class','node-circle');
+  c.setAttribute('filter','url(#glow)');
+  g.appendChild(c);
+
+  // label
+  const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+  t.setAttribute('x',h.x);
+  t.setAttribute('y',isTop?h.y-20:h.y+28);
+  t.setAttribute('class','node-label');
+  t.textContent=h.id;
+  g.appendChild(t);
+
+  const t2=document.createElementNS('http://www.w3.org/2000/svg','text');
+  t2.setAttribute('x',h.x);
+  t2.setAttribute('y',isTop?h.y-32:h.y+40);
+  t2.setAttribute('class','node-label-en');
+  t2.textContent=h.cat;
+  g.appendChild(t2);
+
+  nodesGroup.appendChild(g);
+});
+
+const tooltip=document.getElementById('tooltip');
+function showTooltip(e,h){
+  document.getElementById('tt-title').textContent=h.zh;
+  document.getElementById('tt-desc').textContent=h.desc;
+  document.getElementById('tt-exec').textContent=h.exec;
+  document.getElementById('tt-code').textContent=h.code;
+  tooltip.classList.add('visible');
+  moveTooltip(e);
+}
+function moveTooltip(e){
+  const rect=tooltip.getBoundingClientRect();
+  let left=e.clientX+16;
+  let top=e.clientY+16;
+  if(left+rect.width>window.innerWidth)left=e.clientX-rect.width-16;
+  if(top+rect.height>window.innerHeight)top=e.clientY-rect.height-16;
+  tooltip.style.left=left+'px';
+  tooltip.style.top=top+'px';
+}
+function hideTooltip(){
+  tooltip.classList.remove('visible');
+}
+
+const panel=document.getElementById('detailPanel');
+function openDetail(h){
+  document.getElementById('dt-title').textContent=h.zh;
+  document.getElementById('dt-subtitle').textContent=h.id+' · '+h.cat.toUpperCase();
+  document.getElementById('dt-desc').textContent=h.desc;
+  document.getElementById('dt-code').textContent=h.code;
+  const meta=document.getElementById('dt-meta');
+  meta.innerHTML='';
+  [
+    '执行方式: '+h.exec,
+    'Matcher: '+h.matcher,
+    'Color: '+h.cat
+  ].forEach(t=>{
+    const s=document.createElement('span');
+    s.textContent=t;
+    meta.appendChild(s);
+  });
+  panel.classList.add('open');
+}
+function closeDetail(){
+  panel.classList.remove('open');
+}
+panel.addEventListener('click',e=>{
+  if(e.target===panel)closeDetail();
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')closeDetail();
+});
+</script>
+</body>
+</html>

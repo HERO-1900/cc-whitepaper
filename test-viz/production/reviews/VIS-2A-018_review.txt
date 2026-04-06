@@ -1,0 +1,32 @@
+总分: 13/20
+
+**布局: 3/5** — 层次结构清晰，但MAIN标签与节点间距(55px)明显大于子Agent标签间距(40px)，视觉上不对齐；外层光晕环opacity:0.15几不可见。
+
+**信息: 4/5** — 通信类型、可靠性语义、风险提示一目了然；tooltip交互细节丰富；但缺少对Scratchpad无锁风险的可视化强调（仅靠文字）。
+
+**美学: 3/5** — 暗色主题+粒子动画+光晕滤镜调性统一，渐变配色有辨识度；Legend用repeating-linear-gradient模拟虚线是不得已的hack，视觉精度不足；粒子效果长期运行会累积（无清理机制）。
+
+**完整: 3/5** — 语法正确可直接运行；粒子动画存在内存泄漏隐患（requestAnimationFrame永不清理DOM节点）；缺少移动端适配。
+
+---
+
+**缺陷:**
+
+1. **行165** — `opacity: 0.15` 使MAIN外层晕圈几乎不可见，建议提升至 `0.3~0.4` 或改用 `stroke` + `stroke-width` 描边方案
+2. **行163** — MAIN标签 `y=145` 与节点圆心 `y=90` 间距55px；子Agent标签间距仅40px；视觉重心偏下，不对称
+3. **行~82~86** — `repeating-linear-gradient` 模拟虚线在Retina屏和不同宽度legend-line下会失真，应改用 `stroke-dasharray` + 真实 `<line>` 元素
+4. **行~260** — `createParticle` 每400ms/500ms/600ms持续创建新 `<circle>` DOM节点，`particleGroup` 永不清理，动画运行久后内存累积
+5. **行~240** — `moveTooltip` 只修正右/下边界，未处理左/上边界溢出；当光标贴近容器左上角时 tooltip 会跑出容器
+6. **行~200** — 节点hover时 `<g class="node">` 整体scale，但子 `<text>` 元素独立于transform之外，导致文字与圆脱节
+
+**修改建议:**
+
+1. 统一MAIN与子Agent的标签间距均为40px，调整MAIN标签y至135
+2. Legend虚线改用 `<line stroke-dasharray="4 4">` 替代gradient hack
+3. 粒子动画增加 `path.remove()` 或对象池复用；或添加 `pageVisibility` 监听，页面隐藏时暂停
+4. tooltip边界检测补充左/上判断：
+   ```javascript
+   if (x < 0) x = e.clientX - rect.left + 16;
+   if (y < 0) y = e.clientY - rect.top + 16;
+   ```
+5. 将节点hover的transform移至外层 `<g>` 以保证文字同步变换；或改用CSS `transform-origin: center` 作用于整个 `<g>`
