@@ -495,6 +495,28 @@ function main() {
     console.log(`  ${ch.title} — completeness: ${ch.completeness}/5, issues: ${ch.issueCount}`);
   }
 
+  // ── search-index.json 完整性校验（防御 #135 双写源事故） ──
+  // 历史问题：build-search-index.js 曾硬编码 BOOK_STRUCTURE 与 data.js 不同步，
+  // 导致 search-index.json 默默丢失章节。现 build 脚本已从 data.js 单一源读取，
+  // 这里再加一道 CI 校验，确保 search-index.json entries 数 >= data.js BOOK_STRUCTURE 章节数。
+  console.log('\n── search-index 完整性校验 ──');
+  try {
+    const { BOOK_STRUCTURE } = require('../js/data.js');
+    const expectedChapters = BOOK_STRUCTURE.reduce((sum, p) => sum + p.chapters.length, 0);
+    const searchIndexPath = path.resolve(__dirname, '..', 'js', 'search-index.json');
+    const searchIndex = JSON.parse(fs.readFileSync(searchIndexPath, 'utf-8'));
+    const actualEntries = Array.isArray(searchIndex) ? searchIndex.length : 0;
+    if (actualEntries < expectedChapters) {
+      console.log(`  ❌ FAIL: search-index.json 有 ${actualEntries} entries，data.js 期望 ${expectedChapters}`);
+      console.log(`     修复：node scripts/build-search-index.js`);
+      process.exitCode = 1;
+    } else {
+      console.log(`  ✅ OK: ${actualEntries}/${expectedChapters} entries 完整`);
+    }
+  } catch (e) {
+    console.log(`  ⚠️  跳过校验：${e.message}`);
+  }
+
   console.log('\nDone.');
 }
 

@@ -518,4 +518,18 @@ const BOOK_STRUCTURE = [
       { id: 'p6-03', file: 'part5_批判与超越/03_把这些思想用在你的项目里.md', title: '03 把这些思想用在你的项目里' },
     ],
   },
+  {
+    id: 'part7',
+    title: 'Part 7 · 补遗与延伸',
+    chapters: [
+      { id: 'p7-01', file: 'part5_supplementary/83_Harness_Engineering.md', title: '83 Harness Engineering：从 Claude Code 看 Agent 工程化范式' },
+      { id: 'p7-99', file: 'references.md', title: '引用与致谢' },
+    ],
+  },
 ];
+
+// Node.js 兼容性导出（消除 build-search-index.js 双写源 — 详见 #135）
+// 浏览器端通过 <script> 全局作用域读取，typeof module 为 'undefined' 时跳过
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { COMPONENTS, BOOK_STRUCTURE };
+}
