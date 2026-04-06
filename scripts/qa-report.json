@@ -1,15 +1,15 @@
 {
   "summary": {
     "totalChapters": 82,
-    "totalLines": 36042,
-    "totalCJKCharacters": 352481,
-    "avgCompletenessScore": 4.95,
-    "avgMetaphorBalance": 0.334,
-    "totalIssues": 4,
+    "totalLines": 36089,
+    "totalCJKCharacters": 353586,
+    "avgCompletenessScore": 4.96,
+    "avgMetaphorBalance": 0.336,
+    "totalIssues": 3,
     "issuesByType": {
       "error": 0,
       "warning": 2,
-      "info": 2
+      "info": 1
     }
   },
   "chapters": [
@@ -17,16 +17,16 @@
       "file": "part0_序章/00_序章.md",
       "title": "序章：当你打开一个\"聊天助手\"的引擎盖",
       "stats": {
-        "lineCount": 199,
-        "cjkCount": 3849,
+        "lineCount": 207,
+        "cjkCount": 4182,
         "codeBlocks": 1,
         "srcPathCount": 5
       },
       "metaphors": {
-        "osCount": 63,
-        "nonTechCount": 37,
-        "total": 100,
-        "balanceScore": 0.37,
+        "osCount": 64,
+        "nonTechCount": 38,
+        "total": 102,
+        "balanceScore": 0.373,
         "imbalanced": false
       },
       "crossRefs": {
@@ -579,23 +579,25 @@
       "file": "part2_代码架构完全解构/10_Token经济学.md",
       "title": "Token 经济学：成本、缓存与性能工程",
       "stats": {
-        "lineCount": 321,
-        "cjkCount": 4924,
+        "lineCount": 325,
+        "cjkCount": 5124,
         "codeBlocks": 2,
-        "srcPathCount": 3
+        "srcPathCount": 5
       },
       "metaphors": {
-        "osCount": 97,
-        "nonTechCount": 20,
-        "total": 117,
-        "balanceScore": 0.171,
+        "osCount": 101,
+        "nonTechCount": 24,
+        "total": 125,
+        "balanceScore": 0.192,
         "imbalanced": false
       },
       "crossRefs": {
         "paths": [
           "src/utils/token.ts",
           "src/utils/compact.ts",
-          "src/services/claude.ts"
+          "src/services/claude.ts",
+          "src/tools/AgentTool/prompt.ts",
+          "src/utils/attachments.ts"
         ],
         "brokenCount": 0,
         "broken": []
@@ -1964,16 +1966,16 @@
       "file": "part3_子系统完全解析/04_Hooks子系统完全解析.md",
       "title": "Hooks 子系统完全解析",
       "stats": {
-        "lineCount": 353,
-        "cjkCount": 5188,
+        "lineCount": 371,
+        "cjkCount": 5095,
         "codeBlocks": 4,
         "srcPathCount": 6
       },
       "metaphors": {
         "osCount": 16,
-        "nonTechCount": 9,
-        "total": 25,
-        "balanceScore": 0.36,
+        "nonTechCount": 12,
+        "total": 28,
+        "balanceScore": 0.429,
         "imbalanced": false
       },
       "crossRefs": {
@@ -3169,16 +3171,16 @@
       "file": "part4_工程哲学/06_Prompt的八大设计智慧.md",
       "title": "Prompt 的八大设计智慧：从 124 个提示词模板中提炼的工程哲学",
       "stats": {
-        "lineCount": 538,
-        "cjkCount": 5347,
+        "lineCount": 555,
+        "cjkCount": 6012,
         "codeBlocks": 19,
         "srcPathCount": 10
       },
       "metaphors": {
-        "osCount": 14,
-        "nonTechCount": 6,
-        "total": 20,
-        "balanceScore": 0.3,
+        "osCount": 16,
+        "nonTechCount": 8,
+        "total": 24,
+        "balanceScore": 0.333,
         "imbalanced": false
       },
       "crossRefs": {
@@ -3198,22 +3200,16 @@
         "broken": []
       },
       "completeness": {
-        "score": 4,
+        "score": 5,
         "details": {
           "hasIntroduction": true,
           "hasCodeBlocks": true,
           "hasSrcRefs": true,
           "hasAnalogies": true,
-          "hasCritical": false
+          "hasCritical": true
         }
       },
-      "issues": [
-        {
-          "severity": "info",
-          "type": "no_critical",
-          "message": "缺少批判/局限性分析"
-        }
-      ]
+      "issues": []
     },
     {
       "file": "part5_批判与超越/01_这个系统的代价.md",
@@ -3401,13 +3397,6 @@
       "severity": "info",
       "type": "no_critical",
       "message": "缺少批判/局限性分析",
-      "chapter": "part4_工程哲学/06_Prompt的八大设计智慧.md",
-      "title": "Prompt 的八大设计智慧：从 124 个提示词模板中提炼的工程哲学"
-    },
-    {
-      "severity": "info",
-      "type": "no_critical",
-      "message": "缺少批判/局限性分析",
       "chapter": "references.md",
       "title": "引用与致谢"
     }
@@ -3418,12 +3407,6 @@
       "title": "引用与致谢",
       "completeness": 2,
       "issueCount": 3
-    },
-    {
-      "file": "part4_工程哲学/06_Prompt的八大设计智慧.md",
-      "title": "Prompt 的八大设计智慧：从 124 个提示词模板中提炼的工程哲学",
-      "completeness": 4,
-      "issueCount": 1
     },
     {
       "file": "part0_序章/00_序章.md",
@@ -3470,6 +3453,12 @@
     {
       "file": "part2_代码架构完全解构/03_提示词工厂.md",
       "title": "提示词工厂：系统提示词的组装流水线",
+      "completeness": 5,
+      "issueCount": 0
+    },
+    {
+      "file": "part2_代码架构完全解构/04_查询循环.md",
+      "title": "心脏：查询循环与流式处理引擎",
       "completeness": 5,
       "issueCount": 0
     }

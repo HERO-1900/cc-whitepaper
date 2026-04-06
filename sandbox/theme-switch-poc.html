@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>主题切换沙箱 — CC 白皮书 PoC</title>
+
+<!--
+  ============================================================
+  FOUC 防御脚本（关键！必须在 <link> 之前）
+  ------------------------------------------------------------
+  why：CSS 文件在 download/parse 阶段会阻塞渲染，但浏览器
+  对 <html> 元素的属性读取是同步的。把"读取 localStorage +
+  设置 data-theme"放在 <head> 顶端的同步 <script> 里，
+  可以保证 CSS 第一次匹配选择器时就拿到正确的主题，
+  避免"先渲染默认主题、再 JS 切换"的白屏闪烁。
+
+  这个脚本必须满足三个硬约束：
+  1. 同步执行（不能 async/defer）
+  2. 不依赖任何外部资源
+  3. try/catch 包裹，因为 localStorage 在 file:// 或隐私
+     模式下可能 throw
+  ============================================================
+-->
+<script>
+  (function () {
+    try {
+      var stored = localStorage.getItem('cc-theme');
+      var systemDark = window.matchMedia &&
+                       window.matchMedia('(prefers-color-scheme: dark)').matches;
+      // 优先级：用户手动选择 > 系统偏好 > 默认暗色
+      var theme = stored || (systemDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) {
+      // localStorage 不可用时退回到暗色（与生产站点一致）
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
+
+<link rel="stylesheet" href="theme-tokens.css">
+
+<style>
+/* ============================================================
+   PoC 页面样式 — 仅消费 token，不再硬编码颜色
+   ============================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  /* 主题切换瞬间用过渡动画，避免硬切。
+     但要避开 transform/opacity 这种昂贵属性，
+     也要避开 box-shadow（多层混合很卡） */
+  transition: background-color var(--transition-normal),
+              color var(--transition-normal);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 56px;
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border-subtle);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  backdrop-filter: blur(12px);
+}
+
+.nav-brand {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.nav-brand span { color: var(--color-accent); }
+.nav-spacer { flex: 1; }
+
+/* —— 三段主题选择器（System / Light / Dark）——
+   why 三段而不是两段：
+   原因 1：尊重系统偏好是 a11y 基本要求；
+   原因 2：用户手动切过一次后，不应该被系统偏好"反悔"，
+   所以"跟随系统"必须是一个独立的状态，而不是"清除选择"
+   的副作用。 */
+.theme-switcher {
+  display: inline-flex;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 2px;
+}
+
+.theme-switcher button {
+  background: transparent;
+  border: 0;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  padding: var(--space-2) var(--space-3);
+  border-radius: calc(var(--radius-md) - 2px);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color var(--transition-fast),
+              color var(--transition-fast);
+}
+
+.theme-switcher button:hover {
+  color: var(--color-text-primary);
+}
+
+.theme-switcher button[aria-pressed="true"] {
+  background: var(--color-bg-hover);
+  color: var(--color-accent);
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-6) var(--space-16);
+}
+
+h1 {
+  font-size: var(--font-size-4xl);
+  font-weight: 700;
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.03em;
+  margin-bottom: var(--space-4);
+}
+
+h2 {
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  margin-top: var(--space-12);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+h3 {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  margin-top: var(--space-8);
+  margin-bottom: var(--space-3);
+}
+
+p {
+  margin-bottom: 1.5em;
+  color: var(--color-text-primary);
+}
+
+p.lead {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-8);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--color-bg-elevated);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-accent);
+}
+
+pre {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: 1.5em;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-text-primary);
+}
+
+.card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-4);
+  transition: border-color var(--transition-normal),
+              background-color var(--transition-normal);
+}
+.card:hover { border-color: var(--color-accent); }
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+.card-desc {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.callout {
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-6);
+  margin-bottom: 1.5em;
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-accent-bg);
+}
+.callout-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-accent);
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+.swatch {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--color-bg-elevated);
+}
+.swatch-block {
+  height: 48px;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+}
+.swatch-name {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-6);
+  font-family: var(--font-mono);
+}
+.status-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">CC <span>Whitepaper</span> · 主题沙箱</div>
+  <div class="nav-spacer"></div>
+  <!--
+    role/aria-pressed 是为屏幕阅读器准备的。
+    button 而不是 input[radio] 是因为：input[radio] 有一堆
+    默认样式和键盘行为，调起来麻烦；button + JS 状态更可控。
+  -->
+  <div class="theme-switcher" role="group" aria-label="主题选择">
+    <button data-theme-set="system" aria-pressed="false">⚙ 跟随系统</button>
+    <button data-theme-set="light"  aria-pressed="false">☀ 亮色</button>
+    <button data-theme-set="dark"   aria-pressed="false">☾ 暗色</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <h1>主题切换 PoC</h1>
+  <p class="lead">
+    本沙箱演示 CC 白皮书的双主题方案：CSS 变量分层 + 三态切换器（系统/亮/暗）+
+    localStorage 记忆 + FOUC 防御。所有颜色来自 <code>theme-tokens.css</code>，
+    页面本身不写一个硬编码色值。
+  </p>
+
+  <div class="status-row">
+    当前状态 →
+    <span>data-theme = <span id="status-attr" class="status-pill">?</span></span>
+    <span>localStorage = <span id="status-store" class="status-pill">?</span></span>
+    <span>系统偏好 = <span id="status-system" class="status-pill">?</span></span>
+  </div>
+
+  <h2>设计要点</h2>
+
+  <div class="callout">
+    <div class="callout-label">why 三层结构</div>
+    <p style="margin-bottom:0">
+      原子层（primitive）只声明颜色值，语义层（color-bg-*）声明用途，组件层
+      只引用语义层。这样换主题时只需要重映射语义→原子的指针，不需要碰组件代码。
+      未来如果要加"高对比度模式"或"打印模式"，新增一个 <code>[data-theme="hc"]</code>
+      块即可，组件零改动。
+    </p>
+  </div>
+
+  <h3>切换优先级</h3>
+  <pre><code>用户手动选择 (localStorage)
+   ↓ 没有则
+系统偏好 (prefers-color-scheme)
+   ↓ 没有则
+默认 dark（与生产站点一致）</code></pre>
+
+  <h3>FOUC 防御原理</h3>
+  <p>
+    把 <code>localStorage.getItem('cc-theme')</code> 放在 <code>&lt;head&gt;</code>
+    的同步 <code>&lt;script&gt;</code> 里，浏览器在解析 CSS 之前就把
+    <code>data-theme</code> 设到 <code>&lt;html&gt;</code> 上。
+    CSS 第一次匹配选择器时已经是正确的主题，因此不会出现"先渲染暗色再切亮色"
+    的闪烁。代价是 5 行同步 JS 阻塞渲染，可以接受。
+  </p>
+
+  <h2>语义色板预览</h2>
+  <p>下面的色块直接消费 token，切换主题时会同步变化：</p>
+
+  <div class="swatches">
+    <div class="swatch"><div class="swatch-block" style="background:var(--color-bg-primary)"></div><div class="swatch-name">--color-bg-primary</div></div>
+    <div class="swatch"><div class="swatch-block" style="background:var(--color-bg-secondary)"></div><div class="swatch-name">--color-bg-secondary</div></div>
+    <div class="swatch"><div class="swatch-block" style="background:var(--color-bg-elevated)"></div><div class="swatch-name">--color-bg-elevated</div></div>
+    <div class="swatch"><div class="swatch-block" style="background:var(--color-bg-hover)"></div><div class="swatch-name">--color-bg-hover</div></div>
+    <div class="swatch"><div class="swatch-block" style="background:var(--color-accent)"></div><div class="swatch-name">--color-accent</div></div>
+    <div class="swatch"><div class="swatch-block" style="background:var(--color-success)"></div><div class="swatch-name">--color-success</div></div>
+    <div class="swatch"><div class="swatch-block" style="background:var(--color-warning)"></div><div class="swatch-name">--color-warning</div></div>
+    <div class="swatch"><div class="swatch-block" style="background:var(--color-error)"></div><div class="swatch-name">--color-error</div></div>
+  </div>
+
+  <h2>组件预览</h2>
+
+  <div class="card">
+    <div class="card-title">Prompt Cache 边界工程</div>
+    <div class="card-desc">通过类型系统在编译期约束缓存安全性，从"运行时优化"提升为"编译时设计约束"。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">27 个 Hook 事件</div>
+    <div class="card-desc">覆盖工具调用、权限决策、Session 生命周期等所有关键决策点。</div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">通俗理解</div>
+    <p style="margin-bottom:0">
+      Token 系统就像菜谱里的"一勺糖"——具体多少克是另一回事。组件只说"加一勺
+      <code>--color-accent</code>"，到底是紫还是蓝，全靠主题文件这本菜谱定义。
+    </p>
+  </div>
+
+  <h3>正文示例</h3>
+  <p>
+    Claude Code 的核心循环是 nO 函数，它接收消息流并产出工具调用决策。
+    在 30 万行源代码中，nO 只占不到 200 行，但承担了整个 Agent 循环的调度职责。
+    这种"小函数承担大责任"的模式让代码审计变得相对容易。
+  </p>
+  <p>
+    对比 Cursor 或 Cline，CC 的差异在于：它把权限决策从运行时抽到了编译时——
+    通过 <code>CacheSafeParams</code> 类型把不安全的参数组合直接拒绝在类型检查阶段。
+    这是一个非常 Anthropic 风格的工程决策。
+  </p>
+
+</div>
+
+<script>
+  /* ============================================================
+     主题控制器
+     ------------------------------------------------------------
+     职责：
+     1. 响应按钮点击 → 写 localStorage + 改 data-theme
+     2. 响应系统偏好变化 → 仅当用户选了"system"才跟随
+     3. 同步 UI 状态（按钮高亮 + 状态栏）
+     ============================================================ */
+  (function () {
+    var STORAGE_KEY = 'cc-theme';
+    var html = document.documentElement;
+    var mql = window.matchMedia('(prefers-color-scheme: dark)');
+
+    function getStored() {
+      try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; }
+    }
+    function setStored(v) {
+      try {
+        if (v === null) localStorage.removeItem(STORAGE_KEY);
+        else localStorage.setItem(STORAGE_KEY, v);
+      } catch (e) { /* 隐私模式吃掉错误 */ }
+    }
+
+    function resolveTheme(choice) {
+      // choice ∈ {'system', 'light', 'dark'}
+      if (choice === 'system' || !choice) {
+        return mql.matches ? 'dark' : 'light';
+      }
+      return choice;
+    }
+
+    function currentChoice() {
+      // 没存就是"跟随系统"
+      return getStored() || 'system';
+    }
+
+    function apply(choice) {
+      var theme = resolveTheme(choice);
+      html.setAttribute('data-theme', theme);
+      // "system" 不写入 localStorage（用 null 表示），方便后续直接跟随系统切换
+      setStored(choice === 'system' ? null : choice);
+      syncUI();
+    }
+
+    function syncUI() {
+      var choice = currentChoice();
+      document.querySelectorAll('[data-theme-set]').forEach(function (btn) {
+        btn.setAttribute('aria-pressed', btn.dataset.themeSet === choice ? 'true' : 'false');
+      });
+      var attrEl   = document.getElementById('status-attr');
+      var storeEl  = document.getElementById('status-store');
+      var sysEl    = document.getElementById('status-system');
+      if (attrEl)  attrEl.textContent  = html.getAttribute('data-theme');
+      if (storeEl) storeEl.textContent = getStored() || '(未设置 → 跟随系统)';
+      if (sysEl)   sysEl.textContent   = mql.matches ? 'dark' : 'light';
+    }
+
+    // 绑定按钮
+    document.querySelectorAll('[data-theme-set]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        apply(btn.dataset.themeSet);
+      });
+    });
+
+    // 系统偏好变化时，仅当用户处于 "system" 模式才跟随
+    // why：用户既然手动选了 light，就不该被系统切到 dark "强奸"
+    mql.addEventListener('change', function () {
+      if (!getStored()) {
+        html.setAttribute('data-theme', mql.matches ? 'dark' : 'light');
+        syncUI();
+      }
+    });
+
+    // 多标签同步：另一个 tab 改了 localStorage，本 tab 跟随
+    window.addEventListener('storage', function (e) {
+      if (e.key === STORAGE_KEY) {
+        apply(e.newValue || 'system');
+      }
+    });
+
+    syncUI();
+  })();
+</script>
+</body>
+</html>

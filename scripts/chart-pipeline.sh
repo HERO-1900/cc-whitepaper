@@ -6,7 +6,13 @@
 # ============================================================
 
 set -e
-cd /Users/hero/Desktop/CC-Research-byClaude/web
+cd "$(dirname "$0")/.."
+
+# Load env vars from .env if present
+[ -f .env ] && set -a && . ./.env && set +a
+
+: "${KIMI_API_KEY:?KIMI_API_KEY not set — see .env.example}"
+: "${MINIMAX_API_KEY:?MINIMAX_API_KEY not set — see .env.example}"
 
 BRIEF_FILE="$1"
 MAX_ROUNDS="${2:-3}"  # 默认最多3轮修正
@@ -18,20 +24,16 @@ MM_DIR="test-viz/pipeline/minimax"
 REVIEW_DIR="test-viz/pipeline/reviews"
 mkdir -p "$KIMI_DIR" "$MM_DIR" "$REVIEW_DIR"
 
-# API configs
-KIMI_ENV='ANTHROPIC_BASE_URL=https://api.kimi.com/coding/ ANTHROPIC_API_KEY=REDACTED ENABLE_TOOL_SEARCH=false'
-MM_ENV='ANTHROPIC_BASE_URL=https://api.minimaxi.com/anthropic ANTHROPIC_API_KEY=REDACTED ANTHROPIC_MODEL=MiniMax-M2.7 API_TIMEOUT_MS=300000 ENABLE_TOOL_SEARCH=false'
-
 call_kimi() {
     ANTHROPIC_BASE_URL="https://api.kimi.com/coding/" \
-    ANTHROPIC_API_KEY="REDACTED" \
+    ANTHROPIC_API_KEY="${KIMI_API_KEY}" \
     ENABLE_TOOL_SEARCH=false \
     claude -p "$1" --output-format text < /dev/null 2>/dev/null
 }
 
 call_minimax() {
     ANTHROPIC_BASE_URL="https://api.minimaxi.com/anthropic" \
-    ANTHROPIC_API_KEY="REDACTED" \
+    ANTHROPIC_API_KEY="${MINIMAX_API_KEY}" \
     ANTHROPIC_MODEL="MiniMax-M2.7" \
     API_TIMEOUT_MS=300000 \
     ENABLE_TOOL_SEARCH=false \

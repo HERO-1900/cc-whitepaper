@@ -5,3 +5,9 @@ node_modules/
 *.log
 handoff/
 briefs/
+
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+prompt-audit-full.md

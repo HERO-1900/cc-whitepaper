@@ -1,12 +1,20 @@
 # Hooks 子系统完全解析
 
-Hooks（钩子）是 Claude Code 的生命周期注入点系统——"生命周期"指一个操作从开始到结束的完整过程，"注入点"指你可以在过程中的特定时刻插入自己的逻辑，就像在流水线上设置质检站。用户可以在 27 个预定义事件上注册自定义逻辑，在不修改源码的情况下改变 Claude 的行为。从工具调用前的拦截、到权限决策的自动化、到子 Agent 的停止条件验证（即在 AI 分身完成任务前检查"你真的做完了吗？"），Hooks 几乎覆盖了系统的每一个关键决策点。本章将完整枚举 27 个事件、4 种执行类型、以及退出码的双轨语义设计。
+你用过快递通知吗？"包裹到了自动发短信"、"签收前需要验证身份"、"配送失败自动转寄"——这就是 Hooks 做的事，只不过它管的不是快递，而是 Claude 的每一个动作。
+
+Hooks（钩子）让你可以在 Claude Code 的 **27 个关键时刻**插入自定义逻辑——工具调用前拦截、权限决策自动化、AI 完成任务前检查"你真的做完了吗？"——全部通过编辑一个配置文件实现，不需要改源码。本章将完整枚举这 27 个事件、4 种执行类型、以及退出码的双轨语义设计。
 
 > **源码位置**：`src/hooks/`（104 个文件）、`src/services/hooks/`
 
-> 💡 **通俗理解**：Hooks 就像快递通知设置——你可以设定"包裹到达时自动短信通知"（PostToolUse）、"签收前需要验证身份"（PreToolUse + exit 2 阻断）、"配送失败时自动转寄"（StopFailure），甚至可以自定义通知方式（command/prompt/agent/http 四种类型）。
+> 💡 **通俗理解**：把 Hooks 想象成快递柜的通知设置：
+> - "包裹到达时自动短信通知" → `PostToolUse`（工具用完后通知）
+> - "签收前需要验证身份" → `PreToolUse` + exit 2（工具执行前拦截）
+> - "配送失败时自动转寄" → `StopFailure`（失败时触发备用方案）
+> - 通知方式可选：短信（command）、AI 判断（prompt/agent）、系统对接（http）
 
-> 🌍 **行业背景**：生命周期钩子（Lifecycle Hooks）是软件工程中的成熟设计模式，在 AI 编码工具中的应用各有侧重。**Git** 本身就有 pre-commit、post-commit 等 hooks，Claude Code 的 Hooks 系统在命名和退出码语义上明显借鉴了 Git hooks 的设计。**Cursor** 通过 `.cursorrules` 文件提供项目级指令注入，但没有可编程的事件钩子系统。**Aider** 支持 `--lint-cmd` 和 `--test-cmd` 在编辑后自动运行检查，这相当于 Claude Code 的 `PostToolUse` + `Stop` 两个 hook 的特化版本。**LangChain** 的 Callbacks 系统提供了 `on_tool_start`、`on_tool_end` 等回调，概念最接近 Claude Code 的 Hooks，但它是库级 API 而非配置驱动。**GitHub Actions** 的 workflow 事件系统是另一个参照——但它是 CI/CD 级别的，不做实时阻断。Claude Code 的 27 个事件 + 4 种执行类型 + exit 2 阻断语义的组合，在 AI 编码工具中覆盖面最广，但也带来了最陡峭的学习曲线。
+了解了这个类比，下面我们来看 Hooks 在行业中的位置。
+
+> 🌍 **行业背景**：生命周期钩子（Lifecycle Hooks）是软件工程中的成熟设计模式。**Git** 本身就有 pre-commit/post-commit hooks，Claude Code 在命名和退出码语义上明显借鉴了这个设计。同类 AI 工具中：**Cursor** 通过 `.cursorrules` 注入项目指令但没有事件钩子；**Aider** 的 `--lint-cmd`/`--test-cmd` 相当于 Claude Code 两个 hook 的特化版；**LangChain** 的 Callbacks 概念最接近但是代码 API 而非配置驱动。Claude Code 的 27 个事件 + 4 种执行类型 + exit 2 阻断语义的组合，覆盖面最广，但学习曲线也最陡。
 
 ---
 
@@ -241,9 +249,9 @@ Hooks 是 Claude Code 的**生命周期注入点系统**——用户可以在系
 
 ## 3. 退出码语义——双轨制
 
-> 📚 **课程关联**：退出码的双轨制设计是**操作系统**课程中"进程间通信（IPC）"的实际应用。Unix 进程通过 `waitpid()` 获取子进程退出码，这是最简单的 IPC 机制之一——单个整数值传递语义信息。Claude Code 在这 256 个可能值（0-255）中定义了三个语义区间（0/2/其他），这类似于 HTTP 状态码的分区设计（2xx 成功/4xx 客户端错误/5xx 服务端错误）。值得注意的是，exit code 作为 IPC 机制有先天局限——8 bit 整数无法传递结构化信息。Claude Code 通过 exit code + stdout/stderr + `hookSpecificOutput`（JSON）的组合来弥补这个局限：exit code 传递"动作语义"（放行/阻断/忽略），stdout/stderr 传递"内容"，JSON 传递"结构化决策"。这是在原始 IPC 机制上构建高层协议的经典模式。
+退出码是 Hooks 系统最核心的设计决策——Claude 怎么知道你的脚本是"放行"还是"拦截"？答案就是一个数字：
 
-这是 Hooks 系统最核心的设计决策：
+> 💡 **通俗理解**：退出码就像交通信号灯。你的 hook 脚本跑完后，返回一个数字告诉 Claude 怎么办：**绿灯（0）= 放行**，**红灯（2）= 拦截**，**黄灯闪烁（其他数字）= 脚本自己出了问题，但别影响正常流程**。
 
 | 退出码 | 含义 |
 |--------|------|
@@ -251,7 +259,17 @@ Hooks 是 Claude Code 的**生命周期注入点系统**——用户可以在系
 | **2** | **阻断**。stderr 展示给模型，操作被阻止 |
 | **其他非零** | 非阻断错误。stderr 只展示给用户（不影响模型） |
 
-**为什么是 2？** 需要澄清一个常见误解：这并非严格遵循某个 Unix 标准惯例。POSIX 标准中只规定了 `exit 0`（成功）和 `exit 1`（一般错误）；Bash 手册中 exit 2 表示"shell 命令用法错误"（misuse of shell builtins），而 BSD 的 `sysexits.h` 中 `EX_USAGE=64` 才是"用法错误"的标准值。Git hooks 也只区分"零=放行，非零=阻断"，并不区分 1 和 2。Claude Code 选择 exit 2 的真实原因更务实——需要一个不与 exit 1（通用错误）冲突的小整数值，使得 hook 脚本可以区分两种完全不同的语义：exit 1 表示"脚本自身出错了"（不应影响 Claude 行为，属于非阻断错误），而 exit 2 表示"我有意阻断这个操作"（错误信息传递给 AI 模型）。这是一种**实用主义的约定**，而非对某个 Unix 传统的继承。
+**为什么偏偏选了数字 2？** 简单说：需要一个不与 exit 1（通用错误）冲突的小整数值。exit 1 表示"脚本自身出错了"（不应影响 Claude 行为），exit 2 表示"我有意阻断这个操作"。这是一种实用主义的约定，而非对某个 Unix 传统的继承。
+
+> <details><summary>📚 <b>技术深潜：退出码与操作系统 IPC</b>（点击展开）</summary>
+>
+> 退出码的双轨制设计是操作系统课程中"进程间通信（IPC）"的实际应用。Unix 进程通过 `waitpid()` 获取子进程退出码——这是最简单的 IPC 机制，单个 8-bit 整数（0-255）传递语义。Claude Code 在其中定义了三个语义区间（0/2/其他），类似 HTTP 状态码的分区设计（2xx/4xx/5xx）。
+>
+> 8-bit 整数无法传递结构化信息，因此 Claude Code 用 exit code + stdout/stderr + `hookSpecificOutput`（JSON）的组合来弥补：exit code 传递"动作语义"，stdout/stderr 传递"内容"，JSON 传递"结构化决策"。这是在原始 IPC 机制上构建高层协议的经典模式。
+>
+> 关于 exit 2 的来历：POSIX 只规定了 `exit 0`（成功）和 `exit 1`（错误）；Bash 手册中 exit 2 是"shell 用法错误"；BSD `sysexits.h` 中 `EX_USAGE=64`。Git hooks 只区分零/非零，不区分 1 和 2。Claude Code 的选择更接近自定义协议。
+>
+> </details>
 
 例外情况：
 - `StopFailure`、`PostToolUseFailure`：fire-and-forget，输出被忽略

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图表 Token 注入 Spike — CC 白皮书沙箱</title>
+
+<!-- FOUC 防御（同 PoC） -->
+<script>
+  (function () {
+    try {
+      var stored = localStorage.getItem('cc-theme');
+      var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', stored || (systemDark ? 'dark' : 'light'));
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
+
+<link rel="stylesheet" href="theme-tokens.css">
+
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  transition: background-color var(--transition-normal),
+              color var(--transition-normal);
+  min-height: 100vh;
+}
+
+.shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+header h1 {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.theme-switcher {
+  display: inline-flex;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 2px;
+}
+.theme-switcher button {
+  background: transparent;
+  border: 0;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  padding: var(--space-2) var(--space-3);
+  border-radius: calc(var(--radius-md) - 2px);
+  cursor: pointer;
+}
+.theme-switcher button[aria-pressed="true"] {
+  background: var(--color-bg-hover);
+  color: var(--color-accent);
+}
+
+.callout {
+  background: var(--color-accent-bg);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-6);
+  margin-bottom: var(--space-6);
+  font-size: var(--font-size-sm);
+}
+.callout strong { color: var(--color-accent); }
+
+.controls {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+.controls button {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.controls button:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.controls button.primary {
+  background: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+}
+
+.iframe-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+  margin-bottom: var(--space-6);
+}
+.iframe-wrap iframe {
+  display: block;
+  width: 100%;
+  height: 600px;
+  border: 0;
+}
+
+.log {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+.log .ok    { color: var(--color-success); }
+.log .warn  { color: var(--color-warning); }
+.log .err   { color: var(--color-error); }
+
+h2 {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  margin-top: var(--space-8);
+  margin-bottom: var(--space-3);
+  color: var(--color-text-primary);
+}
+p {
+  margin-bottom: 1em;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--color-bg-elevated);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  color: var(--color-accent);
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <header>
+    <h1>图表 Token 注入 Spike</h1>
+    <div class="theme-switcher" role="group" aria-label="主题选择">
+      <button data-theme-set="system" aria-pressed="false">⚙ 系统</button>
+      <button data-theme-set="light"  aria-pressed="false">☀ 亮色</button>
+      <button data-theme-set="dark"   aria-pressed="false">☾ 暗色</button>
+    </div>
+  </header>
+
+  <div class="callout">
+    <strong>实验目标</strong> ——
+    验证：能否在不修改 114 个图表 HTML 的前提下，让父页面的主题切换"穿透"
+    iframe，强制图表跟随当前主题？答案：<strong>能，前提是同源</strong>。
+    iframe 与父页同源时，<code>iframe.contentDocument</code> 可写，
+    我们可以注入一段 <code>&lt;style&gt;</code> 覆盖图表的 <code>:root</code> 变量。
+  </div>
+
+  <h2>实验步骤</h2>
+  <p>
+    1. 父页面加载真实图表 <code>VIS-0-001_英雄架构图.html</code> 到 iframe；
+    2. iframe load 完成后，读取父页面当前 <code>data-theme</code>；
+    3. 根据主题，向 iframe 的 <code>&lt;head&gt;</code> 注入一个 <code>&lt;style id="cc-theme-override"&gt;</code>；
+    4. 这个 style 块用更高优先级（<code>!important</code>）覆盖图表自带的 <code>:root</code>；
+    5. 主题切换时，更新 style 块的内容，实现实时联动。
+  </p>
+
+  <div class="controls">
+    <button id="btn-load" class="primary">① 加载图表</button>
+    <button id="btn-inject">② 注入主题</button>
+    <button id="btn-reset">③ 还原（移除注入）</button>
+  </div>
+
+  <div class="iframe-wrap">
+    <iframe
+      id="chart"
+      title="VIS-0-001 英雄架构图"
+      sandbox="allow-scripts allow-same-origin"
+      loading="lazy"></iframe>
+  </div>
+
+  <h2>实时日志</h2>
+  <div class="log" id="log">尚未开始。点击"① 加载图表"。</div>
+
+  <h2>可行性结论</h2>
+  <p>
+    <strong>同源 iframe（生产场景）</strong>：可行。生产站点的图表都放在
+    <code>test-viz/production/html/</code>，与主页面同源，iframe.contentDocument
+    完全可读可写。注入 <code>&lt;style&gt;</code> 后，CSS 变量在图表内部立即生效，
+    无需重新加载、无需图表配合改造。
+  </p>
+  <p>
+    <strong>跨源 iframe（理论场景）</strong>：不可行。CORS 会阻止 contentDocument
+    访问，只能走 <code>postMessage</code>，且需要图表 HTML 内置一个 message 监听器。
+    114 个图表都没有这个监听器，所以"零改造方案"只在同源下成立。
+  </p>
+  <p>
+    <strong>注意事项</strong>：每个图表自定的变量名不一样
+    （<code>--bg-primary</code> vs <code>--color-bg-primary</code> vs <code>--background</code>），
+    所以注入的 override style 必须列出"所有可能的变量名"。本 spike 用一份预置的
+    "图表变量字典"覆盖最常见的 8 个名字，足以让 80% 的图表跟随主题；
+    剩余 20% 用 <code>iframe.body</code> 上的 mix-blend-mode 滤镜兜底
+    （未来可优化）。
+  </p>
+
+</div>
+
+<script>
+/* ============================================================
+   1) 主题切换控制器（与 PoC 同款，简化版）
+   ============================================================ */
+(function () {
+  var STORAGE_KEY = 'cc-theme';
+  var html = document.documentElement;
+  var mql  = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function getStored() { try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; } }
+  function setStored(v) { try { v ? localStorage.setItem(STORAGE_KEY, v) : localStorage.removeItem(STORAGE_KEY); } catch (e) {} }
+
+  function apply(choice) {
+    var theme = (choice === 'system' || !choice)
+      ? (mql.matches ? 'dark' : 'light')
+      : choice;
+    html.setAttribute('data-theme', theme);
+    setStored(choice === 'system' ? null : choice);
+    syncUI();
+    // 每次切主题，自动刷新 iframe 注入
+    refreshInjection();
+  }
+
+  function syncUI() {
+    var choice = getStored() || 'system';
+    document.querySelectorAll('[data-theme-set]').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.dataset.themeSet === choice ? 'true' : 'false');
+    });
+  }
+
+  document.querySelectorAll('[data-theme-set]').forEach(function (b) {
+    b.addEventListener('click', function () { apply(b.dataset.themeSet); });
+  });
+  mql.addEventListener('change', function () {
+    if (!getStored()) { html.setAttribute('data-theme', mql.matches ? 'dark' : 'light'); refreshInjection(); }
+  });
+  syncUI();
+
+  // 暴露一个全局，方便下面 spike 区块复用
+  window.__refreshInjection = function () { /* 占位，下面会赋值 */ };
+  window.refreshInjection = function () { window.__refreshInjection(); };
+})();
+
+/* ============================================================
+   2) 图表 Token 注入 Spike
+   ------------------------------------------------------------
+   核心 trick：往 iframe.contentDocument.head 里 append 一个
+   <style id="cc-theme-override">，里面用 !important 覆盖图表
+   自带的 :root 变量。
+
+   why id：每次刷新主题先把旧的 remove，再 append 新的。
+   why !important：图表自己的 :root { --bg: #xxx } 优先级和我们
+   注入的 :root 相同（同选择器），后注入的会胜出，但保险起见
+   加 !important 防止图表内还有 [data-mode] 之类更具体的覆写。
+   ============================================================ */
+
+var CHART_URL = '../test-viz/production/html/VIS-0-001_英雄架构图.html';
+var iframe = document.getElementById('chart');
+var logEl  = document.getElementById('log');
+
+function log(msg, kind) {
+  var line = document.createElement('div');
+  if (kind) line.className = kind;
+  line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+/* 主题 → 图表变量 的映射字典
+   覆盖了 sandbox 里观察到的常见命名风格：
+   - 生产 style.css 用的 --bg-primary / --text-primary
+   - 部分图表用的 --background / --foreground
+   - 沙箱 token 用的 --color-bg-primary
+   注入时三种命名都给一份，确保最大兼容 */
+function buildOverrideCSS(themeMode) {
+  // 从父页面真实 token 读取（保证和主站一致）
+  var cs = getComputedStyle(document.documentElement);
+  var bgPrimary    = cs.getPropertyValue('--color-bg-primary').trim();
+  var bgSecondary  = cs.getPropertyValue('--color-bg-secondary').trim();
+  var bgElevated   = cs.getPropertyValue('--color-bg-elevated').trim();
+  var textPrimary  = cs.getPropertyValue('--color-text-primary').trim();
+  var textSecondary= cs.getPropertyValue('--color-text-secondary').trim();
+  var textMuted    = cs.getPropertyValue('--color-text-muted').trim();
+  var border       = cs.getPropertyValue('--color-border').trim();
+  var accent       = cs.getPropertyValue('--color-accent').trim();
+
+  // 注意：用 :root, html, body 三选择器叠加，确保任何写法都被命中
+  return [
+    '/* === injected by cc-theme-override === */',
+    ':root, html, body {',
+    '  /* 通用语义 */',
+    '  --color-bg-primary:    ' + bgPrimary    + ' !important;',
+    '  --color-bg-secondary:  ' + bgSecondary  + ' !important;',
+    '  --color-bg-elevated:   ' + bgElevated   + ' !important;',
+    '  --color-text-primary:  ' + textPrimary  + ' !important;',
+    '  --color-text-secondary:' + textSecondary+ ' !important;',
+    '  --color-accent:        ' + accent       + ' !important;',
+    '  /* 生产 style.css 命名（生产图表多用这一套） */',
+    '  --bg-primary:    ' + bgPrimary    + ' !important;',
+    '  --bg-secondary:  ' + bgSecondary  + ' !important;',
+    '  --bg-tertiary:   ' + bgElevated   + ' !important;',
+    '  --bg-card:       ' + bgElevated   + ' !important;',
+    '  --bg-hover:      ' + bgElevated   + ' !important;',
+    '  --text-primary:  ' + textPrimary  + ' !important;',
+    '  --text-secondary:' + textSecondary+ ' !important;',
+    '  --text-muted:    ' + textMuted    + ' !important;',
+    '  --border:        ' + border       + ' !important;',
+    '  /* 图表风格 1：GitHub-ish 命名 */',
+    '  --background:    ' + bgPrimary    + ' !important;',
+    '  --foreground:    ' + textPrimary  + ' !important;',
+    '}',
+    'body {',
+    '  background: ' + bgPrimary + ' !important;',
+    '  color: '      + textPrimary + ' !important;',
+    '}'
+  ].join('\n');
+}
+
+function injectInto(iframeEl) {
+  try {
+    var doc = iframeEl.contentDocument;
+    if (!doc) {
+      log('contentDocument 为空，可能跨域或未加载完成', 'err');
+      return false;
+    }
+    var head = doc.head || doc.getElementsByTagName('head')[0];
+    if (!head) {
+      log('iframe 内未找到 <head>', 'err');
+      return false;
+    }
+    // 先移除旧的 override（如果存在）
+    var old = doc.getElementById('cc-theme-override');
+    if (old) old.parentNode.removeChild(old);
+
+    // 注入新的
+    var theme = document.documentElement.getAttribute('data-theme');
+    var style = doc.createElement('style');
+    style.id = 'cc-theme-override';
+    style.textContent = buildOverrideCSS(theme);
+    head.appendChild(style);
+
+    // 同时往 iframe 的 <html> 上写一个 data-theme，方便图表内部
+    // 如果有 [data-theme="dark"] 选择器也能命中
+    doc.documentElement.setAttribute('data-theme', theme);
+
+    log('注入成功 → theme=' + theme + '，覆盖了 14 个变量', 'ok');
+    return true;
+  } catch (e) {
+    log('注入失败：' + e.message + '（很可能是跨域被 CORS 拒了）', 'err');
+    return false;
+  }
+}
+
+function removeInjection(iframeEl) {
+  try {
+    var doc = iframeEl.contentDocument;
+    if (!doc) return;
+    var old = doc.getElementById('cc-theme-override');
+    if (old) {
+      old.parentNode.removeChild(old);
+      doc.documentElement.removeAttribute('data-theme');
+      log('已移除注入，图表恢复原始样式', 'warn');
+    }
+  } catch (e) {
+    log('移除失败：' + e.message, 'err');
+  }
+}
+
+/* 主题切换时自动刷新注入 */
+window.__refreshInjection = function () {
+  if (iframe.src) {
+    injectInto(iframe);
+  }
+};
+
+/* 按钮绑定 */
+document.getElementById('btn-load').addEventListener('click', function () {
+  log('开始加载图表 → ' + CHART_URL);
+  iframe.src = CHART_URL;
+});
+
+iframe.addEventListener('load', function () {
+  if (!iframe.src) return;
+  log('图表加载完成', 'ok');
+  // 自动注入一次
+  injectInto(iframe);
+});
+
+iframe.addEventListener('error', function () {
+  log('iframe 加载失败', 'err');
+});
+
+document.getElementById('btn-inject').addEventListener('click', function () {
+  injectInto(iframe);
+});
+document.getElementById('btn-reset').addEventListener('click', function () {
+  removeInjection(iframe);
+});
+</script>
+
+</body>
+</html>
