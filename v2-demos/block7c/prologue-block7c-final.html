@@ -43,6 +43,7 @@
             --cc-font-size-5xl: 48px;
         }
 
+        /* Light theme override - OS preference fallback (user-set data-theme wins) */
         @media (prefers-color-scheme: light) {
             :root {
                 --cc-bg-primary: #ffffff;
@@ -54,6 +55,18 @@
                 --cc-text-secondary: #57606a;
                 --cc-text-muted: #6e7781;
             }
+        }
+
+        /* Manual theme override via data-theme attribute (added by toggle button) */
+        [data-theme="light"] {
+            --cc-bg-primary: #ffffff;
+            --cc-bg-secondary: #f6f8fa;
+            --cc-bg-tertiary: #eaeef2;
+            --cc-border-default: #d0d7de;
+            --cc-border-muted: #e5e7eb;
+            --cc-text-primary: #24292f;
+            --cc-text-secondary: #57606a;
+            --cc-text-muted: #6e7781;
         }
 
         * {
@@ -661,9 +674,33 @@
                 font-size: var(--cc-font-size-3xl);
             }
         }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            position: fixed;
+            top: var(--cc-space-4);
+            right: var(--cc-space-4);
+            z-index: 100;
+            padding: var(--cc-space-2) var(--cc-space-3);
+            border: 1px solid var(--cc-border-default);
+            border-radius: 0.375rem;
+            background: var(--cc-bg-primary);
+            color: var(--cc-text-secondary);
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .theme-toggle:hover {
+            color: var(--cc-accent-purple);
+            border-color: var(--cc-accent-purple);
+        }
     </style>
 </head>
 <body>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="切换主题">
+        <span id="theme-icon">◐</span>
+    </button>
     <!-- Marginal Label -->
     <div class="prologue-marginal-label">
         序章 · Block 07c · 内部组织
@@ -1367,6 +1404,22 @@
         // Initial center
         const initialTransform = d3.zoomIdentity.translate(0, 0).scale(0.9);
         svg.call(zoom.transform, initialTransform);
+    </script>
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            const next = current === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+
+        (function initTheme() {
+            const saved = localStorage.getItem('theme');
+            const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+            const theme = saved || (prefersLight ? 'light' : 'dark');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
     </script>
 </body>
 </html>

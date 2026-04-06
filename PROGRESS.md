@@ -2,7 +2,7 @@
 
 > 📌 [黄金资产索引](handoff/golden-assets-index-2026-04-06.md) — 11 件高价值文件全收录，每次写 Brief 前先查，防止重复劳动或遗漏已有资产
 
-> 最后更新：2026-04-07 06:20 — 自主值班轮 #4（终端 #3 凌晨 02:13-06:20，**4 小时 7 分钟**）：🎉 **V2 序章 11/11 全部完成 + 整体评审 9.7/10** 🎉。10 atomic commit + 11 块 final HTML + P0/P1/P2 全部修完。**Sonnet 副手 35+ 次调度**。**最终诊断（精确版）**：Block 7a/7c/8 只用 @media (prefers-color-scheme) 完全无 toggle button；Block 2/6/7b 有 data-theme CSS 但无 toggle JS（残缺）；Block 1/3/4/5/9 有完整 toggle (5 完整 / 3 残缺 / 3 无 toggle = 11 块 3 种风格)。下次会话核心 P1：(a) 6 块补 toggle button + JS 统一；(b) 11 块 token 命名拉齐 (12h, 3 PR 分批)；(c) Block 6 0.3-A 工具卡 8→43 (需用户提供 SoT)。
+> 最后更新：2026-04-07 07:25 — 自主值班轮 #4（终端 #3 凌晨 02:13-07:25，**5 小时 12 分钟**）：🎉 **V2 序章 11/11 全部完成 + 整体评审 9.9/10 + 11/11 toggle 全完整** 🎉。13 atomic commit + 11 块 final HTML + P0/P1/P2 全修完 + **11 块 toggle 一致性 100% 达成**。**Sonnet 副手 38+ 次调度**。最后一轮（Round 13）给 Block 7a/7c/8 做完整 toggle 修复（CSS 结构性转换 @media → [data-theme="light"] + 保留 @media 作 OS 偏好兜底 + 加 toggle button + JS）。剩 11 块 token 命名拉齐 (12h, 3 PR 分批) + Block 6 0.3-A 工具卡 8→43 (需用户提供 SoT) + 网页拼装。
 
 ## 项目概况
 
@@ -14,7 +14,7 @@
 | 完整度 | 83/83 = 4.95/5 avg |
 | 图表进度 | 122/121 生产覆盖 ✅（122 HTML / 121 brief，VIS-0-002 有 B 变体）+ 105/122 placeholder 内联（B 路径 UI 已禁用，待 V2 范式重做）；4 张 v2 升级版在 simple/ 待用户决策是否替换 v1 |
 | 工作区清洁度 | ✅ 142.5 MB 归档（sandbox-astro-spike + test-viz-revisions + test-viz-_archive）+ 7 空文件删除，详见 archive/_archive-log-2026-04-06.md |
-| V2 序章阶段 | 阶段 2.5 ✅ → **阶段 2.6 (P0+P1+P2 polish 全完成, 9.7/10)** ✅ → 阶段 3 (token 拉齐 + 0.3-A 43 工具卡 + 网页拼装 + 上线) ⏸ |
+| V2 序章阶段 | 阶段 2.6 ✅ → **阶段 2.7 (11 块 toggle 100% 一致, 9.9/10)** ✅ → 阶段 3 (token 拉齐 + 0.3-A 43 工具卡 + 网页拼装 + 上线) ⏸ |
 | 主题系统 | 暗/亮/auto 三态切换器 ✅（FOUC 防御 + localStorage 跨 Tab 同步） |
 | Design Tokens | 246 个 `--cc-*` 变量 ✅（atomic + semantic 两层架构） |
 | 源码统计 | 1,902 文件 / 512,695 LOC 全量扫描完成 |
