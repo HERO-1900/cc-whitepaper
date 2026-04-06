@@ -1,14 +1,14 @@
 {
   "summary": {
-    "totalChapters": 82,
-    "totalLines": 36089,
-    "totalCJKCharacters": 353586,
-    "avgCompletenessScore": 4.96,
-    "avgMetaphorBalance": 0.336,
-    "totalIssues": 3,
+    "totalChapters": 83,
+    "totalLines": 36528,
+    "totalCJKCharacters": 360580,
+    "avgCompletenessScore": 4.95,
+    "avgMetaphorBalance": 0.337,
+    "totalIssues": 4,
     "issuesByType": {
       "error": 0,
-      "warning": 2,
+      "warning": 3,
       "info": 1
     }
   },
@@ -17,8 +17,8 @@
       "file": "part0_序章/00_序章.md",
       "title": "序章：当你打开一个\"聊天助手\"的引擎盖",
       "stats": {
-        "lineCount": 207,
-        "cjkCount": 4182,
+        "lineCount": 242,
+        "cjkCount": 4840,
         "codeBlocks": 1,
         "srcPathCount": 5
       },
@@ -3212,6 +3212,45 @@
       "issues": []
     },
     {
+      "file": "part5_supplementary/83_Harness_Engineering.md",
+      "title": "第 83 章 Harness Engineering：从 Claude Code 看 Agent 工程化范式",
+      "stats": {
+        "lineCount": 404,
+        "cjkCount": 6336,
+        "codeBlocks": 1,
+        "srcPathCount": 0
+      },
+      "metaphors": {
+        "osCount": 7,
+        "nonTechCount": 6,
+        "total": 13,
+        "balanceScore": 0.462,
+        "imbalanced": false
+      },
+      "crossRefs": {
+        "paths": [],
+        "brokenCount": 0,
+        "broken": []
+      },
+      "completeness": {
+        "score": 4,
+        "details": {
+          "hasIntroduction": true,
+          "hasCodeBlocks": true,
+          "hasSrcRefs": false,
+          "hasAnalogies": true,
+          "hasCritical": true
+        }
+      },
+      "issues": [
+        {
+          "severity": "warning",
+          "type": "no_src_ref",
+          "message": "没有源文件引用（src/ 路径）"
+        }
+      ]
+    },
+    {
       "file": "part5_批判与超越/01_这个系统的代价.md",
       "title": "这个系统的代价",
       "stats": {
@@ -3381,6 +3420,13 @@
   "allIssues": [
     {
       "severity": "warning",
+      "type": "no_src_ref",
+      "message": "没有源文件引用（src/ 路径）",
+      "chapter": "part5_supplementary/83_Harness_Engineering.md",
+      "title": "第 83 章 Harness Engineering：从 Claude Code 看 Agent 工程化范式"
+    },
+    {
+      "severity": "warning",
       "type": "no_code",
       "message": "没有代码块（``` 标记）",
       "chapter": "references.md",
@@ -3407,6 +3453,12 @@
       "title": "引用与致谢",
       "completeness": 2,
       "issueCount": 3
+    },
+    {
+      "file": "part5_supplementary/83_Harness_Engineering.md",
+      "title": "第 83 章 Harness Engineering：从 Claude Code 看 Agent 工程化范式",
+      "completeness": 4,
+      "issueCount": 1
     },
     {
       "file": "part0_序章/00_序章.md",
@@ -3453,12 +3505,6 @@
     {
       "file": "part2_代码架构完全解构/03_提示词工厂.md",
       "title": "提示词工厂：系统提示词的组装流水线",
-      "completeness": 5,
-      "issueCount": 0
-    },
-    {
-      "file": "part2_代码架构完全解构/04_查询循环.md",
-      "title": "心脏：查询循环与流式处理引擎",
       "completeness": 5,
       "issueCount": 0
     }

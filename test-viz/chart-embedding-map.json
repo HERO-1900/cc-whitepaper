@@ -3,15 +3,15 @@
     "generated": "2026-04-04",
     "last_updated": "2026-04-06",
     "description": "占位符 -> 图表文件的映射关系，用于图表嵌入系统",
-    "total_placeholders_in_book": 91,
-    "unique_placeholder_ids": 83,
+    "total_placeholders_in_book": 106,
+    "unique_placeholder_ids": 98,
     "duplicate_placeholder_ids": 8,
     "total_briefs": 122,
     "total_chart_files": 122,
-    "matched_count": 90,
+    "matched_count": 105,
     "unmatched_placeholder_count": 1,
-    "unmatched_chart_count": 32,
-    "drift_audit_2026_04_06": "Sonnet 子 Agent 归位 7 张 part3_new 游离图表 (VIS-3-018A/B, 3-019A/B, 3-020A/B, 3-022A) — 章节中已有占位符，可立即显示。剩余 32 张游离图表 (序章 VIS-0-001~015 + VIS-0-002B、VIS-1-011 本书阅读路径图、part4 VIS-4-001~010、part5 VIS-5-001~005) 因对应章节文件无 [图表预留] 占位符，且本次任务禁止修改 .md，无法通过 chart-embed.js 的占位符替换机制嵌入。需 Opus 决策：(A) 在序章/part4/part5 章节里追加 [图表预留] 占位符，(B) 引入非占位符的'章节图表附录'渲染路径，(C) 暂缓处理。"
+    "unmatched_chart_count": 17,
+    "drift_audit_2026_04_06": "Sonnet 子 Agent 归位 7 张 part3_new 游离图表 (VIS-3-018A/B, 3-019A/B, 3-020A/B, 3-022A)。序章图表占位符插入任务 (2026-04-06 续): 在 book/part0_序章/00_序章.md 追加 15 个 [图表预留 0.X-Y] 占位符，归位 VIS-0-001/002B/003~015 共 15 张游离图表 (VIS-0-002 旧版源码仪表盘作为 002B 的历史副本保留游离)。剩余 17 张游离图表 (VIS-0-002、VIS-1-011、part4 VIS-4-001~010、part5 VIS-5-001~005) 因对应章节无 [图表预留] 占位符待后续处理。"
   },
   "mappings": [
     {
@@ -823,6 +823,141 @@
       "chart_id": "VIS-3-022A",
       "chart_file": "test-viz/production/html/VIS-3-022A_CacheBreak检测流程.html",
       "brief_file": "briefs/part3_new/VIS-3-022A_CacheBreak检测流程.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.1-A]",
+      "placeholder_id": "0.1-A",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 61,
+      "chart_id": "VIS-0-002B",
+      "chart_file": "test-viz/production/html/VIS-0-002B_CC源码全量统计仪表盘.html",
+      "brief_file": null
+    },
+    {
+      "placeholder": "[图表预留 0.1-B]",
+      "placeholder_id": "0.1-B",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 65,
+      "chart_id": "VIS-0-001",
+      "chart_file": "test-viz/production/html/VIS-0-001_英雄架构图.html",
+      "brief_file": "briefs/overview/VIS-0-001_英雄架构图.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.2-A]",
+      "placeholder_id": "0.2-A",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 81,
+      "chart_id": "VIS-0-004",
+      "chart_file": "test-viz/production/html/VIS-0-004_数据流完整旅程图.html",
+      "brief_file": "briefs/overview/VIS-0-004_数据流完整旅程图.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.2-B]",
+      "placeholder_id": "0.2-B",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 87,
+      "chart_id": "VIS-0-003",
+      "chart_file": "test-viz/production/html/VIS-0-003_技术栈全景.html",
+      "brief_file": "briefs/overview/VIS-0-003_技术栈全景.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.3-A]",
+      "placeholder_id": "0.3-A",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 110,
+      "chart_id": "VIS-0-010",
+      "chart_file": "test-viz/production/html/VIS-0-010_43个工具完整目录.html",
+      "brief_file": "briefs/overview/VIS-0-010_43个工具完整目录.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.3-B]",
+      "placeholder_id": "0.3-B",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 120,
+      "chart_id": "VIS-0-006",
+      "chart_file": "test-viz/production/html/VIS-0-006_安全模型全景图.html",
+      "brief_file": "briefs/overview/VIS-0-006_安全模型全景图.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.3-C]",
+      "placeholder_id": "0.3-C",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 122,
+      "chart_id": "VIS-0-009",
+      "chart_file": "test-viz/production/html/VIS-0-009_权限模型对照表.html",
+      "brief_file": "briefs/overview/VIS-0-009_权限模型对照表.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.3-D]",
+      "placeholder_id": "0.3-D",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 128,
+      "chart_id": "VIS-0-013",
+      "chart_file": "test-viz/production/html/VIS-0-013_MCP传输方式对比.html",
+      "brief_file": "briefs/overview/VIS-0-013_MCP传输方式对比.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.3-E]",
+      "placeholder_id": "0.3-E",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 135,
+      "chart_id": "VIS-0-011",
+      "chart_file": "test-viz/production/html/VIS-0-011_配置文件完整地图.html",
+      "brief_file": "briefs/overview/VIS-0-011_配置文件完整地图.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.3-F]",
+      "placeholder_id": "0.3-F",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 147,
+      "chart_id": "VIS-0-012",
+      "chart_file": "test-viz/production/html/VIS-0-012_Hook事件完整目录.html",
+      "brief_file": "briefs/overview/VIS-0-012_Hook事件完整目录.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.3-G]",
+      "placeholder_id": "0.3-G",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 151,
+      "chart_id": "VIS-0-007",
+      "chart_file": "test-viz/production/html/VIS-0-007_扩展生态地图.html",
+      "brief_file": "briefs/overview/VIS-0-007_扩展生态地图.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.3-H]",
+      "placeholder_id": "0.3-H",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 153,
+      "chart_id": "VIS-0-005",
+      "chart_file": "test-viz/production/html/VIS-0-005_模块依赖网络图.html",
+      "brief_file": "briefs/overview/VIS-0-005_模块依赖网络图.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.4-A]",
+      "placeholder_id": "0.4-A",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 161,
+      "chart_id": "VIS-0-014",
+      "chart_file": "test-viz/production/html/VIS-0-014_本书知识图谱.html",
+      "brief_file": "briefs/overview/VIS-0-014_本书知识图谱.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.4-B]",
+      "placeholder_id": "0.4-B",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 180,
+      "chart_id": "VIS-0-008",
+      "chart_file": "test-viz/production/html/VIS-0-008_性能优化全景.html",
+      "brief_file": "briefs/overview/VIS-0-008_性能优化全景.txt"
+    },
+    {
+      "placeholder": "[图表预留 0.5-A]",
+      "placeholder_id": "0.5-A",
+      "book_file": "book/part0_序章/00_序章.md",
+      "book_line": 213,
+      "chart_id": "VIS-0-015",
+      "chart_file": "test-viz/production/html/VIS-0-015_概念速查表.html",
+      "brief_file": "briefs/overview/VIS-0-015_概念速查表.txt"
     }
   ],
   "unmatched_placeholders": [
@@ -838,100 +973,10 @@
   ],
   "unmatched_charts": [
     {
-      "chart_id": "VIS-0-001",
-      "chart_file": "test-viz/production/html/VIS-0-001_英雄架构图.html",
-      "brief_file": "briefs/overview/VIS-0-001_英雄架构图.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
       "chart_id": "VIS-0-002",
       "chart_file": "test-viz/production/html/VIS-0-002_源码统计仪表盘.html",
       "brief_file": "briefs/overview/VIS-0-002_源码统计仪表盘.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-002B",
-      "chart_file": "test-viz/production/html/VIS-0-002B_CC源码全量统计仪表盘.html",
-      "brief_file": null,
-      "reason": "新增可视化（VIS-0-002 升级版），无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-003",
-      "chart_file": "test-viz/production/html/VIS-0-003_技术栈全景.html",
-      "brief_file": "briefs/overview/VIS-0-003_技术栈全景.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-004",
-      "chart_file": "test-viz/production/html/VIS-0-004_数据流完整旅程图.html",
-      "brief_file": "briefs/overview/VIS-0-004_数据流完整旅程图.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-005",
-      "chart_file": "test-viz/production/html/VIS-0-005_模块依赖网络图.html",
-      "brief_file": "briefs/overview/VIS-0-005_模块依赖网络图.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-006",
-      "chart_file": "test-viz/production/html/VIS-0-006_安全模型全景图.html",
-      "brief_file": "briefs/overview/VIS-0-006_安全模型全景图.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-007",
-      "chart_file": "test-viz/production/html/VIS-0-007_扩展生态地图.html",
-      "brief_file": "briefs/overview/VIS-0-007_扩展生态地图.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-008",
-      "chart_file": "test-viz/production/html/VIS-0-008_性能优化全景.html",
-      "brief_file": "briefs/overview/VIS-0-008_性能优化全景.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-009",
-      "chart_file": "test-viz/production/html/VIS-0-009_权限模型对照表.html",
-      "brief_file": "briefs/overview/VIS-0-009_权限模型对照表.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-010",
-      "chart_file": "test-viz/production/html/VIS-0-010_43个工具完整目录.html",
-      "brief_file": "briefs/overview/VIS-0-010_43个工具完整目录.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-011",
-      "chart_file": "test-viz/production/html/VIS-0-011_配置文件完整地图.html",
-      "brief_file": "briefs/overview/VIS-0-011_配置文件完整地图.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-012",
-      "chart_file": "test-viz/production/html/VIS-0-012_Hook事件完整目录.html",
-      "brief_file": "briefs/overview/VIS-0-012_Hook事件完整目录.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-013",
-      "chart_file": "test-viz/production/html/VIS-0-013_MCP传输方式对比.html",
-      "brief_file": "briefs/overview/VIS-0-013_MCP传输方式对比.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-014",
-      "chart_file": "test-viz/production/html/VIS-0-014_本书知识图谱.html",
-      "brief_file": "briefs/overview/VIS-0-014_本书知识图谱.txt",
-      "reason": "新增可视化，无对应书中占位符"
-    },
-    {
-      "chart_id": "VIS-0-015",
-      "chart_file": "test-viz/production/html/VIS-0-015_概念速查表.html",
-      "brief_file": "briefs/overview/VIS-0-015_概念速查表.txt",
-      "reason": "新增可视化，无对应书中占位符"
+      "reason": "旧版源码统计仪表盘，已被 VIS-0-002B 全量统计仪表盘替代并归位至序章 [图表预留 0.1-A]；本图作为历史版本保留，不再嵌入序章避免重复"
     },
     {
       "chart_id": "VIS-1-011",
