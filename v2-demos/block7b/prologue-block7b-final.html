@@ -1002,6 +1002,21 @@
         .animate-in {
             animation: fadeIn 0.5s ease forwards;
         }
+
+        /* Light mode：在浅色系统主题下覆盖背景/文字/边框 token，保留 brand accent */
+        [data-theme="light"] {
+            --cc-bg-primary: #ffffff;
+            --cc-bg-secondary: #f6f8fa;
+            --cc-bg-tertiary: #eaeef2;
+            --cc-surface-primary: #ffffff;
+            --cc-surface-secondary: #f6f8fa;
+            --cc-border-default: #d0d7de;
+            --cc-border-muted: #eaeef2;
+            --cc-text-primary: #1f2328;
+            --cc-text-secondary: #4b5563;
+            --cc-text-muted: #6e7781;
+            --cc-text-subtle: #8b949e;
+        }
     </style>
 </head>
 <body>
