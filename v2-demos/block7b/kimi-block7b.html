@@ -1,0 +1,1768 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>序章 · Block 07b · 外部接口 | Claude Code 源码白皮书</title>
+    <style>
+        :root {
+            /* CC Design System Tokens */
+            --cc-bg-primary: #0d1117;
+            --cc-bg-secondary: #161b22;
+            --cc-bg-tertiary: #21262d;
+            --cc-surface-primary: #1c2128;
+            --cc-surface-secondary: #242b33;
+            --cc-border-default: #30363d;
+            --cc-border-muted: #21262d;
+            
+            --cc-text-primary: #f0f6fc;
+            --cc-text-secondary: #c9d1d9;
+            --cc-text-muted: #8b949e;
+            --cc-text-subtle: #6e7681;
+            
+            --cc-accent-purple: #a371f7;
+            --cc-accent-blue: #58a6ff;
+            --cc-accent-green: #3fb950;
+            --cc-accent-orange: #f0883e;
+            --cc-accent-yellow: #d29922;
+            --cc-accent-red: #f85149;
+            --cc-accent-cyan: #39c5cf;
+            
+            --cc-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            --cc-font-mono: "SF Mono", Monaco, "Cascadia Code", "Noto Sans SC", "PingFang SC", monospace;
+            
+            --cc-space-1: 0.25rem;
+            --cc-space-2: 0.5rem;
+            --cc-space-3: 0.75rem;
+            --cc-space-4: 1rem;
+            --cc-space-6: 1.5rem;
+            --cc-space-8: 2rem;
+            --cc-space-10: 2.5rem;
+            --cc-space-12: 3rem;
+            --cc-space-16: 4rem;
+            --cc-space-20: 5rem;
+            
+            --cc-font-size-xs: 0.75rem;
+            --cc-font-size-sm: 0.875rem;
+            --cc-font-size-base: 1rem;
+            --cc-font-size-lg: 1.125rem;
+            --cc-font-size-xl: 1.25rem;
+            --cc-font-size-2xl: 1.5rem;
+            --cc-font-size-3xl: 1.875rem;
+            --cc-font-size-4xl: 2.25rem;
+            --cc-font-size-5xl: 3rem;
+            
+            /* Phase Colors for VIS-0.3-F */
+            --phase-session: #58a6ff;
+            --phase-query: #a371f7;
+            --phase-tool: #f0883e;
+            --phase-agent: #3fb950;
+            
+            /* Mechanism Colors for VIS-0.3-G */
+            --mech-mcp: #a371f7;
+            --mech-hooks: #f0883e;
+            --mech-claude: #58a6ff;
+            --mech-skills: #3fb950;
+            --mech-cmd: #d29922;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--cc-font-sans);
+            background: var(--cc-bg-primary);
+            color: var(--cc-text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+        
+        /* Marginal Label */
+        .prologue-marginal-label {
+            position: fixed;
+            top: var(--cc-space-4);
+            left: var(--cc-space-4);
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-text-subtle);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            z-index: 100;
+            font-family: var(--cc-font-mono);
+        }
+        
+        /* Hero Footer */
+        .hero-footer {
+            position: fixed;
+            bottom: var(--cc-space-4);
+            left: var(--cc-space-4);
+            right: var(--cc-space-4);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-text-subtle);
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        .hero-footer .block-num {
+            font-size: var(--cc-font-size-5xl);
+            font-weight: 700;
+            color: var(--cc-border-default);
+            line-height: 0.8;
+            font-family: var(--cc-font-mono);
+        }
+        
+        .hero-footer .block-info {
+            text-align: right;
+        }
+        
+        .hero-footer .block-name {
+            color: var(--cc-text-secondary);
+            font-weight: 500;
+        }
+        
+        /* Main Container */
+        .block-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: var(--cc-space-20) var(--cc-space-8);
+        }
+        
+        /* Block Title */
+        .block-title {
+            font-size: var(--cc-font-size-4xl);
+            font-weight: 700;
+            margin-bottom: var(--cc-space-8);
+            color: var(--cc-text-primary);
+            position: relative;
+            padding-bottom: var(--cc-space-4);
+        }
+        
+        .block-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 120px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--cc-accent-purple), var(--cc-accent-blue));
+        }
+        
+        /* Intro Text */
+        .intro-text {
+            font-size: var(--cc-font-size-lg);
+            color: var(--cc-text-secondary);
+            margin-bottom: var(--cc-space-12);
+            line-height: 1.8;
+        }
+        
+        /* OS Table Anchor Cards */
+        .os-anchor-section {
+            margin-bottom: var(--cc-space-12);
+        }
+        
+        .os-anchor-label {
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-accent-purple);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: var(--cc-space-4);
+            font-family: var(--cc-font-mono);
+        }
+        
+        .os-anchor-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--cc-space-4);
+        }
+        
+        .os-anchor-card {
+            background: var(--cc-surface-primary);
+            border: 1px solid var(--cc-border-default);
+            border-radius: 8px;
+            padding: var(--cc-space-6);
+            transition: all 0.2s ease;
+        }
+        
+        .os-anchor-card:hover {
+            border-color: var(--cc-accent-purple);
+            transform: translateY(-2px);
+        }
+        
+        .os-anchor-card .os-concept {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-accent-blue);
+            font-weight: 600;
+            margin-bottom: var(--cc-space-2);
+            font-family: var(--cc-font-mono);
+        }
+        
+        .os-anchor-card .cc-mapping {
+            font-size: var(--cc-font-size-base);
+            font-weight: 600;
+            color: var(--cc-text-primary);
+            margin-bottom: var(--cc-space-3);
+        }
+        
+        .os-anchor-card .analogy {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-text-muted);
+            line-height: 1.6;
+        }
+        
+        /* Insight Block */
+        .insight-block {
+            background: linear-gradient(135deg, var(--cc-surface-primary) 0%, var(--cc-bg-secondary) 100%);
+            border-left: 4px solid var(--cc-accent-yellow);
+            padding: var(--cc-space-6);
+            margin: var(--cc-space-8) 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .insight-block .insight-icon {
+            font-size: var(--cc-font-size-xl);
+            margin-bottom: var(--cc-space-3);
+        }
+        
+        .insight-block .insight-title {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-accent-yellow);
+            font-weight: 600;
+            margin-bottom: var(--cc-space-2);
+            font-family: var(--cc-font-mono);
+        }
+        
+        .insight-block .insight-content {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-text-secondary);
+            line-height: 1.8;
+        }
+        
+        .insight-block .insight-content strong {
+            color: var(--cc-text-primary);
+        }
+        
+        /* Transition Text */
+        .transition-text {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-text-secondary);
+            margin: var(--cc-space-8) 0;
+            font-style: italic;
+        }
+        
+        /* Chart Container */
+        .chart-container {
+            background: var(--cc-surface-primary);
+            border: 1px solid var(--cc-border-default);
+            border-radius: 12px;
+            padding: var(--cc-space-8);
+            margin: var(--cc-space-8) 0;
+        }
+        
+        .chart-header {
+            margin-bottom: var(--cc-space-6);
+        }
+        
+        .chart-title {
+            font-size: var(--cc-font-size-2xl);
+            font-weight: 600;
+            color: var(--cc-text-primary);
+            margin-bottom: var(--cc-space-2);
+        }
+        
+        .chart-subtitle {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-text-muted);
+        }
+        
+        /* Toggle Buttons */
+        .view-toggle {
+            display: flex;
+            gap: var(--cc-space-2);
+            margin-bottom: var(--cc-space-6);
+        }
+        
+        .toggle-btn {
+            padding: var(--cc-space-2) var(--cc-space-4);
+            background: var(--cc-bg-tertiary);
+            border: 1px solid var(--cc-border-default);
+            color: var(--cc-text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: var(--cc-font-size-sm);
+            transition: all 0.2s;
+            font-family: var(--cc-font-mono);
+        }
+        
+        .toggle-btn.active {
+            background: var(--cc-accent-purple);
+            color: var(--cc-text-primary);
+            border-color: var(--cc-accent-purple);
+        }
+        
+        .toggle-btn:hover:not(.active) {
+            border-color: var(--cc-text-muted);
+        }
+        
+        /* VIS-0.3-D: Bar Chart */
+        .bar-chart-container {
+            margin-bottom: var(--cc-space-8);
+        }
+        
+        .bar-chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--cc-space-4);
+            margin-bottom: var(--cc-space-6);
+            font-size: var(--cc-font-size-sm);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-2);
+            color: var(--cc-text-muted);
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: var(--cc-space-3);
+        }
+        
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-4);
+        }
+        
+        .bar-label {
+            width: 140px;
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-text-secondary);
+            text-align: right;
+            flex-shrink: 0;
+        }
+        
+        .bar-label .recommended {
+            color: var(--cc-accent-green);
+            margin-left: var(--cc-space-1);
+        }
+        
+        .bar-track {
+            flex: 1;
+            height: 32px;
+            background: var(--cc-bg-tertiary);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+        
+        .bar-segment {
+            height: 100%;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .bar-segment:hover {
+            filter: brightness(1.2);
+        }
+        
+        .bar-value {
+            position: absolute;
+            right: var(--cc-space-2);
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-text-primary);
+            font-family: var(--cc-font-mono);
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        .bar-total {
+            width: 50px;
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-text-primary);
+            font-weight: 600;
+            font-family: var(--cc-font-mono);
+        }
+        
+        /* Dimension Grouped View */
+        .dim-grouped-view {
+            display: none;
+        }
+        
+        .dim-grouped-view.active {
+            display: block;
+        }
+        
+        .dim-category {
+            margin-bottom: var(--cc-space-6);
+        }
+        
+        .dim-category-title {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-accent-blue);
+            margin-bottom: var(--cc-space-3);
+            font-family: var(--cc-font-mono);
+        }
+        
+        .dim-bars {
+            display: flex;
+            flex-direction: column;
+            gap: var(--cc-space-2);
+        }
+        
+        .dim-bar-row {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-3);
+        }
+        
+        .dim-bar-name {
+            width: 100px;
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-text-muted);
+        }
+        
+        .dim-bar-track {
+            flex: 1;
+            height: 24px;
+            background: var(--cc-bg-tertiary);
+            border-radius: 3px;
+            position: relative;
+        }
+        
+        .dim-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        
+        .dim-bar-score {
+            width: 30px;
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-text-secondary);
+            font-family: var(--cc-font-mono);
+            text-align: right;
+        }
+        
+        /* Compare Table */
+        .compare-table-container {
+            margin-top: var(--cc-space-8);
+            overflow-x: auto;
+        }
+        
+        .compare-table-title {
+            font-size: var(--cc-font-size-base);
+            font-weight: 600;
+            color: var(--cc-text-primary);
+            margin-bottom: var(--cc-space-4);
+        }
+        
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--cc-font-size-sm);
+        }
+        
+        .compare-table th {
+            background: var(--cc-bg-tertiary);
+            color: var(--cc-text-secondary);
+            padding: var(--cc-space-3);
+            text-align: left;
+            font-weight: 500;
+            border-bottom: 1px solid var(--cc-border-default);
+            font-family: var(--cc-font-mono);
+        }
+        
+        .compare-table td {
+            padding: var(--cc-space-3);
+            border-bottom: 1px solid var(--cc-border-muted);
+            color: var(--cc-text-secondary);
+        }
+        
+        .compare-table tr:hover td {
+            background: var(--cc-surface-secondary);
+        }
+        
+        .compare-table .transport-name {
+            color: var(--cc-text-primary);
+            font-weight: 500;
+        }
+        
+        .compare-table .recommended-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            background: var(--cc-accent-green);
+            color: var(--cc-bg-primary);
+            font-size: var(--cc-font-size-xs);
+            border-radius: 3px;
+            margin-left: var(--cc-space-2);
+            font-weight: 600;
+        }
+        
+        .compare-table .score {
+            font-family: var(--cc-font-mono);
+            color: var(--cc-accent-blue);
+        }
+        
+        .compare-table .scenario {
+            color: var(--cc-text-muted);
+            font-size: var(--cc-font-size-xs);
+        }
+        
+        /* VIS-0.3-F: Hook Timeline */
+        .timeline-container {
+            position: relative;
+            padding: var(--cc-space-6) 0;
+        }
+        
+        .timeline-center-line {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, 
+                var(--phase-session) 0%, var(--phase-session) 15%,
+                var(--phase-query) 15%, var(--phase-query) 45%,
+                var(--phase-tool) 45%, var(--phase-tool) 82%,
+                var(--phase-agent) 82%, var(--phase-agent) 100%
+            );
+            transform: translateX(-50%);
+        }
+        
+        .timeline-phase {
+            margin-bottom: var(--cc-space-10);
+            position: relative;
+        }
+        
+        .phase-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: var(--cc-space-6);
+            position: relative;
+        }
+        
+        .phase-badge {
+            padding: var(--cc-space-2) var(--cc-space-4);
+            border-radius: 20px;
+            font-size: var(--cc-font-size-sm);
+            font-weight: 600;
+            color: var(--cc-text-primary);
+            font-family: var(--cc-font-mono);
+            z-index: 10;
+        }
+        
+        .phase-badge.session { background: var(--phase-session); }
+        .phase-badge.query { background: var(--phase-query); }
+        .phase-badge.tool { background: var(--phase-tool); }
+        .phase-badge.agent { background: var(--phase-agent); }
+        
+        .phase-count {
+            margin-left: var(--cc-space-2);
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-text-muted);
+            font-family: var(--cc-font-mono);
+        }
+        
+        .timeline-events {
+            display: flex;
+            flex-direction: column;
+            gap: var(--cc-space-4);
+            position: relative;
+        }
+        
+        .event-card {
+            width: calc(50% - var(--cc-space-6));
+            background: var(--cc-surface-primary);
+            border: 1px solid var(--cc-border-default);
+            border-radius: 8px;
+            padding: var(--cc-space-4);
+            position: relative;
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        
+        .event-card.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .event-card:nth-child(even) {
+            align-self: flex-end;
+            transform: translateX(20px);
+        }
+        
+        .event-card:nth-child(even).visible {
+            transform: translateX(0);
+        }
+        
+        .event-card.session { border-left: 3px solid var(--phase-session); }
+        .event-card.query { border-left: 3px solid var(--phase-query); }
+        .event-card.tool { border-left: 3px solid var(--phase-tool); }
+        .event-card.agent { border-left: 3px solid var(--phase-agent); }
+        
+        .event-card::before {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .event-card:nth-child(odd)::before {
+            right: -34px;
+        }
+        
+        .event-card:nth-child(even)::before {
+            left: -34px;
+        }
+        
+        .event-card.session::before { background: var(--phase-session); }
+        .event-card.query::before { background: var(--phase-query); }
+        .event-card.tool::before { background: var(--phase-tool); }
+        .event-card.agent::before { background: var(--phase-agent); }
+        
+        .event-name {
+            font-size: var(--cc-font-size-sm);
+            font-weight: 600;
+            color: var(--cc-text-primary);
+            font-family: var(--cc-font-mono);
+            margin-bottom: var(--cc-space-2);
+        }
+        
+        .event-timing {
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-text-muted);
+            margin-bottom: var(--cc-space-2);
+        }
+        
+        .event-params {
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-text-subtle);
+            font-family: var(--cc-font-mono);
+        }
+        
+        .event-params span {
+            display: inline-block;
+            background: var(--cc-bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-right: var(--cc-space-1);
+            margin-bottom: var(--cc-space-1);
+        }
+        
+        /* Connection Arcs for paired events */
+        .event-pair-connector {
+            position: absolute;
+            right: -24px;
+            top: 50%;
+            width: 24px;
+            height: 2px;
+            border-top: 1px dashed var(--cc-border-default);
+        }
+        
+        .event-card:nth-child(even) .event-pair-connector {
+            left: -24px;
+            right: auto;
+        }
+        
+        /* Phase Filter */
+        .phase-filter {
+            display: flex;
+            gap: var(--cc-space-2);
+            margin-bottom: var(--cc-space-6);
+            justify-content: center;
+        }
+        
+        .phase-filter-btn {
+            padding: var(--cc-space-2) var(--cc-space-4);
+            background: var(--cc-bg-tertiary);
+            border: 1px solid var(--cc-border-default);
+            color: var(--cc-text-muted);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: var(--cc-font-size-sm);
+            transition: all 0.2s;
+            font-family: var(--cc-font-mono);
+        }
+        
+        .phase-filter-btn.active {
+            color: var(--cc-text-primary);
+            border-width: 2px;
+        }
+        
+        .phase-filter-btn.session.active { border-color: var(--phase-session); }
+        .phase-filter-btn.query.active { border-color: var(--phase-query); }
+        .phase-filter-btn.tool.active { border-color: var(--phase-tool); }
+        .phase-filter-btn.agent.active { border-color: var(--phase-agent); }
+        
+        /* VIS-0.3-G: Extension Map */
+        .extension-map-container {
+            position: relative;
+            min-height: 500px;
+            padding: var(--cc-space-6);
+        }
+        
+        .map-axes {
+            position: absolute;
+            left: 60px;
+            right: var(--cc-space-6);
+            top: var(--cc-space-6);
+            bottom: 60px;
+            border-left: 2px solid var(--cc-border-default);
+            border-bottom: 2px solid var(--cc-border-default);
+        }
+        
+        .axis-label {
+            position: absolute;
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-text-muted);
+            font-family: var(--cc-font-mono);
+        }
+        
+        .axis-label.x-start { bottom: -30px; left: 0; }
+        .axis-label.x-end { bottom: -30px; right: 0; }
+        .axis-label.x-title { bottom: -50px; left: 50%; transform: translateX(-50%); }
+        .axis-label.y-start { left: -50px; bottom: 0; }
+        .axis-label.y-end { left: -50px; top: 0; }
+        .axis-label.y-title { left: -80px; top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: center; }
+        
+        .mechanism-node {
+            position: absolute;
+            width: 140px;
+            padding: var(--cc-space-4);
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .mechanism-node:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        
+        .mechanism-node.mcp {
+            background: rgba(163, 113, 247, 0.15);
+            border-color: var(--mech-mcp);
+            right: 15%;
+            top: 20%;
+        }
+        
+        .mechanism-node.hooks {
+            background: rgba(240, 136, 62, 0.15);
+            border-color: var(--mech-hooks);
+            right: 25%;
+            bottom: 30%;
+        }
+        
+        .mechanism-node.claude {
+            background: rgba(88, 166, 255, 0.15);
+            border-color: var(--mech-claude);
+            left: 20%;
+            bottom: 25%;
+        }
+        
+        .mechanism-node.skills {
+            background: rgba(63, 185, 80, 0.15);
+            border-color: var(--mech-skills);
+            left: 25%;
+            top: 35%;
+        }
+        
+        .mechanism-node.cmd {
+            background: rgba(210, 153, 34, 0.15);
+            border-color: var(--mech-cmd);
+            left: 40%;
+            top: 15%;
+        }
+        
+        .mechanism-icon {
+            font-size: var(--cc-font-size-2xl);
+            margin-bottom: var(--cc-space-2);
+        }
+        
+        .mechanism-name {
+            font-size: var(--cc-font-size-sm);
+            font-weight: 600;
+            color: var(--cc-text-primary);
+            margin-bottom: var(--cc-space-1);
+        }
+        
+        .mechanism-desc {
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-text-muted);
+            line-height: 1.5;
+        }
+        
+        .mechanism-complexity {
+            margin-top: var(--cc-space-2);
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-text-subtle);
+            font-family: var(--cc-font-mono);
+        }
+        
+        /* Connection Lines */
+        .connection-line {
+            position: absolute;
+            height: 2px;
+            background: var(--cc-border-default);
+            transform-origin: left center;
+        }
+        
+        .connection-line.mcp-hooks {
+            right: 25%;
+            top: 30%;
+            width: 80px;
+            transform: rotate(45deg);
+            background: linear-gradient(90deg, var(--mech-mcp), var(--mech-hooks));
+        }
+        
+        .connection-line.claude-skills {
+            left: 32%;
+            top: 40%;
+            width: 60px;
+            transform: rotate(-20deg);
+            background: linear-gradient(90deg, var(--mech-claude), var(--mech-skills));
+        }
+        
+        .combo-label {
+            position: absolute;
+            background: var(--cc-surface-primary);
+            border: 1px solid var(--cc-border-default);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-text-muted);
+            font-family: var(--cc-font-mono);
+        }
+        
+        .combo-label.mcp-hooks {
+            right: 20%;
+            top: 28%;
+        }
+        
+        .combo-label.claude-skills {
+            left: 28%;
+            top: 32%;
+        }
+        
+        /* Map Legend */
+        .map-legend {
+            position: absolute;
+            bottom: var(--cc-space-4);
+            right: var(--cc-space-4);
+            background: var(--cc-surface-primary);
+            border: 1px solid var(--cc-border-default);
+            border-radius: 8px;
+            padding: var(--cc-space-4);
+            font-size: var(--cc-font-size-xs);
+        }
+        
+        .legend-title {
+            color: var(--cc-text-secondary);
+            margin-bottom: var(--cc-space-2);
+            font-weight: 600;
+        }
+        
+        .legend-item-map {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-2);
+            margin-bottom: var(--cc-space-1);
+            color: var(--cc-text-muted);
+        }
+        
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        /* Pull Quote */
+        .pull-quote {
+            font-size: var(--cc-font-size-2xl);
+            color: var(--cc-text-primary);
+            text-align: center;
+            padding: var(--cc-space-10) var(--cc-space-8);
+            margin: var(--cc-space-10) 0;
+            border-top: 1px solid var(--cc-border-default);
+            border-bottom: 1px solid var(--cc-border-default);
+            line-height: 1.6;
+            font-weight: 500;
+        }
+        
+        .pull-quote.highlight {
+            background: linear-gradient(90deg, transparent, var(--cc-surface-primary), transparent);
+        }
+        
+        /* Block Bridge */
+        .block-bridge {
+            margin-top: var(--cc-space-16);
+            padding: var(--cc-space-8);
+            background: var(--cc-surface-primary);
+            border-radius: 12px;
+            border: 1px solid var(--cc-border-default);
+        }
+        
+        .block-bridge-text {
+            font-size: var(--cc-font-size-xl);
+            color: var(--cc-text-secondary);
+            line-height: 1.8;
+            text-align: center;
+        }
+        
+        .block-bridge-text strong {
+            color: var(--cc-text-primary);
+        }
+        
+        /* Utility */
+        .lead-paragraph {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-text-muted);
+            margin-bottom: var(--cc-space-6);
+            line-height: 1.7;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .os-anchor-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .event-card {
+                width: calc(100% - 40px);
+                margin-left: 40px;
+            }
+            
+            .event-card:nth-child(even) {
+                align-self: flex-start;
+            }
+            
+            .event-card::before {
+                left: -28px !important;
+                right: auto !important;
+            }
+            
+            .timeline-center-line {
+                left: 20px;
+            }
+            
+            .mechanism-node {
+                position: relative;
+                width: 100%;
+                margin-bottom: var(--cc-space-4);
+                left: auto !important;
+                right: auto !important;
+                top: auto !important;
+                bottom: auto !important;
+            }
+            
+            .extension-map-container {
+                min-height: auto;
+            }
+            
+            .map-axes {
+                display: none;
+            }
+            
+            .connection-line {
+                display: none;
+            }
+        }
+        
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+    </style>
+</head>
+<body>
+    <!-- Marginal Label -->
+    <div class="prologue-marginal-label">序章 · V2 白皮书</div>
+    
+    <!-- Hero Footer -->
+    <div class="hero-footer">
+        <div class="block-num">07b</div>
+        <div class="block-info">
+            <div class="block-name">外部接口</div>
+            <div>External Interfaces</div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="block-container">
+        <!-- Block Title -->
+        <h2 class="block-title">外部接口</h2>
+        
+        <!-- Intro -->
+        <p class="intro-text">
+            Claude Code 不是一座孤岛——它有三种对外延展面。<strong>标准化协议（JSON-RPC）接入外部能力，就像驱动让 OS 操控不同厂商的硬件</strong>。在系统运行的 <strong>27 个关键节点</strong>注入自定义逻辑，就像 Linux 的可加载内核模块。第三方扩展的安装、验证、沙箱化执行——和 OS 的包管理器做同样的事。
+        </p>
+        
+        <!-- OS Anchor Cards -->
+        <div class="os-anchor-section">
+            <div class="os-anchor-label">OS 类比锚点（三行）</div>
+            <div class="os-anchor-cards">
+                <div class="os-anchor-card">
+                    <div class="os-concept">设备驱动 (Drivers)</div>
+                    <div class="cc-mapping">MCP 服务器</div>
+                    <div class="analogy">标准化协议（JSON-RPC）接入外部能力，就像驱动让 OS 操控不同厂商的硬件</div>
+                </div>
+                <div class="os-anchor-card">
+                    <div class="os-concept">内核模块 (Modules)</div>
+                    <div class="cc-mapping">Hooks 系统</div>
+                    <div class="analogy">在系统运行的 27 个关键节点注入自定义逻辑，就像 Linux 的可加载内核模块</div>
+                </div>
+                <div class="os-anchor-card">
+                    <div class="os-concept">包管理器 (apt/npm)</div>
+                    <div class="cc-mapping">插件系统 + Skills</div>
+                    <div class="analogy">第三方扩展的安装、验证、沙箱化执行——和 OS 的包管理器做同样的事</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- MCP Section -->
+        <div class="insight-block">
+            <div class="insight-icon">💡</div>
+            <div class="insight-title">通俗理解</div>
+            <div class="insight-content">
+                MCP 就像 <strong>MacBook 的 USB 转接口</strong>——MacBook 只有 Type-C 口，想接鼠标键盘投影仪都需要转接器。MCP 就是 Claude 的万能转接器，让它能连接各种外部工具和服务。
+            </div>
+        </div>
+        
+        <p class="transition-text">
+            转接器有 8 种规格，每种适合不同场景——让我们从"我该选哪种"的角度切入。
+        </p>
+        
+        <!-- VIS-0.3-D: MCP Transport Comparison -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">MCP 传输方式对比</h3>
+                <p class="chart-subtitle">8 种 MCP 传输方式的五维评估</p>
+            </div>
+            
+            <p class="lead-paragraph">
+                MCP（Model Context Protocol）定义了 Claude 与外部工具通信的协议层，但数据如何在两者之间流动，有 8 种不同的传输方式可选。它们在延迟、吞吐量、安全性、实现复杂度和连接可靠性五个维度上各有优劣。
+            </p>
+            
+            <div class="view-toggle">
+                <button class="toggle-btn active" onclick="switchView('total')">总分排名</button>
+                <button class="toggle-btn" onclick="switchView('dimensions')">五维度分组</button>
+            </div>
+            
+            <!-- Total Score View -->
+            <div class="bar-chart-container" id="totalView">
+                <div class="bar-chart-legend">
+                    <div class="legend-item"><div class="legend-color" style="background:#58a6ff"></div>延迟 (Latency)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#3fb950"></div>吞吐 (Throughput)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#f0883e"></div>安全 (Security)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#a371f7"></div>复杂度 (Complexity)</div>
+                    <div class="legend-item"><div class="legend-color" style="background:#d29922"></div>可靠性 (Reliability)</div>
+                </div>
+                
+                <div class="bar-chart" id="barChart">
+                    <!-- Bars will be rendered by JS -->
+                </div>
+            </div>
+            
+            <!-- Dimension Grouped View -->
+            <div class="dim-grouped-view" id="dimensionsView">
+                <!-- Dimensions will be rendered by JS -->
+            </div>
+            
+            <!-- Compare Table -->
+            <div class="compare-table-container">
+                <div class="compare-table-title">详细数据与适用场景</div>
+                <table class="compare-table" id="compareTable">
+                    <thead>
+                        <tr>
+                            <th>传输方式</th>
+                            <th>延迟</th>
+                            <th>吞吐</th>
+                            <th>安全</th>
+                            <th>复杂度</th>
+                            <th>可靠</th>
+                            <th>适用场景</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Rows will be rendered by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Hooks Section Transition -->
+        <p class="transition-text">
+            MCP 让 Claude 连接<strong>外部</strong>工具，但有时候你想在 Claude <strong>内部</strong>的某个时刻插一段自定义逻辑——这就是 Hooks。
+        </p>
+        
+        <div class="insight-block">
+            <div class="insight-icon">💡</div>
+            <div class="insight-title">通俗理解</div>
+            <div class="insight-content">
+                Hooks 就像<strong>快递柜的短信通知</strong>——快递到了自动通知你 = 事件钩子。你可以设置"到了通知我"或"直接放门口" = 自定义 Hook 行为。系统在关键时刻自动触发你预设的动作。
+            </div>
+        </div>
+        
+        <!-- VIS-0.3-F: Hook Events Timeline -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">Hook 事件完整目录</h3>
+                <p class="chart-subtitle">27 个 Hook 事件 × 4 阶段时间轴</p>
+            </div>
+            
+            <div class="phase-filter">
+                <button class="phase-filter-btn session active" onclick="filterPhase('session')">Session (4)</button>
+                <button class="phase-filter-btn query active" onclick="filterPhase('query')">Query (8)</button>
+                <button class="phase-filter-btn tool active" onclick="filterPhase('tool')">Tool (10)</button>
+                <button class="phase-filter-btn agent active" onclick="filterPhase('agent')">Agent (5)</button>
+            </div>
+            
+            <div class="timeline-container" id="timelineContainer">
+                <div class="timeline-center-line"></div>
+                
+                <!-- Session Phase -->
+                <div class="timeline-phase" data-phase="session">
+                    <div class="phase-header">
+                        <span class="phase-badge session">Session</span>
+                        <span class="phase-count">4 events</span>
+                    </div>
+                    <div class="timeline-events">
+                        <div class="event-card session">
+                            <div class="event-name">onSessionStart</div>
+                            <div class="event-timing">会话初始化时触发</div>
+                            <div class="event-params">
+                                <span>sessionId</span>
+                                <span>config</span>
+                                <span>timestamp</span>
+                            </div>
+                        </div>
+                        <div class="event-card session">
+                            <div class="event-name">onAuth</div>
+                            <div class="event-timing">身份验证阶段</div>
+                            <div class="event-params">
+                                <span>userToken</span>
+                                <span>permissions</span>
+                            </div>
+                        </div>
+                        <div class="event-card session">
+                            <div class="event-name">onConfigLoad</div>
+                            <div class="event-timing">配置加载完成</div>
+                            <div class="event-params">
+                                <span>configPath</span>
+                                <span>settings</span>
+                            </div>
+                        </div>
+                        <div class="event-card session">
+                            <div class="event-name">onSessionEnd</div>
+                            <div class="event-timing">会话关闭时</div>
+                            <div class="event-params">
+                                <span>sessionId</span>
+                                <span>duration</span>
+                                <span>exitCode</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Query Phase -->
+                <div class="timeline-phase" data-phase="query">
+                    <div class="phase-header">
+                        <span class="phase-badge query">Query</span>
+                        <span class="phase-count">8 events</span>
+                    </div>
+                    <div class="timeline-events">
+                        <div class="event-card query">
+                            <div class="event-name">onQueryStart</div>
+                            <div class="event-timing">用户输入开始处理</div>
+                            <div class="event-params">
+                                <span>queryId</span>
+                                <span>rawInput</span>
+                                <span>context</span>
+                            </div>
+                        </div>
+                        <div class="event-card query">
+                            <div class="event-name">onPromptBuild</div>
+                            <div class="event-timing">Prompt 组装阶段</div>
+                            <div class="event-params">
+                                <span>systemPrompt</span>
+                                <span>userPrompt</span>
+                                <span>history</span>
+                            </div>
+                        </div>
+                        <div class="event-card query">
+                            <div class="event-name">onContextTruncate</div>
+                            <div class="event-timing">上下文超出窗口时</div>
+                            <div class="event-params">
+                                <span>originalLen</span>
+                                <span>truncatedLen</span>
+                                <span>strategy</span>
+                            </div>
+                        </div>
+                        <div class="event-card query">
+                            <div class="event-name">onApiRequest</div>
+                            <div class="event-timing">API 请求发出前</div>
+                            <div class="event-params">
+                                <span>model</span>
+                                <span>temperature</span>
+                                <span>maxTokens</span>
+                            </div>
+                        </div>
+                        <div class="event-card query">
+                            <div class="event-name">onStreamChunk</div>
+                            <div class="event-timing">流式响应每块数据</div>
+                            <div class="event-params">
+                                <span>chunk</span>
+                                <span>index</span>
+                                <span>latency</span>
+                            </div>
+                        </div>
+                        <div class="event-card query">
+                            <div class="event-name">onApiResponse</div>
+                            <div class="event-timing">API 完整响应接收</div>
+                            <div class="event-params">
+                                <span>response</span>
+                                <span>tokenUsage</span>
+                                <span>finishReason</span>
+                            </div>
+                        </div>
+                        <div class="event-card query">
+                            <div class="event-name">onError</div>
+                            <div class="event-timing">任何阶段出错</div>
+                            <div class="event-params">
+                                <span>errorType</span>
+                                <span>message</span>
+                                <span>stack</span>
+                            </div>
+                        </div>
+                        <div class="event-card query">
+                            <div class="event-name">onQueryEnd</div>
+                            <div class="event-timing">查询处理完成</div>
+                            <div class="event-params">
+                                <span>queryId</span>
+                                <span>duration</span>
+                                <span>success</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tool Phase -->
+                <div class="timeline-phase" data-phase="tool">
+                    <div class="phase-header">
+                        <span class="phase-badge tool">Tool</span>
+                        <span class="phase-count">10 events</span>
+                    </div>
+                    <div class="timeline-events">
+                        <div class="event-card tool">
+                            <div class="event-name">onToolCall</div>
+                            <div class="event-timing">工具被调用时</div>
+                            <div class="event-params">
+                                <span>toolName</span>
+                                <span>arguments</span>
+                                <span>callId</span>
+                            </div>
+                            <div class="event-pair-connector"></div>
+                        </div>
+                        <div class="event-card tool">
+                            <div class="event-name">onBashCommand</div>
+                            <div class="event-timing">Bash 命令执行前</div>
+                            <div class="event-params">
+                                <span>command</span>
+                                <span>cwd</span>
+                                <span>timeout</span>
+                            </div>
+                        </div>
+                        <div class="event-card tool">
+                            <div class="event-name">onBashResult</div>
+                            <div class="event-timing">Bash 命令执行后</div>
+                            <div class="event-params">
+                                <span>exitCode</span>
+                                <span>stdout</span>
+                                <span>stderr</span>
+                            </div>
+                        </div>
+                        <div class="event-card tool">
+                            <div class="event-name">onFileRead</div>
+                            <div class="event-timing">文件读取操作</div>
+                            <div class="event-params">
+                                <span>filePath</span>
+                                <span>offset</span>
+                                <span>limit</span>
+                            </div>
+                        </div>
+                        <div class="event-card tool">
+                            <div class="event-name">onFileWrite</div>
+                            <div class="event-timing">文件写入操作</div>
+                            <div class="event-params">
+                                <span>filePath</span>
+                                <span>contentLen</span>
+                                <span>encoding</span>
+                            </div>
+                        </div>
+                        <div class="event-card tool">
+                            <div class="event-name">onFileEdit</div>
+                            <div class="event-timing">文件编辑操作</div>
+                            <div class="event-params">
+                                <span>filePath</span>
+                                <span>oldString</span>
+                                <span>newString</span>
+                            </div>
+                        </div>
+                        <div class="event-card tool">
+                            <div class="event-name">onGrepSearch</div>
+                            <div class="event-timing">代码搜索执行</div>
+                            <div class="event-params">
+                                <span>pattern</span>
+                                <span>path</span>
+                                <span>options</span>
+                            </div>
+                        </div>
+                        <div class="event-card tool">
+                            <div class="event-name">onWebFetch</div>
+                            <div class="event-timing">网络请求发起</div>
+                            <div class="event-params">
+                                <span>url</span>
+                                <span>method</span>
+                                <span>headers</span>
+                            </div>
+                        </div>
+                        <div class="event-card tool">
+                            <div class="event-name">onToolPermission</div>
+                            <div class="event-timing">工具权限检查</div>
+                            <div class="event-params">
+                                <span>toolName</span>
+                                <span>permissionLevel</span>
+                                <span>autoAccept</span>
+                            </div>
+                        </div>
+                        <div class="event-card tool">
+                            <div class="event-name">onToolResult</div>
+                            <div class="event-timing">工具执行结果返回</div>
+                            <div class="event-params">
+                                <span>callId</span>
+                                <span>result</span>
+                                <span>duration</span>
+                            </div>
+                            <div class="event-pair-connector"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Agent Phase -->
+                <div class="timeline-phase" data-phase="agent">
+                    <div class="phase-header">
+                        <span class="phase-badge agent">Agent</span>
+                        <span class="phase-count">5 events</span>
+                    </div>
+                    <div class="timeline-events">
+                        <div class="event-card agent">
+                            <div class="event-name">onAgentSpawn</div>
+                            <div class="event-timing">子 Agent 被创建</div>
+                            <div class="event-params">
+                                <span>agentId</span>
+                                <span>parentId</span>
+                                <span>task</span>
+                            </div>
+                        </div>
+                        <div class="event-card agent">
+                            <div class="event-name">onTaskDistribute</div>
+                            <div class="event-timing">任务分发给子 Agent</div>
+                            <div class="event-params">
+                                <span>taskId</span>
+                                <span>agentId</span>
+                                <span>priority</span>
+                            </div>
+                        </div>
+                        <div class="event-card agent">
+                            <div class="event-name">onAgentComplete</div>
+                            <div class="event-timing">子 Agent 完成</div>
+                            <div class="event-params">
+                                <span>agentId</span>
+                                <span>result</span>
+                                <span>duration</span>
+                            </div>
+                        </div>
+                        <div class="event-card agent">
+                            <div class="event-name">onAgentError</div>
+                            <div class="event-timing">子 Agent 出错</div>
+                            <div class="event-params">
+                                <span>agentId</span>
+                                <span>error</span>
+                                <span>recoverable</span>
+                            </div>
+                        </div>
+                        <div class="event-card agent">
+                            <div class="event-name">onMaxDepthReach</div>
+                            <div class="event-timing">达到最大递归深度</div>
+                            <div class="event-params">
+                                <span>depth</span>
+                                <span>maxDepth</span>
+                                <span>pendingTasks</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Extension Ecosystem Section -->
+        <p class="transition-text">
+            MCP 是"连别人"，Hooks 是"插自己"，那么"装第三方扩展"呢？答案是 Skills + 插件。
+        </p>
+        
+        <div class="pull-quote highlight">
+            扩展不是一个机制，而是<strong>三种不同尺度的接口</strong>——一种连外部（MCP）、一种插内部（Hooks）、一种装第三方（Skills+插件）
+        </div>
+        
+        <!-- VIS-0.3-G: Extension Map -->
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">扩展生态地图</h3>
+                <p class="chart-subtitle">五大扩展机制的范围 × 复杂度地图</p>
+            </div>
+            
+            <div class="extension-map-container">
+                <div class="map-axes">
+                    <span class="axis-label x-start">内部</span>
+                    <span class="axis-label x-end">外部</span>
+                    <span class="axis-label x-title">能力范围 Scope →</span>
+                    <span class="axis-label y-start">简单</span>
+                    <span class="axis-label y-end">复杂</span>
+                    <span class="axis-label y-title">实现复杂度 →</span>
+                </div>
+                
+                <!-- Connection Lines -->
+                <div class="connection-line mcp-hooks"></div>
+                <div class="connection-line claude-skills"></div>
+                
+                <!-- Combo Labels -->
+                <div class="combo-label mcp-hooks">MCP+Hooks 组合</div>
+                <div class="combo-label claude-skills">CLAUDE.md+Skills</div>
+                
+                <!-- Mechanism Nodes -->
+                <div class="mechanism-node mcp">
+                    <div class="mechanism-icon">🔌</div>
+                    <div class="mechanism-name">MCP</div>
+                    <div class="mechanism-desc">标准化协议连接外部工具与服务</div>
+                    <div class="mechanism-complexity">复杂度: ●●●●○</div>
+                </div>
+                
+                <div class="mechanism-node hooks">
+                    <div class="mechanism-icon">🪝</div>
+                    <div class="mechanism-name">Hooks</div>
+                    <div class="mechanism-desc">27个生命周期事件挂载点</div>
+                    <div class="mechanism-complexity">复杂度: ●●●○○</div>
+                </div>
+                
+                <div class="mechanism-node claude">
+                    <div class="mechanism-icon">📄</div>
+                    <div class="mechanism-name">CLAUDE.md</div>
+                    <div class="mechanism-desc">项目级指令与上下文配置</div>
+                    <div class="mechanism-complexity">复杂度: ●●○○○</div>
+                </div>
+                
+                <div class="mechanism-node skills">
+                    <div class="mechanism-icon">🛠️</div>
+                    <div class="mechanism-name">Skills</div>
+                    <div class="mechanism-desc">可复用的指令模板与工作流</div>
+                    <div class="mechanism-complexity">复杂度: ●○○○○</div>
+                </div>
+                
+                <div class="mechanism-node cmd">
+                    <div class="mechanism-icon">⌨️</div>
+                    <div class="mechanism-name">自定义命令</div>
+                    <div class="mechanism-desc">用户定义的快捷指令别名</div>
+                    <div class="mechanism-complexity">复杂度: ●○○○○</div>
+                </div>
+                
+                <!-- Legend -->
+                <div class="map-legend">
+                    <div class="legend-title">图例</div>
+                    <div class="legend-item-map"><div class="legend-dot" style="background:var(--mech-mcp)"></div>MCP</div>
+                    <div class="legend-item-map"><div class="legend-dot" style="background:var(--mech-hooks)"></div>Hooks</div>
+                    <div class="legend-item-map"><div class="legend-dot" style="background:var(--mech-claude)"></div>CLAUDE.md</div>
+                    <div class="legend-item-map"><div class="legend-dot" style="background:var(--mech-skills)"></div>Skills</div>
+                    <div class="legend-item-map"><div class="legend-dot" style="background:var(--mech-cmd)"></div>自定义命令</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Final Quote -->
+        <div class="pull-quote">
+            D 是放大镜（看一种），F 是清单（看一种的所有挂点），G 是俯视图（看全部五种）
+        </div>
+        
+        <!-- Block Bridge to 7c -->
+        <div class="block-bridge">
+            <p class="block-bridge-text">
+                看完了系统怎么向外延展，让我们把视角收回来——看系统<strong>自己</strong>长什么样。它的内部组织有两个层面：可配置的"软组织"，和模块之间的"骨架"。
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // MCP Transport Data
+        const transportData = [
+            {
+                name: 'stdio',
+                displayName: 'stdio',
+                recommended: true,
+                scores: { latency: 98, throughput: 85, security: 60, complexity: 95, reliability: 80 },
+                scenario: '本地工具、CLI 集成、开发环境',
+                desc: '标准输入输出，最简单直接的本地进程通信方式'
+            },
+            {
+                name: 'sse',
+                displayName: 'SSE',
+                recommended: true,
+                scores: { latency: 70, throughput: 75, security: 85, complexity: 80, reliability: 75 },
+                scenario: '实时推送、服务器到客户端流',
+                desc: 'Server-Sent Events，单向服务器推送，适合实时通知场景'
+            },
+            {
+                name: 'streamable-http',
+                displayName: 'Streamable HTTP',
+                recommended: false,
+                scores: { latency: 65, throughput: 80, security: 90, complexity: 70, reliability: 85 },
+                scenario: 'Web 服务、RESTful API',
+                desc: '可流式传输的 HTTP，兼顾兼容性与性能'
+            },
+            {
+                name: 'websocket',
+                displayName: 'WebSocket',
+                recommended: false,
+                scores: { latency: 85, throughput: 90, security: 80, complexity: 60, reliability: 70 },
+                scenario: '双向实时通信、高并发场景',
+                desc: '全双工通信通道，低延迟但需要额外维护连接状态'
+            },
+            {
+                name: 'http-jsonrpc',
+                displayName: 'HTTP+JSON-RPC',
+                recommended: false,
+                scores: { latency: 60, throughput: 65, security: 85, complexity: 75, reliability: 90 },
+                scenario: '传统系统集成、企业内网',
+                desc: '经典 RPC over HTTP，兼容性好但 overhead 较大'
+            },
+            {
+                name: 'grpc',
+                displayName: 'gRPC',
+                recommended: false,
+                scores: { latency: 90, throughput: 95, security: 85, complexity: 50, reliability: 80 },
+                scenario: '微服务架构、高性能内部通信',
+                desc: '基于 HTTP/2 的高性能 RPC，二进制协议效率高'
+            },
+            {
+                name: 'unix-socket',
+                displayName: 'Unix Domain Socket',
+                recommended: false,
+                scores: { latency: 95, throughput: 88, security: 90, complexity: 55, reliability: 85 },
+                scenario: '本地进程间通信、Docker',
+                desc: '同一主机进程间通信，性能接近 pipe 且安全可控'
+            },
+            {
+                name: 'named-pipe',
+                displayName: 'Named Pipe',
+                recommended: false,
+                scores: { latency: 88, throughput: 80, security: 70, complexity: 45, reliability: 75 },
+                scenario: 'Windows 平台、遗留系统',
+                desc: '命名管道，Windows 平台首选的进程间通信方式'
+            }
+        ];
+        
+        const dimensionColors = {
+            latency: '#58a6ff',
+            throughput: '#3fb950',
+            security: '#f0883e',
+            complexity: '#a371f7',
+            reliability: '#d29922'
+        };
+        
+        const dimensionNames = {
+            latency: '延迟',
+            throughput: '吞吐',
+            security: '安全',
+            complexity: '复杂度',
+            reliability: '可靠性'
+        };
+        
+        // Render Bar Chart (Total View)
+        function renderBarChart() {
+            const container = document.getElementById('barChart');
+            container.innerHTML = '';
+            
+            // Sort by total score
+            const sorted = [...transportData].sort((a, b) => {
+                const totalA = Object.values(a.scores).reduce((s, v) => s + v, 0);
+                const totalB = Object.values(b.scores).reduce((s, v) => s + v, 0);
+                return totalB - totalA;
+            });
+            
+            sorted.forEach(t => {
+                const total = Object.values(t.scores).reduce((s, v) => s + v, 0);
+                const row = document.createElement('div');
+                row.className = 'bar-row';
+                
+                let barHTML = '<div class="bar-track">';
+                Object.entries(t.scores).forEach(([dim, score]) => {
+                    const width = (score / 500) * 100; // 500 is max total
+                    barHTML += `
+                        <div class="bar-segment" style="width:${width}%;background:${dimensionColors[dim]}">
+                            <span class="bar-value">${score}</span>
+                        </div>
+                    `;
+                });
+                barHTML += '</div>';
+                
+                row.innerHTML = `
+                    <div class="bar-label">
+                        ${t.displayName}
+                        ${t.recommended ? '<span class="recommended">★</span>' : ''}
+                    </div>
+                    ${barHTML}
+                    <div class="bar-total">${total}</div>
+                `;
+                container.appendChild(row);
+            });
+        }
+        
+        // Render Dimension Grouped View
+        function renderDimensionsView() {
+            const container = document.getElementById('dimensionsView');
+            container.innerHTML = '';
+            
+            Object.keys(dimensionNames).forEach(dim => {
+                const dimDiv = document.createElement('div');
+                dimDiv.className = 'dim-category';
+                
+                const sorted = [...transportData].sort((a, b) => b.scores[dim] - a.scores[dim]);
+                
+                let barsHTML = '<div class="dim-bars">';
+                sorted.forEach(t => {
+                    barsHTML += `
+                        <div class="dim-bar-row">
+                            <div class="dim-bar-name">${t.displayName}</div>
+                            <div class="dim-bar-track">
+                                <div class="dim-bar-fill" style="width:${t.scores[dim]}%;background:${dimensionColors[dim]}"></div>
+                            </div>
+                            <div class="dim-bar-score">${t.scores[dim]}</div>
+                        </div>
+                    `;
+                });
+                barsHTML += '</div>';
+                
+                dimDiv.innerHTML = `
+                    <div class="dim-category-title">${dimensionNames[dim]}</div>
+                    ${barsHTML}
+                `;
+                container.appendChild(dimDiv);
+            });
+        }
+        
+        // Render Compare Table
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            transportData.forEach(t => {
+                const total = Object.values(t.scores).reduce((s, v) => s + v, 0);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="transport-name">
+                        ${t.displayName}
+                        ${t.recommended ? '<span class="recommended-tag">推荐</span>' : ''}
+                    </td>
+                    <td class="score">${t.scores.latency}</td>
+                    <td class="score">${t.scores.throughput}</td>
+                    <td class="score">${t.scores.security}</td>
+                    <td class="score">${t.scores.complexity}</td>
+                    <td class="score">${t.scores.reliability}</td>
+                    <td class="scenario">${t.scenario}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Switch View
+        function switchView(view) {
+            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (view === 'total') {
+                document.getElementById('totalView').style.display = 'block';
+                document.getElementById('dimensionsView').classList.remove('active');
+            } else {
+                document.getElementById('totalView').style.display = 'none';
+                document.getElementById('dimensionsView').classList.add('active');
+            }
+        }
+        
+        // Filter Timeline Phases
+        function filterPhase(phase) {
+            const btn = document.querySelector(`.phase-filter-btn.${phase}`);
+            btn.classList.toggle('active');
+            
+            const isActive = btn.classList.contains('active');
+            const phaseEl = document.querySelector(`.timeline-phase[data-phase="${phase}"]`);
+            
+            if (phaseEl) {
+                phaseEl.style.display = isActive ? 'block' : 'none';
+            }
+        }
+        
+        // Intersection Observer for Event Cards
+        function setupScrollAnimations() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            document.querySelectorAll('.event-card').forEach(card => {
+                observer.observe(card);
+            });
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderBarChart();
+            renderDimensionsView();
+            renderTable();
+            setupScrollAnimations();
+        });
+    </script>
+</body>
+</html>
+```
