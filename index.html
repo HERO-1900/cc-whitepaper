@@ -4,6 +4,32 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Claude Code 2.1.88 — Agent Operating System 架构全景</title>
+  <!-- ===== FOUC 防御脚本（必须在所有 CSS 之前执行）=====
+       在 CSS 解析之前把正确的 data-theme 注入 <html>，
+       避免页面先用默认样式渲染再切主题导致的白闪（FOUC）。
+       逻辑：读 localStorage → 跟随系统偏好 fallback → 默认暗色 -->
+  <script>
+    (function() {
+      try {
+        var stored = localStorage.getItem('cc-theme');
+        // 合法值：'dark' | 'light' | 'auto'
+        if (stored === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else if (stored === 'auto') {
+          // auto 模式：移除 data-theme，让 @media prefers-color-scheme 接管
+          document.documentElement.removeAttribute('data-theme');
+        } else {
+          // 未设置 或 'dark'：强制暗色（与站点原始风格一致）
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch(e) {
+        // localStorage 不可用（隐私模式等）：默认暗色
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+  <!-- Design Token 系统（必须在 style.css 之前加载，让 token 变量优先定义）-->
+  <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 </head>
@@ -22,16 +48,16 @@
           <span class="meta-sep">·</span>
           <span class="meta-item"><span class="meta-val">1,884</span> 个 TypeScript 源文件</span>
           <span class="meta-sep">·</span>
-          <span class="meta-item"><span class="meta-val">74</span> 章</span>
+          <span class="meta-item"><span class="meta-val">82</span> 章</span>
           <span class="meta-sep">·</span>
-          <span class="meta-item"><span class="meta-val">288,000+</span> 字</span>
+          <span class="meta-item"><span class="meta-val">35.4 万+</span> 字</span>
         </div>
       </div>
 
       <!-- 2. 核心数据亮点卡片 -->
       <div class="cover-highlights">
         <div class="highlight-card">
-          <div class="highlight-num">74</div>
+          <div class="highlight-num">82</div>
           <div class="highlight-unit">章</div>
           <p class="highlight-desc">从启动序列到安全架构的完整解析</p>
         </div>
@@ -870,7 +896,7 @@
     <!-- ===== BOTTOM CTA ===== -->
     <section class="landing-section fade-in-section landing-cta">
       <h2 class="section-title" style="color:var(--text-primary)">准备好深入了解了吗？</h2>
-      <p class="section-subtitle">从 74 章完整解析中选择你最好奇的主题开始阅读</p>
+      <p class="section-subtitle">从 82 章完整解析中选择你最好奇的主题开始阅读</p>
       <div class="cta-buttons">
         <button id="cta-read" class="btn-cta btn-cta-primary">开始阅读 →</button>
         <button id="cta-map" class="btn-cta btn-cta-secondary">返回全景地图 ↑</button>
@@ -997,5 +1023,136 @@
   <script src="js/review-mode.js"></script>
   <script src="js/inspiration-lab.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- ===== 主题三态切换器 =====
+       在 app.js 之后运行，确保 #topnav 已渲染完成。
+       三态：dark（强制暗色）/ light（强制亮色）/ auto（跟随系统）
+       持久化：localStorage['cc-theme']
+       跨 Tab 同步：storage 事件监听 -->
+  <script>
+    (function() {
+      'use strict';
+
+      /* ---- 1. 工具函数 ---- */
+
+      /** 读取当前生效的主题（考虑 auto 回退到系统偏好） */
+      function getEffectiveTheme() {
+        var stored = localStorage.getItem('cc-theme') || 'dark';
+        if (stored === 'auto') {
+          return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        return stored;
+      }
+
+      /** 把 theme 应用到 <html> data-theme 属性 */
+      function applyTheme(theme) {
+        if (theme === 'auto') {
+          document.documentElement.removeAttribute('data-theme');
+        } else {
+          document.documentElement.setAttribute('data-theme', theme);
+        }
+      }
+
+      /** 把 theme 写入 localStorage 并应用 */
+      function setTheme(theme) {
+        try { localStorage.setItem('cc-theme', theme); } catch(e) {}
+        applyTheme(theme);
+        updateSwitcherUI(theme);
+      }
+
+      /** 更新切换器按钮的 active 状态 */
+      function updateSwitcherUI(theme) {
+        var btns = document.querySelectorAll('.cc-theme-btn');
+        btns.forEach(function(btn) {
+          btn.classList.toggle('active', btn.dataset.theme === theme);
+        });
+      }
+
+      /* ---- 2. 注入切换器 HTML ---- */
+
+      function injectSwitcher() {
+        var topnav = document.querySelector('#topnav .nav-right') ||
+                     document.querySelector('#topnav .nav-actions') ||
+                     document.querySelector('#topnav') ||
+                     document.querySelector('nav');
+        if (!topnav) {
+          // 如果没找到导航容器，挂到 body 右上角
+          var floatWrapper = document.createElement('div');
+          floatWrapper.style.cssText = 'position:fixed;top:12px;right:16px;z-index:9999;';
+          floatWrapper.innerHTML = buildSwitcherHTML();
+          document.body.appendChild(floatWrapper);
+          return floatWrapper;
+        }
+        var wrapper = document.createElement('div');
+        wrapper.innerHTML = buildSwitcherHTML();
+        topnav.appendChild(wrapper.firstElementChild);
+        return topnav;
+      }
+
+      function buildSwitcherHTML() {
+        return [
+          '<div class="cc-theme-switcher" title="切换显示主题" aria-label="主题切换器">',
+          '  <button class="cc-theme-btn" data-theme="dark"  title="暗色模式" aria-label="暗色模式">🌙</button>',
+          '  <button class="cc-theme-btn" data-theme="light" title="亮色模式" aria-label="亮色模式">☀️</button>',
+          '  <button class="cc-theme-btn" data-theme="auto"  title="跟随系统" aria-label="跟随系统">⚙️</button>',
+          '</div>'
+        ].join('');
+      }
+
+      /* ---- 3. 绑定点击事件 ---- */
+
+      function bindEvents() {
+        document.addEventListener('click', function(e) {
+          var btn = e.target.closest('.cc-theme-btn');
+          if (btn && btn.dataset.theme) {
+            setTheme(btn.dataset.theme);
+          }
+        });
+      }
+
+      /* ---- 4. 跨 Tab 同步 ---- */
+
+      function bindStorageSync() {
+        window.addEventListener('storage', function(e) {
+          if (e.key === 'cc-theme' && e.newValue) {
+            applyTheme(e.newValue);
+            updateSwitcherUI(e.newValue);
+          }
+        });
+      }
+
+      /* ---- 5. 系统偏好变化时（auto 模式）自动刷新 ---- */
+
+      function bindSystemPreferenceChange() {
+        var mq = window.matchMedia('(prefers-color-scheme: light)');
+        mq.addEventListener('change', function() {
+          var current = localStorage.getItem('cc-theme') || 'dark';
+          if (current === 'auto') {
+            applyTheme('auto'); // 触发媒体查询重新计算
+          }
+        });
+      }
+
+      /* ---- 6. 初始化 ---- */
+
+      function init() {
+        var currentTheme = localStorage.getItem('cc-theme') || 'dark';
+        applyTheme(currentTheme); // 二次确认（FOUC 脚本已做一次，这里补全 auto 逻辑）
+        injectSwitcher();
+        updateSwitcherUI(currentTheme);
+        bindEvents();
+        bindStorageSync();
+        bindSystemPreferenceChange();
+      }
+
+      // DOM Ready 后执行
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+
+    })();
+  </script>
 </body>
 </html>
