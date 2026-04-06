@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cache Break 检测流程 | Prompt Cache Observability</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-cyan: #00f0ff;
+            --neon-amber: #ffaa00;
+            --neon-rose: #ff006e;
+            --neon-violet: #8338ec;
+            --deep-space: #0a0a0f;
+            --panel-bg: rgba(15, 15, 25, 0.85);
+            --grid-line: rgba(0, 240, 255, 0.08);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--deep-space);
+            min-height: 100vh;
+            overflow-x: auto;
+            color: #e0e0e0;
+        }
+        
+        /* Animated grid background */
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 40px 40px;
+            animation: gridMove 20s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(40px, 40px); }
+        }
+        
+        /* Radial glow overlay */
+        .glow-overlay {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(0, 240, 255, 0.08) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .container {
+            position: relative;
+            z-index: 10;
+            padding: 40px;
+            min-width: 1400px;
+        }
+        
+        /* Header */
+        .header {
+            margin-bottom: 50px;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: -10px;
+            width: 60px;
+            height: 4px;
+            background: var(--neon-cyan);
+            box-shadow: 0 0 20px var(--neon-cyan);
+        }
+        
+        .title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 42px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, var(--neon-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: #666;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        
+        /* Pipeline container */
+        .pipeline {
+            display: flex;
+            gap: 0;
+            position: relative;
+            margin-top: 40px;
+        }
+        
+        /* Stage styling */
+        .stage {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+            padding: 20px;
+        }
+        
+        .stage-number {
+            position: absolute;
+            top: -30px;
+            left: 20px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 72px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.03);
+            z-index: 0;
+            line-height: 1;
+        }
+        
+        .stage-card {
+            background: var(--panel-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 24px;
+            height: 100%;
+            position: relative;
+            z-index: 1;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stage:hover .stage-card {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.15);
+            transform: translateY(-4px);
+        }
+        
+        .stage-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        
+        .stage-icon::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 12px;
+            padding: 2px;
+            background: linear-gradient(135deg, var(--stage-color), transparent);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+        }
+        
+        .stage-1 { --stage-color: var(--neon-cyan); }
+        .stage-2 { --stage-color: #3b82f6; }
+        .stage-3 { --stage-color: #8b5cf6; }
+        .stage-4 { --stage-color: var(--neon-rose); }
+        .stage-5 { --stage-color: var(--neon-amber); }
+        .stage-6 { --stage-color: #10b981; }
+        
+        .stage-icon { background: rgba(255,255,255,0.03); color: var(--stage-color); }
+        
+        .stage-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        
+        .stage-title-en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--stage-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+        
+        .stage-content {
+            font-size: 13px;
+            line-height: 1.8;
+            color: #aaa;
+        }
+        
+        .stage-content ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .stage-content li {
+            position: relative;
+            padding-left: 14px;
+            margin-bottom: 6px;
+        }
+        
+        .stage-content li::before {
+            content: '›';
+            position: absolute;
+            left: 0;
+            color: var(--stage-color);
+            font-weight: bold;
+        }
+        
+        /* Connector arrows */
+        .connector {
+            position: absolute;
+            top: 50%;
+            right: -20px;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--stage-color), var(--next-color, var(--neon-cyan)));
+            z-index: 2;
+        }
+        
+        .connector::after {
+            content: '▶';
+            position: absolute;
+            right: -2px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            color: var(--next-color, var(--neon-cyan));
+        }
+        
+        /* Special latch stage - spans full width below */
+        .latch-section {
+            margin-top: 40px;
+            position: relative;
+        }
+        
+        .latch-connector {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            width: 2px;
+            height: 40px;
+            background: linear-gradient(180deg, var(--neon-rose), var(--neon-amber));
+        }
+        
+        .latch-connector::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100px;
+            width: 200px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--neon-rose), var(--neon-rose), transparent);
+        }
+        
+        .latch-card {
+            background: linear-gradient(135deg, rgba(255, 170, 0, 0.1), rgba(255, 0, 110, 0.05));
+            border: 1px solid rgba(255, 170, 0, 0.3);
+            border-radius: 16px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .latch-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--neon-amber), var(--neon-rose), var(--neon-amber));
+            animation: shimmer 3s linear infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .latch-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .latch-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(255, 170, 0, 0.15);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            border: 1px solid rgba(255, 170, 0, 0.3);
+        }
+        
+        .latch-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+        }
+        
+        .latch-title-en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--neon-amber);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        
+        .latch-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        
+        .latch-item {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 3px solid var(--neon-amber);
+        }
+        
+        .latch-item-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .latch-item-desc {
+            font-size: 12px;
+            color: #888;
+            line-height: 1.6;
+        }
+        
+        /* Output section */
+        .output-section {
+            margin-top: 30px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(0, 240, 255, 0.05));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            padding: 24px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .output-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .output-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(16, 185, 129, 0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .output-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+        
+        .output-title-en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: #10b981;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .alert-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 0, 110, 0.15);
+            border: 1px solid rgba(255, 0, 110, 0.4);
+            color: var(--neon-rose);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 110, 0.4); }
+            50% { box-shadow: 0 0 20px 5px rgba(255, 0, 110, 0.2); }
+        }
+        
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            gap: 40px;
+            margin-top: 30px;
+            padding: 20px 30px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--neon-cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        /* Hover details */
+        .detail-popover {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-10px);
+            background: rgba(10, 10, 15, 0.98);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 10px;
+            padding: 16px;
+            width: 260px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 100;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        
+        .stage:hover .detail-popover {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .detail-popover::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            border-top-color: rgba(0, 240, 255, 0.3);
+        }
+        
+        .detail-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--neon-cyan);
+            margin-bottom: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .detail-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: #888;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        
+        .detail-code .key { color: #ffaa00; }
+        .detail-code .val { color: #10b981; }
+        .detail-code .str { color: #00f0ff; }
+        
+        /* Common causes panel */
+        .causes-panel {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            width: 280px;
+            background: var(--panel-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .causes-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .cause-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #aaa;
+        }
+        
+        .cause-icon {
+            color: var(--neon-rose);
+            font-weight: bold;
+        }
+        
+        /* Responsive adjustments for the fixed width */
+        @media (max-width: 1440px) {
+            .container {
+                padding: 30px;
+            }
+            .causes-panel {
+                position: relative;
+                top: auto;
+                right: auto;
+                width: 100%;
+                margin-top: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    <div class="glow-overlay"></div>
+    
+    <div class="container">
+        <header class="header">
+            <h1 class="title">Cache Break 检测流程</h1>
+            <p class="subtitle">Prompt Cache Observability Pipeline // VIS-3-022A</p>
+        </header>
+        
+        <!-- Common Causes Panel -->
+        <div class="causes-panel">
+            <div class="causes-title">
+                <span>⚠</span>
+                <span>典型 Cache Break 原因</span>
+            </div>
+            <div class="cause-item">
+                <span class="cause-icon">▸</span>
+                <span>工具列表变化 (Tool List Change)</span>
+            </div>
+            <div class="cause-item">
+                <span class="cause-icon">▸</span>
+                <span>系统提示变化 (System Prompt Change)</span>
+            </div>
+            <div class="cause-item">
+                <span class="cause-icon">▸</span>
+                <span>Feature Flag 变化</span>
+            </div>
+        </div>
+        
+        <!-- Main Pipeline -->
+        <div class="pipeline">
+            <!-- Stage 1 -->
+            <div class="stage stage-1">
+                <div class="stage-number">01</div>
+                <div class="stage-card">
+                    <div class="stage-icon">📸</div>
+                    <h3 class="stage-title">请求前状态快照</h3>
+                    <p class="stage-title-en">Pre-Request Snapshot</p>
+                    <div class="stage-content">
+                        <ul>
+                            <li>工具 Schema SHA256 Hash</li>
+                            <li>记录 cache_read_input_tokens</li>
+                            <li>保存 "before" 状态</li>
+                        </ul>
+                    </div>
+                    <div class="connector" style="--next-color: #3b82f6;"></div>
+                    
+                    <div class="detail-popover">
+                        <div class="detail-title">Schema Hashing</div>
+                        <div class="detail-code">
+<span class="key">hash</span>: <span class="str">"a3f7c2..."</span><br>
+<span class="key">cache_tokens</span>: <span class="val">2048</span><br>
+<span class="key">tools_count</span>: <span class="val">12</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stage 2 -->
+            <div class="stage stage-2">
+                <div class="stage-number">02</div>
+                <div class="stage-card">
+                    <div class="stage-icon">📡</div>
+                    <h3 class="stage-title">API 调用</h3>
+                    <p class="stage-title-en">API Request</p>
+                    <div class="stage-content">
+                        <ul>
+                            <li>发送至 Anthropic API</li>
+                            <li>包含工具定义 + 系统提示</li>
+                            <li>携带完整对话历史</li>
+                        </ul>
+                    </div>
+                    <div class="connector" style="--stage-color: #3b82f6; --next-color: #8b5cf6;"></div>
+                </div>
+            </div>
+            
+            <!-- Stage 3 -->
+            <div class="stage stage-3">
+                <div class="stage-number">03</div>
+                <div class="stage-card">
+                    <div class="stage-icon">📊</div>
+                    <h3 class="stage-title">响应分析</h3>
+                    <p class="stage-title-en">Response Analysis</p>
+                    <div class="stage-content">
+                        <ul>
+                            <li>提取 cache_creation_input_tokens</li>
+                            <li>提取 cache_read_input_tokens</li>
+                            <li>计算缓存命中率</li>
+                        </ul>
+                    </div>
+                    <div class="connector" style="--stage-color: #8b5cf6; --next-color: #ff006e;"></div>
+                    
+                    <div class="detail-popover">
+                        <div class="detail-title">Token Fields</div>
+                        <div class="detail-code">
+cache_creation_input_tokens<br>
+cache_read_input_tokens<br>
+hit_rate = read / total
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stage 4 -->
+            <div class="stage stage-4">
+                <div class="stage-number">04</div>
+                <div class="stage-card">
+                    <div class="stage-icon">🔍</div>
+                    <h3 class="stage-title">Cache Break 判定</h3>
+                    <p class="stage-title-en">Break Detection</p>
+                    <div class="stage-content">
+                        <ul>
+                            <li>cache_read 从 >0 骤降到 0</li>
+                            <li>cache_creation > 0</li>
+                            <li>新建缓存 = 旧缓存失效</li>
+                        </ul>
+                    </div>
+                    <div class="connector" style="--stage-color: #ff006e; --next-color: #ffaa00;"></div>
+                </div>
+            </div>
+            
+            <!-- Stage 5 -->
+            <div class="stage stage-5">
+                <div class="stage-number">05</div>
+                <div class="stage-card">
+                    <div class="stage-icon">🔧</div>
+                    <h3 class="stage-title">Diff 生成</h3>
+                    <p class="stage-title-en">Diff Generation</p>
+                    <div class="stage-content">
+                        <ul>
+                            <li>比较 before/after hash</li>
+                            <li>定位变化的 Schema</li>
+                            <li>生成可读 Diff 输出</li>
+                        </ul>
+                    </div>
+                    <div class="connector" style="--stage-color: #ffaa00; --next-color: #10b981;"></div>
+                    
+                    <div class="detail-popover">
+                        <div class="detail-title">Per-Tool Precision</div>
+                        <div class="detail-code">
+<span class="val">+</span> tool.getWeather<br>
+<span class="key">-</span> param: location<br>
+<span class="val">+</span> param: lat, lon
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stage 6 -->
+            <div class="stage stage-6">
+                <div class="stage-number">06</div>
+                <div class="stage-card">
+                    <div class="stage-icon">🚨</div>
+                    <h3 class="stage-title">告警输出</h3>
+                    <p class="stage-title-en">Alert Output</p>
+                    <div class="stage-content">
+                        <ul>
+                            <li>控制台显示警告</li>
+                            <li>展示 Schema Diff</li>
+                            <li>Token 费用影响</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sticky Latch Section -->
+        <div class="latch-section">
+            <div class="latch-connector"></div>
+            <div class="latch-card">
+                <div class="latch-header">
+                    <div class="latch-icon">🔒</div>
+                    <div>
+                        <div class="latch-title">Sticky Latch 粘性锁存机制</div>
+                        <div class="latch-title-en">Persistent Alert State // Prevent Intermittent Misses</div>
+                    </div>
+                </div>
+                <div class="latch-grid">
+                    <div class="latch-item">
+                        <div class="latch-item-title">
+                            <span>⚡</span>
+                            <span>触发锁存</span>
+                        </div>
+                        <div class="latch-item-desc">
+                            一旦检测到 cache break，立即设置 latch = true。后续请求即使缓存恢复，锁存状态仍保持。
+                        </div>
+                    </div>
+                    <div class="latch-item">
+                        <div class="latch-item-title">
+                            <span>🛡️</span>
+                            <span>防遗漏设计</span>
+                        </div>
+                        <div class="latch-item-desc">
+                            防止间歇性 cache break 被忽略。确保所有缓存失效都被记录和告警，不遗漏任何异常。
+                        </div>
+                    </div>
+                    <div class="latch-item">
+                        <div class="latch-item-title">
+                            <span>✓</span>
+                            <span>手动重置</span>
+                        </div>
+                        <div class="latch-item-desc">
+                            只有用户手动确认后才能重置 latch。强制人工审查，避免自动清除关键告警。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Output Section -->
+        <div class="output-section">
+            <div class="output-left">
+                <div class="output-icon">📢</div>
+                <div>
+                    <div class="output-title">最终输出</div>
+                    <div class="output-title-en">Final Output</div>
+                </div>
+            </div>
+            <div class="alert-badge">
+                <span>⚠</span>
+                <span>Prompt cache break detected</span>
+            </div>
+        </div>
+        
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-label">Source Lines</span>
+                <span class="stat-value">727 lines</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Hash Precision</span>
+                <span class="stat-value">Per-Tool Level</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Algorithm</span>
+                <span class="stat-value">SHA256</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">File</span>
+                <span class="stat-value">promptCacheObserver.ts</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

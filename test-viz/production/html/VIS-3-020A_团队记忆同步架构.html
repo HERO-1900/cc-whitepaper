@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIS-3-020A 团队记忆同步架构</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-tertiary: #1a1a25;
+      --accent-cyan: #00d4ff;
+      --accent-magenta: #ff00a0;
+      --accent-gold: #ffd700;
+      --accent-green: #00ff88;
+      --accent-red: #ff3366;
+      --text-primary: #ffffff;
+      --text-secondary: #a0a0b0;
+      --text-muted: #606070;
+      --grid-color: rgba(0, 212, 255, 0.03);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+    
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    /* Gradient orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(150px);
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    .orb-1 {
+      width: 600px;
+      height: 600px;
+      background: var(--accent-cyan);
+      top: -200px;
+      left: -200px;
+    }
+    
+    .orb-2 {
+      width: 500px;
+      height: 500px;
+      background: var(--accent-magenta);
+      bottom: -150px;
+      right: -150px;
+    }
+    
+    .orb-3 {
+      width: 400px;
+      height: 400px;
+      background: var(--accent-gold);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 40px;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 50px;
+      position: relative;
+    }
+    
+    .diagram-id {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      opacity: 0.8;
+    }
+    
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    
+    .subtitle {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px;
+      color: var(--text-secondary);
+      font-weight: 300;
+    }
+    
+    /* Main diagram area */
+    .diagram {
+      display: grid;
+      grid-template-columns: 280px 1fr 280px;
+      gap: 30px;
+      margin-bottom: 30px;
+      position: relative;
+    }
+    
+    /* Column styling */
+    .column {
+      position: relative;
+    }
+    
+    .column-header {
+      text-align: center;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 16px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .column-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+    }
+    
+    .col-left .column-header::before {
+      background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+    }
+    
+    .col-center .column-header::before {
+      background: linear-gradient(90deg, transparent, var(--accent-magenta), transparent);
+    }
+    
+    .col-right .column-header::before {
+      background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+    }
+    
+    .col-left .column-header {
+      border-color: rgba(0, 212, 255, 0.15);
+    }
+    
+    .col-center .column-header {
+      border-color: rgba(255, 0, 160, 0.15);
+    }
+    
+    .col-right .column-header {
+      border-color: rgba(255, 215, 0, 0.15);
+    }
+    
+    .col-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    
+    .col-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .col-subtitle {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    /* Component boxes */
+    .component {
+      background: var(--bg-secondary);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      position: relative;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .component:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255,255,255,0.12);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    
+    .component-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+    
+    .component-sublabel {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .component-meta {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 9px;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    
+    /* Special component styling */
+    .comp-memory {
+      border-left: 3px solid var(--accent-cyan);
+    }
+    
+    .comp-watcher {
+      border-left: 3px solid var(--accent-cyan);
+    }
+    
+    .comp-syncstate {
+      border-left: 3px solid var(--accent-magenta);
+    }
+    
+    .comp-pull {
+      border-left: 3px solid var(--accent-magenta);
+    }
+    
+    .comp-push {
+      border-left: 3px solid var(--accent-magenta);
+    }
+    
+    .comp-scanner {
+      border-left: 3px solid var(--accent-red);
+    }
+    
+    .comp-cloud {
+      border-left: 3px solid var(--accent-gold);
+    }
+    
+    .comp-storage {
+      border-left: 3px solid var(--accent-gold);
+    }
+    
+    /* Flow arrows */
+    .flow-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -1;
+    }
+    
+    /* Scanner detail box */
+    .scanner-detail {
+      background: linear-gradient(135deg, rgba(255,51,102,0.1), rgba(255,51,102,0.02));
+      border: 1px solid rgba(255,51,102,0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    
+    .scanner-title {
+      font-size: 11px;
+      color: var(--accent-red);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .scanner-patterns {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4px;
+    }
+    
+    .pattern-tag {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 9px;
+      color: var(--text-secondary);
+      background: rgba(255,51,102,0.1);
+      padding: 3px 6px;
+      border-radius: 3px;
+    }
+    
+    /* SyncState fields */
+    .sync-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    
+    .sync-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+    }
+    
+    .field-name {
+      font-family: 'Space Grotesk', monospace;
+      color: var(--accent-magenta);
+      min-width: 90px;
+    }
+    
+    .field-value {
+      color: var(--text-secondary);
+    }
+    
+    /* API endpoints */
+    .api-endpoint {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 10px;
+      color: var(--accent-gold);
+      background: rgba(255,215,0,0.08);
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-top: 8px;
+      display: inline-block;
+    }
+    
+    /* Bottom members section */
+    .bottom-section {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 30px;
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .member-box {
+      background: var(--bg-secondary);
+      border: 1px solid rgba(0,255,136,0.15);
+      border-radius: 16px;
+      padding: 24px;
+      position: relative;
+    }
+    
+    .member-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-green), transparent);
+    }
+    
+    .member-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .member-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    
+    .member-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
+    .member-subtitle {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    
+    .member-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    .flow-arrow {
+      color: var(--accent-green);
+      font-size: 14px;
+    }
+    
+    /* Legend */
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 40px;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+    
+    /* SVG Flow lines */
+    .flow-lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    .flow-line {
+      stroke-width: 2;
+      fill: none;
+      stroke-dasharray: 8 4;
+      animation: flow 2s linear infinite;
+    }
+    
+    @keyframes flow {
+      to {
+        stroke-dashoffset: -24;
+      }
+    }
+    
+    .flow-push {
+      stroke: url(#gradientPush);
+    }
+    
+    .flow-pull {
+      stroke: url(#gradientPull);
+    }
+    
+    /* Hover detail panel */
+    .detail-panel {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 320px;
+      background: var(--bg-secondary);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 20px;
+      transform: translateY(150%);
+      transition: transform 0.3s ease;
+      z-index: 100;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    
+    .detail-panel.active {
+      transform: translateY(0);
+    }
+    
+    .detail-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--accent-cyan);
+    }
+    
+    .detail-content {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    
+    /* Code-like elements */
+    code {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 0.9em;
+      background: var(--bg-tertiary);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    
+    /* Status indicators */
+    .status-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-right: 6px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    .status-success {
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+    }
+    
+    .status-warning {
+      background: var(--accent-red);
+      box-shadow: 0 0 8px var(--accent-red);
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    
+    /* Debounce indicator */
+    .debounce-bar {
+      height: 3px;
+      background: var(--bg-tertiary);
+      border-radius: 2px;
+      margin-top: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .debounce-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-magenta));
+      border-radius: 2px;
+      animation: debounce 2s ease-in-out infinite;
+    }
+    
+    @keyframes debounce {
+      0% { width: 0; }
+      50% { width: 100%; }
+      100% { width: 0; }
+    }
+    
+    .debounce-label {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  
+  <div class="container">
+    <header>
+      <div class="diagram-id">VIS-3-020A · Architecture Diagram</div>
+      <h1>团队记忆同步架构</h1>
+      <div class="subtitle">Team Memory Synchronization Architecture</div>
+    </header>
+    
+    <div class="diagram">
+      <!-- SVG Flow Lines -->
+      <svg class="flow-lines" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="gradientPush" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#00d4ff" />
+            <stop offset="100%" stop-color="#ffd700" />
+          </linearGradient>
+          <linearGradient id="gradientPull" x1="100%" y1="0%" x2="0%" y2="0%">
+            <stop offset="0%" stop-color="#ffd700" />
+            <stop offset="100%" stop-color="#00ff88" />
+          </linearGradient>
+        </defs>
+      </svg>
+      
+      <!-- LEFT COLUMN: Member A -->
+      <div class="column col-left">
+        <div class="column-header">
+          <div class="col-icon">👤</div>
+          <div class="col-title">成员 A 环境</div>
+          <div class="col-subtitle">Member A Environment</div>
+        </div>
+        
+        <div class="component comp-memory" data-detail="本地记忆存储目录，每个项目有独立的记忆文件">
+          <div class="component-meta">.claude/</div>
+          <div class="component-label">本地记忆目录</div>
+          <div class="component-sublabel">Local Memory Directory</div>
+          <code style="display:block;margin-top:8px;font-size:10px;color:var(--accent-cyan)">memory/</code>
+        </div>
+        
+        <div class="component comp-watcher" data-detail="基于 chokidar 的文件系统监听，监控记忆文件变更">
+          <div class="component-meta">watcher.ts:387</div>
+          <div class="component-label">文件监听 (Watcher)</div>
+          <div class="component-sublabel">File System Watcher</div>
+          <div class="debounce-bar">
+            <div class="debounce-fill"></div>
+          </div>
+          <div class="debounce-label">2s 防抖 (Debounce)</div>
+        </div>
+        
+        <div style="text-align:center;padding:10px;">
+          <span style="font-size:20px;color:var(--accent-cyan);">↓</span>
+        </div>
+        
+        <div class="component" style="background: rgba(0,212,255,0.05); border-color: rgba(0,212,255,0.2);">
+          <div class="component-label">变更事件触发 Push</div>
+          <div class="component-sublabel">Change Event Triggers Push</div>
+        </div>
+      </div>
+      
+      <!-- CENTER COLUMN: Core Processing -->
+      <div class="column col-center">
+        <div class="column-header">
+          <div class="col-icon">⚙️</div>
+          <div class="col-title">核心处理引擎</div>
+          <div class="col-subtitle">Core Processing Engine</div>
+        </div>
+        
+        <div class="component comp-syncstate" data-detail="管理同步状态，包括仓库ID、ETag和同步时间戳">
+          <div class="component-meta">index.ts:1256</div>
+          <div class="component-label">SyncState 状态管理</div>
+          <div class="component-sublabel">Synchronization State Manager</div>
+          <div class="sync-fields">
+            <div class="sync-field">
+              <span class="field-name">repoId</span>
+              <span class="field-value">SHA256(git remote URL)</span>
+            </div>
+            <div class="sync-field">
+              <span class="field-name">lastETag</span>
+              <span class="field-value">乐观并发标记</span>
+            </div>
+            <div class="sync-field">
+              <span class="field-name">lastSyncTime</span>
+              <span class="field-value">上次同步时间戳</span>
+            </div>
+          </div>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="component comp-pull" data-detail="启动时自动拉取云端记忆，使用 ETag 条件请求避免重复下载">
+            <div class="component-label">Pull 流程</div>
+            <div class="component-sublabel">Download from Cloud</div>
+            <div style="margin-top:10px;font-size:10px;color:var(--text-secondary);">
+              <div>→ GET /api</div>
+              <div>→ ETag 条件请求</div>
+              <div>→ 304 则跳过</div>
+              <div>→ 200 下载全量</div>
+            </div>
+          </div>
+          
+          <div class="component comp-push" data-detail="检测本地变更，扫描敏感信息，分批上传至云端">
+            <div class="component-label">Push 流程</div>
+            <div class="component-sublabel">Upload to Cloud</div>
+            <div style="margin-top:10px;font-size:10px;color:var(--text-secondary);">
+              <div>→ Delta 检测</div>
+              <div>→ 密钥扫描</div>
+              <div>→ POST /api</div>
+              <div>→ 分批上传</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="component comp-scanner" data-detail="在 Push 前扫描敏感信息，防止密钥泄露到云端">
+          <div class="component-meta">secretScanner.ts:324</div>
+          <div class="component-label">密钥扫描 (Secret Scanner)</div>
+          <div class="component-sublabel">Pre-push Security Check</div>
+          
+          <div style="display:flex;gap:12px;margin-top:12px;">
+            <div style="flex:1;">
+              <div class="scanner-detail">
+                <div class="scanner-title">
+                  <span class="status-dot status-success"></span>
+                  扫描通过
+                </div>
+                <div style="font-size:10px;color:var(--text-secondary);">允许上传至云端</div>
+              </div>
+            </div>
+            <div style="flex:1;">
+              <div class="scanner-detail" style="background: linear-gradient(135deg, rgba(255,51,102,0.2), rgba(255,51,102,0.05));">
+                <div class="scanner-title">
+                  <span class="status-dot status-warning"></span>
+                  扫描失败
+                </div>
+                <div style="font-size:10px;color:var(--text-secondary);">阻止上传 + 告警</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="scanner-detail" style="margin-top:12px;">
+            <div class="scanner-title">13 种密钥模式检测</div>
+            <div class="scanner-patterns">
+              <div class="pattern-tag">AWS_ACCESS_KEY</div>
+              <div class="pattern-tag">GITHUB_TOKEN</div>
+              <div class="pattern-tag">PRIVATE_KEY</div>
+              <div class="pattern-tag">API_SECRET</div>
+              <div class="pattern-tag">DATABASE_URL</div>
+              <div class="pattern-tag">... +8 more</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- RIGHT COLUMN: Cloud -->
+      <div class="column col-right">
+        <div class="column-header">
+          <div class="col-icon">☁️</div>
+          <div class="col-title">Anthropic API 云端</div>
+          <div class="col-subtitle">Cloud Infrastructure</div>
+        </div>
+        
+        <div class="component comp-cloud" data-detail="OAuth 认证的云端 API 服务">
+          <div class="component-label">Anthropic API</div>
+          <div class="component-sublabel">Cloud Service Endpoint</div>
+          <div class="api-endpoint">api.anthropic.com</div>
+          <div style="margin-top:10px;font-size:10px;color:var(--accent-gold);">
+            <span style="display:inline-block;width:6px;height:6px;background:var(--accent-gold);border-radius:50%;margin-right:6px;"></span>
+            OAuth 认证
+          </div>
+        </div>
+        
+        <div style="text-align:center;padding:10px;">
+          <span style="font-size:20px;color:var(--accent-gold);">↓</span>
+        </div>
+        
+        <div class="component comp-storage" data-detail="按 repoId 隔离的团队记忆存储">
+          <div class="component-label">团队记忆存储</div>
+          <div class="component-sublabel">Team Memory Storage</div>
+          <div style="margin-top:10px;font-size:10px;color:var(--text-secondary);">
+            <div style="margin-bottom:6px;">按 repoId 隔离数据</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="color:var(--accent-gold);">ETag</span>
+              <span>乐观并发控制</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- BOTTOM SECTION: Members B/C -->
+    <div class="bottom-section">
+      <div class="member-box">
+        <div class="member-header">
+          <div class="member-avatar">B</div>
+          <div>
+            <div class="member-title">成员 B 环境</div>
+            <div class="member-subtitle">Member B Environment</div>
+          </div>
+        </div>
+        <div class="member-flow">
+          <div class="flow-step">
+            <span>启动时自动 Pull</span>
+          </div>
+          <div class="flow-step">
+            <span class="flow-arrow">→</span>
+            <span>GET /api (带 ETag)</span>
+          </div>
+          <div class="flow-step">
+            <span class="flow-arrow">→</span>
+            <span>304 无变更 / 200 下载</span>
+          </div>
+          <div class="flow-step">
+            <span class="flow-arrow">→</span>
+            <span>合并到本地 .claude/memory/</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="member-box">
+        <div class="member-header">
+          <div class="member-avatar">C</div>
+          <div>
+            <div class="member-title">成员 C 环境</div>
+            <div class="member-subtitle">Member C Environment</div>
+          </div>
+        </div>
+        <div class="member-flow">
+          <div class="flow-step">
+            <span>相同的 Push 机制</span>
+          </div>
+          <div class="flow-step">
+            <span class="flow-arrow">→</span>
+            <span>文件变更 → Watcher 触发</span>
+          </div>
+          <div class="flow-step">
+            <span class="flow-arrow">→</span>
+            <span>密钥扫描 → POST /api</span>
+          </div>
+          <div class="flow-step">
+            <span class="flow-arrow">→</span>
+            <span>云端存储更新</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- LEGEND -->
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-color" style="background: var(--accent-cyan);"></div>
+        <span>本地环境 (Local)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: var(--accent-magenta);"></div>
+        <span>核心处理 (Core)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: var(--accent-red);"></div>
+        <span>安全扫描 (Security)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: var(--accent-gold);"></div>
+        <span>云端服务 (Cloud)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: var(--accent-green);"></div>
+        <span>数据同步 (Sync)</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Detail Panel -->
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-title" id="detailTitle">组件详情</div>
+    <div class="detail-content" id="detailContent">Hover over components to see details</div>
+  </div>
+  
+  <script>
+    // Component hover interactions
+    const components = document.querySelectorAll('.component[data-detail]');
+    const detailPanel = document.getElementById('detailPanel');
+    const detailTitle = document.getElementById('detailTitle');
+    const detailContent = document.getElementById('detailContent');
+    
+    components.forEach(comp => {
+      comp.addEventListener('mouseenter', () => {
+        const label = comp.querySelector('.component-label').textContent;
+        const detail = comp.getAttribute('data-detail');
+        detailTitle.textContent = label;
+        detailContent.textContent = detail;
+        detailPanel.classList.add('active');
+      });
+      
+      comp.addEventListener('mouseleave', () => {
+        detailPanel.classList.remove('active');
+      });
+    });
+  </script>
+</body>
+</html>

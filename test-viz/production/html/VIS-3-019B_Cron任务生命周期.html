@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cron 任务生命周期 | Cron Task Lifecycle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1a2332;
+            --accent-normal: #00d4aa;
+            --accent-recurring: #f59e0b;
+            --accent-expired: #ef4444;
+            --accent-deleted: #6b7280;
+            --text-primary: #f0f4f8;
+            --text-secondary: #94a3b8;
+            --glow-normal: rgba(0, 212, 170, 0.3);
+            --glow-recurring: rgba(245, 158, 11, 0.3);
+            --glow-expired: rgba(239, 68, 68, 0.3);
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 30%, rgba(0, 212, 170, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(245, 158, 11, 0.05) 0%, transparent 50%),
+                repeating-linear-gradient(90deg, transparent, transparent 50px, rgba(255,255,255,0.02) 50px, rgba(255,255,255,0.02) 51px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+        }
+
+        .header h1 span {
+            color: var(--accent-normal);
+        }
+
+        .header .subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .diagram-container {
+            position: relative;
+            z-index: 1;
+            background: var(--bg-secondary);
+            border-radius: 24px;
+            padding: 60px;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .state-node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .state-rect {
+            fill: var(--bg-tertiary);
+            stroke: var(--accent-normal);
+            stroke-width: 2;
+            rx: 12;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+            transition: all 0.3s ease;
+        }
+
+        .state-node:hover .state-rect {
+            filter: drop-shadow(0 0 20px var(--glow-normal));
+            stroke-width: 3;
+        }
+
+        .state-node.recurring:hover .state-rect {
+            filter: drop-shadow(0 0 20px var(--glow-recurring));
+        }
+
+        .state-node.expired:hover .state-rect {
+            filter: drop-shadow(0 0 20px var(--glow-expired));
+        }
+
+        .state-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            fill: var(--text-primary);
+            text-anchor: middle;
+        }
+
+        .state-subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            fill: var(--text-secondary);
+            text-anchor: middle;
+        }
+
+        .arrow-path {
+            fill: none;
+            stroke: var(--accent-normal);
+            stroke-width: 2;
+            marker-end: url(#arrowhead-normal);
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+
+        .arrow-path.recurring {
+            stroke: var(--accent-recurring);
+            stroke-dasharray: 6,4;
+            marker-end: url(#arrowhead-recurring);
+        }
+
+        .arrow-path.expired {
+            stroke: var(--accent-expired);
+            marker-end: url(#arrowhead-expired);
+        }
+
+        .arrow-path.deleted {
+            stroke: var(--accent-deleted);
+            stroke-dasharray: 4,4;
+            marker-end: url(#arrowhead-deleted);
+        }
+
+        .arrow-path:hover {
+            opacity: 1;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 8px currentColor);
+        }
+
+        .transition-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            fill: var(--text-secondary);
+            text-anchor: middle;
+            background: var(--bg-primary);
+        }
+
+        .transition-label-bg {
+            fill: var(--bg-secondary);
+            rx: 4;
+        }
+
+        .legend {
+            display: flex;
+            gap: 30px;
+            margin-top: 40px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .legend-line {
+            width: 30px;
+            height: 2px;
+            border-radius: 1px;
+        }
+
+        .legend-line.normal {
+            background: var(--accent-normal);
+        }
+
+        .legend-line.recurring {
+            background: var(--accent-recurring);
+            border: 2px dashed var(--accent-recurring);
+            height: 0;
+        }
+
+        .legend-line.expired {
+            background: var(--accent-expired);
+        }
+
+        .legend-line.deleted {
+            background: var(--accent-deleted);
+            border: 2px dashed var(--accent-deleted);
+            height: 0;
+        }
+
+        .info-panel {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-secondary);
+            max-width: 280px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .info-panel.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .info-panel .label {
+            color: var(--accent-normal);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .status-indicator {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            fill: var(--accent-normal);
+        }
+
+        .flow-particles {
+            fill: var(--accent-normal);
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Cron <span>任务生命周期</span></h1>
+        <div class="subtitle">Task Lifecycle State Machine</div>
+    </div>
+
+    <div class="diagram-container">
+        <svg width="1000" height="520" viewBox="0 0 1000 520">
+            <defs>
+                <marker id="arrowhead-normal" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#00d4aa"/>
+                </marker>
+                <marker id="arrowhead-recurring" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b"/>
+                </marker>
+                <marker id="arrowhead-expired" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444"/>
+                </marker>
+                <marker id="arrowhead-deleted" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/>
+                </marker>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+
+            <!-- State 1: Created -->
+            <g class="state-node" data-state="created" transform="translate(80, 200)">
+                <rect class="state-rect" width="120" height="70" x="-60" y="-35"/>
+                <text class="state-title" y="-5">创建</text>
+                <text class="state-subtitle" y="15">Created</text>
+                <circle cx="45" cy="-25" r="4" fill="#00d4aa" class="pulse"/>
+            </g>
+
+            <!-- State 2: Persisted -->
+            <g class="state-node" data-state="persisted" transform="translate(280, 200)">
+                <rect class="state-rect" width="130" height="70" x="-65" y="-35"/>
+                <text class="state-title" y="-5">已持久化</text>
+                <text class="state-subtitle" y="15">Persisted</text>
+            </g>
+
+            <!-- State 3: Waiting -->
+            <g class="state-node recurring" data-state="waiting" transform="translate(500, 200)">
+                <rect class="state-rect" width="120" height="70" x="-60" y="-35" stroke="#f59e0b"/>
+                <text class="state-title" y="-5">等待中</text>
+                <text class="state-subtitle" y="15">Waiting</text>
+                <circle cx="0" cy="42" r="3" fill="#f59e0b" class="pulse"/>
+            </g>
+
+            <!-- State 4: Running -->
+            <g class="state-node" data-state="running" transform="translate(720, 200)">
+                <rect class="state-rect" width="120" height="70" x="-60" y="-35"/>
+                <text class="state-title" y="-5">执行中</text>
+                <text class="state-subtitle" y="15">Running</text>
+            </g>
+
+            <!-- State 5: Completed -->
+            <g class="state-node recurring" data-state="completed" transform="translate(900, 200)">
+                <rect class="state-rect" width="130" height="70" x="-65" y="-35" stroke="#f59e0b"/>
+                <text class="state-title" y="-5">执行完毕</text>
+                <text class="state-subtitle" y="15">Completed</text>
+            </g>
+
+            <!-- State 6: Expired -->
+            <g class="state-node expired" data-state="expired" transform="translate(500, 420)">
+                <rect class="state-rect" width="120" height="70" x="-60" y="-35" stroke="#ef4444"/>
+                <text class="state-title" y="-5" fill="#ef4444">已过期</text>
+                <text class="state-subtitle" y="15">Expired</text>
+                <text class="status-indicator" y="35" font-size="9">7 days</text>
+            </g>
+
+            <!-- State 7: Deleted -->
+            <g class="state-node" data-state="deleted" transform="translate(280, 420)">
+                <rect class="state-rect" width="120" height="70" x="-60" y="-35" stroke="#6b7280"/>
+                <text class="state-title" y="-5" fill="#6b7280">已删除</text>
+                <text class="state-subtitle" y="15">Deleted</text>
+            </g>
+
+            <!-- Transitions -->
+
+            <!-- Created -> Persisted -->
+            <path class="arrow-path" d="M 140 200 L 215 200"/>
+            <g transform="translate(177, 190)">
+                <rect class="transition-label-bg" width="70" height="18" x="-35" y="-9"/>
+                <text class="transition-label" y="3">write-tmp</text>
+            </g>
+
+            <!-- Persisted -> Waiting -->
+            <path class="arrow-path" d="M 345 200 L 440 200"/>
+            <g transform="translate(392, 190)">
+                <rect class="transition-label-bg" width="80" height="18" x="-40" y="-9"/>
+                <text class="transition-label" y="3">load queue</text>
+            </g>
+
+            <!-- Waiting -> Running -->
+            <path class="arrow-path" d="M 560 200 L 660 200"/>
+            <g transform="translate(610, 185)">
+                <rect class="transition-label-bg" width="85" height="28" x="-42" y="-12"/>
+                <text class="transition-label" y="-3">cron match</text>
+                <text class="transition-label" y="10" font-size="9" fill="#f59e0b">+ Jitter</text>
+            </g>
+
+            <!-- Running -> Completed -->
+            <path class="arrow-path" d="M 780 200 L 835 200"/>
+            <g transform="translate(807, 190)">
+                <rect class="transition-label-bg" width="60" height="18" x="-30" y="-9"/>
+                <text class="transition-label" y="3">exit</text>
+            </g>
+
+            <!-- Completed -> Waiting (Recurring loop) -->
+            <path class="arrow-path recurring" d="M 900 270 Q 900 340 620 340 Q 500 340 500 270"/>
+            <g transform="translate(620, 345)">
+                <rect class="transition-label-bg" width="90" height="18" x="-45" y="-9" fill="#1a2332"/>
+                <text class="transition-label" y="3" fill="#f59e0b">recurring=true</text>
+            </g>
+
+            <!-- Completed -> Deleted (One-time) -->
+            <path class="arrow-path deleted" d="M 835 235 L 835 420 L 340 420"/>
+            <g transform="translate(600, 415)">
+                <rect class="transition-label-bg" width="100" height="18" x="-50" y="-9"/>
+                <text class="transition-label" y="3" fill="#6b7280">recurring=false</text>
+            </g>
+
+            <!-- Waiting -> Expired -->
+            <path class="arrow-path expired" d="M 500 270 L 500 385"/>
+            <g transform="translate(555, 330)">
+                <rect class="transition-label-bg" width="80" height="22" x="-40" y="-10" fill="#1a2332"/>
+                <text class="transition-label" y="-2" fill="#ef4444">create_time</text>
+                <text class="transition-label" y="10" fill="#ef4444">> 7 days</text>
+            </g>
+
+            <!-- Any -> Deleted (CronDelete) -->
+            <path class="arrow-path deleted" d="M 80 235 L 80 420 L 220 420" stroke="#6b7280"/>
+            <path class="arrow-path deleted" d="M 280 235 L 280 350" stroke="#6b7280"/>
+            <g transform="translate(150, 240)">
+                <rect class="transition-label-bg" width="90" height="18" x="-45" y="-9"/>
+                <text class="transition-label" y="3" fill="#6b7280">CronDelete</text>
+            </g>
+
+            <!-- File storage indicator -->
+            <g transform="translate(280, 285)">
+                <rect width="140" height="50" rx="8" fill="rgba(0,212,170,0.05)" stroke="rgba(0,212,170,0.2)"/>
+                <text x="70" y="18" text-anchor="middle" fill="#00d4aa" font-size="10" font-family="JetBrains Mono">~/.claude/cron-tasks.json</text>
+                <text x="70" y="35" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="JetBrains Mono">持久化存储</text>
+            </g>
+            <line x1="280" y1="270" x2="280" y2="235" stroke="#00d4aa" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+
+            <!-- Lock indicator -->
+            <g transform="translate(720, 285)">
+                <rect width="100" height="40" rx="8" fill="rgba(245,158,11,0.05)" stroke="rgba(245,158,11,0.2)"/>
+                <text x="50" y="18" text-anchor="middle" fill="#f59e0b" font-size="10" font-family="JetBrains Mono">lock: 30s</text>
+                <text x="50" y="32" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="JetBrains Mono">超时保护</text>
+            </g>
+            <line x1="720" y1="270" x2="720" y2="235" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+
+        </svg>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-line normal"></div>
+                <span>正常流程 Normal Flow</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line recurring"></div>
+                <span>循环执行 Recurring Loop</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line expired"></div>
+                <span>过期 Expired (7天)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line deleted"></div>
+                <span>删除 Deleted</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+        <div class="label" id="infoLabel">状态详情</div>
+        <div id="infoContent">Hover over states to see details</div>
+    </div>
+
+    <script>
+        const stateInfo = {
+            created: {
+                label: '创建 Created',
+                content: 'CronCreate 工具被调用，任务对象在内存中初始化。参数验证通过，准备持久化。'
+            },
+            persisted: {
+                label: '已持久化 Persisted',
+                content: '原子写入 ~/.claude/cron-tasks.json（write-tmp + rename），确保数据完整性。'
+            },
+            waiting: {
+                label: '等待中 Waiting',
+                content: '加载到调度器内存队列，等待 cron 表达式匹配当前时间。Jitter: 0-30s 随机延迟。'
+            },
+            running: {
+                label: '执行中 Running',
+                content: 'claude -p 子进程正在运行。锁超时 30 秒保护机制生效中。'
+            },
+            completed: {
+                label: '执行完毕 Completed',
+                content: '单次执行完成。根据 recurring 参数决定：循环回等待态，或删除。'
+            },
+            expired: {
+                label: '已过期 Expired',
+                content: '创建时间超过 7 天（硬编码阈值），自动标记为过期，不再触发。'
+            },
+            deleted: {
+                label: '已删除 Deleted',
+                content: '用户通过 CronDelete 手动删除，或一次性任务执行完毕后自动清除。'
+            }
+        };
+
+        const infoPanel = document.getElementById('infoPanel');
+        const infoLabel = document.getElementById('infoLabel');
+        const infoContent = document.getElementById('infoContent');
+        const stateNodes = document.querySelectorAll('.state-node');
+
+        stateNodes.forEach(node => {
+            node.addEventListener('mouseenter', () => {
+                const state = node.getAttribute('data-state');
+                const info = stateInfo[state];
+                if (info) {
+                    infoLabel.textContent = info.label;
+                    infoContent.textContent = info.content;
+                    infoPanel.classList.add('visible');
+                }
+            });
+
+            node.addEventListener('mouseleave', () => {
+                infoPanel.classList.remove('visible');
+            });
+        });
+    </script>
+</body>
+</html>

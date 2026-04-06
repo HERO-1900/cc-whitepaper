@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cron Scheduler Architecture</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0e1a 0%, #111827 50%, #0d1321 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Space Grotesk', sans-serif;
+            overflow: hidden;
+        }
+        
+        .container {
+            width: 1400px;
+            height: 900px;
+            position: relative;
+            background: radial-gradient(ellipse at 30% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 50%);
+        }
+        
+        .noise {
+            position: absolute;
+            inset: 0;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+        
+        .title {
+            position: absolute;
+            top: 30px;
+            left: 50px;
+            font-size: 32px;
+            font-weight: 700;
+            color: #f8fafc;
+            letter-spacing: -0.5px;
+        }
+        
+        .title span {
+            font-size: 14px;
+            font-weight: 400;
+            color: #64748b;
+            display: block;
+            margin-top: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .layer {
+            position: absolute;
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .layer-header {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        /* User Layer */
+        .layer-user {
+            top: 100px;
+            left: 50px;
+            width: 280px;
+            height: 200px;
+            background: linear-gradient(145deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .layer-user .layer-header { color: #10b981; border-color: rgba(16, 185, 129, 0.3); }
+        
+        /* Scheduler Layer */
+        .layer-scheduler {
+            top: 100px;
+            left: 360px;
+            width: 320px;
+            height: 280px;
+            background: linear-gradient(145deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.05));
+            border: 1px solid rgba(59, 130, 246, 0.35);
+        }
+        .layer-scheduler .layer-header { color: #3b82f6; border-color: rgba(59, 130, 246, 0.3); }
+        
+        /* Persistence Layer */
+        .layer-persistence {
+            top: 400px;
+            left: 360px;
+            width: 320px;
+            height: 180px;
+            background: linear-gradient(145deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+        .layer-persistence .layer-header { color: #8b5cf6; border-color: rgba(139, 92, 246, 0.3); }
+        
+        /* Lock Layer */
+        .layer-lock {
+            top: 400px;
+            left: 700px;
+            width: 280px;
+            height: 180px;
+            background: linear-gradient(145deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .layer-lock .layer-header { color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
+        
+        /* Execution Layer */
+        .layer-execution {
+            top: 100px;
+            right: 50px;
+            width: 300px;
+            height: 480px;
+            background: linear-gradient(145deg, rgba(236, 72, 153, 0.1), rgba(236, 72, 153, 0.05));
+            border: 1px solid rgba(236, 72, 153, 0.3);
+        }
+        .layer-execution .layer-header { color: #ec4899; border-color: rgba(236, 72, 153, 0.3); }
+        
+        .component {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .component:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .component-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #f1f5f9;
+            margin-bottom: 4px;
+        }
+        
+        .component-en {
+            font-size: 12px;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .component-file {
+            font-size: 10px;
+            color: #475569;
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .tag {
+            display: inline-block;
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+        }
+        
+        .tag-green { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .tag-blue { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .tag-purple { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+        .tag-amber { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .tag-pink { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
+        
+        .detail-list {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 10px;
+            line-height: 1.6;
+        }
+        
+        .detail-list li {
+            list-style: none;
+            position: relative;
+            padding-left: 12px;
+        }
+        
+        .detail-list li::before {
+            content: '›';
+            position: absolute;
+            left: 0;
+            color: #64748b;
+        }
+        
+        svg.connections {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .flow-line {
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            opacity: 0.6;
+        }
+        
+        .flow-line.animated {
+            stroke-dasharray: 8 4;
+            animation: flow 1s linear infinite;
+        }
+        
+        @keyframes flow {
+            to { stroke-dashoffset: -12; }
+        }
+        
+        .arrow-head {
+            fill: none;
+            stroke-width: 2;
+            opacity: 0.6;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 40px;
+            left: 50px;
+            display: flex;
+            gap: 24px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .flow-label {
+            font-size: 10px;
+            fill: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+            text-anchor: middle;
+        }
+        
+        .param-box {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+        
+        .param-box h4 {
+            font-size: 10px;
+            color: #64748b;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .param-box code {
+            font-family: 'JetBrains Mono', monospace;
+            color: #e2e8f0;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .jitter-config {
+            top: 240px;
+            left: 540px;
+            width: 180px;
+        }
+        
+        .atomic-write {
+            top: 420px;
+            left: 540px;
+            width: 160px;
+        }
+        
+        .session-indicator {
+            position: absolute;
+            top: 30px;
+            right: 50px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12px;
+            color: #64748b;
+        }
+        
+        .session-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="noise"></div>
+        
+        <h1 class="title">
+            Cron Scheduler Architecture
+            <span>cronScheduler.ts · 566 lines | cron-tasks.json persistence</span>
+        </h1>
+        
+        <div class="session-indicator">
+            <div class="session-dot"></div>
+            <span>Active Session</span>
+        </div>
+        
+        <!-- User Layer -->
+        <div class="layer layer-user">
+            <div class="layer-header">用户层 User Layer</div>
+            <div class="component">
+                <div class="component-name">/loop 命令</div>
+                <div class="component-en">/loop Skill</div>
+                <span class="tag tag-green">Skill</span>
+                <ul class="detail-list">
+                    <li>自然语言解析</li>
+                    <li>interval + prompt</li>
+                    <li>生成 cron 表达式</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Scheduler Layer -->
+        <div class="layer layer-scheduler">
+            <div class="layer-header">调度层 Scheduler Layer</div>
+            <div class="component">
+                <div class="component-name">调度器</div>
+                <div class="component-en">CronScheduler</div>
+                <div class="component-file">cronScheduler.ts · 566 lines</div>
+                <span class="tag tag-blue">Core</span>
+                <ul class="detail-list">
+                    <li>内存任务队列</li>
+                    <li>setInterval 每分钟检查</li>
+                    <li>匹配 cron 表达式触发</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Persistence Layer -->
+        <div class="layer layer-persistence">
+            <div class="layer-header">持久化层 Persistence Layer</div>
+            <div class="component">
+                <div class="component-name">任务存储</div>
+                <div class="component-en">CronTasks</div>
+                <div class="component-file">cronTasks.ts · 1,028 lines</div>
+                <span class="tag tag-purple">Storage</span>
+                <ul class="detail-list">
+                    <li>~/.claude/cron-tasks.json</li>
+                    <li>JSON 格式存储</li>
+                    <li>原子写入保护</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Lock Layer -->
+        <div class="layer layer-lock">
+            <div class="layer-header">锁层 Lock Layer</div>
+            <div class="component">
+                <div class="component-name">文件锁</div>
+                <div class="component-en">CronTasksLock</div>
+                <div class="component-file">cronTasksLock.ts · 195 lines</div>
+                <span class="tag tag-amber">Lock</span>
+                <ul class="detail-list">
+                    <li>~/.claude/cron-tasks.lock</li>
+                    <li>防多会话冲突</li>
+                    <li>30s 超时释放</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Execution Layer -->
+        <div class="layer layer-execution">
+            <div class="layer-header">执行层 Execution Layer</div>
+            <div class="component">
+                <div class="component-name">子进程执行</div>
+                <div class="component-en">Child Process</div>
+                <span class="tag tag-pink">Execute</span>
+                <ul class="detail-list">
+                    <li>claude -p &lt;prompt&gt;</li>
+                    <li>独立进程隔离</li>
+                </ul>
+            </div>
+            <div class="component">
+                <div class="component-name">生命周期管理</div>
+                <div class="component-en">Lifecycle</div>
+                <span class="tag tag-pink">7d TTL</span>
+                <ul class="detail-list">
+                    <li>7 天自动过期</li>
+                    <li>硬编码不可配置</li>
+                    <li>执行结果不回传</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Param Boxes -->
+        <div class="param-box jitter-config">
+            <h4>Jitter 配置</h4>
+            <div style="color: #3b82f6; margin-bottom: 4px;">cronJitterConfig.ts · 75 lines</div>
+            <div>随机延迟: <code>0-30s</code></div>
+            <div style="margin-top: 4px; font-size: 10px;">避免惊群效应</div>
+        </div>
+        
+        <!-- SVG Connections -->
+        <svg class="connections" viewBox="0 0 1400 900">
+            <defs>
+                <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#10b981" opacity="0.8"/>
+                </marker>
+                <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#3b82f6" opacity="0.8"/>
+                </marker>
+                <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#8b5cf6" opacity="0.8"/>
+                </marker>
+                <marker id="arrow-pink" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L9,3 z" fill="#ec4899" opacity="0.8"/>
+                </marker>
+            </defs>
+            
+            <!-- User -> Scheduler -->
+            <path class="flow-line animated" d="M330 200 L360 200" stroke="#10b981" marker-end="url(#arrow-green)"/>
+            
+            <!-- Scheduler -> Persistence -->
+            <path class="flow-line" d="M520 380 L520 400" stroke="#8b5cf6" marker-end="url(#arrow-purple)"/>
+            
+            <!-- Scheduler -> Lock -->
+            <path class="flow-line" d="M680 490 L700 490" stroke="#f59e0b" opacity="0.4"/>
+            
+            <!-- Scheduler <-> Persistence (双向) -->
+            <path class="flow-line animated" d="M500 400 L500 380" stroke="#3b82f6" marker-end="url(#arrow-blue)"/>
+            
+            <!-- Scheduler -> Execution -->
+            <path class="flow-line animated" d="M680 240 L1100 240" stroke="#ec4899" marker-end="url(#arrow-pink)"/>
+            
+            <!-- Loop back indicator -->
+            <path class="flow-line" d="M360 280 L340 280 L340 320 L1050 320 L1050 400" stroke="#64748b" stroke-dasharray="4 4" opacity="0.3" fill="none"/>
+            
+            <!-- Labels -->
+            <text class="flow-label" x="345" y="195" fill="#10b981">CronCreate</text>
+            <text class="flow-label" x="510" y="395" fill="#8b5cf6">write</text>
+            <text class="flow-label" x="500" y="375" fill="#3b82f6">read</text>
+            <text class="flow-label" x="890" y="235" fill="#ec4899">trigger</text>
+            <text class="flow-label" x="800" y="315" fill="#64748b">no feedback</text>
+        </svg>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot" style="background: #10b981;"></div>
+                <span>User Input</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background: #3b82f6;"></div>
+                <span>Scheduler Flow</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background: #8b5cf6;"></div>
+                <span>Persistence</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background: #ec4899;"></div>
+                <span>Execution</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

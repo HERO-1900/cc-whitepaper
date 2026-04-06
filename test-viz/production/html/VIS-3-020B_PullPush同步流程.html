@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pull/Push 同步流程 | Team Memory Sync</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a25;
+            --accent-cyan: #00d4ff;
+            --accent-magenta: #ff00a0;
+            --accent-green: #00ff88;
+            --accent-amber: #ffb800;
+            --accent-red: #ff4444;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --border: #2a2a3a;
+            --grid: rgba(0, 212, 255, 0.03);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Animated Grid Background */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(var(--grid) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-glow {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(150px);
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow-cyan {
+            background: var(--accent-cyan);
+            top: -200px;
+            left: -200px;
+        }
+
+        .glow-magenta {
+            background: var(--accent-magenta);
+            bottom: -200px;
+            right: -200px;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 30px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -1px;
+        }
+
+        .header .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Flow Container */
+        .flow-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 40px;
+        }
+
+        .flow-section {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 35px;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .flow-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+        }
+
+        .flow-section.pull::before {
+            background: linear-gradient(90deg, var(--accent-cyan), transparent);
+        }
+
+        .flow-section.push::before {
+            background: linear-gradient(90deg, var(--accent-magenta), transparent);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .section-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .pull .section-icon {
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .push .section-icon {
+            background: rgba(255, 0, 160, 0.1);
+            color: var(--accent-magenta);
+            border: 1px solid rgba(255, 0, 160, 0.3);
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+
+        .section-title span {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 1.2rem;
+        }
+
+        /* Flow Diagram */
+        .flow-diagram {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .flow-row {
+            display: flex;
+            align-items: stretch;
+            gap: 20px;
+            min-height: 80px;
+        }
+
+        .actor {
+            width: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 10px;
+        }
+
+        .actor-box {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 20px;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 0.85rem;
+            width: 100%;
+        }
+
+        .actor-label {
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .actor.client .actor-box {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .actor.server .actor-box {
+            border-color: var(--accent-magenta);
+            color: var(--accent-magenta);
+        }
+
+        .flow-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Step Cards */
+        .step-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px 22px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .step-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateX(5px);
+        }
+
+        .push .step-card:hover {
+            border-color: var(--accent-magenta);
+        }
+
+        .step-number {
+            position: absolute;
+            left: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .pull .step-number {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+        }
+
+        .push .step-number {
+            background: var(--accent-magenta);
+            color: var(--text-primary);
+        }
+
+        .step-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-desc {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .step-meta {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.05);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .tag.http {
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--accent-cyan);
+            border-color: rgba(0, 212, 255, 0.3);
+        }
+
+        .tag.header {
+            background: rgba(255, 184, 0, 0.1);
+            color: var(--accent-amber);
+            border-color: rgba(255, 184, 0, 0.3);
+        }
+
+        .tag.success {
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--accent-green);
+            border-color: rgba(0, 255, 136, 0.3);
+        }
+
+        .tag.error {
+            background: rgba(255, 68, 68, 0.1);
+            color: var(--accent-red);
+            border-color: rgba(255, 68, 68, 0.3);
+        }
+
+        /* Decision Branch */
+        .decision-branch {
+            display: flex;
+            gap: 15px;
+            margin-left: 30px;
+        }
+
+        .branch {
+            flex: 1;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px dashed var(--border);
+            position: relative;
+        }
+
+        .branch::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            width: 1px;
+            height: 20px;
+            background: var(--border);
+        }
+
+        .branch.yes {
+            background: rgba(0, 255, 136, 0.05);
+            border-color: rgba(0, 255, 136, 0.4);
+        }
+
+        .branch.no {
+            background: rgba(0, 212, 255, 0.05);
+            border-color: rgba(0, 212, 255, 0.4);
+        }
+
+        .branch.skip {
+            background: rgba(255, 184, 0, 0.05);
+            border-color: rgba(255, 184, 0, 0.4);
+        }
+
+        .branch-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .branch-content {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Arrow Connector */
+        .arrow-down {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 30px;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        .pull .arrow-down {
+            color: var(--accent-cyan);
+        }
+
+        .push .arrow-down {
+            color: var(--accent-magenta);
+        }
+
+        /* Conflict Resolution Section */
+        .conflict-section {
+            margin-top: 40px;
+            background: linear-gradient(135deg, rgba(255, 68, 68, 0.05), rgba(255, 0, 160, 0.05));
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 16px;
+            padding: 30px;
+            position: relative;
+        }
+
+        .conflict-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .conflict-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.4);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-red);
+            font-size: 1.2rem;
+        }
+
+        .conflict-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .conflict-title span {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .conflict-flow {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .conflict-step {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .conflict-step .code {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-red);
+            font-weight: 600;
+        }
+
+        .conflict-arrow {
+            color: var(--accent-magenta);
+            font-size: 1.5rem;
+        }
+
+        .loop-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: rgba(255, 0, 160, 0.1);
+            border: 1px dashed var(--accent-magenta);
+            border-radius: 8px;
+            color: var(--accent-magenta);
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Legend */
+        .legend {
+            margin-top: 40px;
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+            padding: 25px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .legend-dot.cyan { background: var(--accent-cyan); }
+        .legend-dot.magenta { background: var(--accent-magenta); }
+        .legend-dot.green { background: var(--accent-green); }
+        .legend-dot.amber { background: var(--accent-amber); }
+        .legend-dot.red { background: var(--accent-red); }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .flow-row {
+                flex-direction: column;
+            }
+            
+            .actor {
+                width: 100%;
+                flex-direction: row;
+                gap: 15px;
+                padding-top: 0;
+            }
+            
+            .decision-branch {
+                flex-direction: column;
+                margin-left: 0;
+            }
+            
+            .conflict-flow {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .conflict-arrow {
+                transform: rotate(90deg);
+            }
+        }
+
+        /* Pulse Animation for Key Steps */
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(0, 212, 255, 0); }
+        }
+
+        @keyframes pulse-magenta {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 160, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(255, 0, 160, 0); }
+        }
+
+        .step-card.important {
+            animation: pulse 2s infinite;
+        }
+
+        .push .step-card.important {
+            animation: pulse-magenta 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow glow-cyan"></div>
+    <div class="bg-glow glow-magenta"></div>
+
+    <div class="container">
+        <header class="header">
+            <h1>Pull/Push 同步流程</h1>
+            <p class="subtitle">Team Memory Synchronization Protocol with ETag Optimistic Concurrency Control</p>
+        </header>
+
+        <div class="flow-container">
+            <!-- Pull Flow Section -->
+            <section class="flow-section pull">
+                <div class="section-header">
+                    <div class="section-icon">↓</div>
+                    <h2 class="section-title">拉取流程 <span>Pull Flow</span></h2>
+                </div>
+
+                <div class="flow-diagram">
+                    <div class="flow-row">
+                        <div class="actor client">
+                            <div class="actor-box">CLIENT</div>
+                            <div class="actor-label">本地客户端</div>
+                        </div>
+                        <div class="flow-content">
+                            <div class="step-card">
+                                <div class="step-number">1</div>
+                                <div class="step-title">发送 GET 请求</div>
+                                <div class="step-desc">客户端发起同步请求，携带仓库标识</div>
+                                <div class="step-meta">
+                                    <span class="tag http">GET /api/team-memory</span>
+                                    <span class="tag">repoId=&lt;sha256&gt;</span>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step-card">
+                                <div class="step-number">2</div>
+                                <div class="step-title">附带条件请求头</div>
+                                <div class="step-desc">使用 If-None-Match 携带上次同步的 ETag 值</div>
+                                <div class="step-meta">
+                                    <span class="tag header">If-None-Match: &lt;lastETag&gt;</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="actor server">
+                            <div class="actor-box">SERVER</div>
+                            <div class="actor-label">远程服务器</div>
+                        </div>
+                    </div>
+
+                    <div class="flow-row">
+                        <div class="actor server">
+                            <div class="actor-box">SERVER</div>
+                        </div>
+                        <div class="flow-content">
+                            <div class="step-card important">
+                                <div class="step-number">3</div>
+                                <div class="step-title">ETag 比对判断</div>
+                                <div class="step-desc">服务器比较客户端提供的 ETag 与当前数据版本</div>
+                            </div>
+                            <div class="decision-branch">
+                                <div class="branch yes">
+                                    <div class="branch-label">MATCH ✓</div>
+                                    <div class="branch-content">
+                                        <div class="step-meta" style="margin-top:0;">
+                                            <span class="tag success">304 Not Modified</span>
+                                        </div>
+                                        数据未变更，跳过下载
+                                    </div>
+                                </div>
+                                <div class="branch no">
+                                    <div class="branch-label">MISMATCH ✗</div>
+                                    <div class="branch-content">
+                                        <div class="step-meta" style="margin-top:0;">
+                                            <span class="tag http">200 OK</span>
+                                        </div>
+                                        返回全量数据 + 新 ETag
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="actor client">
+                            <div class="actor-box">CLIENT</div>
+                        </div>
+                    </div>
+
+                    <div class="flow-row">
+                        <div class="actor client">
+                            <div class="actor-box">CLIENT</div>
+                        </div>
+                        <div class="flow-content">
+                            <div class="step-card">
+                                <div class="step-number">4</div>
+                                <div class="step-title">数据合并</div>
+                                <div class="step-desc">将服务器返回的数据合并到本地 .claude/memory/ 目录</div>
+                                <div class="step-meta">
+                                    <span class="tag">文件系统写入</span>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step-card">
+                                <div class="step-number">5</div>
+                                <div class="step-title">更新同步状态</div>
+                                <div class="step-desc">持久化新的 ETag 值，用于下次同步比对</div>
+                                <div class="step-meta">
+                                    <span class="tag header">SyncState.lastETag = newETag</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="actor server" style="visibility: hidden;">
+                            <div class="actor-box">SERVER</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Push Flow Section -->
+            <section class="flow-section push">
+                <div class="section-header">
+                    <div class="section-icon">↑</div>
+                    <h2 class="section-title">推送流程 <span>Push Flow</span></h2>
+                </div>
+
+                <div class="flow-diagram">
+                    <div class="flow-row">
+                        <div class="actor client">
+                            <div class="actor-box">CLIENT</div>
+                            <div class="actor-label">本地客户端</div>
+                        </div>
+                        <div class="flow-content">
+                            <div class="step-card">
+                                <div class="step-number">1</div>
+                                <div class="step-title">变更触发</div>
+                                <div class="step-desc">文件系统 watcher 检测到变更，2秒防抖后触发 Push</div>
+                                <div class="step-meta">
+                                    <span class="tag">watcher (2s debounce)</span>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step-card">
+                                <div class="step-number">2</div>
+                                <div class="step-title">Delta 检测</div>
+                                <div class="step-desc">计算本地文件 hash，与 lastPushHashes 比对</div>
+                                <div class="step-meta">
+                                    <span class="tag header">hash(local) vs lastPushHashes</span>
+                                </div>
+                            </div>
+                            <div class="decision-branch">
+                                <div class="branch skip">
+                                    <div class="branch-label">NO CHANGE</div>
+                                    <div class="branch-content">无变化，跳过 Push</div>
+                                </div>
+                                <div class="branch yes">
+                                    <div class="branch-label">CHANGED</div>
+                                    <div class="branch-content">检测到变更，继续流程</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="actor server" style="visibility: hidden;">
+                            <div class="actor-box">SERVER</div>
+                        </div>
+                    </div>
+
+                    <div class="flow-row">
+                        <div class="actor client">
+                            <div class="actor-box">CLIENT</div>
+                        </div>
+                        <div class="flow-content">
+                            <div class="step-card">
+                                <div class="step-number">3</div>
+                                <div class="step-title">密钥扫描</div>
+                                <div class="step-desc">对变更文件执行 13 种密钥模式匹配，防止敏感信息泄露</div>
+                                <div class="step-meta">
+                                    <span class="tag error">Secret Detection (13 patterns)</span>
+                                </div>
+                            </div>
+                            <div class="decision-branch">
+                                <div class="branch skip">
+                                    <div class="branch-label">DETECTED</div>
+                                    <div class="branch-content">
+                                        <div class="step-meta" style="margin-top:0;">
+                                            <span class="tag error">BLOCKED</span>
+                                        </div>
+                                        阻止上传 + 告警提示
+                                    </div>
+                                </div>
+                                <div class="branch yes">
+                                    <div class="branch-label">PASSED</div>
+                                    <div class="branch-content">安全校验通过</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step-card important">
+                                <div class="step-number">4</div>
+                                <div class="step-title">分批上传</div>
+                                <div class="step-desc">POST 请求携带 If-Match 头部，实现乐观并发控制</div>
+                                <div class="step-meta">
+                                    <span class="tag http">POST /api/team-memory</span>
+                                    <span class="tag header">If-Match: &lt;lastETag&gt;</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="actor server">
+                            <div class="actor-box">SERVER</div>
+                            <div class="actor-label">远程服务器</div>
+                        </div>
+                    </div>
+
+                    <div class="flow-row">
+                        <div class="actor server">
+                            <div class="actor-box">SERVER</div>
+                        </div>
+                        <div class="flow-content">
+                            <div class="step-card">
+                                <div class="step-number">5</div>
+                                <div class="step-title">乐观并发判断</div>
+                                <div class="step-desc">服务器验证 If-Match 与当前 ETag 是否一致</div>
+                            </div>
+                            <div class="decision-branch">
+                                <div class="branch yes">
+                                    <div class="branch-label">MATCH ✓</div>
+                                    <div class="branch-content">
+                                        <div class="step-meta" style="margin-top:0;">
+                                            <span class="tag success">200 OK + newETag</span>
+                                        </div>
+                                        写入成功
+                                    </div>
+                                </div>
+                                <div class="branch no">
+                                    <div class="branch-label">MISMATCH ✗</div>
+                                    <div class="branch-content">
+                                        <div class="step-meta" style="margin-top:0;">
+                                            <span class="tag error">412 Precondition Failed</span>
+                                        </div>
+                                        版本冲突
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="actor client">
+                            <div class="actor-box">CLIENT</div>
+                        </div>
+                    </div>
+
+                    <div class="flow-row">
+                        <div class="actor client">
+                            <div class="actor-box">CLIENT</div>
+                        </div>
+                        <div class="flow-content">
+                            <div class="step-card">
+                                <div class="step-number">6</div>
+                                <div class="step-title">更新状态</div>
+                                <div class="step-desc">同步成功后更新本地状态记录</div>
+                                <div class="step-meta">
+                                    <span class="tag header">SyncState.lastETag = newETag</span>
+                                    <span class="tag header">SyncState.lastPushHashes = currentHashes</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="actor server" style="visibility: hidden;">
+                            <div class="actor-box">SERVER</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Conflict Resolution -->
+            <section class="conflict-section">
+                <div class="conflict-header">
+                    <div class="conflict-icon">⚡</div>
+                    <h3 class="conflict-title">冲突处理 <span>Conflict Resolution Path</span></h3>
+                </div>
+                <div class="conflict-flow">
+                    <div class="conflict-step">
+                        <span>Push 收到</span>
+                        <span class="code">412</span>
+                    </div>
+                    <span class="conflict-arrow">→</span>
+                    <div class="conflict-step">
+                        自动触发 Pull
+                    </div>
+                    <span class="conflict-arrow">→</span>
+                    <div class="conflict-step">
+                        本地合并 Merge
+                    </div>
+                    <span class="conflict-arrow">→</span>
+                    <div class="loop-indicator">
+                        <span>↻</span>
+                        <span>重新 Push (Retry)</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot cyan"></div>
+                <span>Pull 流程 / 客户端操作</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot magenta"></div>
+                <span>Push 流程 / 服务端操作</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot green"></div>
+                <span>成功 / 匹配</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot amber"></div>
+                <span>HTTP 头部 / 元数据</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot red"></div>
+                <span>错误 / 冲突 / 阻断</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

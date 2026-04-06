@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAIL-CLOSED Security Model</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-deep: #0a0c10;
+            --bg-mid: #11141c;
+            --bg-surface: #1a1f2a;
+            --accent-danger: #ff4757;
+            --accent-safe: #00d9a6;
+            --accent-gold: #ffd700;
+            --accent-cyan: #00d4ff;
+            --text-primary: #e8ecf1;
+            --text-secondary: #8b95a8;
+            --border-subtle: #2a3142;
+            --gradient-aurora: linear-gradient(135deg, rgba(0,212,255,0.08) 0%, rgba(255,215,0,0.05) 50%, rgba(255,71,87,0.08) 100%);
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* 噪点纹理背景 */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* 光晕效果 */
+        .glow {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow-1 {
+            width: 600px;
+            height: 600px;
+            background: var(--accent-cyan);
+            top: -200px;
+            left: -200px;
+        }
+
+        .glow-2 {
+            width: 500px;
+            height: 500px;
+            background: var(--accent-gold);
+            bottom: -150px;
+            right: -150px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 60px 40px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* 标题区域 - 杂志风格 */
+        .header {
+            text-align: center;
+            margin-bottom: 80px;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+        }
+
+        .header-subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--accent-gold);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .header-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 64px;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-cyan) 50%, var(--accent-gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-tagline {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.8;
+        }
+
+        .header-tagline strong {
+            color: var(--accent-safe);
+            font-weight: 700;
+        }
+
+        /* 核心对比区域 - 戏剧性分割 */
+        .comparison-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            margin-bottom: 80px;
+            position: relative;
+        }
+
+        .comparison-panel {
+            padding: 50px 60px;
+            position: relative;
+            min-height: 420px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 对角分割线 */
+        .comparison-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            background: linear-gradient(180deg, transparent 0%, var(--border-subtle) 20%, var(--border-subtle) 80%, transparent 100%);
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+
+        /* 中心徽章 */
+        .center-badge {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            background: var(--bg-deep);
+            border: 2px solid var(--border-subtle);
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--accent-gold);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .panel-failopen {
+            background: linear-gradient(135deg, rgba(255,71,87,0.05) 0%, transparent 70%);
+            border-top-left-radius: 16px;
+            border-bottom-left-radius: 16px;
+        }
+
+        .panel-failclosed {
+            background: linear-gradient(225deg, rgba(0,217,166,0.05) 0%, transparent 70%);
+            border-top-right-radius: 16px;
+            border-bottom-right-radius: 16px;
+        }
+
+        .panel-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-label-danger { color: var(--accent-danger); }
+        .panel-label-safe { color: var(--accent-safe); }
+
+        .panel-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .panel-title-danger { color: var(--accent-danger); }
+        .panel-title-safe { color: var(--accent-safe); }
+
+        .panel-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .flow-diagram {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .flow-item {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .flow-item:hover {
+            transform: translateX(8px);
+            border-color: currentColor;
+        }
+
+        .flow-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .flow-icon-danger {
+            background: rgba(255,71,87,0.15);
+            color: var(--accent-danger);
+        }
+
+        .flow-icon-safe {
+            background: rgba(0,217,166,0.15);
+            color: var(--accent-safe);
+        }
+
+        .flow-content {
+            flex: 1;
+        }
+
+        .flow-label {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .flow-en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .flow-arrow {
+            text-align: center;
+            font-size: 20px;
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        .outcome-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-top: 16px;
+            align-self: flex-start;
+        }
+
+        .outcome-danger {
+            background: rgba(255,71,87,0.15);
+            color: var(--accent-danger);
+            border: 1px solid rgba(255,71,87,0.3);
+        }
+
+        .outcome-safe {
+            background: rgba(0,217,166,0.15);
+            color: var(--accent-safe);
+            border: 1px solid rgba(0,217,166,0.3);
+        }
+
+        /* 白名单区域 - 蜂巢网格 */
+        .whitelist-section {
+            margin-bottom: 80px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 20px;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 48px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            opacity: 0.3;
+            line-height: 1;
+        }
+
+        .section-title-group {
+            flex: 1;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .section-subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+        }
+
+        .whitelist-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .whitelist-card {
+            background: var(--bg-mid);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .whitelist-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent-cyan);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .whitelist-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 20px 40px rgba(0,212,255,0.1);
+        }
+
+        .whitelist-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .card-icon {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 24px;
+            color: var(--accent-cyan);
+            margin-bottom: 12px;
+            opacity: 0.8;
+        }
+
+        .card-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .card-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .card-status {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 8px;
+            height: 8px;
+            background: var(--accent-safe);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent-safe);
+        }
+
+        /* Too-Complex 区域 */
+        .complex-section {
+            background: var(--gradient-aurora);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 50px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .complex-section::before {
+            content: 'BLOCK';
+            position: absolute;
+            top: 50%;
+            right: -50px;
+            transform: translateY(-50%) rotate(-90deg);
+            font-family: 'Playfair Display', serif;
+            font-size: 120px;
+            font-weight: 900;
+            color: var(--accent-danger);
+            opacity: 0.03;
+            pointer-events: none;
+            letter-spacing: 20px;
+        }
+
+        .complex-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .complex-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,71,87,0.1);
+            border: 2px solid var(--accent-danger);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .complex-title-group {
+            flex: 1;
+        }
+
+        .complex-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-danger);
+            margin-bottom: 6px;
+        }
+
+        .complex-subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .complex-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .complex-item {
+            background: var(--bg-mid);
+            border: 1px solid var(--border-subtle);
+            border-left: 4px solid var(--accent-danger);
+            border-radius: 8px;
+            padding: 20px 24px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .complex-item:hover {
+            border-color: var(--accent-danger);
+            transform: translateX(8px);
+        }
+
+        .complex-item-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .complex-item-icon {
+            font-size: 18px;
+        }
+
+        .complex-item-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text-primary);
+        }
+
+        .complex-item-en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--accent-danger);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .complex-item-example {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            background: var(--bg-surface);
+            padding: 10px 14px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+
+        /* 底部原则声明 */
+        .principle-footer {
+            margin-top: 60px;
+            text-align: center;
+            padding: 40px;
+            background: var(--bg-mid);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            position: relative;
+        }
+
+        .principle-footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: var(--accent-gold);
+        }
+
+        .principle-quote {
+            font-family: 'Playfair Display', serif;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .principle-explain {
+            font-size: 15px;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.8;
+        }
+
+        .principle-explain code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-surface);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: var(--accent-cyan);
+        }
+
+        /* 动画 */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .whitelist-card, .complex-item, .flow-item {
+            animation: slideIn 0.6s ease-out backwards;
+        }
+
+        .whitelist-card:nth-child(1) { animation-delay: 0.05s; }
+        .whitelist-card:nth-child(2) { animation-delay: 0.1s; }
+        .whitelist-card:nth-child(3) { animation-delay: 0.15s; }
+        .whitelist-card:nth-child(4) { animation-delay: 0.2s; }
+        .whitelist-card:nth-child(5) { animation-delay: 0.25s; }
+        .whitelist-card:nth-child(6) { animation-delay: 0.3s; }
+        .whitelist-card:nth-child(7) { animation-delay: 0.35s; }
+        .whitelist-card:nth-child(8) { animation-delay: 0.4s; }
+        .whitelist-card:nth-child(9) { animation-delay: 0.45s; }
+        .whitelist-card:nth-child(10) { animation-delay: 0.5s; }
+        .whitelist-card:nth-child(11) { animation-delay: 0.55s; }
+        .whitelist-card:nth-child(12) { animation-delay: 0.6s; }
+
+        /* 响应式 */
+        @media (max-width: 1200px) {
+            .whitelist-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .comparison-section {
+                grid-template-columns: 1fr;
+            }
+            .comparison-section::before {
+                display: none;
+            }
+            .center-badge {
+                display: none;
+            }
+            .whitelist-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .complex-grid {
+                grid-template-columns: 1fr;
+            }
+            .header-title {
+                font-size: 42px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+
+    <div class="container">
+        <!-- 标题区域 -->
+        <header class="header">
+            <div class="header-subtitle">Security Model · VIS-3-018B</div>
+            <h1 class="header-title">FAIL-CLOSED</h1>
+            <p class="header-tagline">
+                宁可<strong>误拦</strong>，不可<strong>放过</strong><br>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px;">Better safe than sorry</span>
+            </p>
+        </header>
+
+        <!-- 核心对比 -->
+        <section class="comparison-section">
+            <div class="center-badge">VS</div>
+
+            <!-- FAIL-OPEN -->
+            <div class="comparison-panel panel-failopen">
+                <div class="panel-label panel-label-danger">⚠ Avoid</div>
+                <h2 class="panel-title panel-title-danger">FAIL-OPEN</h2>
+                <p class="panel-subtitle">失败开放模式 — 当解析器遇到未知节点时选择放行，将安全风险转嫁给用户</p>
+                
+                <div class="flow-diagram">
+                    <div class="flow-item">
+                        <div class="flow-icon flow-icon-danger">?</div>
+                        <div class="flow-content">
+                            <div class="flow-label">解析失败 / 未知节点</div>
+                            <div class="flow-en">Parse Failure / Unknown Node</div>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-icon flow-icon-danger">✓</div>
+                        <div class="flow-content">
+                            <div class="flow-label">默认允许执行</div>
+                            <div class="flow-en">Default Allow</div>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <span class="outcome-badge outcome-danger">⚠ DANGER: 潜在恶意代码执行</span>
+                </div>
+            </div>
+
+            <!-- FAIL-CLOSED -->
+            <div class="comparison-panel panel-failclosed">
+                <div class="panel-label panel-label-safe">✓ Recommended</div>
+                <h2 class="panel-title panel-title-safe">FAIL-CLOSED</h2>
+                <p class="panel-subtitle">失败关闭模式 — Claude Code 的选择，任何不确定性都导向人工确认</p>
+                
+                <div class="flow-diagram">
+                    <div class="flow-item">
+                        <div class="flow-icon flow-icon-safe">?</div>
+                        <div class="flow-content">
+                            <div class="flow-label">解析失败 / 未知节点</div>
+                            <div class="flow-en">Parse Failure / Unknown Node</div>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-item">
+                        <div class="flow-icon flow-icon-safe">🛡</div>
+                        <div class="flow-content">
+                            <div class="flow-label">标记为 too-complex</div>
+                            <div class="flow-en">Mark as Suspicious</div>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <span class="outcome-badge outcome-safe">✓ SAFE: 交给用户确认</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 白名单节点类型 -->
+        <section class="whitelist-section">
+            <div class="section-header">
+                <span class="section-number">12</span>
+                <div class="section-title-group">
+                    <h3 class="section-title">白名单节点类型</h3>
+                    <p class="section-subtitle">SAFE NODE TYPES — 这些 AST 节点可被自动处理</p>
+                </div>
+            </div>
+
+            <div class="whitelist-grid">
+                <div class="whitelist-card">
+                    <div class="card-status pulse"></div>
+                    <div class="card-icon">⌘</div>
+                    <div class="card-name">Command</div>
+                    <div class="card-desc">简单命令执行</div>
+                </div>
+                <div class="whitelist-card">
+                    <div class="card-status pulse"></div>
+                    <div class="card-icon">|</div>
+                    <div class="card-name">Pipeline</div>
+                    <div class="card-desc">管道操作</div>
+                </div>
+                <div class="whitelist-card">
+                    <div class="card-status pulse"></div>
+                    <div class="card-icon">&amp;&amp;</div>
+                    <div class="card-name">List</div>
+                    <div class="card-desc">逻辑链 &amp;&amp; ||</div>
+                </div>
+                <div class="whitelist-card">
+                    <div class="card-status pulse"></div>
+                    <div class="card-icon">{}</div>
+                    <div class="card-name">Compound</div>
+                    <div class="card-desc">花括号命令组</div>
+                </div>
+                <div class="whitelist-card">
+                    <div class="card-status pulse"></div>
+                    <div class="card-icon">()</div>
+                    <div class="card-name">Subshell</div>
+                    <div class="card-desc">子 Shell 执行</div>
+                </div>
+                <div class="whitelist-card">
+                    <div class="card-status pulse"></div>
+                    <div class="card-icon">if</div>
+                    <div class="card-name">If / While / For</div>
+                    <div class="card-desc">控制流语句</div>
+                </div>
+                <div class="whitelist-card">
+                    <div class="card-status pulse"></div>
+                    <div class="card-icon">fn</div>
+                    <div class="card-name">FunctionDef</div>
+                    <div class="card-desc">函数定义</div>
+                </div>
+                <div class="whitelist-card">
+                    <div class="card-status pulse"></div>
+                    <div class="card-icon">case</div>
+                    <div class="card-name">Case</div>
+                    <div class="card-desc">Case 语句</div>
+                </div>
+                <div class="whitelist-card">
+                    <div class="card-status pulse"></div>
+                    <div class="card-icon">&gt;</div>
+                    <div class="card-name">Redirect</div>
+                    <div class="card-desc">重定向 &gt; &gt;&gt;</div>
+                </div>
+                <div class="whitelist-card">
+                    <div class="card-status pulse"></div>
+                    <div class="card-icon">=</div>
+                    <div class="card-name">Assignment</div>
+                    <div class="card-desc">变量赋值</div>
+                </div>
+                <div class="whitelist-card">
+                    <div class="card-status pulse"></div>
+                    <div class="card-icon">$(( ))</div>
+                    <div class="card-name">Arithmetic</div>
+                    <div class="card-desc">算术表达式</div>
+                </div>
+                <div class="whitelist-card">
+                    <div class="card-status pulse"></div>
+                    <div class="card-icon">#</div>
+                    <div class="card-name">Comment</div>
+                    <div class="card-desc">注释</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Too-Complex 触发条件 -->
+        <section class="complex-section">
+            <div class="complex-header">
+                <div class="complex-icon">🚫</div>
+                <div class="complex-title-group">
+                    <h3 class="complex-title">触发 too-complex 的条件</h3>
+                    <p class="complex-subtitle">UNKNOWN / UNSUPPORTED NODE TYPES → ALWAYS ASK USER</p>
+                </div>
+            </div>
+
+            <div class="complex-grid">
+                <div class="complex-item">
+                    <div class="complex-item-header">
+                        <span class="complex-item-icon">⚡</span>
+                        <span class="complex-item-name">高级 Bash 特性</span>
+                        <span class="complex-item-en">Advanced Features</span>
+                    </div>
+                    <div class="complex-item-example"><(process substitution), coproc, <<< here-string</div>
+                </div>
+                <div class="complex-item">
+                    <div class="complex-item-header">
+                        <span class="complex-item-icon">🎭</span>
+                        <span class="complex-item-name">混淆 / 编码命令</span>
+                        <span class="complex-item-en">Obfuscated Commands</span>
+                    </div>
+                    <div class="complex-item-example">eval "$(echo ... | base64 -d)", $'...' tricks</div>
+                </div>
+                <div class="complex-item">
+                    <div class="complex-item-header">
+                        <span class="complex-item-icon">📏</span>
+                        <span class="complex-item-name">超长命令</span>
+                        <span class="complex-item-en">Command Length Limit</span>
+                    </div>
+                    <div class="complex-item-example">命令字符串超过 1024 字符</div>
+                </div>
+                <div class="complex-item">
+                    <div class="complex-item-header">
+                        <span class="complex-item-icon">🔀</span>
+                        <span class="complex-item-name">嵌套过深</span>
+                        <span class="complex-item-en">Nesting Depth</span>
+                    </div>
+                    <div class="complex-item-example">AST 嵌套深度超过 10 层</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 底部原则声明 -->
+        <footer class="principle-footer">
+            <p class="principle-quote">"宁可误拦，不可放过"</p>
+            <p class="principle-explain">
+                Claude Code 的 Bash AST 解析器始终遵循 <code>FAIL-CLOSED</code> 原则。<br>
+                当面对任何不确定性时，系统选择将控制权交还给用户，而非冒险执行潜在危险操作。
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

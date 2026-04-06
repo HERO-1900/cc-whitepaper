@@ -1,15 +1,17 @@
 {
   "metadata": {
     "generated": "2026-04-04",
+    "last_updated": "2026-04-06",
     "description": "占位符 -> 图表文件的映射关系，用于图表嵌入系统",
-    "total_placeholders_in_book": 84,
-    "unique_placeholder_ids": 76,
+    "total_placeholders_in_book": 91,
+    "unique_placeholder_ids": 83,
     "duplicate_placeholder_ids": 8,
-    "total_briefs": 114,
-    "total_chart_files": 114,
-    "matched_count": 83,
+    "total_briefs": 122,
+    "total_chart_files": 122,
+    "matched_count": 90,
     "unmatched_placeholder_count": 1,
-    "unmatched_chart_count": 31
+    "unmatched_chart_count": 32,
+    "drift_audit_2026_04_06": "Sonnet 子 Agent 归位 7 张 part3_new 游离图表 (VIS-3-018A/B, 3-019A/B, 3-020A/B, 3-022A) — 章节中已有占位符，可立即显示。剩余 32 张游离图表 (序章 VIS-0-001~015 + VIS-0-002B、VIS-1-011 本书阅读路径图、part4 VIS-4-001~010、part5 VIS-5-001~005) 因对应章节文件无 [图表预留] 占位符，且本次任务禁止修改 .md，无法通过 chart-embed.js 的占位符替换机制嵌入。需 Opus 决策：(A) 在序章/part4/part5 章节里追加 [图表预留] 占位符，(B) 引入非占位符的'章节图表附录'渲染路径，(C) 暂缓处理。"
   },
   "mappings": [
     {
@@ -758,6 +760,69 @@
       "chart_id": "VIS-2Q-014",
       "chart_file": "test-viz/production/html/VIS-2Q-014_命令四象限分类图.html",
       "brief_file": "briefs/part2_qa/VIS-2Q-014_命令四象限分类图.txt"
+    },
+    {
+      "placeholder": "[图表预留 3.18-A]",
+      "placeholder_id": "3.18-A",
+      "book_file": "book/part3_子系统完全解析/18_Bash_AST解析器完全解析.md",
+      "book_line": 35,
+      "chart_id": "VIS-3-018A",
+      "chart_file": "test-viz/production/html/VIS-3-018A_Bash_AST解析管线全景图.html",
+      "brief_file": "briefs/part3_new/VIS-3-018A_Bash_AST解析管线全景图.txt"
+    },
+    {
+      "placeholder": "[图表预留 3.18-B]",
+      "placeholder_id": "3.18-B",
+      "book_file": "book/part3_子系统完全解析/18_Bash_AST解析器完全解析.md",
+      "book_line": 37,
+      "chart_id": "VIS-3-018B",
+      "chart_file": "test-viz/production/html/VIS-3-018B_FAIL-CLOSED安全模型.html",
+      "brief_file": "briefs/part3_new/VIS-3-018B_FAIL-CLOSED安全模型.txt"
+    },
+    {
+      "placeholder": "[图表预留 3.19-A]",
+      "placeholder_id": "3.19-A",
+      "book_file": "book/part3_子系统完全解析/19_Cron调度系统完全解析.md",
+      "book_line": 28,
+      "chart_id": "VIS-3-019A",
+      "chart_file": "test-viz/production/html/VIS-3-019A_Cron调度器架构图.html",
+      "brief_file": "briefs/part3_new/VIS-3-019A_Cron调度器架构图.txt"
+    },
+    {
+      "placeholder": "[图表预留 3.19-B]",
+      "placeholder_id": "3.19-B",
+      "book_file": "book/part3_子系统完全解析/19_Cron调度系统完全解析.md",
+      "book_line": 30,
+      "chart_id": "VIS-3-019B",
+      "chart_file": "test-viz/production/html/VIS-3-019B_Cron任务生命周期.html",
+      "brief_file": "briefs/part3_new/VIS-3-019B_Cron任务生命周期.txt"
+    },
+    {
+      "placeholder": "[图表预留 3.20-A]",
+      "placeholder_id": "3.20-A",
+      "book_file": "book/part3_子系统完全解析/20_团队记忆同步完全解析.md",
+      "book_line": 28,
+      "chart_id": "VIS-3-020A",
+      "chart_file": "test-viz/production/html/VIS-3-020A_团队记忆同步架构.html",
+      "brief_file": "briefs/part3_new/VIS-3-020A_团队记忆同步架构.txt"
+    },
+    {
+      "placeholder": "[图表预留 3.20-B]",
+      "placeholder_id": "3.20-B",
+      "book_file": "book/part3_子系统完全解析/20_团队记忆同步完全解析.md",
+      "book_line": 30,
+      "chart_id": "VIS-3-020B",
+      "chart_file": "test-viz/production/html/VIS-3-020B_PullPush同步流程.html",
+      "brief_file": "briefs/part3_new/VIS-3-020B_PullPush同步流程.txt"
+    },
+    {
+      "placeholder": "[图表预留 3.22-A]",
+      "placeholder_id": "3.22-A",
+      "book_file": "book/part3_子系统完全解析/22_PromptCache可观测性完全解析.md",
+      "book_line": 17,
+      "chart_id": "VIS-3-022A",
+      "chart_file": "test-viz/production/html/VIS-3-022A_CacheBreak检测流程.html",
+      "brief_file": "briefs/part3_new/VIS-3-022A_CacheBreak检测流程.txt"
     }
   ],
   "unmatched_placeholders": [
@@ -783,6 +848,12 @@
       "chart_file": "test-viz/production/html/VIS-0-002_源码统计仪表盘.html",
       "brief_file": "briefs/overview/VIS-0-002_源码统计仪表盘.txt",
       "reason": "新增可视化，无对应书中占位符"
+    },
+    {
+      "chart_id": "VIS-0-002B",
+      "chart_file": "test-viz/production/html/VIS-0-002B_CC源码全量统计仪表盘.html",
+      "brief_file": null,
+      "reason": "新增可视化（VIS-0-002 升级版），无对应书中占位符"
     },
     {
       "chart_id": "VIS-0-003",
