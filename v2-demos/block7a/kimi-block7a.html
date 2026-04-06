@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Block 7a · 安全防线 | Claude Code 白皮书 V2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cc-bg-primary: #0d1117;
+      --cc-bg-secondary: #161b22;
+      --cc-bg-tertiary: #21262d;
+      --cc-border-default: #30363d;
+      --cc-border-muted: #21262d;
+      --cc-text-primary: #f0f6fc;
+      --cc-text-secondary: #8b949e;
+      --cc-text-muted: #6e7681;
+      --cc-accent-blue: #58a6ff;
+      --cc-accent-green: #3fb950;
+      --cc-accent-yellow: #d29922;
+      --cc-accent-red: #f85149;
+      --cc-accent-purple: #a371f7;
+      --cc-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --cc-font-mono: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+      --cc-space-1: 0.25rem;
+      --cc-space-2: 0.5rem;
+      --cc-space-3: 0.75rem;
+      --cc-space-4: 1rem;
+      --cc-space-5: 1.25rem;
+      --cc-space-6: 1.5rem;
+      --cc-space-8: 2rem;
+      --cc-space-10: 2.5rem;
+      --cc-space-12: 3rem;
+      --cc-space-16: 4rem;
+      --cc-font-size-xs: 0.75rem;
+      --cc-font-size-sm: 0.875rem;
+      --cc-font-size-base: 1rem;
+      --cc-font-size-lg: 1.125rem;
+      --cc-font-size-xl: 1.25rem;
+      --cc-font-size-2xl: 1.5rem;
+      --cc-font-size-3xl: 1.875rem;
+      --cc-font-size-4xl: 2.25rem;
+      --cc-font-size-5xl: 3rem;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --cc-bg-primary: #ffffff;
+        --cc-bg-secondary: #f6f8fa;
+        --cc-bg-tertiary: #eaeef2;
+        --cc-border-default: #d0d7de;
+        --cc-border-muted: #eaeef2;
+        --cc-text-primary: #24292f;
+        --cc-text-secondary: #57606a;
+        --cc-text-muted: #6e7781;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--cc-font-sans);
+      background: var(--cc-bg-primary);
+      color: var(--cc-text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .block-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--cc-space-12) var(--cc-space-6);
+    }
+
+    /* Marginal Label + Hero Footer */
+    .prologue-marginal-label {
+      display: flex;
+      align-items: center;
+      gap: var(--cc-space-3);
+      margin-bottom: var(--cc-space-6);
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .prologue-marginal-label::before {
+      content: '';
+      width: 2rem;
+      height: 1px;
+      background: var(--cc-accent-blue);
+    }
+
+    .hero-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: var(--cc-space-6);
+      border-top: 1px solid var(--cc-border-muted);
+      margin-top: var(--cc-space-12);
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-text-muted);
+    }
+
+    .hero-footer .block-number {
+      font-family: var(--cc-font-mono);
+      color: var(--cc-accent-blue);
+      font-weight: 600;
+    }
+
+    .hero-footer .block-name {
+      font-weight: 500;
+    }
+
+    .hero-footer .sub-title {
+      color: var(--cc-text-secondary);
+    }
+
+    /* Block Title */
+    .block-title {
+      font-size: var(--cc-font-size-5xl);
+      font-weight: 700;
+      margin-bottom: var(--cc-space-8);
+      background: linear-gradient(135deg, var(--cc-text-primary) 0%, var(--cc-accent-blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* OS Table Anchor Card */
+    .os-table-anchor-card {
+      background: var(--cc-bg-secondary);
+      border: 1px solid var(--cc-border-default);
+      border-radius: 12px;
+      padding: var(--cc-space-6);
+      margin-bottom: var(--cc-space-8);
+      position: relative;
+    }
+
+    .os-anchor-label {
+      display: inline-block;
+      background: var(--cc-accent-blue);
+      color: var(--cc-bg-primary);
+      font-size: var(--cc-font-size-xs);
+      font-weight: 600;
+      padding: var(--cc-space-1) var(--cc-space-3);
+      border-radius: 4px;
+      margin-bottom: var(--cc-space-4);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .os-anchor-content {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: var(--cc-space-6);
+      align-items: center;
+    }
+
+    .os-concept {
+      font-size: var(--cc-font-size-lg);
+      font-weight: 600;
+      color: var(--cc-accent-blue);
+      font-family: var(--cc-font-mono);
+    }
+
+    .os-mapping {
+      color: var(--cc-text-secondary);
+    }
+
+    .os-mapping strong {
+      color: var(--cc-text-primary);
+      font-weight: 600;
+    }
+
+    /* Insight Block */
+    .insight-block {
+      background: linear-gradient(135deg, rgba(88, 166, 255, 0.1) 0%, rgba(163, 113, 247, 0.1) 100%);
+      border-left: 4px solid var(--cc-accent-blue);
+      border-radius: 0 8px 8px 0;
+      padding: var(--cc-space-6);
+      margin: var(--cc-space-8) 0;
+    }
+
+    .insight-label {
+      display: flex;
+      align-items: center;
+      gap: var(--cc-space-2);
+      font-weight: 600;
+      color: var(--cc-accent-blue);
+      margin-bottom: var(--cc-space-3);
+      font-size: var(--cc-font-size-lg);
+    }
+
+    .insight-content {
+      color: var(--cc-text-secondary);
+      font-size: var(--cc-font-size-lg);
+    }
+
+    .insight-content strong {
+      color: var(--cc-text-primary);
+    }
+
+    /* Transition Text */
+    .transition-text {
+      font-size: var(--cc-font-size-xl);
+      color: var(--cc-text-secondary);
+      margin: var(--cc-space-8) 0;
+      line-height: 1.8;
+    }
+
+    /* Pull Quote */
+    .pull-quote {
+      font-size: var(--cc-font-size-3xl);
+      font-weight: 600;
+      text-align: center;
+      padding: var(--cc-space-10) var(--cc-space-8);
+      margin: var(--cc-space-10) 0;
+      border-top: 1px solid var(--cc-border-muted);
+      border-bottom: 1px solid var(--cc-border-muted);
+      color: var(--cc-text-primary);
+      position: relative;
+    }
+
+    .pull-quote::before {
+      content: '"';
+      font-size: var(--cc-font-size-5xl);
+      color: var(--cc-accent-blue);
+      opacity: 0.5;
+      position: absolute;
+      top: var(--cc-space-4);
+      left: var(--cc-space-6);
+    }
+
+    /* Section Title */
+    .section-title {
+      font-size: var(--cc-font-size-2xl);
+      font-weight: 600;
+      margin: var(--cc-space-10) 0 var(--cc-space-6);
+      display: flex;
+      align-items: center;
+      gap: var(--cc-space-3);
+    }
+
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 1.5rem;
+      background: var(--cc-accent-blue);
+      border-radius: 2px;
+    }
+
+    /* VIS-0.3-B Security Matrix */
+    .vis-0-3-b-container {
+      background: var(--cc-bg-secondary);
+      border: 1px solid var(--cc-border-default);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: var(--cc-space-8) 0;
+    }
+
+    .vis-header {
+      background: var(--cc-bg-tertiary);
+      padding: var(--cc-space-4) var(--cc-space-6);
+      border-bottom: 1px solid var(--cc-border-default);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .vis-title {
+      font-weight: 600;
+      font-size: var(--cc-font-size-lg);
+    }
+
+    .vis-subtitle {
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-text-muted);
+    }
+
+    .security-matrix {
+      display: grid;
+      grid-template-columns: 180px repeat(3, 1fr);
+      gap: 1px;
+      background: var(--cc-border-default);
+    }
+
+    .matrix-header-cell {
+      background: var(--cc-bg-tertiary);
+      padding: var(--cc-space-4);
+      text-align: center;
+      font-weight: 600;
+      font-size: var(--cc-font-size-sm);
+    }
+
+    .matrix-row-header {
+      background: var(--cc-bg-secondary);
+      padding: var(--cc-space-4) var(--cc-space-5);
+      display: flex;
+      align-items: center;
+      gap: var(--cc-space-3);
+      font-weight: 600;
+      font-size: var(--cc-font-size-sm);
+    }
+
+    .matrix-cell {
+      background: var(--cc-bg-primary);
+      padding: var(--cc-space-4);
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .cell-effectiveness {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--cc-space-2);
+      font-size: var(--cc-font-size-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      padding: var(--cc-space-1) var(--cc-space-2);
+      border-radius: 4px;
+      margin-bottom: var(--cc-space-2);
+      width: fit-content;
+    }
+
+    .effectiveness-strong {
+      background: rgba(63, 185, 80, 0.2);
+      color: var(--cc-accent-green);
+    }
+
+    .effectiveness-medium {
+      background: rgba(210, 153, 34, 0.2);
+      color: var(--cc-accent-yellow);
+    }
+
+    .effectiveness-weak {
+      background: rgba(248, 81, 73, 0.2);
+      color: var(--cc-accent-red);
+    }
+
+    .cell-measure {
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-text-secondary);
+      line-height: 1.5;
+    }
+
+    .matrix-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .matrix-icon-shield { color: var(--cc-accent-green); }
+    .matrix-icon-skull { color: var(--cc-accent-red); }
+    .matrix-icon-folder { color: var(--cc-accent-yellow); }
+    .matrix-icon-terminal { color: var(--cc-accent-blue); }
+
+    /* VIS-0.3-C Permission Table */
+    .vis-0-3-c-container {
+      background: var(--cc-bg-secondary);
+      border: 1px solid var(--cc-border-default);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: var(--cc-space-8) 0;
+    }
+
+    .permission-table-wrapper {
+      overflow-x: auto;
+    }
+
+    .permission-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: var(--cc-font-size-sm);
+    }
+
+    .permission-table th,
+    .permission-table td {
+      padding: var(--cc-space-3) var(--cc-space-4);
+      text-align: center;
+      border-bottom: 1px solid var(--cc-border-default);
+    }
+
+    .permission-table th {
+      background: var(--cc-bg-tertiary);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .permission-table th:first-child,
+    .permission-table td:first-child {
+      text-align: left;
+      font-weight: 500;
+      background: var(--cc-bg-secondary);
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      border-right: 1px solid var(--cc-border-default);
+    }
+
+    .permission-table th:first-child {
+      z-index: 15;
+    }
+
+    .mode-col {
+      min-width: 100px;
+    }
+
+    .mode-col.default {
+      background: rgba(88, 166, 255, 0.15);
+      border: 2px solid var(--cc-accent-blue);
+      position: relative;
+    }
+
+    .mode-col.default::after {
+      content: '推荐';
+      position: absolute;
+      top: -1px;
+      right: -1px;
+      background: var(--cc-accent-blue);
+      color: var(--cc-bg-primary);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 0 0 0 4px;
+    }
+
+    .status-auto {
+      color: var(--cc-accent-green);
+    }
+
+    .status-confirm {
+      color: var(--cc-accent-yellow);
+    }
+
+    .status-deny {
+      color: var(--cc-accent-red);
+    }
+
+    .table-footer {
+      padding: var(--cc-space-4) var(--cc-space-6);
+      background: var(--cc-bg-tertiary);
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-text-secondary);
+      border-top: 1px solid var(--cc-border-default);
+    }
+
+    /* Balance Statement */
+    .balance-statement {
+      background: var(--cc-bg-secondary);
+      border: 1px solid var(--cc-border-default);
+      border-radius: 8px;
+      padding: var(--cc-space-6);
+      margin: var(--cc-space-8) 0;
+      text-align: center;
+      font-size: var(--cc-font-size-lg);
+      color: var(--cc-text-secondary);
+    }
+
+    .balance-statement strong {
+      color: var(--cc-text-primary);
+    }
+
+    .mode-highlight {
+      display: inline-block;
+      padding: var(--cc-space-1) var(--cc-space-2);
+      border-radius: 4px;
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-sm);
+      font-weight: 500;
+    }
+
+    .mode-plan { background: rgba(110, 118, 129, 0.2); color: var(--cc-text-secondary); }
+    .mode-default { background: rgba(88, 166, 255, 0.2); color: var(--cc-accent-blue); }
+    .mode-accept { background: rgba(163, 113, 247, 0.2); color: var(--cc-accent-purple); }
+    .mode-auto { background: rgba(63, 185, 80, 0.2); color: var(--cc-accent-green); }
+    .mode-bypass { background: rgba(248, 81, 73, 0.2); color: var(--cc-accent-red); }
+    .mode-dontask { background: rgba(210, 153, 34, 0.2); color: var(--cc-accent-yellow); }
+
+    /* Block Bridge */
+    .block-7b-bridge {
+      margin-top: var(--cc-space-12);
+      padding: var(--cc-space-8);
+      background: linear-gradient(135deg, var(--cc-bg-secondary) 0%, var(--cc-bg-tertiary) 100%);
+      border: 1px solid var(--cc-border-default);
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .bridge-text {
+      font-size: var(--cc-font-size-xl);
+      color: var(--cc-text-secondary);
+      line-height: 1.8;
+    }
+
+    .bridge-highlight {
+      color: var(--cc-accent-blue);
+      font-weight: 600;
+    }
+
+    .bridge-arrow {
+      margin-top: var(--cc-space-4);
+      font-size: var(--cc-font-size-2xl);
+      color: var(--cc-accent-blue);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .security-matrix {
+        grid-template-columns: 120px repeat(3, 1fr);
+      }
+      
+      .matrix-cell {
+        min-height: 80px;
+        padding: var(--cc-space-3);
+      }
+      
+      .cell-measure {
+        font-size: var(--cc-font-size-xs);
+      }
+      
+      .pull-quote {
+        font-size: var(--cc-font-size-xl);
+        padding: var(--cc-space-6) var(--cc-space-4);
+      }
+      
+      .permission-table-wrapper {
+        overflow-x: scroll;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="block-container">
+    <!-- Marginal Label -->
+    <div class="prologue-marginal-label">
+      序章 · Prologue
+    </div>
+
+    <!-- Block Title -->
+    <h1 class="block-title">安全防线</h1>
+
+    <!-- OS Table Anchor Card -->
+    <div class="os-table-anchor-card">
+      <div class="os-anchor-label">OS 类比锚点</div>
+      <div class="os-anchor-content">
+        <div class="os-concept">安全模型 (Security)</div>
+        <div class="os-mapping">
+          <strong>权限系统 + 沙箱 + 企业策略</strong><br>
+          十步权限状态机、seatbelt/bwrap 进程隔离、bypass-immune 规则——多层防御纵深
+        </div>
+      </div>
+    </div>
+
+    <!-- Insight Block: Community Gate -->
+    <div class="insight-block">
+      <div class="insight-label">
+        <span>💡</span>
+        <span>通俗理解</span>
+      </div>
+      <div class="insight-content">
+        权限系统就像<strong>小区门禁</strong>——业主（已批准操作）= 自动放行，访客（未知操作）= 要登记确认，外卖（沙箱内命令）= 扫码进，可疑人员（危险操作）= 直接拒绝。
+      </div>
+    </div>
+
+    <!-- Transition -->
+    <p class="transition-text">
+      但门禁体系不止有一道门——它是四层 × 三种威胁的矩阵。
+    </p>
+
+    <!-- VIS-0.3-B Security Matrix -->
+    <div class="section-title">VIS-0.3-B 安全模型全景图</div>
+    
+    <div class="vis-0-3-b-container">
+      <div class="vis-header">
+        <div>
+          <div class="vis-title">四层防御 × 三种威胁的安全矩阵</div>
+          <div class="vis-subtitle">12 单元格覆盖全攻击面，三色编码表示防护有效性</div>
+        </div>
+      </div>
+      
+      <div class="security-matrix">
+        <!-- Headers -->
+        <div class="matrix-header-cell" style="background: var(--cc-bg-secondary);"></div>
+        <div class="matrix-header-cell">
+          <svg class="matrix-icon matrix-icon-skull" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 1.74.5 3.37 1.41 4.84.95 1.54 2.2 2.86 3.16 4.4.47.75.93 1.66.93 2.26v3h5v-3c0-.6.46-1.51.93-2.26.96-1.54 2.21-2.86 3.16-4.4C18.5 12.37 19 10.74 19 9c0-3.87-3.13-7-7-7zm0 11c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+          </svg>
+          <div>Prompt 注入</div>
+        </div>
+        <div class="matrix-header-cell">
+          <svg class="matrix-icon matrix-icon-folder" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/>
+          </svg>
+          <div>文件越权</div>
+        </div>
+        <div class="matrix-header-cell">
+          <svg class="matrix-icon matrix-icon-terminal" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM7.5 15l5-5-5-5v10zm6 0h5v-2h-5v2z"/>
+          </svg>
+          <div>命令逃逸</div>
+        </div>
+
+        <!-- Row 1: Permission System -->
+        <div class="matrix-row-header">
+          <svg class="matrix-icon matrix-icon-shield" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+          </svg>
+          权限系统
+        </div>
+        <div class="matrix-cell">
+          <span class="cell-effectiveness effectiveness-medium">
+            <span>⚠</span> 中等
+          </span>
+          <div class="cell-measure">十步权限状态机识别恶意指令意图，default 模式拦截可疑操作</div>
+        </div>
+        <div class="matrix-cell">
+          <span class="cell-effectiveness effectiveness-strong">
+            <span>✓</span> 强
+          </span>
+          <div class="cell-measure">文件路径白名单、敏感目录保护、覆盖冲突检测</div>
+        </div>
+        <div class="matrix-cell">
+          <span class="cell-effectiveness effectiveness-strong">
+            <span>✓</span> 强
+          </span>
+          <div class="cell-measure">Bash 工具需显式确认、危险命令模式匹配拦截</div>
+        </div>
+
+        <!-- Row 2: Sandbox Isolation -->
+        <div class="matrix-row-header">
+          <svg class="matrix-icon matrix-icon-shield" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+          </svg>
+          沙箱隔离
+        </div>
+        <div class="matrix-cell">
+          <span class="cell-effectiveness effectiveness-strong">
+            <span>✓</span> 强
+          </span>
+          <div class="cell-measure">seatbelt/bwrap 进程隔离，外部命令无法访问主进程内存</div>
+        </div>
+        <div class="matrix-cell">
+          <span class="cell-effectiveness effectiveness-strong">
+            <span>✓</span> 强
+          </span>
+          <div class="cell-measure">沙箱文件系统只读挂载，关键目录写保护</div>
+        </div>
+        <div class="matrix-cell">
+          <span class="cell-effectiveness effectiveness-strong">
+            <span>✓</span> 强
+          </span>
+          <div class="cell-measure">子进程网络隔离、资源限制、超时熔断机制</div>
+        </div>
+
+        <!-- Row 3: Command Pre-check -->
+        <div class="matrix-row-header">
+          <svg class="matrix-icon matrix-icon-shield" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+          </svg>
+          命令预检
+        </div>
+        <div class="matrix-cell">
+          <span class="cell-effectiveness effectiveness-weak">
+            <span>✗</span> 弱
+          </span>
+          <div class="cell-measure">Prompt 注入攻击表面在于输入解析层，预检有限</div>
+        </div>
+        <div class="matrix-cell">
+          <span class="cell-effectiveness effectiveness-medium">
+            <span>⚠</span> 中等
+          </span>
+          <div class="cell-measure">Edit 操作前 diff 预览、冲突检测、备份机制</div>
+        </div>
+        <div class="matrix-cell">
+          <span class="cell-effectiveness effectiveness-medium">
+            <span>⚠</span> 中等
+          </span>
+          <div class="cell-measure">命令语法预检、危险模式警告，但无法保证语义安全</div>
+        </div>
+
+        <!-- Row 4: Enterprise Policy -->
+        <div class="matrix-row-header">
+          <svg class="matrix-icon matrix-icon-shield" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+          </svg>
+          企业策略
+        </div>
+        <div class="matrix-cell">
+          <span class="cell-effectiveness effectiveness-medium">
+            <span>⚠</span> 中等
+          </span>
+          <div class="cell-measure">审计日志记录、异常检测告警、事后追溯能力</div>
+        </div>
+        <div class="matrix-cell">
+          <span class="cell-effectiveness effectiveness-strong">
+            <span>✓</span> 强
+          </span>
+          <div class="cell-measure">敏感文件访问策略、路径黑名单、合规检查</div>
+        </div>
+        <div class="matrix-cell">
+          <span class="cell-effectiveness effectiveness-strong">
+            <span>✓</span> 强
+          </span>
+          <div class="cell-measure">命令白名单、禁止工具列表、组织级安全策略</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pull Quote Q2 -->
+    <div class="pull-quote">
+      安全不是一个开关，而是矩阵化、可配置、有兜底的纵深体系
+    </div>
+
+    <!-- Transition -->
+    <p class="transition-text">
+      四层防御中，<strong>权限系统</strong>是最贴近用户的一层——而权限系统本身又有 6 种模式，每种模式下不同工具的行为不一样。
+    </p>
+
+    <!-- VIS-0.3-C Permission Table -->
+    <div class="section-title">VIS-0.3-C 权限模型对照表</div>
+    
+    <div class="vis-0-3-c-container">
+      <div class="vis-header">
+        <div>
+          <div class="vis-title">6 种权限模式 × 工具行为矩阵</div>
+          <div class="vis-subtitle">✓ = 自动执行 / ⚠ = 需确认 / ✗ = 禁止执行</div>
+        </div>
+      </div>
+      
+      <div class="permission-table-wrapper">
+        <table class="permission-table">
+          <thead>
+            <tr>
+              <th>工具 \ 权限模式</th>
+              <th class="mode-col plan">plan</th>
+              <th class="mode-col default">default</th>
+              <th class="mode-col">acceptEdits</th>
+              <th class="mode-col">autoAccept</th>
+              <th class="mode-col">bypass</th>
+              <th class="mode-col">dontAsk</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Read / Glob / Grep</td>
+              <td class="status-auto">✓</td>
+              <td class="status-auto">✓</td>
+              <td class="status-auto">✓</td>
+              <td class="status-auto">✓</td>
+              <td class="status-auto">✓</td>
+              <td class="status-auto">✓</td>
+            </tr>
+            <tr>
+              <td>Edit / Write</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-auto">✓</td>
+              <td class="status-auto">✓</td>
+              <td class="status-auto">✓</td>
+              <td class="status-deny">✗</td>
+            </tr>
+            <tr>
+              <td>Bash</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-auto">✓</td>
+              <td class="status-auto">✓</td>
+              <td class="status-deny">✗</td>
+            </tr>
+            <tr>
+              <td>Agent</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-auto">✓</td>
+              <td class="status-deny">✗</td>
+            </tr>
+            <tr>
+              <td>MCP</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-auto">✓</td>
+              <td class="status-deny">✗</td>
+            </tr>
+            <tr>
+              <td>NotebokEdit</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-auto">✓</td>
+              <td class="status-auto">✓</td>
+              <td class="status-auto">✓</td>
+              <td class="status-deny">✗</td>
+            </tr>
+            <tr>
+              <td>WebFetch / WebSearch</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-auto">✓</td>
+              <td class="status-auto">✓</td>
+              <td class="status-deny">✗</td>
+            </tr>
+            <tr>
+              <td>RemoteTrigger</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-confirm">⚠</td>
+              <td class="status-auto">✓</td>
+              <td class="status-deny">✗</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="table-footer">
+        <strong>注：</strong>dontAsk 模式对需确认的操作直接拒绝（而非执行），适用于高安全敏感环境。
+      </div>
+    </div>
+
+    <!-- Q3 Balance Statement -->
+    <div class="balance-statement">
+      <span class="mode-highlight mode-default">default</span> 是平衡点；<br>
+      想完全自动？看 <span class="mode-highlight mode-accept">acceptEdits</span> / <span class="mode-highlight mode-auto">autoAccept</span>；<br>
+      想完全自由？看 <span class="mode-highlight mode-bypass">bypass</span>，但要承担风险。
+    </div>
+
+    <!-- Block 7b Bridge -->
+    <div class="block-7b-bridge">
+      <p class="bridge-text">
+        但 Claude 不只有内置工具。它还能接入<span class="bridge-highlight">外部工具</span>、被<span class="bridge-highlight">外部钩子拦截</span>、被<span class="bridge-highlight">第三方扩展</span>加新能力——<br>
+        这些<strong>"对外的延展面"</strong>是<span class="bridge-highlight">另一组完全不同的设计</span>。
+      </p>
+      <div class="bridge-arrow">↓</div>
+    </div>
+
+    <!-- Hero Footer -->
+    <div class="hero-footer">
+      <div>
+        <span class="block-number">07a</span>
+        <span class="block-name">安全防线</span>
+      </div>
+      <div class="sub-title">四层纵深 × 六维权限的矩阵化防御</div>
+    </div>
+  </div>
+</body>
+</html>

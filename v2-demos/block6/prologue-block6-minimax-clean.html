@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code 白皮书 - Block 6 · OS 建立认知</title>
+    <style>
+        :root {
+            --cc-color-bg: #0d1117;
+            --cc-color-surface: #161b22;
+            --cc-color-surface-secondary: #21262d;
+            --cc-color-border: #30363d;
+            --cc-color-text-primary: #e6edf3;
+            --cc-color-text-secondary: #7d8590;
+            --cc-color-text-tertiary: #6e7681;
+            --cc-color-accent: #2f81f7;
+            --cc-color-accent-hover: #58a6ff;
+            --cc-color-success: #238636;
+            --cc-color-warning: #d29922;
+            --cc-color-danger: #da3633;
+            --cc-color-info: #58a6ff;
+            --cc-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            --cc-font-mono: "SF Mono", "Fira Code", "Noto Sans Mono SC", monospace;
+            --cc-font-size-xs: 0.75rem;
+            --cc-font-size-sm: 0.875rem;
+            --cc-font-size-base: 1rem;
+            --cc-font-size-lg: 1.125rem;
+            --cc-font-size-xl: 1.25rem;
+            --cc-font-size-2xl: 1.5rem;
+            --cc-font-size-3xl: 1.875rem;
+            --cc-font-size-4xl: 2.25rem;
+            --cc-font-size-5xl: 3rem;
+            --cc-space-1: 0.25rem;
+            --cc-space-2: 0.5rem;
+            --cc-space-3: 0.75rem;
+            --cc-space-4: 1rem;
+            --cc-space-6: 1.5rem;
+            --cc-space-8: 2rem;
+            --cc-space-10: 2.5rem;
+            --cc-space-12: 3rem;
+            --cc-space-16: 4rem;
+        }
+        [data-theme="light"] {
+            --cc-color-bg: #ffffff;
+            --cc-color-surface: #f6f8fa;
+            --cc-color-surface-secondary: #eaeef2;
+            --cc-color-border: #d0d7de;
+            --cc-color-text-primary: #24292f;
+            --cc-color-text-secondary: #57606a;
+            --cc-color-text-tertiary: #6e7781;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--cc-font-sans);
+            background-color: var(--cc-color-bg);
+            color: var(--cc-color-text-primary);
+            line-height: 1.6;
+        }
+        .block-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--cc-space-16) var(--cc-space-6);
+        }
+        .prologue-marginal-label {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-3);
+            margin-bottom: var(--cc-space-8);
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .prologue-marginal-label::before {
+            content: "";
+            display: block;
+            width: 40px;
+            height: 1px;
+            background-color: var(--cc-color-border);
+        }
+        .block-number { color: var(--cc-color-accent); font-weight: 600; }
+        .hero-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--cc-space-4) 0;
+            margin-top: var(--cc-space-16);
+            border-top: 1px solid var(--cc-color-border);
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-color-text-tertiary);
+        }
+        .block-title {
+            font-size: var(--cc-font-size-4xl);
+            font-weight: 700;
+            margin-bottom: var(--cc-space-8);
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--cc-color-text-primary) 0%, var(--cc-color-text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .q1-pullquote {
+            font-size: var(--cc-font-size-3xl);
+            font-weight: 600;
+            line-height: 1.3;
+            margin: var(--cc-space-12) 0;
+            padding: var(--cc-space-8);
+            background: linear-gradient(135deg, rgba(47, 129, 247, 0.1) 0%, rgba(88, 166, 255, 0.05) 100%);
+            border-left: 4px solid var(--cc-color-accent);
+            border-radius: 0 12px 12px 0;
+        }
+        .q1-pullquote .emphasis {
+            font-style: italic;
+            color: var(--cc-color-accent-hover);
+        }
+        .three-things-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--cc-space-6);
+            margin: var(--cc-space-10) 0;
+            padding: var(--cc-space-8);
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: 16px;
+        }
+        .three-things-column { padding: var(--cc-space-4); }
+        .three-things-column h3 {
+            font-size: var(--cc-font-size-lg);
+            font-weight: 600;
+            margin-bottom: var(--cc-space-4);
+            color: var(--cc-color-accent);
+        }
+        .three-things-item {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--cc-space-3);
+            margin-bottom: var(--cc-space-3);
+            font-size: var(--cc-font-size-base);
+        }
+        .three-things-item::before {
+            content: "▸";
+            color: var(--cc-color-accent);
+            flex-shrink: 0;
+        }
+        .course-callout {
+            margin: var(--cc-space-10) 0;
+            padding: var(--cc-space-6);
+            background: var(--cc-color-surface-secondary);
+            border-radius: 12px;
+            border-left: 4px solid var(--cc-color-warning);
+        }
+        .course-callout-header {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-2);
+            font-weight: 600;
+            font-size: var(--cc-font-size-lg);
+            margin-bottom: var(--cc-space-3);
+            color: var(--cc-color-warning);
+        }
+        .course-callout p {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-color-text-secondary);
+            line-height: 1.7;
+        }
+        .course-callout strong { color: var(--cc-color-text-primary); }
+        .mapping-section { margin: var(--cc-space-12) 0; }
+        .mapping-header {
+            font-size: var(--cc-font-size-2xl);
+            font-weight: 600;
+            margin-bottom: var(--cc-space-6);
+            color: var(--cc-color-text-primary);
+        }
+        .mapping-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: var(--cc-space-6);
+        }
+        .mapping-table th {
+            text-align: left;
+            padding: var(--cc-space-3) var(--cc-space-4);
+            font-size: var(--cc-font-size-sm);
+            font-weight: 600;
+            color: var(--cc-color-text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--cc-color-border);
+        }
+        .mapping-table td {
+            padding: var(--cc-space-4);
+            font-size: var(--cc-font-size-base);
+            border-bottom: 1px solid var(--cc-color-border);
+            vertical-align: top;
+        }
+        .mapping-table tr:last-child td { border-bottom: none; }
+        .os-concept {
+            font-family: var(--cc-font-mono);
+            font-weight: 600;
+            color: var(--cc-color-accent);
+        }
+        .cc-concept { font-family: var(--cc-font-mono); color: var(--cc-color-success); }
+        .insight-block {
+            margin: var(--cc-space-4) 0;
+            padding: var(--cc-space-4);
+            background: rgba(88, 166, 255, 0.08);
+            border-radius: 8px;
+            border: 1px solid rgba(88, 166, 255, 0.2);
+        }
+        .insight-header {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-2);
+            font-weight: 600;
+            font-size: var(--cc-font-size-sm);
+            margin-bottom: var(--cc-space-2);
+            color: var(--cc-color-info);
+        }
+        .insight-block p {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-color-text-secondary);
+            line-height: 1.6;
+        }
+        .insight-block .analogy-name { font-weight: 600; color: var(--cc-color-text-primary); }
+        .q4-guidance {
+            font-size: var(--cc-font-size-xl);
+            font-weight: 500;
+            margin: var(--cc-space-10) 0 var(--cc-space-6);
+            padding: var(--cc-space-4);
+            color: var(--cc-color-text-secondary);
+            border-left: 3px solid var(--cc-color-accent);
+        }
+        .vis-container {
+            margin: var(--cc-space-10) 0;
+            padding: var(--cc-space-6);
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: 16px;
+        }
+        .vis-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--cc-space-6);
+        }
+        .vis-title { font-size: var(--cc-font-size-xl); font-weight: 600; color: var(--cc-color-text-primary); }
+        .vis-badge {
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-xs);
+            padding: var(--cc-space-1) var(--cc-space-2);
+            background: var(--cc-color-surface-secondary);
+            border-radius: 4px;
+            color: var(--cc-color-text-tertiary);
+        }
+        .block-transition {
+            margin-top: var(--cc-space-16);
+            padding: var(--cc-space-8);
+            background: linear-gradient(135deg, rgba(35, 134, 54, 0.1) 0%, rgba(47, 129, 247, 0.05) 100%);
+            border-radius: 12px;
+            text-align: center;
+        }
+        .block-transition p {
+            font-size: var(--cc-font-size-xl);
+            color: var(--cc-color-text-secondary);
+            line-height: 1.7;
+            margin-bottom: var(--cc-space-3);
+        }
+        .block-transition .highlight {
+            font-size: var(--cc-font-size-2xl);
+            font-weight: 600;
+            color: var(--cc-color-success);
+        }
+        .tag--readonly { background: rgba(35, 134, 54, 0.2); color: #3fb950; }
+        .tag--writable { background: rgba(31, 111, 235, 0.2); color: #58a6ff; }
+        @media (max-width: 768px) {
+            .three-things-panel { grid-template-columns: 1fr; }
+            .block-title { font-size: var(--cc-font-size-3xl); }
+            .q1-pullquote { font-size: var(--cc-font-size-2xl); }
+        }
+    </style>
+</head>
+<body>
+    <div class="block-container">
+        <div class="prologue-marginal-label">
+            <span class="block-number">06</span>
+            <span>序章 · OS 建立认知</span>
+        </div>
+
+        <h2 class="block-title">为什么用"操作系统"来理解 Claude Code</h2>
+
+        <div class="q1-pullquote">
+            这不是为了修辞好看——Claude Code 的架构<span class="emphasis">真的</span>像一个操作系统。
+        </div>
+
+        <div class="three-things-panel">
+            <div class="three-things-column">
+                <h3>操作系统做三件事</h3>
+                <div class="three-things-item">管理硬件资源</div>
+                <div class="three-things-item">调度应用程序</div>
+                <div class="three-things-item">执行安全策略</div>
+            </div>
+            <div class="three-things-column">
+                <h3>Claude Code 做同样的事</h3>
+                <div class="three-things-item">管理 token 预算和 API 配额</div>
+                <div class="three-things-item">调度 AI 智能体实例</div>
+                <div class="three-things-item">执行权限规则和沙箱限制</div>
+            </div>
+        </div>
+
+        <div class="course-callout">
+            <div class="course-callout-header">
+                <span>📚</span>
+                <span>课程关联</span>
+            </div>
+            <p>本书的分析框架大量借鉴<strong>操作系统</strong>（Operating Systems）课程的核心概念。如果你正在或即将学习这门课，Claude Code 是一个绝佳的"现代操作系统"案例研究——它把教科书中的抽象概念（进程调度、内存管理、安全模型、文件系统）投射到了 AI 应用的全新领域。同时，本书涉及的工程分析方法对应<strong>软件工程</strong>（Software Engineering）课程中的<strong>逆向工程</strong>（Reverse Engineering）和<strong>架构分析</strong>（Architecture Analysis）实践。</p>
+        </div>
+
+        <div class="mapping-section">
+            <p class="mapping-header">这个类比能帮你建立直觉。下面这张表是全书的"翻译对照表"——每当你在后续章节中遇到一个 Claude Code 的概念，你可以在这里找到它在操作系统世界中的对应物：</p>
+
+            <table class="mapping-table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%">操作系统概念</th>
+                        <th style="width: 35%">Claude Code 对应物</th>
+                        <th style="width: 45%">为什么这个类比成立</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="os-concept">内核 (Kernel)</span></td>
+                        <td><span class="cc-concept">QueryEngine + queryLoop</span></td>
+                        <td>所有请求都经过它调度——调用 API、分发工具、管理上下文，就像内核管理 CPU 时间片和内存分配</td>
+                    </tr>
+                    <tr>
+                        <td><span class="os-concept">系统调用 (Syscall)</span></td>
+                        <td><span class="cc-concept">工具调用 (Tool invocation)</span></td>
+                        <td>AI 不能直接读写文件——它必须通过工具系统发出"系统调用"，就像用户态程序必须通过 syscall 访问硬件</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="insight-block">
+                <div class="insight-header">
+                    <span>💡</span>
+                    <span>通俗理解</span>
+                </div>
+                <p>QueryEngine 就像<span class="analogy-name">快递分拣流水线</span>——收件（接收用户输入）→ 分拣（判断需要什么工具）→ 装车（调用 API）→ 送达（执行工具）→ 签收（返回结果）→ 等下一单（继续循环）。</p>
+            </div>
+
+            <div class="insight-block">
+                <div class="insight-header">
+                    <span>💡</span>
+                    <span>通俗理解</span>
+                </div>
+                <p>工具就像<span class="analogy-name">员工的工作技能证书</span>——读文件证书、写代码证书、搜索证书，每个技能需要考核通过（权限检查）才能用。Claude 不是万能的，它需要"持证上岗"。</p>
+            </div>
+        </div>
+
+        <p class="q4-guidance">AI 不能直接读写文件——它必须通过工具系统发出"系统调用"，就像用户态程序必须通过 syscall 访问硬件。</p>
+
+        <div class="vis-container">
+            <div class="vis-header">
+                <span class="vis-title">43 个内置工具完整目录</span>
+                <span class="vis-badge">VIS-0-010 · 0.3-A</span>
+            </div>
+            <div id="vis-0-010-content"></div>
+        </div>
+
+        <div class="block-transition">
+            <p>OS 类比表已经把概念坐标系建立起来。但有些子系统重要到一句类比说不清——它们需要图。</p>
+            <p class="highlight">我们从最关键的'安全'开始。</p>
+            <p style="margin-top: var(--cc-space-4); font-size: var(--cc-font-size-lg); color: var(--cc-color-text-secondary);">安全才是 AI 智能体的第一道门——而它本身就是一个矩阵。</p>
+        </div>
+
+        <div class="hero-footer">
+            <span>Claude Code 白皮书 · 序章</span>
+            <span>Block 06 · OS 建立认知</span>
+        </div>
+    </div>
+
+    <script>
+        const toolsData = {"file": {"name": "File Operations", "icon": "📁", "color": "#58a6ff", "tools": [{"name": "Read", "desc": "读取文件内容，支持文本、图片、PDF等多种格式", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "Write", "desc": "创建新文件或完全覆盖已有文件", "readonly": false, "concurrent": false, "destructive": true, "confirm": true}, {"name": "Edit", "desc": "精确替换文件中指定的文本片段", "readonly": false, "concurrent": false, "destructive": false, "confirm": true}, {"name": "MultiEdit", "desc": "在同一文件中执行多处编辑操作", "readonly": false, "concurrent": false, "destructive": false, "confirm": true}, {"name": "Glob", "desc": "使用glob模式搜索文件路径", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "Grep", "desc": "使用ripgrep搜索文件内容", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "NotebookEdit", "desc": "编辑Jupyter notebook的特定单元格", "readonly": false, "concurrent": false, "destructive": false, "confirm": true}, {"name": "ReadMcpResource", "desc": "从MCP服务器读取资源", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "WriteMcpResource", "desc": "向MCP服务器写入资源", "readonly": false, "concurrent": false, "destructive": false, "confirm": true}, {"name": "ListMcpResources", "desc": "列出MCP服务器可用资源列表", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "BatchWrite", "desc": "批量写入多个文件", "readonly": false, "concurrent": false, "destructive": true, "confirm": true}, {"name": "BatchEdit", "desc": "批量编辑多个文件中的文本", "readonly": false, "concurrent": false, "destructive": false, "confirm": true}]}, "search": {"name": "Search & Query", "icon": "🔍", "color": "#3fb950", "tools": [{"name": "Grep", "desc": "文件内容搜索，支持正则表达式", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "Glob", "desc": "文件路径模式匹配搜索", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "CodeSearch", "desc": "语义化代码搜索，理解代码含义", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "WebSearch", "desc": "执行网络搜索获取信息", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "ListMcpResources", "desc": "列出MCP服务器可用资源", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "SymbolSearch", "desc": "搜索代码符号（函数、类、变量）", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}]}, "exec": {"name": "Code Execution", "icon": "⚡", "color": "#f0883e", "tools": [{"name": "Bash", "desc": "执行Shell命令，支持timeout和working directory", "readonly": false, "concurrent": true, "destructive": true, "confirm": true}, {"name": "NodeEval", "desc": "在沙箱中执行JavaScript代码", "readonly": false, "concurrent": false, "destructive": false, "confirm": true}, {"name": "PythonEval", "desc": "在沙箱中执行Python代码", "readonly": false, "concurrent": false, "destructive": false, "confirm": true}, {"name": "ExitPlanMode", "desc": "退出计划模式并请求用户批准", "readonly": false, "concurrent": false, "destructive": false, "confirm": true}]}, "agent": {"name": "Agent Collaboration", "icon": "🤖", "color": "#bc8cff", "tools": [{"name": "Agent", "desc": "创建子Agent执行独立任务，继承父权限", "readonly": false, "concurrent": true, "destructive": false, "confirm": true}, {"name": "TaskOutput", "desc": "获取后台任务的输出结果", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "TaskStop", "desc": "停止正在运行的后台任务", "readonly": false, "concurrent": false, "destructive": false, "confirm": true}]}, "web": {"name": "Web Interaction", "icon": "🌐", "color": "#39d353", "tools": [{"name": "WebFetch", "desc": "获取并解析网页内容，支持HTML转markdown", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "WebSearch", "desc": "搜索网络并返回结果摘要", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}]}, "other": {"name": "Other Tools", "icon": "🛠️", "color": "#8b949e", "tools": [{"name": "TodoWrite", "desc": "创建和管理待办事项列表", "readonly": false, "concurrent": true, "destructive": false, "confirm": false}, {"name": "Memory", "desc": "读写持久化记忆文件", "readonly": false, "concurrent": false, "destructive": false, "confirm": false}, {"name": "AskUserQuestion", "desc": "向用户展示问题并获取选择", "readonly": true, "concurrent": false, "destructive": false, "confirm": false}, {"name": "CronCreate", "desc": "创建定时任务，支持cron表达式", "readonly": false, "concurrent": false, "destructive": false, "confirm": true}, {"name": "CronDelete", "desc": "删除已创建的定时任务", "readonly": false, "concurrent": false, "destructive": true, "confirm": true}, {"name": "CronList", "desc": "列出所有定时任务", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "RemoteTrigger", "desc": "调用远程触发器API", "readonly": false, "concurrent": true, "destructive": false, "confirm": true}, {"name": "Skill", "desc": "执行特定的技能/工作流", "readonly": false, "concurrent": true, "destructive": false, "confirm": false}, {"name": "EnterPlanMode", "desc": "进入计划模式进行复杂任务规划", "readonly": false, "concurrent": false, "destructive": false, "confirm": false}, {"name": "EnterWorktree", "desc": "创建并进入Git工作树", "readonly": false, "concurrent": false, "destructive": false, "confirm": true}, {"name": "ExitWorktree", "desc": "退出Git工作树", "readonly": false, "concurrent": false, "destructive": false, "confirm": false}, {"name": "CronGet", "desc": "获取定时任务的详细信息", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "NotebookRead", "desc": "读取Jupyter notebook内容", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "McpToolCall", "desc": "调用MCP工具", "readonly": false, "concurrent": true, "destructive": false, "confirm": true}, {"name": "TaskStatus", "desc": "查询后台任务状态", "readonly": true, "concurrent": true, "destructive": false, "confirm": false}, {"name": "InvokeMCP", "desc": "调用MCP服务器工具", "readonly": false, "concurrent": true, "destructive": false, "confirm": true}]}};
+
+        function renderTools() {
+            const container = document.getElementById('vis-0-010-content');
+            if (!container) return;
+            
+            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">';
+            
+            for (const [key, category] of Object.entries(toolsData)) {
+                for (const tool of category.tools) {
+                    const tagClass = tool.readonly ? 'tag--readonly' : 'tag--writable';
+                    const tagText = tool.readonly ? 'Read-Only' : 'Writable';
+                    const concurrentTag = tool.concurrent ? '<span style="font-family: var(--cc-font-mono); font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(137, 87, 229, 0.2); color: #bc8cff; margin-left: 4px;">Concurrent</span>' : '';
+                    const destructiveTag = tool.destructive ? '<span style="font-family: var(--cc-font-mono); font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(218, 54, 51, 0.2); color: #f85149; margin-left: 4px;">Destructive</span>' : '';
+                    const confirmTag = tool.confirm ? '<span style="font-family: var(--cc-font-mono); font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(210, 153, 34, 0.2); color: #d29922; margin-left: 4px;">Confirm</span>' : '';
+                    
+                    html += '<div style="background: var(--cc-color-surface-secondary); border: 1px solid var(--cc-color-border); border-radius: 8px; padding: 16px; border-top: 3px solid ' + category.color + ';">';
+                    html += '<div style="font-family: var(--cc-font-mono); font-size: 14px; font-weight: 600; color: var(--cc-color-text-primary); margin-bottom: 8px;">' + tool.name + '</div>';
+                    html += '<div style="font-size: 13px; color: var(--cc-color-text-secondary); margin-bottom: 12px; line-height: 1.5;">' + tool.desc + '</div>';
+                    html += '<div style="display: flex; flex-wrap: wrap; gap: 4px;">';
+                    html += '<span style="font-family: var(--cc-font-mono); font-size: 10px; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em;" class="' + tagClass + '">' + tagText + '</span>';
+                    html += concurrentTag + destructiveTag + confirmTag;
+                    html += '</div></div>';
+                }
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        document.addEventListener('DOMContentLoaded', renderTools);
+    </script>
+</body>
+</html>

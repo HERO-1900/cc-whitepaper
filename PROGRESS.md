@@ -2,7 +2,7 @@
 
 > 📌 [黄金资产索引](handoff/golden-assets-index-2026-04-06.md) — 11 件高价值文件全收录，每次写 Brief 前先查，防止重复劳动或遗漏已有资产
 
-> 最后更新：2026-04-07 04:15 — 自主值班轮 #4（终端 #3 凌晨 02:30-04:15）：V2 序章 7 块双跑 + 4 atomic commit + V2 序章 **8/11 完成** (Block 1+2+3+4+5+6+8+9)。Block 1 hero 引擎盖 (Kimi 62 + L5 修复)，Block 2 群雄并起 (Kimi 75/75 满分)，Block 4 数字震撼 (Kimi 69 + Prompt 卡)，Block 5 使命陈述 (66+66 fusion)，Block 6 OS 建立 (Kimi-only, MiniMax FM-06 挂死)，Block 8 阅读分流 (Kimi-only, MiniMax FM-06 挂死)，Block 9 收尾合一 (MiniMax 65/65 选中)。FM-15/16 沉淀。剩 Block 7 三拆 (7a/7b/7c)。
+> 最后更新：2026-04-07 04:35 — 自主值班轮 #4（终端 #3 凌晨 02:30-04:35）：V2 序章 8 块双跑 + 5 atomic commit + V2 序章 **9/11 完成** (Block 1+2+3+4+5+6+7a+8+9)。Block 7a 安全防线 (Kimi 重试成功 / MiniMax FM-06 跳过)，含安全模型矩阵 + 权限对照表。Block 6 MiniMax 救援文件 (晚到 26 KB)。剩 Block 7b/7c (信息密度顶点剩余 2 拍)。
 
 ## 项目概况
 
@@ -14,7 +14,7 @@
 | 完整度 | 83/83 = 4.95/5 avg |
 | 图表进度 | 122/121 生产覆盖 ✅（122 HTML / 121 brief，VIS-0-002 有 B 变体）+ 105/122 placeholder 内联（B 路径 UI 已禁用，待 V2 范式重做）；4 张 v2 升级版在 simple/ 待用户决策是否替换 v1 |
 | 工作区清洁度 | ✅ 142.5 MB 归档（sandbox-astro-spike + test-viz-revisions + test-viz-_archive）+ 7 空文件删除，详见 archive/_archive-log-2026-04-06.md |
-| V2 序章阶段 | 阶段 1✅ → 阶段 1.5✅ → 阶段 2.1✅ → 阶段 2.2 (推进块 1+2+4+5+9)✅ → **阶段 2.3 (推进块 6+8，8/11 完成)** 🟡 — 剩 7a/7b/7c |
+| V2 序章阶段 | 阶段 2.2 ✅ → 阶段 2.3 ✅ → **阶段 2.4 (推进 7a，9/11 完成)** 🟡 — 剩 7b/7c |
 | 主题系统 | 暗/亮/auto 三态切换器 ✅（FOUC 防御 + localStorage 跨 Tab 同步） |
 | Design Tokens | 246 个 `--cc-*` 变量 ✅（atomic + semantic 两层架构） |
 | 源码统计 | 1,902 文件 / 512,695 LOC 全量扫描完成 |

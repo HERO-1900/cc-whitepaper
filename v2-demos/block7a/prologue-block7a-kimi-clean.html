@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>序章 · Block 07a · 安全防线 | Claude Code 源码白皮书</title>
+    <style>
+        :root {
+            /* Claude Code Design Tokens */
+            --cc-bg-primary: #0d1117;
+            --cc-bg-secondary: #161b22;
+            --cc-bg-tertiary: #21262d;
+            --cc-bg-elevated: #21262d;
+
+            --cc-border-default: #30363d;
+            --cc-border-muted: #21262d;
+            --cc-border-accent: #388bfd;
+
+            --cc-fg-default: #e6edf3;
+            --cc-fg-muted: #7d8590;
+            --cc-fg-subtle: #484f58;
+
+            --cc-accent-blue: #58a6ff;
+            --cc-accent-green: #3fb950;
+            --cc-accent-yellow: #d29922;
+            --cc-accent-orange: #f0883e;
+            --cc-accent-red: #f85149;
+            --cc-accent-purple: #a371f7;
+
+            --cc-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            --cc-font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Noto Sans Mono SC', Consolas, monospace;
+
+            --cc-space-1: 4px;
+            --cc-space-2: 8px;
+            --cc-space-3: 12px;
+            --cc-space-4: 16px;
+            --cc-space-5: 20px;
+            --cc-space-6: 24px;
+            --cc-space-8: 32px;
+            --cc-space-10: 40px;
+            --cc-space-12: 48px;
+            --cc-space-16: 64px;
+
+            --cc-font-size-xs: 12px;
+            --cc-font-size-sm: 14px;
+            --cc-font-size-base: 16px;
+            --cc-font-size-lg: 18px;
+            --cc-font-size-xl: 20px;
+            --cc-font-size-2xl: 24px;
+            --cc-font-size-3xl: 30px;
+            --cc-font-size-4xl: 36px;
+            --cc-font-size-5xl: 48px;
+
+            /* Matrix color codes */
+            --color-strong: #3fb950;
+            --color-medium: #d29922;
+            --color-weak: #f85149;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--cc-font-sans);
+            background: var(--cc-bg-primary);
+            color: var(--cc-fg-default);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+
+        /* Prologue Block Container */
+        .prologue-block {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--cc-space-12) var(--cc-space-6);
+        }
+
+        /* Marginal Label */
+        .prologue-marginal-label {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-3);
+            margin-bottom: var(--cc-space-6);
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-fg-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .prologue-marginal-label::before {
+            content: '';
+            width: 24px;
+            height: 2px;
+            background: var(--cc-accent-blue);
+        }
+
+        /* Hero Footer */
+        .hero-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--cc-space-4) 0;
+            margin-bottom: var(--cc-space-8);
+            border-bottom: 1px solid var(--cc-border-default);
+        }
+
+        .hero-footer .block-number {
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-4xl);
+            font-weight: 700;
+            color: var(--cc-accent-blue);
+        }
+
+        .hero-footer .block-meta {
+            text-align: right;
+        }
+
+        .hero-footer .block-name {
+            font-size: var(--cc-font-size-xl);
+            font-weight: 600;
+            color: var(--cc-fg-default);
+        }
+
+        .hero-footer .block-subtitle {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-fg-muted);
+        }
+
+        /* Block Title */
+        .block-title {
+            font-size: var(--cc-font-size-5xl);
+            font-weight: 700;
+            margin-bottom: var(--cc-space-8);
+            background: linear-gradient(135deg, var(--cc-fg-default) 0%, var(--cc-accent-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* OS Table Anchor Card */
+        .os-table-anchor-card {
+            background: var(--cc-bg-secondary);
+            border: 1px solid var(--cc-border-default);
+            border-radius: 12px;
+            padding: var(--cc-space-6);
+            margin-bottom: var(--cc-space-8);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .os-table-anchor-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--cc-accent-green), var(--cc-accent-blue));
+        }
+
+        .os-anchor-label {
+            display: inline-block;
+            background: var(--cc-bg-tertiary);
+            color: var(--cc-accent-blue);
+            font-size: var(--cc-font-size-xs);
+            font-weight: 600;
+            padding: var(--cc-space-1) var(--cc-space-3);
+            border-radius: 4px;
+            margin-bottom: var(--cc-space-3);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .os-anchor-content {
+            display: grid;
+            grid-template-columns: 200px 1fr 1fr;
+            gap: var(--cc-space-4);
+            align-items: center;
+        }
+
+        .os-anchor-concept {
+            font-size: var(--cc-font-size-lg);
+            font-weight: 600;
+            color: var(--cc-fg-default);
+        }
+
+        .os-anchor-cc {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-accent-green);
+        }
+
+        .os-anchor-reason {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-fg-muted);
+            line-height: 1.6;
+        }
+
+        /* Insight Block */
+        .insight-block {
+            background: linear-gradient(135deg, rgba(88, 166, 255, 0.1) 0%, rgba(163, 113, 247, 0.1) 100%);
+            border: 1px solid var(--cc-border-accent);
+            border-radius: 12px;
+            padding: var(--cc-space-6);
+            margin: var(--cc-space-8) 0;
+            position: relative;
+        }
+
+        .insight-block::before {
+            content: '💡 通俗理解';
+            display: block;
+            font-size: var(--cc-font-size-sm);
+            font-weight: 600;
+            color: var(--cc-accent-blue);
+            margin-bottom: var(--cc-space-3);
+        }
+
+        .insight-block p {
+            font-size: var(--cc-font-size-lg);
+            color: var(--cc-fg-default);
+            line-height: 1.8;
+        }
+
+        .insight-block .highlight {
+            color: var(--cc-accent-yellow);
+            font-weight: 600;
+        }
+
+        /* Section Transition */
+        .section-transition {
+            font-size: var(--cc-font-size-xl);
+            color: var(--cc-fg-muted);
+            text-align: center;
+            margin: var(--cc-space-10) 0;
+            padding: var(--cc-space-6);
+            border-left: 3px solid var(--cc-accent-blue);
+            background: var(--cc-bg-secondary);
+        }
+
+        /* VIS-0.3-B Security Matrix */
+        .vis-0-3-b-container {
+            margin: var(--cc-space-10) 0;
+        }
+
+        .vis-title {
+            font-size: var(--cc-font-size-3xl);
+            font-weight: 700;
+            margin-bottom: var(--cc-space-2);
+            color: var(--cc-fg-default);
+        }
+
+        .vis-subtitle {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-fg-muted);
+            margin-bottom: var(--cc-space-6);
+        }
+
+        .security-matrix {
+            display: grid;
+            grid-template-columns: 180px repeat(3, 1fr);
+            gap: var(--cc-space-3);
+            background: var(--cc-bg-secondary);
+            border: 1px solid var(--cc-border-default);
+            border-radius: 12px;
+            padding: var(--cc-space-4);
+            overflow: hidden;
+        }
+
+        /* Matrix Header Row */
+        .matrix-header-cell {
+            background: var(--cc-bg-tertiary);
+            padding: var(--cc-space-4);
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: var(--cc-font-size-sm);
+        }
+
+        .matrix-header-cell.empty {
+            background: transparent;
+        }
+
+        .matrix-header-cell .icon {
+            font-size: var(--cc-font-size-2xl);
+            display: block;
+            margin-bottom: var(--cc-space-2);
+        }
+
+        /* Matrix Row Headers */
+        .matrix-row-header {
+            background: var(--cc-bg-tertiary);
+            padding: var(--cc-space-4);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-3);
+            font-weight: 600;
+        }
+
+        .matrix-row-header .shield-icon {
+            font-size: var(--cc-font-size-xl);
+        }
+
+        /* Matrix Data Cells */
+        .matrix-cell {
+            background: var(--cc-bg-elevated);
+            padding: var(--cc-space-4);
+            border-radius: 8px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .matrix-cell:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .matrix-cell .measure {
+            font-size: var(--cc-font-size-sm);
+            font-weight: 600;
+            margin-bottom: var(--cc-space-2);
+        }
+
+        .matrix-cell .effectiveness {
+            font-size: var(--cc-font-size-xs);
+            padding: var(--cc-space-1) var(--cc-space-2);
+            border-radius: 4px;
+            display: inline-block;
+            font-weight: 600;
+        }
+
+        .matrix-cell .effectiveness.strong {
+            background: rgba(63, 185, 80, 0.2);
+            color: var(--color-strong);
+        }
+
+        .matrix-cell .effectiveness.medium {
+            background: rgba(210, 153, 34, 0.2);
+            color: var(--color-medium);
+        }
+
+        .matrix-cell .effectiveness.weak {
+            background: rgba(248, 81, 73, 0.2);
+            color: var(--color-weak);
+        }
+
+        .matrix-cell.strong {
+            border-color: var(--color-strong);
+        }
+
+        .matrix-cell.medium {
+            border-color: var(--color-medium);
+        }
+
+        .matrix-cell.weak {
+            border-color: var(--color-weak);
+        }
+
+        /* Security Score Dashboard */
+        .security-dashboard {
+            background: var(--cc-bg-secondary);
+            border: 1px solid var(--cc-border-default);
+            border-radius: 12px;
+            padding: var(--cc-space-6);
+            margin-top: var(--cc-space-6);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+        }
+
+        .dashboard-title {
+            font-size: var(--cc-font-size-lg);
+            font-weight: 600;
+            color: var(--cc-fg-muted);
+        }
+
+        .score-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: conic-gradient(var(--cc-accent-green) 0deg 324deg, var(--cc-bg-tertiary) 324deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .score-circle::before {
+            content: '';
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: var(--cc-bg-secondary);
+        }
+
+        .score-value {
+            position: relative;
+            font-size: var(--cc-font-size-3xl);
+            font-weight: 700;
+            color: var(--cc-accent-green);
+        }
+
+        .score-label {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-fg-muted);
+        }
+
+        /* Pull Quote */
+        .pull-quote {
+            font-size: var(--cc-font-size-2xl);
+            font-weight: 600;
+            color: var(--cc-fg-default);
+            text-align: center;
+            padding: var(--cc-space-8) var(--cc-space-6);
+            margin: var(--cc-space-10) 0;
+            background: var(--cc-bg-secondary);
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .pull-quote::before,
+        .pull-quote::after {
+            content: '"';
+            font-size: var(--cc-font-size-5xl);
+            color: var(--cc-accent-blue);
+            opacity: 0.3;
+            position: absolute;
+        }
+
+        .pull-quote::before {
+            top: var(--cc-space-4);
+            left: var(--cc-space-6);
+        }
+
+        .pull-quote::after {
+            bottom: var(--cc-space-4);
+            right: var(--cc-space-6);
+            transform: rotate(180deg);
+        }
+
+        /* VIS-0.3-C Permission Table */
+        .vis-0-3-c-container {
+            margin: var(--cc-space-10) 0;
+        }
+
+        .permission-table-wrapper {
+            background: var(--cc-bg-secondary);
+            border: 1px solid var(--cc-border-default);
+            border-radius: 12px;
+            padding: var(--cc-space-4);
+            overflow-x: auto;
+        }
+
+        .permission-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: var(--cc-space-2);
+        }
+
+        .permission-table th {
+            background: var(--cc-bg-tertiary);
+            padding: var(--cc-space-3) var(--cc-space-2);
+            border-radius: 8px;
+            font-size: var(--cc-font-size-sm);
+            font-weight: 600;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .permission-table th.recommended {
+            border: 2px solid var(--cc-accent-blue);
+            background: rgba(88, 166, 255, 0.15);
+            position: relative;
+        }
+
+        .permission-table th.recommended::after {
+            content: '推荐';
+            position: absolute;
+            top: -10px;
+            right: 50%;
+            transform: translateX(50%);
+            background: var(--cc-accent-blue);
+            color: white;
+            font-size: var(--cc-font-size-xs);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .permission-table th .mode-name {
+            display: block;
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-accent-blue);
+            margin-top: var(--cc-space-1);
+        }
+
+        .permission-table th .risk-tag {
+            display: inline-block;
+            font-size: var(--cc-font-size-xs);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: var(--cc-space-1);
+        }
+
+        .permission-table th .risk-tag.low {
+            background: rgba(63, 185, 80, 0.2);
+            color: var(--cc-accent-green);
+        }
+
+        .permission-table th .risk-tag.medium {
+            background: rgba(210, 153, 34, 0.2);
+            color: var(--cc-accent-yellow);
+        }
+
+        .permission-table th .risk-tag.high {
+            background: rgba(248, 81, 73, 0.2);
+            color: var(--cc-accent-red);
+        }
+
+        .permission-table td {
+            padding: var(--cc-space-3);
+            border-radius: 6px;
+            text-align: center;
+            font-size: var(--cc-font-size-sm);
+            transition: all 0.2s ease;
+        }
+
+        .permission-table tr:hover td {
+            background: var(--cc-bg-tertiary);
+        }
+
+        .permission-table td.tool-name {
+            background: var(--cc-bg-tertiary);
+            font-family: var(--cc-font-mono);
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .permission-table td.allow {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--cc-accent-green);
+        }
+
+        .permission-table td.confirm {
+            background: rgba(210, 153, 34, 0.15);
+            color: var(--cc-accent-yellow);
+        }
+
+        .permission-table td.block {
+            background: rgba(248, 81, 73, 0.15);
+            color: var(--cc-accent-red);
+        }
+
+        .permission-table td.recommended-col {
+            border-left: 2px solid var(--cc-accent-blue);
+            border-right: 2px solid var(--cc-accent-blue);
+        }
+
+        .permission-table td.recommended-col.allow {
+            background: rgba(88, 166, 255, 0.1);
+        }
+
+        /* Balance Statement */
+        .balance-statement {
+            background: linear-gradient(135deg, var(--cc-bg-secondary) 0%, var(--cc-bg-tertiary) 100%);
+            border: 1px solid var(--cc-border-default);
+            border-radius: 12px;
+            padding: var(--cc-space-6);
+            margin: var(--cc-space-8) 0;
+            text-align: center;
+        }
+
+        .balance-statement p {
+            font-size: var(--cc-font-size-xl);
+            color: var(--cc-fg-default);
+            line-height: 1.8;
+        }
+
+        .balance-statement .mode-highlight {
+            font-family: var(--cc-font-mono);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .balance-statement .mode-highlight.default {
+            background: rgba(88, 166, 255, 0.2);
+            color: var(--cc-accent-blue);
+        }
+
+        .balance-statement .mode-highlight.auto {
+            background: rgba(63, 185, 80, 0.2);
+            color: var(--cc-accent-green);
+        }
+
+        .balance-statement .mode-highlight.bypass {
+            background: rgba(248, 81, 73, 0.2);
+            color: var(--cc-accent-red);
+        }
+
+        /* Block Transition */
+        .block-transition {
+            background: linear-gradient(135deg, rgba(163, 113, 247, 0.1) 0%, rgba(88, 166, 255, 0.1) 100%);
+            border: 1px solid var(--cc-border-accent);
+            border-radius: 12px;
+            padding: var(--cc-space-8);
+            margin-top: var(--cc-space-12);
+            text-align: center;
+        }
+
+        .block-transition p {
+            font-size: var(--cc-font-size-xl);
+            color: var(--cc-fg-default);
+            line-height: 1.8;
+        }
+
+        .block-transition .highlight {
+            color: var(--cc-accent-blue);
+            font-weight: 600;
+        }
+
+        /* Legend */
+        .matrix-legend {
+            display: flex;
+            justify-content: center;
+            gap: var(--cc-space-6);
+            margin-top: var(--cc-space-4);
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-2);
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-fg-muted);
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .legend-color.strong {
+            background: var(--color-strong);
+        }
+
+        .legend-color.medium {
+            background: var(--color-medium);
+        }
+
+        .legend-color.weak {
+            background: var(--color-weak);
+        }
+
+        /* Footer Note */
+        .footer-note {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-fg-muted);
+            text-align: center;
+            margin-top: var(--cc-space-4);
+            padding: var(--cc-space-3);
+            background: var(--cc-bg-tertiary);
+            border-radius: 8px;
+        }
+
+        .footer-note code {
+            font-family: var(--cc-font-mono);
+            color: var(--cc-accent-yellow);
+            background: var(--cc-bg-secondary);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .fade-in-delay-1 { animation-delay: 0.1s; }
+        .fade-in-delay-2 { animation-delay: 0.2s; }
+        .fade-in-delay-3 { animation-delay: 0.3s; }
+        .fade-in-delay-4 { animation-delay: 0.4s; }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .security-matrix {
+                grid-template-columns: 120px repeat(3, 1fr);
+                gap: var(--cc-space-2);
+            }
+
+            .os-anchor-content {
+                grid-template-columns: 1fr;
+                gap: var(--cc-space-2);
+            }
+
+            .matrix-cell {
+                padding: var(--cc-space-2);
+            }
+
+            .matrix-cell .measure {
+                font-size: var(--cc-font-size-xs);
+            }
+        }
+
+        /* Light theme override */
+        @media (prefers-color-scheme: light) {
+            :root {
+                --cc-bg-primary: #ffffff;
+                --cc-bg-secondary: #f6f8fa;
+                --cc-bg-tertiary: #eaeef2;
+                --cc-bg-elevated: #ffffff;
+                --cc-border-default: #d0d7de;
+                --cc-border-muted: #eaeef2;
+                --cc-fg-default: #24292f;
+                --cc-fg-muted: #57606a;
+                --cc-fg-subtle: #6e7781;
+            }
+
+            .matrix-cell.strong {
+                background: rgba(63, 185, 80, 0.1);
+            }
+
+            .matrix-cell.medium {
+                background: rgba(210, 153, 34, 0.1);
+            }
+
+            .matrix-cell.weak {
+                background: rgba(248, 81, 73, 0.1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="prologue-block">
+        <!-- Marginal Label -->
+        <div class="prologue-marginal-label">序章 · 阅读指南</div>
+
+        <!-- Hero Footer -->
+        <div class="hero-footer">
+            <div class="block-number">07a</div>
+            <div class="block-meta">
+                <div class="block-name">安全防线</div>
+                <div class="block-subtitle">Security Defense Layers</div>
+            </div>
+        </div>
+
+        <!-- Block Title -->
+        <h1 class="block-title">安全防线</h1>
+
+        <!-- OS Table Anchor Card -->
+        <div class="os-table-anchor-card fade-in">
+            <div class="os-anchor-label">OS 类比锚点</div>
+            <div class="os-anchor-content">
+                <div class="os-anchor-concept">安全模型 (Security)</div>
+                <div class="os-anchor-cc">权限系统 + 沙箱 + 企业策略</div>
+                <div class="os-anchor-reason">十步权限状态机、seatbelt/bwrap 进程隔离、bypass-immune 规则——多层防御纵深</div>
+            </div>
+        </div>
+
+        <!-- Insight Block: Community Gate -->
+        <div class="insight-block fade-in fade-in-delay-1">
+            <p>权限系统就像<span class="highlight">小区门禁</span>——业主（已批准操作）= 自动放行，访客（未知操作）= 要登记确认，外卖（沙箱内命令）= 扫码进，可疑人员（危险操作）= 直接拒绝。</p>
+        </div>
+
+        <!-- Section Transition -->
+        <div class="section-transition fade-in fade-in-delay-2">
+            但门禁体系不止有一道门——它是四层 × 三种威胁的矩阵
+        </div>
+
+        <!-- VIS-0.3-B Security Matrix -->
+        <div class="vis-0-3-b-container">
+            <h2 class="vis-title">安全模型全景图</h2>
+            <p class="vis-subtitle">四层防御 × 三种威胁的安全矩阵</p>
+
+            <div class="security-matrix">
+                <!-- Header Row -->
+                <div class="matrix-header-cell empty"></div>
+                <div class="matrix-header-cell">
+                    <span class="icon">💀</span>
+                    Prompt 注入
+                </div>
+                <div class="matrix-header-cell">
+                    <span class="icon">📁</span>
+                    文件越权
+                </div>
+                <div class="matrix-header-cell">
+                    <span class="icon">💻</span>
+                    命令逃逸
+                </div>
+
+                <!-- Row 1: Permission System -->
+                <div class="matrix-row-header">
+                    <span class="shield-icon">🛡️</span>
+                    权限系统
+                </div>
+                <div class="matrix-cell strong">
+                    <div class="measure">十步状态机</div>
+                    <span class="effectiveness strong">✓ 强</span>
+                </div>
+                <div class="matrix-cell strong">
+                    <div class="measure">路径白名单</div>
+                    <span class="effectiveness strong">✓ 强</span>
+                </div>
+                <div class="matrix-cell medium">
+                    <div class="measure">Bash 权限分级</div>
+                    <span class="effectiveness medium">⚠ 中</span>
+                </div>
+
+                <!-- Row 2: Sandbox Isolation -->
+                <div class="matrix-row-header">
+                    <span class="shield-icon">🔒</span>
+                    沙箱隔离
+                </div>
+                <div class="matrix-cell medium">
+                    <div class="measure">bwrap 进程隔离</div>
+                    <span class="effectiveness medium">⚠ 中</span>
+                </div>
+                <div class="matrix-cell strong">
+                    <div class="measure">seatbelt 文件沙箱</div>
+                    <span class="effectiveness strong">✓ 强</span>
+                </div>
+                <div class="matrix-cell strong">
+                    <div class="measure">受限 Shell</div>
+                    <span class="effectiveness strong">✓ 强</span>
+                </div>
+
+                <!-- Row 3: Command Pre-check -->
+                <div class="matrix-row-header">
+                    <span class="shield-icon">🔍</span>
+                    命令预检
+                </div>
+                <div class="matrix-cell medium">
+                    <div class="measure">Prompt 模式过滤</div>
+                    <span class="effectiveness medium">⚠ 中</span>
+                </div>
+                <div class="matrix-cell strong">
+                    <div class="measure">危险命令拦截</div>
+                    <span class="effectiveness strong">✓ 强</span>
+                </div>
+                <div class="matrix-cell strong">
+                    <div class="measure">命令注入检测</div>
+                    <span class="effectiveness strong">✓ 强</span>
+                </div>
+
+                <!-- Row 4: Enterprise Policy -->
+                <div class="matrix-row-header">
+                    <span class="shield-icon">🏢</span>
+                    企业策略
+                </div>
+                <div class="matrix-cell strong">
+                    <div class="measure">bypass-immune</div>
+                    <span class="effectiveness strong">✓ 强</span>
+                </div>
+                <div class="matrix-cell strong">
+                    <div class="measure">allowedTools 白名单</div>
+                    <span class="effectiveness strong">✓ 强</span>
+                </div>
+                <div class="matrix-cell medium">
+                    <div class="measure">审计日志追溯</div>
+                    <span class="effectiveness medium">⚠ 中</span>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="matrix-legend">
+                <div class="legend-item">
+                    <div class="legend-color strong"></div>
+                    <span>强防护 (#3fb950)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color medium"></div>
+                    <span>中防护 (#d29922)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color weak"></div>
+                    <span>弱防护 (#f85149)</span>
+                </div>
+            </div>
+
+            <!-- Security Score Dashboard -->
+            <div class="security-dashboard">
+                <div class="dashboard-title">整体安全评分</div>
+                <div class="score-circle">
+                    <span class="score-value">A+</span>
+                </div>
+                <div class="score-label">多层纵深防御</div>
+            </div>
+        </div>
+
+        <!-- Pull Quote Q2 -->
+        <div class="pull-quote fade-in">
+            安全不是一个开关，而是矩阵化、可配置、有兜底的纵深体系。四层防御中，"权限系统"是最贴近用户的一层——而权限系统本身又有 6 种模式，每种模式下不同工具的行为不一样。
+        </div>
+
+        <!-- VIS-0.3-C Permission Table -->
+        <div class="vis-0-3-c-container">
+            <h2 class="vis-title">权限模型对照表</h2>
+            <p class="vis-subtitle">6 种权限模式 × 工具行为矩阵</p>
+
+            <div class="permission-table-wrapper">
+                <table class="permission-table">
+                    <thead>
+                        <tr>
+                            <th>工具</th>
+                            <th>
+                                plan
+                                <span class="mode-name">交互式规划</span>
+                                <span class="risk-tag low">低风险</span>
+                            </th>
+                            <th class="recommended">
+                                default
+                                <span class="mode-name">默认平衡</span>
+                                <span class="risk-tag low">低风险</span>
+                            </th>
+                            <th>
+                                acceptEdits
+                                <span class="mode-name">自动接受编辑</span>
+                                <span class="risk-tag medium">中风险</span>
+                            </th>
+                            <th>
+                                autoAccept
+                                <span class="mode-name">全自动化</span>
+                                <span class="risk-tag medium">中风险</span>
+                            </th>
+                            <th>
+                                bypass
+                                <span class="mode-name">绕过确认</span>
+                                <span class="risk-tag high">高风险</span>
+                            </th>
+                            <th>
+                                dontAsk
+                                <span class="mode-name">静默拒绝</span>
+                                <span class="risk-tag low">低风险</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="tool-name">Read</td>
+                            <td class="confirm">⚠ 确认</td>
+                            <td class="allow recommended-col">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                        </tr>
+                        <tr>
+                            <td class="tool-name">Glob</td>
+                            <td class="confirm">⚠ 确认</td>
+                            <td class="allow recommended-col">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                        </tr>
+                        <tr>
+                            <td class="tool-name">Grep</td>
+                            <td class="confirm">⚠ 确认</td>
+                            <td class="allow recommended-col">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                        </tr>
+                        <tr>
+                            <td class="tool-name">Edit</td>
+                            <td class="confirm">⚠ 确认</td>
+                            <td class="confirm recommended-col">⚠ 确认</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="block">✗ 禁止</td>
+                        </tr>
+                        <tr>
+                            <td class="tool-name">Write</td>
+                            <td class="confirm">⚠ 确认</td>
+                            <td class="confirm recommended-col">⚠ 确认</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="block">✗ 禁止</td>
+                        </tr>
+                        <tr>
+                            <td class="tool-name">NotebookEdit</td>
+                            <td class="confirm">⚠ 确认</td>
+                            <td class="confirm recommended-col">⚠ 确认</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="block">✗ 禁止</td>
+                        </tr>
+                        <tr>
+                            <td class="tool-name">Bash</td>
+                            <td class="confirm">⚠ 确认</td>
+                            <td class="confirm recommended-col">⚠ 确认</td>
+                            <td class="confirm">⚠ 确认</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="block">✗ 禁止</td>
+                        </tr>
+                        <tr>
+                            <td class="tool-name">Agent</td>
+                            <td class="confirm">⚠ 确认</td>
+                            <td class="confirm recommended-col">⚠ 确认</td>
+                            <td class="confirm">⚠ 确认</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="block">✗ 禁止</td>
+                        </tr>
+                        <tr>
+                            <td class="tool-name">MCP Tools</td>
+                            <td class="confirm">⚠ 确认</td>
+                            <td class="confirm recommended-col">⚠ 确认</td>
+                            <td class="confirm">⚠ 确认</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="allow">✓ 自动</td>
+                            <td class="block">✗ 禁止</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer Note -->
+            <div class="footer-note">
+                <strong>注意：</strong><code>dontAsk</code> 模式对需确认的操作直接拒绝（而非执行），这是其区别于其他模式的核心特征
+            </div>
+        </div>
+
+        <!-- Balance Statement Q3 -->
+        <div class="balance-statement fade-in">
+            <p>
+                <span class="mode-highlight default">default</span> 是平衡点；
+                想完全自动？看 <span class="mode-highlight auto">acceptEdits/autoAccept</span>；
+                想完全自由？看 <span class="mode-highlight bypass">bypass</span>，但要承担风险
+            </p>
+        </div>
+
+        <!-- Block Transition to 7b -->
+        <div class="block-transition fade-in">
+            <p>
+                但 Claude 不只有内置工具。它还能接入<span class="highlight">外部工具</span>、被<span class="highlight">外部钩子</span>拦截、被<span class="highlight">第三方扩展</span>加新能力——这些"对外的延展面"是<span class="highlight">另一组完全不同的设计</span>。
+            </p>
+        </div>
+    </div>
+</body>
+</html>
