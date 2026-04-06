@@ -23,8 +23,179 @@
   const PLACEHOLDER_REGEX = /\[图表预留\s+(\d+\.\d+-[A-Z])[^\]]*\]/g;
   const PLACEHOLDER_REGEX_SINGLE = /\[图表预留\s+(\d+\.\d+-[A-Z])[^\]]*\]/;
 
+  // ===== STAGE 1 改造常量 =====
+  const COLLAPSE_STORAGE_KEY = 'cc-chart-collapsed';
+  const VIEWPORT_ROOT_MARGIN = '200px';
+  // 已加载 iframe 的弱引用列表（用于主题切换时 broadcast）
+  const loadedIframes = new Set();
+
   // ===== SHARED RESIZE STATE (single document-level handler) =====
   let activeResize = null; // { iframe, startY, startHeight }
+
+  // ===== STAGE 1 - 注入骨架屏样式 + 折叠样式 =====
+  function injectStyles() {
+    if (document.getElementById('chart-embed-stage1-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'chart-embed-stage1-styles';
+    style.textContent = `
+      /* 骨架屏：扫光动画 */
+      .chart-embed-skeleton {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          var(--cc-bg-secondary, #1a1a1a) 0%,
+          var(--cc-bg-tertiary, #242424) 50%,
+          var(--cc-bg-secondary, #1a1a1a) 100%
+        );
+        background-size: 200% 100%;
+        animation: chart-embed-skeleton-shimmer 1.6s ease-in-out infinite;
+        opacity: 1;
+        transition: opacity 200ms ease-out;
+        pointer-events: none;
+        z-index: 1;
+      }
+      .chart-embed-skeleton.is-fading {
+        opacity: 0;
+      }
+      @keyframes chart-embed-skeleton-shimmer {
+        0%   { background-position: 100% 0; }
+        100% { background-position: -100% 0; }
+      }
+      /* iframe wrap 必须能容纳绝对定位的骨架屏 */
+      .chart-embed-iframe-wrap {
+        position: relative;
+        min-height: 200px;
+      }
+      /* iframe 加载前隐藏（避免白闪），加载完成后淡入。
+         覆盖 style.css 中的 display:none，改用 opacity 过渡。 */
+      .chart-embed-iframe-wrap > iframe.chart-embed-iframe {
+        display: block !important;
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        transition: opacity 200ms ease-out;
+        z-index: 2;
+      }
+      .chart-embed-iframe-wrap > iframe.chart-embed-iframe.is-loaded {
+        opacity: 1;
+      }
+      /* 折叠按钮 */
+      .chart-embed-collapse-btn {
+        margin-left: auto;
+        background: transparent;
+        border: 1px solid var(--cc-border-default, #444);
+        color: var(--cc-text-secondary, #aaa);
+        cursor: pointer;
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 4px;
+        line-height: 1;
+        transition: all 150ms ease;
+      }
+      .chart-embed-collapse-btn:hover {
+        background: var(--cc-bg-tertiary, #2a2a2a);
+        color: var(--cc-text-primary, #fff);
+      }
+      /* 折叠态：body 高度收缩 */
+      .chart-embed-container .chart-embed-body {
+        overflow: hidden;
+        transition: max-height 300ms ease, opacity 200ms ease;
+        max-height: 2000px;
+        opacity: 1;
+      }
+      .chart-embed-container.is-collapsed .chart-embed-body {
+        max-height: 0;
+        opacity: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+      .chart-embed-container.is-collapsed .chart-embed-arrow {
+        transform: rotate(-90deg);
+      }
+      .chart-embed-arrow {
+        transition: transform 200ms ease;
+      }
+    `;
+    (document.head || document.documentElement).appendChild(style);
+  }
+  injectStyles();
+
+  // ===== STAGE 1 - 折叠状态持久化 =====
+  function readCollapsedSet() {
+    try {
+      const raw = localStorage.getItem(COLLAPSE_STORAGE_KEY);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch (e) {
+      return new Set();
+    }
+  }
+  function writeCollapsedSet(set) {
+    try {
+      localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify([...set]));
+    } catch (e) { /* quota / privacy mode, 静默失败 */ }
+  }
+  function isCollapsed(chartId) {
+    return readCollapsedSet().has(chartId);
+  }
+  function setCollapsed(chartId, collapsed) {
+    const set = readCollapsedSet();
+    if (collapsed) set.add(chartId); else set.delete(chartId);
+    writeCollapsedSet(set);
+  }
+
+  // ===== STAGE 1 - 当前主题 + 主题广播 =====
+  function getCurrentTheme() {
+    return document.documentElement.dataset.theme || 'dark';
+  }
+  function postThemeToIframe(iframe) {
+    if (!iframe || !iframe.contentWindow) return;
+    try {
+      iframe.contentWindow.postMessage(
+        { type: 'cc-theme', theme: getCurrentTheme() },
+        '*'
+      );
+    } catch (e) { /* cross-origin or detached, 静默失败 */ }
+  }
+  function broadcastThemeToAllIframes() {
+    loadedIframes.forEach(postThemeToIframe);
+  }
+  // 监听 <html data-theme> 变化
+  if (typeof MutationObserver !== 'undefined') {
+    const themeObserver = new MutationObserver((muts) => {
+      for (const m of muts) {
+        if (m.type === 'attributes' && m.attributeName === 'data-theme') {
+          broadcastThemeToAllIframes();
+          break;
+        }
+      }
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+  }
+
+  // ===== STAGE 1 - 视口预加载（IntersectionObserver） =====
+  // 退化方案：不支持时直接立即加载
+  const supportsIO = typeof IntersectionObserver !== 'undefined';
+  const viewportObserver = supportsIO
+    ? new IntersectionObserver((entries, observer) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const el = entry.target;
+            observer.unobserve(el);
+            if (typeof el.__ccLoadIframe === 'function') {
+              el.__ccLoadIframe();
+            }
+          }
+        });
+      }, { rootMargin: VIEWPORT_ROOT_MARGIN })
+    : null;
 
   document.addEventListener('mousemove', (e) => {
     if (!activeResize) return;
@@ -103,25 +274,27 @@
   // ===== CREATE CHART CONTAINER =====
   function createChartContainer(placeholderId, mapping) {
     const container = document.createElement('div');
-    container.className = 'chart-embed-container';
+    container.className = 'chart-embed-container expanded';
     container.dataset.chartId = placeholderId;
 
     const displayName = getChartDisplayName(mapping);
+    const collapsedInitially = isCollapsed(placeholderId);
 
-    // Header (toggle)
+    // Header
     const header = document.createElement('div');
     header.className = 'chart-embed-header';
     header.innerHTML = `
       <span class="chart-embed-icon">📊</span>
-      <span class="chart-embed-title">点击查看图表: ${displayName}</span>
+      <span class="chart-embed-title">${displayName}</span>
       <span class="chart-embed-badge">${mapping.chart_id}</span>
-      <span class="chart-embed-arrow">▶</span>
+      <button type="button" class="chart-embed-collapse-btn" aria-label="折叠/展开图表">
+        <span class="chart-embed-arrow">▼</span>
+      </button>
     `;
 
-    // Body (collapsible)
+    // Body (默认展开)
     const body = document.createElement('div');
     body.className = 'chart-embed-body';
-    body.style.display = 'none';
 
     // Toolbar
     const toolbar = document.createElement('div');
@@ -132,18 +305,15 @@
       </a>
     `;
 
-    // Iframe wrapper (for loading state and resize)
+    // Iframe wrapper (for skeleton + iframe + resize)
     const iframeWrap = document.createElement('div');
     iframeWrap.className = 'chart-embed-iframe-wrap';
+    iframeWrap.style.height = getDefaultHeight() + 'px';
 
-    // Loading indicator
-    const loader = document.createElement('div');
-    loader.className = 'chart-embed-loader';
-    loader.innerHTML = `
-      <div class="chart-embed-spinner"></div>
-      <span>图表加载中...</span>
-    `;
-    iframeWrap.appendChild(loader);
+    // 骨架屏（替代旋转 spinner）
+    const skeleton = document.createElement('div');
+    skeleton.className = 'chart-embed-skeleton';
+    iframeWrap.appendChild(skeleton);
 
     // Resize handle
     const resizeHandle = document.createElement('div');
@@ -158,61 +328,88 @@
     container.appendChild(header);
     container.appendChild(body);
 
-    // ===== TOGGLE LOGIC =====
+    // ===== 应用初始折叠态 =====
+    if (collapsedInitially) {
+      container.classList.add('is-collapsed');
+      container.classList.remove('expanded');
+    }
+
+    // ===== iframe 加载逻辑（懒加载，IntersectionObserver 触发） =====
     let iframeLoaded = false;
     let iframe = null;
 
-    header.addEventListener('click', () => {
-      const isExpanded = body.style.display !== 'none';
-      if (isExpanded) {
-        // Collapse
-        body.style.display = 'none';
-        container.classList.remove('expanded');
-        header.querySelector('.chart-embed-arrow').textContent = '▶';
-      } else {
-        // Expand
-        body.style.display = '';
-        container.classList.add('expanded');
-        header.querySelector('.chart-embed-arrow').textContent = '▼';
+    function loadIframe() {
+      if (iframeLoaded) return;
+      iframeLoaded = true;
 
-        // Lazy-load iframe on first expand
-        if (!iframeLoaded) {
-          iframeLoaded = true;
-          iframe = document.createElement('iframe');
-          iframe.className = 'chart-embed-iframe';
-          iframe.style.height = getDefaultHeight() + 'px';
-          iframe.setAttribute('loading', 'lazy');
-          iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
-          iframe.setAttribute('title', displayName);
-
-          // Handle load success
-          iframe.addEventListener('load', () => {
-            loader.style.display = 'none';
-            iframe.style.display = 'block';
-          });
-
-          // Handle load error via a check after timeout
-          iframe.addEventListener('error', () => {
-            showFallback(loader, iframeWrap);
-          });
-
-          // Set src - also do a HEAD check for 404
-          checkChartExists(mapping.chart_file).then(exists => {
-            if (exists) {
-              iframe.src = mapping.chart_file;
-              iframeWrap.appendChild(iframe);
-            } else {
-              showFallback(loader, iframeWrap);
-            }
-          });
+      checkChartExists(mapping.chart_file).then((exists) => {
+        if (!exists) {
+          // 用骨架屏区域显示降级提示
+          skeleton.classList.add('is-fading');
+          const fallback = document.createElement('div');
+          fallback.className = 'chart-embed-loader';
+          fallback.innerHTML = `
+            <div class="chart-embed-fallback">
+              <span class="chart-embed-fallback-icon">🔧</span>
+              <span>图表加载中，敬请期待</span>
+            </div>
+          `;
+          iframeWrap.appendChild(fallback);
+          return;
         }
-      }
+
+        iframe = document.createElement('iframe');
+        iframe.className = 'chart-embed-iframe';
+        iframe.style.height = '100%';
+        iframe.style.width = '100%';
+        iframe.style.border = '0';
+        iframe.setAttribute('loading', 'lazy');
+        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
+        iframe.setAttribute('title', displayName);
+
+        iframe.addEventListener('load', () => {
+          iframe.classList.add('is-loaded');
+          // 200ms 淡出骨架屏
+          skeleton.classList.add('is-fading');
+          setTimeout(() => { skeleton.style.display = 'none'; }, 220);
+          // 主题 bridge：推送当前主题到 iframe
+          loadedIframes.add(iframe);
+          postThemeToIframe(iframe);
+        });
+
+        iframe.addEventListener('error', () => {
+          showFallback(skeleton, iframeWrap);
+        });
+
+        iframe.src = mapping.chart_file;
+        iframeWrap.appendChild(iframe);
+      });
+    }
+
+    // 暴露给 IntersectionObserver 回调
+    container.__ccLoadIframe = loadIframe;
+
+    if (viewportObserver) {
+      viewportObserver.observe(container);
+    } else {
+      // 退化：立即加载
+      loadIframe();
+    }
+
+    // ===== 折叠按钮 =====
+    const collapseBtn = header.querySelector('.chart-embed-collapse-btn');
+    collapseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const willCollapse = !container.classList.contains('is-collapsed');
+      container.classList.toggle('is-collapsed', willCollapse);
+      container.classList.toggle('expanded', !willCollapse);
+      setCollapsed(placeholderId, willCollapse);
     });
 
     // ===== RESIZE LOGIC (uses shared document-level handler) =====
     resizeHandle.addEventListener('mousedown', (e) => {
       if (!iframe) return;
-      activeResize = { iframe, startY: e.clientY, startHeight: iframe.offsetHeight };
+      activeResize = { iframe: iframeWrap, startY: e.clientY, startHeight: iframeWrap.offsetHeight };
       document.body.style.cursor = 'ns-resize';
       document.body.style.userSelect = 'none';
       e.preventDefault();
@@ -220,7 +417,7 @@
 
     resizeHandle.addEventListener('touchstart', (e) => {
       if (!iframe) return;
-      activeResize = { iframe, startY: e.touches[0].clientY, startHeight: iframe.offsetHeight };
+      activeResize = { iframe: iframeWrap, startY: e.touches[0].clientY, startHeight: iframeWrap.offsetHeight };
       e.preventDefault();
     }, { passive: false });
 
@@ -228,17 +425,25 @@
   }
 
   // ===== FALLBACK DISPLAY =====
-  function showFallback(loader, iframeWrap) {
-    loader.innerHTML = `
-      <div class="chart-embed-fallback">
-        <span class="chart-embed-fallback-icon">🔧</span>
-        <span>图表加载中，敬请期待</span>
-      </div>
-    `;
-    loader.style.display = '';
+  function showFallback(skeleton, iframeWrap) {
+    if (skeleton && skeleton.classList) {
+      skeleton.classList.add('is-fading');
+    }
     // Remove any iframe that might be in the wrap
     const existingIframe = iframeWrap.querySelector('iframe');
     if (existingIframe) existingIframe.remove();
+    // 注入降级提示
+    if (!iframeWrap.querySelector('.chart-embed-fallback')) {
+      const fallback = document.createElement('div');
+      fallback.className = 'chart-embed-loader';
+      fallback.innerHTML = `
+        <div class="chart-embed-fallback">
+          <span class="chart-embed-fallback-icon">🔧</span>
+          <span>图表加载中，敬请期待</span>
+        </div>
+      `;
+      iframeWrap.appendChild(fallback);
+    }
   }
 
   // ===== CHECK IF CHART FILE EXISTS =====
