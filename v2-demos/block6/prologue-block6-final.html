@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code 白皮书 - Block 6 · OS 建立认知</title>
+    <style>
+        :root {
+            --cc-color-bg: #0d1117;
+            --cc-color-surface: #161b22;
+            --cc-color-surface-secondary: #21262d;
+            --cc-color-border: #30363d;
+            --cc-color-text-primary: #e6edf3;
+            --cc-color-text-secondary: #7d8590;
+            --cc-color-text-tertiary: #6e7681;
+            --cc-color-accent: #2f81f7;
+            --cc-color-accent-hover: #58a6ff;
+            --cc-color-success: #238636;
+            --cc-color-warning: #d29922;
+            --cc-color-danger: #da3633;
+            --cc-color-info: #58a6ff;
+            
+            --cc-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            --cc-font-mono: "SF Mono", "Fira Code", "Noto Sans Mono SC", monospace;
+            
+            --cc-font-size-xs: 0.75rem;
+            --cc-font-size-sm: 0.875rem;
+            --cc-font-size-base: 1rem;
+            --cc-font-size-lg: 1.125rem;
+            --cc-font-size-xl: 1.25rem;
+            --cc-font-size-2xl: 1.5rem;
+            --cc-font-size-3xl: 1.875rem;
+            --cc-font-size-4xl: 2.25rem;
+            --cc-font-size-5xl: 3rem;
+            
+            --cc-space-1: 0.25rem;
+            --cc-space-2: 0.5rem;
+            --cc-space-3: 0.75rem;
+            --cc-space-4: 1rem;
+            --cc-space-6: 1.5rem;
+            --cc-space-8: 2rem;
+            --cc-space-10: 2.5rem;
+            --cc-space-12: 3rem;
+            --cc-space-16: 4rem;
+            --cc-space-20: 5rem;
+            --cc-space-24: 6rem;
+        }
+
+        [data-theme="light"] {
+            --cc-color-bg: #ffffff;
+            --cc-color-surface: #f6f8fa;
+            --cc-color-surface-secondary: #eaeef2;
+            --cc-color-border: #d0d7de;
+            --cc-color-text-primary: #24292f;
+            --cc-color-text-secondary: #57606a;
+            --cc-color-text-tertiary: #6e7781;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--cc-font-sans);
+            background-color: var(--cc-color-bg);
+            color: var(--cc-color-text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .block-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--cc-space-16) var(--cc-space-6);
+        }
+
+        /* Marginal Label */
+        .prologue-marginal-label {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-3);
+            margin-bottom: var(--cc-space-8);
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .prologue-marginal-label::before {
+            content: "";
+            display: block;
+            width: 40px;
+            height: 1px;
+            background-color: var(--cc-color-border);
+        }
+
+        .block-number {
+            color: var(--cc-color-accent);
+            font-weight: 600;
+        }
+
+        /* Hero Footer */
+        .hero-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--cc-space-4) 0;
+            border-top: 1px solid var(--cc-color-border);
+            margin-top: var(--cc-space-12);
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-color-text-tertiary);
+        }
+
+        .block-meta {
+            display: flex;
+            gap: var(--cc-space-6);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-2);
+        }
+
+        .meta-label {
+            color: var(--cc-color-text-tertiary);
+        }
+
+        .meta-value {
+            color: var(--cc-color-text-secondary);
+        }
+
+        /* Block Title */
+        .block-title {
+            font-size: var(--cc-font-size-4xl);
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: var(--cc-space-10);
+            color: var(--cc-color-text-primary);
+        }
+
+        /* Q1 Pull Quote */
+        .q1-rejection-rhetoric {
+            font-size: var(--cc-font-size-3xl);
+            font-weight: 600;
+            line-height: 1.4;
+            margin: var(--cc-space-12) 0;
+            padding: var(--cc-space-8);
+            background: linear-gradient(135deg, var(--cc-color-surface) 0%, var(--cc-color-surface-secondary) 100%);
+            border-left: 4px solid var(--cc-color-accent);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .q1-rejection-rhetoric em {
+            color: var(--cc-color-accent);
+            font-style: italic;
+            font-weight: 700;
+        }
+
+        /* Three Things Panel */
+        .three-things-section {
+            margin: var(--cc-space-12) 0;
+        }
+
+        .three-things-intro {
+            font-size: var(--cc-font-size-lg);
+            color: var(--cc-color-text-secondary);
+            margin-bottom: var(--cc-space-6);
+            line-height: 1.8;
+        }
+
+        .three-things-panel {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: var(--cc-space-6);
+            align-items: stretch;
+            margin: var(--cc-space-8) 0;
+        }
+
+        .os-column, .cc-column {
+            background-color: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: 12px;
+            padding: var(--cc-space-6);
+        }
+
+        .column-header {
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--cc-color-text-tertiary);
+            margin-bottom: var(--cc-space-4);
+            padding-bottom: var(--cc-space-3);
+            border-bottom: 1px solid var(--cc-color-border);
+        }
+
+        .os-column .column-header {
+            color: var(--cc-color-info);
+        }
+
+        .cc-column .column-header {
+            color: var(--cc-color-success);
+        }
+
+        .thing-item {
+            padding: var(--cc-space-4) 0;
+            border-bottom: 1px solid var(--cc-color-border);
+        }
+
+        .thing-item:last-child {
+            border-bottom: none;
+        }
+
+        .thing-title {
+            font-size: var(--cc-font-size-lg);
+            font-weight: 600;
+            color: var(--cc-color-text-primary);
+            margin-bottom: var(--cc-space-2);
+        }
+
+        .thing-desc {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-color-text-secondary);
+            line-height: 1.6;
+        }
+
+        .arrow-connector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--cc-color-text-tertiary);
+            font-size: var(--cc-font-size-2xl);
+        }
+
+        .three-things-summary {
+            font-size: var(--cc-font-size-lg);
+            color: var(--cc-color-text-secondary);
+            margin-top: var(--cc-space-6);
+            padding: var(--cc-space-4) var(--cc-space-6);
+            background-color: var(--cc-color-surface-secondary);
+            border-radius: 8px;
+            border-left: 3px solid var(--cc-color-warning);
+        }
+
+        /* Course Callout */
+        .course-callout {
+            margin: var(--cc-space-10) 0;
+            padding: var(--cc-space-6);
+            background-color: var(--cc-color-surface-secondary);
+            border: 1px solid var(--cc-color-border);
+            border-radius: 12px;
+            display: flex;
+            gap: var(--cc-space-4);
+        }
+
+        .course-icon {
+            font-size: var(--cc-font-size-2xl);
+            flex-shrink: 0;
+        }
+
+        .course-content {
+            flex: 1;
+        }
+
+        .course-label {
+            font-size: var(--cc-font-size-sm);
+            font-weight: 600;
+            color: var(--cc-color-text-primary);
+            margin-bottom: var(--cc-space-2);
+        }
+
+        .course-text {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-color-text-secondary);
+            line-height: 1.8;
+        }
+
+        .course-text strong {
+            color: var(--cc-color-text-primary);
+        }
+
+        /* Q2 Table Header */
+        .q2-table-header {
+            font-size: var(--cc-font-size-xl);
+            color: var(--cc-color-text-secondary);
+            margin: var(--cc-space-12) 0 var(--cc-space-6);
+            line-height: 1.8;
+        }
+
+        /* Mapping Table */
+        .mapping-table {
+            margin: var(--cc-space-8) 0;
+        }
+
+        .mapping-header {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 2fr;
+            gap: var(--cc-space-4);
+            padding: var(--cc-space-4) var(--cc-space-6);
+            background-color: var(--cc-color-surface-secondary);
+            border: 1px solid var(--cc-color-border);
+            border-radius: 8px 8px 0 0;
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--cc-color-text-tertiary);
+        }
+
+        .mapping-row {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 2fr;
+            gap: var(--cc-space-4);
+            padding: var(--cc-space-6);
+            background-color: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-top: none;
+        }
+
+        .mapping-row:last-child {
+            border-radius: 0 0 8px 8px;
+        }
+
+        .os-concept {
+            font-size: var(--cc-font-size-xl);
+            font-weight: 700;
+            color: var(--cc-color-text-primary);
+        }
+
+        .os-concept .en {
+            display: block;
+            font-size: var(--cc-font-size-sm);
+            font-weight: 400;
+            color: var(--cc-color-text-tertiary);
+            font-family: var(--cc-font-mono);
+            margin-top: var(--cc-space-1);
+        }
+
+        .cc-counterpart {
+            font-size: var(--cc-font-size-lg);
+            color: var(--cc-color-text-primary);
+            line-height: 1.5;
+        }
+
+        .analogy-reason {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-color-text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Insight Block */
+        .insight-block {
+            margin: var(--cc-space-4) 0 var(--cc-space-8);
+            padding: var(--cc-space-6);
+            background: linear-gradient(135deg, rgba(47, 129, 247, 0.1) 0%, rgba(47, 129, 247, 0.05) 100%);
+            border: 1px solid rgba(47, 129, 247, 0.3);
+            border-radius: 12px;
+            display: flex;
+            gap: var(--cc-space-4);
+        }
+
+        .insight-icon {
+            font-size: var(--cc-font-size-xl);
+            flex-shrink: 0;
+        }
+
+        .insight-content {
+            flex: 1;
+        }
+
+        .insight-label {
+            font-size: var(--cc-font-size-sm);
+            font-weight: 700;
+            color: var(--cc-color-accent);
+            margin-bottom: var(--cc-space-2);
+        }
+
+        .insight-text {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-color-text-secondary);
+            line-height: 1.8;
+        }
+
+        .insight-text strong {
+            color: var(--cc-color-text-primary);
+        }
+
+        /* Q4 Chart Header */
+        .q4-chart-header {
+            font-size: var(--cc-font-size-xl);
+            color: var(--cc-color-text-primary);
+            margin: var(--cc-space-12) 0 var(--cc-space-6);
+            padding: var(--cc-space-6);
+            background-color: var(--cc-color-surface);
+            border-left: 4px solid var(--cc-color-warning);
+            border-radius: 0 8px 8px 0;
+            line-height: 1.6;
+        }
+
+        /* VIS-0-010 Embed */
+        .vis-embed {
+            margin: var(--cc-space-8) 0;
+            padding: var(--cc-space-6);
+            background-color: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: 12px;
+        }
+
+        .vis-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--cc-space-6);
+            padding-bottom: var(--cc-space-4);
+            border-bottom: 1px solid var(--cc-color-border);
+        }
+
+        .vis-title {
+            font-size: var(--cc-font-size-xl);
+            font-weight: 700;
+            color: var(--cc-color-text-primary);
+        }
+
+        .vis-title .number {
+            color: var(--cc-color-accent);
+        }
+
+        .vis-subtitle {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-tertiary);
+        }
+
+        /* Tool Categories */
+        .tool-categories {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--cc-space-3);
+            margin-bottom: var(--cc-space-6);
+        }
+
+        .category-btn {
+            padding: var(--cc-space-2) var(--cc-space-4);
+            background-color: var(--cc-color-surface-secondary);
+            border: 1px solid var(--cc-color-border);
+            border-radius: 20px;
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .category-btn:hover {
+            background-color: var(--cc-color-accent);
+            color: white;
+            border-color: var(--cc-color-accent);
+        }
+
+        .category-btn.active {
+            background-color: var(--cc-color-accent);
+            color: white;
+            border-color: var(--cc-color-accent);
+        }
+
+        .category-btn .count {
+            font-family: var(--cc-font-mono);
+            margin-left: var(--cc-space-2);
+            opacity: 0.7;
+        }
+
+        /* Tool Grid */
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: var(--cc-space-4);
+        }
+
+        .tool-card {
+            background-color: var(--cc-color-bg);
+            border: 1px solid var(--cc-color-border);
+            border-radius: 8px;
+            padding: var(--cc-space-4);
+            transition: all 0.2s;
+        }
+
+        .tool-card:hover {
+            border-color: var(--cc-color-accent);
+            transform: translateY(-2px);
+        }
+
+        .tool-name {
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-sm);
+            font-weight: 600;
+            color: var(--cc-color-accent);
+            margin-bottom: var(--cc-space-2);
+        }
+
+        .tool-desc {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-secondary);
+            line-height: 1.5;
+            margin-bottom: var(--cc-space-3);
+        }
+
+        .tool-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--cc-space-1);
+        }
+
+        .tool-tag {
+            padding: var(--cc-space-1) var(--cc-space-2);
+            background-color: var(--cc-color-surface-secondary);
+            border-radius: 4px;
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-color-text-tertiary);
+        }
+
+        .tool-tag.readonly {
+            background-color: rgba(35, 134, 54, 0.2);
+            color: var(--cc-color-success);
+        }
+
+        .tool-tag.writable {
+            background-color: rgba(47, 129, 247, 0.2);
+            color: var(--cc-color-info);
+        }
+
+        .tool-tag.destructive {
+            background-color: rgba(218, 54, 51, 0.2);
+            color: var(--cc-color-danger);
+        }
+
+        /* Block 7a Bridge */
+        .block-7a-bridge {
+            margin-top: var(--cc-space-16);
+            padding: var(--cc-space-8);
+            background: linear-gradient(135deg, var(--cc-color-surface) 0%, var(--cc-color-surface-secondary) 100%);
+            border: 1px solid var(--cc-color-border);
+            border-radius: 16px;
+            text-align: center;
+        }
+
+        .bridge-text {
+            font-size: var(--cc-font-size-2xl);
+            color: var(--cc-color-text-primary);
+            line-height: 1.6;
+            margin-bottom: var(--cc-space-4);
+        }
+
+        .bridge-text strong {
+            color: var(--cc-color-accent);
+        }
+
+        .bridge-subtext {
+            font-size: var(--cc-font-size-lg);
+            color: var(--cc-color-text-secondary);
+            line-height: 1.6;
+        }
+
+        .bridge-arrow {
+            font-size: var(--cc-font-size-3xl);
+            color: var(--cc-color-accent);
+            margin: var(--cc-space-4) 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .three-things-panel {
+                grid-template-columns: 1fr;
+                gap: var(--cc-space-4);
+            }
+
+            .arrow-connector {
+                transform: rotate(90deg);
+                padding: var(--cc-space-2) 0;
+            }
+
+            .mapping-header,
+            .mapping-row {
+                grid-template-columns: 1fr;
+                gap: var(--cc-space-2);
+            }
+
+            .mapping-header {
+                display: none;
+            }
+
+            .tool-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="block-container">
+        <!-- Marginal Label -->
+        <div class="prologue-marginal-label">
+            <span>序章</span>
+            <span class="block-number">Block 06</span>
+            <span>OS 建立认知</span>
+        </div>
+
+        <!-- Block Title -->
+        <h2 class="block-title">为什么用"操作系统"来理解 Claude Code</h2>
+
+        <!-- Q1 Pull Quote -->
+        <div class="q1-rejection-rhetoric">
+            这不是为了修辞好看——Claude Code 的架构<em>真的</em>像一个操作系统。
+        </div>
+
+        <!-- Three Things Section -->
+        <div class="three-things-section">
+            <p class="three-things-intro">
+                当你的电脑开机时，操作系统做三件事：管理硬件资源、调度应用程序、执行安全策略。Claude Code 做的事几乎一样，只不过"硬件资源"变成了 token 预算和 API 配额，"应用程序"变成了 AI 智能体实例，"安全策略"变成了权限规则和沙箱限制。
+            </p>
+
+            <div class="three-things-panel">
+                <div class="os-column">
+                    <div class="column-header">操作系统 (OS)</div>
+                    <div class="thing-item">
+                        <div class="thing-title">管理硬件资源</div>
+                        <div class="thing-desc">CPU 时间片、内存分配、磁盘 I/O</div>
+                    </div>
+                    <div class="thing-item">
+                        <div class="thing-title">调度应用程序</div>
+                        <div class="thing-desc">进程创建、优先级分配、上下文切换</div>
+                    </div>
+                    <div class="thing-item">
+                        <div class="thing-title">执行安全策略</div>
+                        <div class="thing-desc">用户权限、文件访问控制、系统调用过滤</div>
+                    </div>
+                </div>
+                <div class="arrow-connector">→</div>
+                <div class="cc-column">
+                    <div class="column-header">Claude Code</div>
+                    <div class="thing-item">
+                        <div class="thing-title">管理 token 预算和 API 配额</div>
+                        <div class="thing-desc">请求成本控制、上下文窗口管理、速率限制</div>
+                    </div>
+                    <div class="thing-item">
+                        <div class="thing-title">调度 AI 智能体实例</div>
+                        <div class="thing-desc">子 Agent 创建、任务分发、并行执行协调</div>
+                    </div>
+                    <div class="thing-item">
+                        <div class="thing-title">执行权限规则和沙箱限制</div>
+                        <div class="thing-desc">工具权限检查、文件系统沙箱、用户确认策略</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="three-things-summary">
+                "硬件资源"变成了 <strong>token 预算和 API 配额</strong>，"应用程序"变成了 <strong>AI 智能体实例</strong>，"安全策略"变成了 <strong>权限规则和沙箱限制</strong>。
+            </div>
+        </div>
+
+        <!-- Course Callout -->
+        <div class="course-callout">
+            <div class="course-icon">📚</div>
+            <div class="course-content">
+                <div class="course-label">课程关联</div>
+                <div class="course-text">
+                    本书的分析框架大量借鉴<strong>操作系统</strong>（Operating Systems）课程的核心概念。如果你正在或即将学习这门课，Claude Code 是一个绝佳的"现代操作系统"案例研究——它把教科书中的抽象概念（<strong>进程调度</strong>、<strong>内存管理</strong>、<strong>安全模型</strong>、<strong>文件系统</strong>）投射到了 AI 应用的全新领域。同时，本书涉及的工程分析方法对应<strong>软件工程</strong>（Software Engineering）课程中的<strong>逆向工程</strong>（Reverse Engineering）和<strong>架构分析</strong>（Architecture Analysis）实践。
+                </div>
+            </div>
+        </div>
+
+        <!-- Q2 Table Header -->
+        <div class="q2-table-header">
+            这个类比能帮你建立直觉。下面这张表是全书的"翻译对照表"——每当你在后续章节中遇到一个 Claude Code 的概念，你可以在这里找到它在操作系统世界中的对应物：
+        </div>
+
+        <!-- Mapping Table -->
+        <div class="mapping-table">
+            <div class="mapping-header">
+                <div>操作系统概念</div>
+                <div>Claude Code 对应物</div>
+                <div>为什么这个类比成立</div>
+            </div>
+
+            <!-- Row 1: Kernel -->
+            <div class="mapping-row">
+                <div class="os-concept">
+                    内核
+                    <span class="en">(Kernel)</span>
+                </div>
+                <div class="cc-counterpart">
+                    QueryEngine + queryLoop<br>
+                    <span style="font-size: var(--cc-font-size-sm); color: var(--cc-color-text-tertiary);">核心循环——接收请求、调用工具、返回结果</span>
+                </div>
+                <div class="analogy-reason">
+                    所有请求都经过它调度——调用 API、分发工具、管理上下文，就像内核管理 CPU 时间片和内存分配
+                </div>
+            </div>
+
+            <!-- Insight Block 1 -->
+            <div class="insight-block">
+                <div class="insight-icon">💡</div>
+                <div class="insight-content">
+                    <div class="insight-label">通俗理解</div>
+                    <div class="insight-text">
+                        QueryEngine 就像<strong>快递分拣流水线</strong>——收件（接收用户输入）→ 分拣（判断需要什么工具）→ 装车（调用 API）→ 送达（执行工具）→ 签收（返回结果）→ 等下一单（继续循环）。
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 2: Syscall -->
+            <div class="mapping-row">
+                <div class="os-concept">
+                    系统调用
+                    <span class="en">(Syscall)</span>
+                </div>
+                <div class="cc-counterpart">
+                    工具调用<br>
+                    <span style="font-size: var(--cc-font-size-sm); color: var(--cc-color-text-tertiary);">(Tool invocation)</span>
+                </div>
+                <div class="analogy-reason">
+                    AI 不能直接读写文件——它必须通过工具系统发出"系统调用"，就像用户态程序必须通过 syscall 访问硬件
+                </div>
+            </div>
+
+            <!-- Insight Block 2 -->
+            <div class="insight-block">
+                <div class="insight-icon">💡</div>
+                <div class="insight-content">
+                    <div class="insight-label">通俗理解</div>
+                    <div class="insight-text">
+                        工具就像<strong>员工的工作技能证书</strong>——读文件证书、写代码证书、搜索证书，每个技能需要考核通过（权限检查）才能用。Claude 不是万能的，它需要<strong>"持证上岗"</strong>。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q4 Chart Header -->
+        <div class="q4-chart-header">
+            AI 不能直接读写文件——它必须通过工具系统发出"系统调用"，就像用户态程序必须通过 syscall 访问硬件。
+        </div>
+
+        <!-- VIS-0-010 Embed -->
+        <div class="vis-embed">
+            <div class="vis-header">
+                <div>
+                    <div class="vis-title"><span class="number">43</span> 个内置工具完整目录</div>
+                    <div class="vis-subtitle">按 6 个类别分组，标注每个工具的权限要求、输入 schema 与适用场景</div>
+                </div>
+            </div>
+
+            <div class="tool-categories">
+                <button class="category-btn active">全部 <span class="count">43</span></button>
+                <button class="category-btn">File <span class="count">12</span></button>
+                <button class="category-btn">Search <span class="count">6</span></button>
+                <button class="category-btn">Execute <span class="count">4</span></button>
+                <button class="category-btn">Agent <span class="count">3</span></button>
+                <button class="category-btn">Web <span class="count">2</span></button>
+                <button class="category-btn">Other <span class="count">16</span></button>
+            </div>
+
+            <div class="tool-grid">
+                <!-- File Tools -->
+                <div class="tool-card">
+                    <div class="tool-name">Read</div>
+                    <div class="tool-desc">读取文件内容，支持指定行范围</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-name">Edit</div>
+                    <div class="tool-desc">基于 old_string/new_string 精确替换文件内容</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag destructive">破坏性</span>
+                    </div>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-name">Write</div>
+                    <div class="tool-desc">创建新文件或覆盖写入</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag destructive">破坏性</span>
+                    </div>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-name">Glob</div>
+                    <div class="tool-desc">按通配符模式搜索文件路径</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-name">Grep</div>
+                    <div class="tool-desc">在文件内容中搜索正则匹配</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-name">Bash</div>
+                    <div class="tool-desc">执行 shell 命令</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag destructive">破坏性</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <!-- Agent Tools -->
+                <div class="tool-card">
+                    <div class="tool-name">Agent</div>
+                    <div class="tool-desc">创建子 Agent 执行独立任务</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <!-- Web Tools -->
+                <div class="tool-card">
+                    <div class="tool-name">WebFetch</div>
+                    <div class="tool-desc">抓取网页内容并转换为 markdown</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Block 7a Bridge -->
+        <div class="block-7a-bridge">
+            <div class="bridge-text">
+                <strong>OS 类比表已经把概念坐标系建立起来。</strong>但有些子系统重要到一句类比说不清——它们需要图。<strong>我们从最关键的"安全"开始。</strong>
+            </div>
+            <div class="bridge-arrow">↓</div>
+            <div class="bridge-subtext">
+                <strong>安全才是 AI 智能体的第一道门——而它本身就是一个矩阵。</strong>
+            </div>
+        </div>
+
+        <!-- Hero Footer -->
+        <div class="hero-footer">
+            <div class="block-meta">
+                <div class="meta-item">
+                    <span class="meta-label">BLOCK</span>
+                    <span class="meta-value">06 / 11</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">PHASE</span>
+                    <span class="meta-value">序章·建立框架</span>
+                </div>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">NEXT</span>
+                <span class="meta-value">Block 7a · 安全防线</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

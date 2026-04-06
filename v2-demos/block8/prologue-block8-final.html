@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>序章 · Block 08 · 阅读分流</title>
+    <style>
+        :root {
+            /* Claude Code Design System - Dark Theme Baseline */
+            --cc-bg-primary: #0d1117;
+            --cc-bg-secondary: #161b22;
+            --cc-bg-tertiary: #21262d;
+            --cc-bg-elevated: #1c2128;
+            
+            --cc-border-primary: #30363d;
+            --cc-border-secondary: #21262d;
+            
+            --cc-text-primary: #e6edf3;
+            --cc-text-secondary: #8b949e;
+            --cc-text-tertiary: #6e7681;
+            --cc-text-muted: #484f58;
+            
+            --cc-brand: #d29922;
+            --cc-brand-light: #e3b341;
+            --cc-brand-dark: #a67c16;
+            
+            --cc-accent-blue: #58a6ff;
+            --cc-accent-green: #3fb950;
+            --cc-accent-purple: #a371f7;
+            --cc-accent-red: #f85149;
+            --cc-accent-cyan: #39c5cf;
+            
+            /* Cluster Colors for Knowledge Graph */
+            --cc-cluster-architecture: #58a6ff;
+            --cc-cluster-engine: #3fb950;
+            --cc-cluster-tools: #d29922;
+            --cc-cluster-security: #a371f7;
+            --cc-cluster-advanced: #39c5cf;
+            
+            /* Typography */
+            --cc-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            --cc-font-mono: "SF Mono", "SFMono-Regular", "Fira Code", "JetBrains Mono", Consolas, monospace;
+            
+            --cc-font-size-xs: 0.75rem;
+            --cc-font-size-sm: 0.875rem;
+            --cc-font-size-base: 1rem;
+            --cc-font-size-lg: 1.125rem;
+            --cc-font-size-xl: 1.25rem;
+            --cc-font-size-2xl: 1.5rem;
+            --cc-font-size-3xl: 1.875rem;
+            --cc-font-size-4xl: 2.25rem;
+            --cc-font-size-5xl: 3rem;
+            --cc-font-size-6xl: 3.75rem;
+            
+            /* Spacing */
+            --cc-space-1: 0.25rem;
+            --cc-space-2: 0.5rem;
+            --cc-space-3: 0.75rem;
+            --cc-space-4: 1rem;
+            --cc-space-6: 1.5rem;
+            --cc-space-8: 2rem;
+            --cc-space-10: 2.5rem;
+            --cc-space-12: 3rem;
+            --cc-space-16: 4rem;
+            --cc-space-20: 5rem;
+            --cc-space-24: 6rem;
+        }
+        
+        /* Light Theme Override */
+        @media (prefers-color-scheme: light) {
+            :root {
+                --cc-bg-primary: #ffffff;
+                --cc-bg-secondary: #f6f8fa;
+                --cc-bg-tertiary: #f3f4f6;
+                --cc-bg-elevated: #ffffff;
+                
+                --cc-border-primary: #d0d7de;
+                --cc-border-secondary: #e1e4e8;
+                
+                --cc-text-primary: #24292f;
+                --cc-text-secondary: #57606a;
+                --cc-text-tertiary: #6e7781;
+                --cc-text-muted: #8c959f;
+                
+                --cc-brand: #9a6700;
+                --cc-brand-light: #b8860b;
+                --cc-brand-dark: #7d4e00;
+                
+                --cc-accent-blue: #0969da;
+                --cc-accent-green: #1a7f37;
+                --cc-accent-purple: #8250df;
+                --cc-accent-red: #cf222e;
+                --cc-accent-cyan: #0d7f8c;
+                
+                --cc-cluster-architecture: #0969da;
+                --cc-cluster-engine: #1a7f37;
+                --cc-cluster-tools: #9a6700;
+                --cc-cluster-security: #8250df;
+                --cc-cluster-advanced: #0d7f8c;
+            }
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--cc-font-sans);
+            background-color: var(--cc-bg-primary);
+            color: var(--cc-text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+        
+        /* Block Container */
+        .block-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--cc-space-16) var(--cc-space-8);
+        }
+        
+        /* Marginal Label */
+        .marginal-label {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-3);
+            margin-bottom: var(--cc-space-4);
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-text-secondary);
+            letter-spacing: 0.05em;
+        }
+        
+        .marginal-label::before {
+            content: "";
+            width: 32px;
+            height: 1px;
+            background-color: var(--cc-border-primary);
+        }
+        
+        .marginal-label .block-number {
+            color: var(--cc-brand);
+            font-weight: 600;
+        }
+        
+        /* Hero Footer */
+        .hero-footer {
+            margin-top: var(--cc-space-2);
+            margin-bottom: var(--cc-space-12);
+        }
+        
+        .hero-footer .block-title-full {
+            font-size: var(--cc-font-size-2xl);
+            font-weight: 700;
+            color: var(--cc-text-primary);
+            margin-bottom: var(--cc-space-2);
+        }
+        
+        .hero-footer .block-subtitle {
+            font-size: var(--cc-font-size-lg);
+            color: var(--cc-text-secondary);
+            font-style: italic;
+        }
+        
+        /* Section Title */
+        .section-title {
+            font-size: var(--cc-font-size-4xl);
+            font-weight: 700;
+            color: var(--cc-text-primary);
+            margin-bottom: var(--cc-space-12);
+            padding-bottom: var(--cc-space-4);
+            border-bottom: 2px solid var(--cc-border-primary);
+        }
+        
+        /* Q1 Open Reading Manifesto */
+        .q1-manifesto {
+            font-size: var(--cc-font-size-2xl);
+            color: var(--cc-text-primary);
+            margin-bottom: var(--cc-space-8);
+            padding: var(--cc-space-6) var(--cc-space-8);
+            background-color: var(--cc-bg-secondary);
+            border-left: 4px solid var(--cc-brand);
+            border-radius: 0 8px 8px 0;
+            font-weight: 500;
+        }
+        
+        /* Knowledge Graph Hero */
+        .knowledge-graph-hero {
+            width: 100%;
+            height: 520px;
+            background-color: var(--cc-bg-secondary);
+            border: 1px solid var(--cc-border-primary);
+            border-radius: 12px;
+            margin-bottom: var(--cc-space-8);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .knowledge-graph-svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .kg-center-number {
+            font-size: 120px;
+            font-weight: 700;
+            fill: var(--cc-brand);
+            font-family: var(--cc-font-mono);
+        }
+        
+        .kg-center-label {
+            font-size: 18px;
+            fill: var(--cc-text-secondary);
+            font-family: var(--cc-font-sans);
+        }
+        
+        .kg-cluster-label {
+            font-size: 14px;
+            font-weight: 600;
+            fill: var(--cc-text-primary);
+            font-family: var(--cc-font-sans);
+        }
+        
+        .kg-cluster-architecture { fill: var(--cc-cluster-architecture); }
+        .kg-cluster-engine { fill: var(--cc-cluster-engine); }
+        .kg-cluster-tools { fill: var(--cc-cluster-tools); }
+        .kg-cluster-security { fill: var(--cc-cluster-security); }
+        .kg-cluster-advanced { fill: var(--cc-cluster-advanced); }
+        
+        .kg-footnote {
+            position: absolute;
+            bottom: var(--cc-space-4);
+            left: var(--cc-space-6);
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-text-tertiary);
+            font-style: italic;
+        }
+        
+        .kg-title {
+            position: absolute;
+            top: var(--cc-space-6);
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: var(--cc-font-size-lg);
+            font-weight: 600;
+            color: var(--cc-text-secondary);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        
+        /* Part Cards Grid */
+        .part-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--cc-space-6);
+            margin-bottom: var(--cc-space-16);
+        }
+        
+        @media (max-width: 1200px) {
+            .part-cards-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .part-cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .part-card {
+            background-color: var(--cc-bg-secondary);
+            border: 1px solid var(--cc-border-primary);
+            border-radius: 12px;
+            padding: var(--cc-space-6);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+        }
+        
+        .part-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            border-color: var(--cc-border-secondary);
+        }
+        
+        .part-card-header {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-3);
+            margin-bottom: var(--cc-space-4);
+        }
+        
+        .part-number {
+            font-size: var(--cc-font-size-sm);
+            font-weight: 700;
+            color: var(--cc-brand);
+            background-color: var(--cc-bg-tertiary);
+            padding: var(--cc-space-1) var(--cc-space-3);
+            border-radius: 4px;
+            font-family: var(--cc-font-mono);
+        }
+        
+        .part-name {
+            font-size: var(--cc-font-size-2xl);
+            font-weight: 700;
+            color: var(--cc-text-primary);
+        }
+        
+        .part-positioning {
+            font-size: var(--cc-font-size-xl);
+            color: var(--cc-text-secondary);
+            font-style: italic;
+            margin-bottom: var(--cc-space-4);
+            line-height: 1.5;
+        }
+        
+        .part-description {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-text-primary);
+            margin-bottom: var(--cc-space-4);
+            line-height: 1.8;
+        }
+        
+        .part-kpi {
+            display: flex;
+            align-items: baseline;
+            gap: var(--cc-space-2);
+            margin-bottom: var(--cc-space-4);
+        }
+        
+        .part-kpi-number {
+            font-size: var(--cc-font-size-3xl);
+            font-weight: 700;
+            color: var(--cc-brand);
+            font-family: var(--cc-font-mono);
+        }
+        
+        .part-kpi-label {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-text-secondary);
+        }
+        
+        .part-tag {
+            display: inline-block;
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-accent-green);
+            background-color: rgba(63, 185, 80, 0.1);
+            padding: var(--cc-space-2) var(--cc-space-3);
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        
+        .part-card.highlighted {
+            border-color: var(--cc-brand);
+            background: linear-gradient(135deg, var(--cc-bg-secondary) 0%, rgba(210, 153, 34, 0.05) 100%);
+        }
+        
+        .part-card.highlighted .part-tag {
+            background-color: rgba(210, 153, 34, 0.15);
+            color: var(--cc-brand);
+        }
+        
+        .dual-star {
+            position: absolute;
+            top: var(--cc-space-4);
+            right: var(--cc-space-4);
+            color: var(--cc-brand);
+            font-size: var(--cc-font-size-xl);
+        }
+        
+        .dual-star-subtitle {
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-brand);
+            margin-top: var(--cc-space-1);
+            font-weight: 600;
+        }
+        
+        /* Performance Chart Inline */
+        .performance-chart-inline {
+            margin: var(--cc-space-8) 0;
+            padding: var(--cc-space-6);
+            background-color: var(--cc-bg-tertiary);
+            border-radius: 8px;
+            border: 1px solid var(--cc-border-primary);
+        }
+        
+        .performance-chart-title {
+            font-size: var(--cc-font-size-lg);
+            font-weight: 600;
+            color: var(--cc-text-primary);
+            margin-bottom: var(--cc-space-4);
+            text-align: center;
+        }
+        
+        .performance-strategies {
+            display: flex;
+            justify-content: center;
+            gap: var(--cc-space-8);
+            flex-wrap: wrap;
+        }
+        
+        .strategy-item {
+            text-align: center;
+        }
+        
+        .strategy-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto var(--cc-space-2);
+            background-color: var(--cc-bg-secondary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--cc-border-primary);
+        }
+        
+        .strategy-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: var(--cc-brand);
+        }
+        
+        .strategy-name {
+            font-size: var(--cc-font-size-sm);
+            font-weight: 600;
+            color: var(--cc-text-primary);
+            margin-bottom: var(--cc-space-1);
+        }
+        
+        .strategy-etc {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-text-secondary);
+        }
+        
+        .performance-subtitle {
+            text-align: center;
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-text-secondary);
+            margin-top: var(--cc-space-4);
+            font-style: italic;
+        }
+        
+        /* Reader Paths Section */
+        .reader-paths-section {
+            margin-top: var(--cc-space-20);
+        }
+        
+        .q2-subtitle {
+            font-size: var(--cc-font-size-3xl);
+            font-weight: 700;
+            color: var(--cc-text-primary);
+            margin-bottom: var(--cc-space-4);
+        }
+        
+        .q2-tagline {
+            font-size: var(--cc-font-size-xl);
+            color: var(--cc-brand);
+            margin-bottom: var(--cc-space-12);
+            font-weight: 500;
+        }
+        
+        .reader-paths-trio {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--cc-space-6);
+        }
+        
+        @media (max-width: 1200px) {
+            .reader-paths-trio {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .reader-path-card {
+            background-color: var(--cc-bg-secondary);
+            border: 1px solid var(--cc-border-primary);
+            border-radius: 12px;
+            padding: var(--cc-space-8);
+            position: relative;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .reader-path-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+        }
+        
+        .reader-path-card:nth-child(1) {
+            border-top: 4px solid var(--cc-accent-blue);
+        }
+        
+        .reader-path-card:nth-child(2) {
+            border-top: 4px solid var(--cc-accent-green);
+        }
+        
+        .reader-path-card:nth-child(3) {
+            border-top: 4px solid var(--cc-accent-purple);
+        }
+        
+        .reader-icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: var(--cc-space-4);
+        }
+        
+        .reader-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .reader-label {
+            font-size: var(--cc-font-size-2xl);
+            font-weight: 700;
+            color: var(--cc-text-primary);
+            margin-bottom: var(--cc-space-1);
+        }
+        
+        .reader-qualifier {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-text-secondary);
+            margin-bottom: var(--cc-space-6);
+            display: block;
+        }
+        
+        .reader-path-sequence {
+            background-color: var(--cc-bg-tertiary);
+            padding: var(--cc-space-4);
+            border-radius: 8px;
+            margin-bottom: var(--cc-space-6);
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-sm);
+        }
+        
+        .reader-path-sequence .arrow {
+            color: var(--cc-brand);
+            margin: 0 var(--cc-space-2);
+        }
+        
+        .reader-path-sequence .highlight {
+            color: var(--cc-brand);
+            font-weight: 600;
+        }
+        
+        .reader-hero-sentence {
+            font-size: var(--cc-font-size-lg);
+            color: var(--cc-text-primary);
+            line-height: 1.8;
+            margin-bottom: var(--cc-space-6);
+        }
+        
+        .reader-callback {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-text-secondary);
+            font-style: italic;
+            padding: var(--cc-space-4);
+            background-color: var(--cc-bg-tertiary);
+            border-radius: 8px;
+            border-left: 3px solid var(--cc-brand);
+        }
+        
+        .soft-exit {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-brand);
+            font-weight: 500;
+            margin-top: var(--cc-space-6);
+            font-style: italic;
+        }
+        
+        /* Entrepreneur Icons */
+        .entrepreneur-icons {
+            display: flex;
+            gap: var(--cc-space-3);
+            margin-bottom: var(--cc-space-4);
+        }
+        
+        .entrepreneur-icons .reader-icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="block-container">
+        <!-- Marginal Label -->
+        <div class="marginal-label">
+            <span>序章</span>
+            <span class="block-number">Block 08</span>
+            <span>阅读分流</span>
+        </div>
+        
+        <!-- Hero Footer -->
+        <div class="hero-footer">
+            <h1 class="block-title-full">找到适合你的入口</h1>
+            <p class="block-subtitle">第三个 hero 高潮位 / 全篇分岔口</p>
+        </div>
+        
+        <!-- Section Title -->
+        <h2 class="section-title">阅读路线</h2>
+        
+        <!-- Knowledge Graph Hero -->
+        <div class="knowledge-graph-hero">
+            <div class="kg-title">本书知识图谱</div>
+            <svg class="knowledge-graph-svg" viewBox="0 0 1200 520">
+                <!-- Background grid -->
+                <defs>
+                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                        <circle cx="1" cy="1" r="1" fill="var(--cc-border-primary)" opacity="0.3"/>
+                    </pattern>
+                    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)"/>
+                
+                <!-- Cluster regions (subtle background circles) -->
+                <circle cx="200" cy="150" r="120" fill="var(--cc-cluster-architecture)" opacity="0.05"/>
+                <circle cx="1000" cy="150" r="120" fill="var(--cc-cluster-engine)" opacity="0.05"/>
+                <circle cx="200" cy="380" r="120" fill="var(--cc-cluster-tools)" opacity="0.05"/>
+                <circle cx="1000" cy="380" r="120" fill="var(--cc-cluster-security)" opacity="0.05"/>
+                <circle cx="600" cy="260" r="150" fill="var(--cc-cluster-advanced)" opacity="0.03"/>
+                
+                <!-- Chapter nodes - Architecture cluster (top-left) -->
+                <g class="cluster-architecture">
+                    <circle cx="140" cy="100" r="8" fill="var(--cc-cluster-architecture)" opacity="0.8"/>
+                    <circle cx="180" cy="130" r="6" fill="var(--cc-cluster-architecture)" opacity="0.7"/>
+                    <circle cx="120" cy="160" r="7" fill="var(--cc-cluster-architecture)" opacity="0.75"/>
+                    <circle cx="220" cy="110" r="5" fill="var(--cc-cluster-architecture)" opacity="0.6"/>
+                    <circle cx="160" cy="190" r="6" fill="var(--cc-cluster-architecture)" opacity="0.7"/>
+                    <circle cx="250" cy="160" r="8" fill="var(--cc-cluster-architecture)" opacity="0.8"/>
+                    <circle cx="200" cy="220" r="5" fill="var(--cc-cluster-architecture)" opacity="0.65"/>
+                    <text x="200" y="80" text-anchor="middle" class="kg-cluster-label kg-cluster-architecture">Architecture</text>
+                </g>
+                
+                <!-- Chapter nodes - Engine cluster (top-right) -->
+                <g class="cluster-engine">
+                    <circle cx="940" cy="100" r="7" fill="var(--cc-cluster-engine)" opacity="0.75"/>
+                    <circle cx="980" cy="130" r="8" fill="var(--cc-cluster-engine)" opacity="0.8"/>
+                    <circle cx="1020" cy="110" r="6" fill="var(--cc-cluster-engine)" opacity="0.7"/>
+                    <circle cx="960" cy="170" r="5" fill="var(--cc-cluster-engine)" opacity="0.65"/>
+                    <circle cx="1050" cy="150" r="7" fill="var(--cc-cluster-engine)" opacity="0.75"/>
+                    <circle cx="1000" cy="190" r="6" fill="var(--cc-cluster-engine)" opacity="0.7"/>
+                    <circle cx="1080" cy="180" r="5" fill="var(--cc-cluster-engine)" opacity="0.6"/>
+                    <text x="1000" y="80" text-anchor="middle" class="kg-cluster-label kg-cluster-engine">Engine</text>
+                </g>
+                
+                <!-- Chapter nodes - Tools cluster (bottom-left) -->
+                <g class="cluster-tools">
+                    <circle cx="140" cy="340" r="6" fill="var(--cc-cluster-tools)" opacity="0.7"/>
+                    <circle cx="180" cy="370" r="8" fill="var(--cc-cluster-tools)" opacity="0.8"/>
+                    <circle cx="120" cy="400" r="5" fill="var(--cc-cluster-tools)" opacity="0.65"/>
+                    <circle cx="220" cy="350" r="7" fill="var(--cc-cluster-tools)" opacity="0.75"/>
+                    <circle cx="160" cy="430" r="6" fill="var(--cc-cluster-tools)" opacity="0.7"/>
+                    <circle cx="250" cy="400" r="5" fill="var(--cc-cluster-tools)" opacity="0.6"/>
+                    <circle cx="200" cy="460" r="7" fill="var(--cc-cluster-tools)" opacity="0.75"/>
+                    <text x="200" y="320" text-anchor="middle" class="kg-cluster-label kg-cluster-tools">Tools</text>
+                </g>
+                
+                <!-- Chapter nodes - Security cluster (bottom-right) -->
+                <g class="cluster-security">
+                    <circle cx="940" cy="340" r="8" fill="var(--cc-cluster-security)" opacity="0.8"/>
+                    <circle cx="980" cy="370" r="6" fill="var(--cc-cluster-security)" opacity="0.7"/>
+                    <circle cx="1020" cy="350" r="7" fill="var(--cc-cluster-security)" opacity="0.75"/>
+                    <circle cx="960" cy="410" r="5" fill="var(--cc-cluster-security)" opacity="0.65"/>
+                    <circle cx="1050" cy="390" r="6" fill="var(--cc-cluster-security)" opacity="0.7"/>
+                    <circle cx="1000" cy="430" r="8" fill="var(--cc-cluster-security)" opacity="0.8"/>
+                    <circle cx="1080" cy="420" r="5" fill="var(--cc-cluster-security)" opacity="0.6"/>
+                    <text x="1000" y="320" text-anchor="middle" class="kg-cluster-label kg-cluster-security">Security</text>
+                </g>
+                
+                <!-- Chapter nodes - Advanced cluster (center) -->
+                <g class="cluster-advanced">
+                    <circle cx="520" cy="220" r="6" fill="var(--cc-cluster-advanced)" opacity="0.7"/>
+                    <circle cx="560" cy="240" r="5" fill="var(--cc-cluster-advanced)" opacity="0.65"/>
+                    <circle cx="600" cy="210" r="7" fill="var(--cc-cluster-advanced)" opacity="0.75"/>
+                    <circle cx="640" cy="240" r="6" fill="var(--cc-cluster-advanced)" opacity="0.7"/>
+                    <circle cx="680" cy="220" r="5" fill="var(--cc-cluster-advanced)" opacity="0.6"/>
+                    <circle cx="540" cy="280" r="8" fill="var(--cc-cluster-advanced)" opacity="0.8"/>
+                    <circle cx="600" cy="300" r="6" fill="var(--cc-cluster-advanced)" opacity="0.7"/>
+                    <circle cx="660" cy="280" r="7" fill="var(--cc-cluster-advanced)" opacity="0.75"/>
+                    <text x="600" y="190" text-anchor="middle" class="kg-cluster-label kg-cluster-advanced">Advanced</text>
+                </g>
+                
+                <!-- Connection lines between clusters -->
+                <line x1="270" y1="160" x2="500" y2="230" stroke="var(--cc-border-primary)" stroke-width="1" opacity="0.4"/>
+                <line x1="920" y1="150" x2="700" y2="230" stroke="var(--cc-border-primary)" stroke-width="1" opacity="0.4"/>
+                <line x1="270" y1="400" x2="510" y2="280" stroke="var(--cc-border-primary)" stroke-width="1" opacity="0.4"/>
+                <line x1="920" y1="390" x2="690" y2="280" stroke="var(--cc-border-primary)" stroke-width="1" opacity="0.4"/>
+                
+                <!-- Cross-cluster connections -->
+                <line x1="250" y1="120" x2="920" y2="120" stroke="var(--cc-border-primary)" stroke-width="1" opacity="0.2" stroke-dasharray="5,5"/>
+                <line x1="250" y1="400" x2="920" y2="400" stroke="var(--cc-border-primary)" stroke-width="1" opacity="0.2" stroke-dasharray="5,5"/>
+                
+                <!-- Central number -->
+                <text x="600" y="280" text-anchor="middle" class="kg-center-number" filter="url(#glow)">83</text>
+                <text x="600" y="310" text-anchor="middle" class="kg-center-label">章</text>
+            </svg>
+            <div class="kg-footnote">* 图表预留早期版本写为 74，本图根据 PROGRESS.md 最新值更新为 83</div>
+        </div>
+        
+        <!-- Q1 Manifesto -->
+        <div class="q1-manifesto">
+            全书分为六个部分，你可以按顺序读，也可以根据兴趣跳读
+        </div>
+        
+        <!-- Part Cards Grid -->
+        <div class="part-cards-grid">
+            <!-- Part 1 -->
+            <div class="part-card">
+                <div class="part-card-header">
+                    <span class="part-number">Part 1</span>
+                </div>
+                <h3 class="part-name">认识这个系统</h3>
+                <p class="part-positioning">从零开始建立认知。</p>
+                <p class="part-description">用五分钟看懂整体架构，学会阅读后续内容所需的全部概念。</p>
+                <div class="part-kpi">
+                    <span class="part-kpi-number">5</span>
+                    <span class="part-kpi-label">分钟读完</span>
+                </div>
+                <span class="part-tag">适合所有读者</span>
+            </div>
+            
+            <!-- Part 2 -->
+            <div class="part-card">
+                <div class="part-card-header">
+                    <span class="part-number">Part 2</span>
+                </div>
+                <h3 class="part-name">代码架构完全解构</h3>
+                <p class="part-positioning">系统性地拆解整个代码库。</p>
+                <p class="part-description">从启动序列到终端 UI，按架构层次逐层解剖每一个子系统的设计、实体、组件和逻辑。</p>
+                <div class="part-kpi">
+                    <span class="part-kpi-number">地基</span>
+                </div>
+                <span class="part-tag">本书的"地基"——这一部分不能跳</span>
+            </div>
+            
+            <!-- Part 3 -->
+            <div class="part-card">
+                <div class="part-card-header">
+                    <span class="part-number">Part 3</span>
+                </div>
+                <h3 class="part-name">好奇心驱动的深度问答</h3>
+                <p class="part-positioning">25 个你可能好奇的问题。</p>
+                <p class="part-description">"那三行在 import 之前的代码是什么把戏？""Claude 在你打字的时候偷偷在做什么？" 每个问题深入一个具体的工程细节，发现让人拍案叫绝的设计。</p>
+                <div class="part-kpi">
+                    <span class="part-kpi-number">25</span>
+                    <span class="part-kpi-label">个深度问答</span>
+                </div>
+                <span class="part-tag">适合随机翻阅</span>
+            </div>
+            
+            <!-- Part 4 -->
+            <div class="part-card">
+                <div class="part-card-header">
+                    <span class="part-number">Part 4</span>
+                </div>
+                <h3 class="part-name">子系统完全解析</h3>
+                <p class="part-positioning">技术参考手册。</p>
+                <p class="part-description">28 个核心子系统的逐行深度解析（权限、MCP、Hooks、插件、沙箱、遥测、记忆、Bash AST、Cron、团队同步、Prompt Cache 可观测性等）。</p>
+                <div class="part-kpi">
+                    <span class="part-kpi-number">28</span>
+                    <span class="part-kpi-label">个核心子系统</span>
+                </div>
+                <span class="part-tag">适合需要精确细节时查阅</span>
+            </div>
+            
+            <!-- Part 5 - Highlighted -->
+            <div class="part-card highlighted">
+                <div class="dual-star">★★</div>
+                <div class="part-card-header">
+                    <span class="part-number">Part 5</span>
+                </div>
+                <h3 class="part-name">工程哲学</h3>
+                <p class="part-positioning">从代码中提炼的设计原则。</p>
+                <p class="part-description">"在等待时间里藏工作""Token 是一等公民""把 AI 当乐高积木"——六条可以带走用在你自己项目里的工程哲学。</p>
+                <div class="part-kpi">
+                    <span class="part-kpi-number">6</span>
+                    <span class="part-kpi-label">条工程哲学</span>
+                    <span style="margin: 0 var(--cc-space-2); color: var(--cc-text-muted);">+</span>
+                    <span class="part-kpi-number">8</span>
+                    <span class="part-kpi-label">大设计智慧</span>
+                </div>
+                <div class="dual-star-subtitle">被两类读者共同推荐</div>
+                <span class="part-tag">★★ 被两类读者共同推荐</span>
+            </div>
+            
+            <!-- Part 6 -->
+            <div class="part-card">
+                <div class="part-card-header">
+                    <span class="part-number">Part 6</span>
+                </div>
+                <h3 class="part-name">批判与超越</h3>
+                <p class="part-positioning">诚实的代价分析。</p>
+                <p class="part-description">这个系统的复杂度代价是什么？如果我们从头设计会怎么做？怎么把这些思想用在你自己的项目里？</p>
+                <div class="part-kpi">
+                    <span class="part-kpi-number">代价</span>
+                    <span class="part-kpi-label">与替代方案</span>
+                </div>
+                <span class="part-tag">创业者核心章节</span>
+            </div>
+        </div>
+        
+        <!-- Performance Chart Inline (0.4-B) -->
+        <div class="performance-chart-inline">
+            <div class="performance-chart-title">性能优化全景</div>
+            <div class="performance-strategies">
+                <div class="strategy-item">
+                    <div class="strategy-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                        </svg>
+                    </div>
+                    <div class="strategy-name">Prompt Cache</div>
+                </div>
+                <div class="strategy-item">
+                    <div class="strategy-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 4v16M4 12l4-4m-4 4l4 4"/>
+                            <path d="M12 4v16M12 8l4-4m-4 4l4 4m-4 4l4 4"/>
+                            <path d="M20 4v16"/>
+                        </svg>
+                    </div>
+                    <div class="strategy-name">流式执行</div>
+                </div>
+                <div class="strategy-item">
+                    <div class="strategy-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                        </svg>
+                    </div>
+                    <div class="strategy-name">投机执行</div>
+                </div>
+                <div class="strategy-item">
+                    <div class="strategy-icon" style="border-style: dashed;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="stroke: var(--cc-text-tertiary);">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 8v8M8 12h8"/>
+                        </svg>
+                    </div>
+                    <div class="strategy-etc">等五大加速策略</div>
+                </div>
+            </div>
+            <div class="performance-subtitle">Prompt Cache、流式执行、投机执行等五大加速策略的 Before/After 对比，Part 5"工程哲学"章节将逐一拆解这些数字背后的工程取舍。</div>
+        </div>
+        
+        <!-- Reader Paths Section -->
+        <div class="reader-paths-section">
+            <h3 class="q2-subtitle">三条阅读路线</h3>
+            <p class="q2-tagline">找到适合你的入口</p>
+            
+            <div class="reader-paths-trio">
+                <!-- CS Student Path -->
+                <div class="reader-path-card">
+                    <div class="reader-icon">
+                        <svg viewBox="0 0 64 64" fill="none" stroke="var(--cc-accent-blue)" stroke-width="2">
+                            <path d="M32 8L8 20v24l24 12 24-12V20L32 8z"/>
+                            <path d="M32 32v24"/>
+                            <path d="M32 32L8 20"/>
+                            <path d="M32 32l24-12"/>
+                            <circle cx="32" cy="32" r="4" fill="var(--cc-accent-blue)"/>
+                        </svg>
+                    </div>
+                    <h4 class="reader-label">如果你是 CS 学生</h4>
+                    <span class="reader-qualifier">（或刚学编程不久）</span>
+                    
+                    <div class="reader-path-sequence">
+                        序章<span class="arrow">→</span><span class="highlight">Part 1</span>「认识这个系统」<span class="arrow">→</span><span class="highlight">Part 3</span>问答
+                    </div>
+                    
+                    <p class="reader-hero-sentence">
+                        建立全局印象。遇到不懂的术语别焦虑，直接跳过——Part 3 的问答式章节更适合随机探索，每个问题自成一体。
+                    </p>
+                    
+                    <div class="reader-callback">
+                        重点关注操作系统类比表（就在上面），它会帮你把课堂概念和真实系统对接。
+                    </div>
+                    
+                    <p class="soft-exit">从这里出发，让课堂概念与真实系统相遇。</p>
+                </div>
+                
+                <!-- Senior Engineer Path -->
+                <div class="reader-path-card">
+                    <div class="reader-icon">
+                        <svg viewBox="0 0 64 64" fill="none" stroke="var(--cc-accent-green)" stroke-width="2">
+                            <rect x="8" y="12" width="48" height="40" rx="4"/>
+                            <line x1="8" y1="24" x2="56" y2="24"/>
+                            <line x1="16" y1="8" x2="16" y2="16"/>
+                            <line x1="48" y1="8" x2="48" y2="16"/>
+                            <rect x="16" y="32" width="12" height="12" rx="2"/>
+                            <rect x="36" y="32" width="12" height="12" rx="2"/>
+                        </svg>
+                    </div>
+                    <h4 class="reader-label">如果你是高级工程师</h4>
+                    <span class="reader-qualifier">（已经在用 Claude Code 或类似工具）</span>
+                    
+                    <div class="reader-path-sequence">
+                        <span class="highlight">Part 4</span>（核心）<span class="arrow">→</span><span class="highlight">Part 5</span>工程哲学<span class="arrow">→</span><span class="highlight">Part 2</span>架构解构（按需）
+                    </div>
+                    
+                    <p class="reader-hero-sentence">
+                        直接跳到你关心的子系统——Part 4 是按模块组织的技术参考手册，每章开头有源码位置和关键数据结构索引。
+                    </p>
+                    
+                    <p class="soft-exit">精准定位你关心的子系统，让源码为你敞开。</p>
+                </div>
+                
+                <!-- Entrepreneur/PM Path -->
+                <div class="reader-path-card">
+                    <div class="entrepreneur-icons">
+                        <div class="reader-icon">
+                            <svg viewBox="0 0 48 48" fill="none" stroke="var(--cc-accent-purple)" stroke-width="2">
+                                <path d="M24 4L4 14v20l20 10 20-10V14L24 4z"/>
+                                <path d="M24 24v20"/>
+                                <path d="M24 24L4 14"/>
+                                <path d="M24 24l20-10"/>
+                            </svg>
+                        </div>
+                        <div class="reader-icon">
+                            <svg viewBox="0 0 48 48" fill="none" stroke="var(--cc-accent-purple)" stroke-width="2">
+                                <circle cx="24" cy="16" r="8"/>
+                                <path d="M8 40c0-8.837 7.163-16 16-16s16 7.163 16 16"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <h4 class="reader-label">如果你是 AI 工具创业者或产品经理</h4>
+                    <span class="reader-qualifier">（想理解 Agent 架构决策）</span>
+                    
+                    <div class="reader-path-sequence">
+                        <span class="highlight">Part 6</span>「批判与超越」<span class="arrow">→</span><span class="highlight">序章</span>行业背景<span class="arrow">→</span><span class="highlight">Part 5</span>设计哲学
+                    </div>
+                    
+                    <p class="reader-hero-sentence">
+                        Part 6「批判与超越」是你的核心章节——它分析了这个系统的复杂度代价和替代方案。
+                    </p>
+                    
+                    <div class="reader-callback">
+                        序章的行业背景和竞品全景提供了市场坐标系。
+                    </div>
+                    
+                    <p class="soft-exit">理解代价与替代方案，在市场中找到自己的坐标。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

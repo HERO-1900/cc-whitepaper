@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>序章 · Block 08 · 阅读分流</title>
+<style>
+:root {
+  --cc-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --cc-font-mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  --cc-bg: #0d1117;
+  --cc-surface: #161b22;
+  --cc-border: #30363d;
+  --cc-text: #e6edf3;
+  --cc-muted: #8b949e;
+  --cc-accent: #58a6ff;
+  --cc-link: #79c0ff;
+  --cc-star: #f0c14b;
+  --cc-architecture: #388bfd;
+  --cc-engine: #3fb950;
+  --cc-tools: #d29922;
+  --cc-security: #f85149;
+  --cc-advanced: #a371f7;
+}
+
+[data-theme="light"] {
+  --cc-bg: #ffffff;
+  --cc-surface: #f6f8fa;
+  --cc-border: #d0d7de;
+  --cc-text: #1f2328;
+  --cc-muted: #656d76;
+  --cc-accent: #0969da;
+  --cc-link: #0550ae;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--cc-font-sans);
+  background: var(--cc-bg);
+  color: var(--cc-text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.prologue-marginal-label {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%) rotate(-90deg);
+  transform-origin: left center;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: var(--cc-muted);
+  text-transform: uppercase;
+  background: var(--cc-surface);
+  border: 1px solid var(--cc-border);
+  border-left: none;
+  padding: 6px 16px;
+  border-radius: 0 8px 8px 0;
+  white-space: nowrap;
+  z-index: 100;
+}
+
+.hero-footer {
+  width: 100%;
+  text-align: center;
+  padding: 32px 24px;
+  border-top: 1px solid var(--cc-border);
+  margin-top: 80px;
+  font-size: 12px;
+  color: var(--cc-muted);
+  letter-spacing: 0.1em;
+}
+
+.hero-footer strong {
+  color: var(--cc-accent);
+  font-weight: 600;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 60px;
+}
+
+.block-title {
+  font-family: var(--cc-font-mono);
+  font-size: 13px;
+  color: var(--cc-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.section-heading {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--cc-text);
+  margin-bottom: 32px;
+  line-height: 1.3;
+}
+
+/* ===== 0.4-A Knowledge Graph Hero ===== */
+.knowledge-graph-hero {
+  width: 100%;
+  height: 480px;
+  background: var(--cc-surface);
+  border: 1px solid var(--cc-border);
+  border-radius: 16px;
+  margin-bottom: 40px;
+  overflow: hidden;
+  position: relative;
+}
+
+.kg-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.kg-node {
+  cursor: default;
+}
+
+.kg-label {
+  font-family: var(--cc-font-sans);
+  font-size: 10px;
+  fill: var(--cc-text);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.kg-sublabel {
+  font-family: var(--cc-font-sans);
+  font-size: 9px;
+  fill: var(--cc-muted);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.kg-hero-title {
+  font-family: var(--cc-font-sans);
+  font-size: 22px;
+  font-weight: 700;
+  fill: var(--cc-text);
+  text-anchor: middle;
+}
+
+.kg-hero-sub {
+  font-family: var(--cc-font-sans);
+  font-size: 13px;
+  fill: var(--cc-muted);
+  text-anchor: middle;
+}
+
+.kg-legend {
+  font-family: var(--cc-font-sans);
+  font-size: 11px;
+  fill: var(--cc-muted);
+}
+
+.kg-legend-dot {
+  stroke: none;
+}
+
+.kg-edge {
+  stroke: var(--cc-border);
+  stroke-width: 1;
+  fill: none;
+  opacity: 0.6;
+}
+
+.kg-cluster-label {
+  font-family: var(--cc-font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--cc-text);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.kg-graph-note {
+  font-family: var(--cc-font-sans);
+  font-size: 11px;
+  fill: var(--cc-muted);
+  text-anchor: middle;
+}
+
+/* ===== Q1 Guidance ===== */
+.q1-guidance {
+  font-size: 16px;
+  color: var(--cc-text);
+  margin-bottom: 36px;
+  padding: 20px 24px;
+  background: var(--cc-surface);
+  border: 1px solid var(--cc-border);
+  border-left: 4px solid var(--cc-accent);
+  border-radius: 8px;
+}
+
+.q1-guidance strong {
+  color: var(--cc-accent);
+}
+
+/* ===== 6 Part Cards Grid ===== */
+.parts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 48px;
+}
+
+@media (max-width: 768px) {
+  .parts-grid {
+    grid-template-columns: 1fr;
+  }
+  .reader-paths {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.part-card {
+  background: var(--cc-surface);
+  border: 1px solid var(--cc-border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  position: relative;
+  transition: border-color 0.2s;
+}
+
+.part-card:hover {
+  border-color: var(--cc-accent);
+}
+
+.part-number {
+  font-family: var(--cc-font-mono);
+  font-size: 11px;
+  color: var(--cc-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.part-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--cc-text);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.part-desc {
+  font-size: 13px;
+  color: var(--cc-muted);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.part-meta {
+  font-size: 12px;
+  color: var(--cc-accent);
+}
+
+.part-card.part-star .part-title::after {
+  content: " ★★";
+  color: var(--cc-star);
+  font-size: 14px;
+}
+
+/* ===== 0.4-B Performance Inline ===== */
+.perf-inline {
+  background: var(--cc-surface);
+  border: 1px solid var(--cc-border);
+  border-radius: 10px;
+  padding: 18px 22px;
+  margin-bottom: 48px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.perf-title {
+  font-family: var(--cc-font-mono);
+  font-size: 12px;
+  color: var(--cc-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.perf-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--cc-text);
+}
+
+.perf-item-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.perf-item-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.perf-more {
+  font-size: 12px;
+  color: var(--cc-muted);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ===== Q2 Sub-title ===== */
+.q2-subtitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--cc-text);
+  margin-bottom: 24px;
+}
+
+/* ===== 3 Reader Path Cards ===== */
+.reader-paths {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 80px;
+}
+
+.path-card {
+  background: var(--cc-surface);
+  border: 1px solid var(--cc-border);
+  border-radius: 14px;
+  padding: 24px;
+  position: relative;
+}
+
+.path-badge {
+  display: inline-block;
+  font-family: var(--cc-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cc-bg);
+  background: var(--cc-accent);
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-bottom: 14px;
+}
+
+.path-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cc-text);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.path-route {
+  font-family: var(--cc-font-mono);
+  font-size: 13px;
+  color: var(--cc-accent);
+  margin-bottom: 14px;
+  letter-spacing: 0.03em;
+}
+
+.path-hero {
+  font-size: 13px;
+  color: var(--cc-muted);
+  line-height: 1.6;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: var(--cc-bg);
+  border-radius: 8px;
+  border-left: 3px solid var(--cc-accent);
+}
+
+.path-hero strong {
+  color: var(--cc-text);
+}
+
+.path-ref {
+  font-size: 12px;
+  color: var(--cc-link);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.path-ref:hover {
+  text-decoration: underline;
+}
+
+.path-ref-icon {
+  width: 14px;
+  height: 14px;
+}
+</style>
+</head>
+<body>
+
+<div class="prologue-marginal-label">序章 · Block 08 · 阅读分流</div>
+
+<div class="container">
+
+  <div class="block-title">## 阅读路线</div>
+
+  <!-- ===== 0.4-A Knowledge Graph Hero ===== -->
+  <div class="knowledge-graph-hero">
+    <svg class="kg-svg" viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- Title -->
+      <text x="450" y="38" class="kg-hero-title">83 章 · 知识图谱</text>
+      <text x="450" y="58" class="kg-hero-sub">5 集群染色：Architecture · Engine · Tools · Security · Advanced</text>
+
+      <!-- Center Hub -->
+      <circle cx="450" cy="200" r="28" fill="var(--cc-surface)" stroke="var(--cc-border)" stroke-width="2"/>
+      <text x="450" y="195" class="kg-label" font-size="10" font-weight="600">Claude</text>
+      <text x="450" y="208" class="kg-label" font-size="10" font-weight="600">Code</text>
+
+      <!-- ===== Architecture Cluster (Blue) ===== -->
+      <circle cx="160" cy="140" r="18" fill="var(--cc-architecture)" opacity="0.9" filter="url(#glow)"/>
+      <circle cx="110" cy="200" r="13" fill="var(--cc-architecture)" opacity="0.7"/>
+      <circle cx="200" cy="200" r="13" fill="var(--cc-architecture)" opacity="0.7"/>
+      <circle cx="145" cy="260" r="11" fill="var(--cc-architecture)" opacity="0.6"/>
+      <circle cx="210" cy="255" r="11" fill="var(--cc-architecture)" opacity="0.6"/>
+
+      <!-- Architecture Edges -->
+      <line x1="450" y1="185" x2="178" y2="148" class="kg-edge"/>
+      <line x1="160" y1="140" x2="123" y2="190" class="kg-edge"/>
+      <line x1="160" y1="140" x2="188" y2="190" class="kg-edge"/>
+      <line x1="110" y1="200" x2="137" y2="250" class="kg-edge"/>
+      <line x1="200" y1="200" x2="202" y2="244" class="kg-edge"/>
+
+      <!-- Architecture Labels -->
+      <text x="160" y="107" class="kg-cluster-label" fill="var(--cc-architecture)">Architecture</text>
+      <text x="160" y="124" class="kg-sublabel" font-size="8">架构</text>
+      <text x="110" y="186" class="kg-sublabel" font-size="8">Session</text>
+      <text x="200" y="186" class="kg-sublabel" font-size="8">MCP</text>
+      <text x="145" y="276" class="kg-sublabel" font-size="8">Embed</text>
+      <text x="210" y="270" class="kg-sublabel" font-size="8">Transport</text>
+
+      <!-- ===== Engine Cluster (Green) ===== -->
+      <circle cx="300" cy="120" r="18" fill="var(--cc-engine)" opacity="0.9" filter="url(#glow)"/>
+      <circle cx="265" cy="175" r="13" fill="var(--cc-engine)" opacity="0.7"/>
+      <circle cx="340" cy="175" r="13" fill="var(--cc-engine)" opacity="0.7"/>
+      <circle cx="290" cy="230" r="11" fill="var(--cc-engine)" opacity="0.6"/>
+      <circle cx="350" cy="230" r="11" fill="var(--cc-engine)" opacity="0.6"/>
+      <circle cx="305" cy="275" r="11" fill="var(--cc-engine)" opacity="0.6"/>
+
+      <!-- Engine Edges -->
+      <line x1="432" y1="185" x2="318" y2="128" class="kg-edge"/>
+      <line x1="300" y1="120" x2="277" y2="163" class="kg-edge"/>
+      <line x1="300" y1="120" x2="328" y2="163" class="kg-edge"/>
+      <line x1="265" y1="175" x2="283" y2="219" class="kg-edge"/>
+      <line x1="340" y1="175" x2="342" y2="219" class="kg-edge"/>
+      <line x1="290" y1="230" x2="300" y2="264" class="kg-edge"/>
+
+      <!-- Engine Labels -->
+      <text x="300" y="87" class="kg-cluster-label" fill="var(--cc-engine)">Engine</text>
+      <text x="300" y="104" class="kg-sublabel" font-size="8">引擎</text>
+      <text x="265" y="161" class="kg-sublabel" font-size="8">Parser</text>
+      <text x="340" y="161" class="kg-sublabel" font-size="8">Execute</text>
+      <text x="290" y="246" class="kg-sublabel" font-size="8">Prompt</text>
+      <text x="350" y="246" class="kg-sublabel" font-size="8">History</text>
+      <text x="305" y="291" class="kg-sublabel" font-size="8">Result</text>
+
+      <!-- ===== Tools Cluster (Yellow) ===== -->
+      <circle cx="600" cy="120" r="18" fill="var(--cc-tools)" opacity="0.9" filter="url(#glow)"/>
+      <circle cx="555" cy="175" r="13" fill="var(--cc-tools)" opacity="0.7"/>
+      <circle cx="645" cy="175" r="13" fill="var(--cc-tools)" opacity="0.7"/>
+      <circle cx="575" cy="230" r="11" fill="var(--cc-tools)" opacity="0.6"/>
+      <circle cx="635" cy="230" r="11" fill="var(--cc-tools)" opacity="0.6"/>
+      <circle cx="600" cy="275" r="11" fill="var(--cc-tools)" opacity="0.6"/>
+
+      <!-- Tools Edges -->
+      <line x1="468" y1="185" x2="582" y2="128" class="kg-edge"/>
+      <line x1="600" y1="120" x2="567" y2="163" class="kg-edge"/>
+      <line x1="600" y1="120" x2="633" y2="163" class="kg-edge"/>
+      <line x1="555" y1="175" x2="569" y2="219" class="kg-edge"/>
+      <line x1="645" y1="175" x2="631" y2="219" class="kg-edge"/>
+      <line x1="575" y1="230" x2="594" y2="264" class="kg-edge"/>
+      <line x1="635" y1="230" x2="606" y2="264" class="kg-edge"/>
+
+      <!-- Tools Labels -->
+      <text x="600" y="87" class="kg-cluster-label" fill="var(--cc-tools)">Tools</text>
+      <text x="600" y="104" class="kg-sublabel" font-size="8">工具</text>
+      <text x="555" y="161" class="kg-sublabel" font-size="8">Bash</text>
+      <text x="645" y="161" class="kg-sublabel" font-size="8">Write</text>
+      <text x="575" y="246" class="kg-sublabel" font-size="8">Read</text>
+      <text x="635" y="246" class="kg-sublabel" font-size="8">Edit</text>
+      <text x="600" y="291" class="kg-sublabel" font-size="8">Glob</text>
+
+      <!-- ===== Security Cluster (Red) ===== -->
+      <circle cx="740" cy="140" r="18" fill="var(--cc-security)" opacity="0.9" filter="url(#glow)"/>
+      <circle cx="700" cy="200" r="13" fill="var(--cc-security)" opacity="0.7"/>
+      <circle cx="780" cy="200" r="13" fill="var(--cc-security)" opacity="0.7"/>
+      <circle cx="730" cy="255" r="11" fill="var(--cc-security)" opacity="0.6"/>
+
+      <!-- Security Edges -->
+      <line x1="478" y1="190" x2="722" y2="150" class="kg-edge"/>
+      <line x1="740" y1="140" x2="712" y2="188" class="kg-edge"/>
+      <line x1="740" y1="140" x2="768" y2="188" class="kg-edge"/>
+      <line x1="700" y1="200" x2="722" y2="244" class="kg-edge"/>
+
+      <!-- Security Labels -->
+      <text x="740" y="107" class="kg-cluster-label" fill="var(--cc-security)">Security</text>
+      <text x="740" y="124" class="kg-sublabel" font-size="8">安全</text>
+      <text x="700" y="186" class="kg-sublabel" font-size="8">Sandbox</text>
+      <text x="780" y="186" class="kg-sublabel" font-size="8">Auth</text>
+      <text x="730" y="271" class="kg-sublabel" font-size="8">Audit</text>
+
+      <!-- ===== Advanced Cluster (Purple) ===== -->
+      <circle cx="740" cy="320" r="18" fill="var(--cc-advanced)" opacity="0.9" filter="url(#glow)"/>
+      <circle cx="695" cy="375" r="13" fill="var(--cc-advanced)" opacity="0.7"/>
+      <circle cx="780" cy="375" r="13" fill="var(--cc-advanced)" opacity="0.7"/>
+      <circle cx="740" cy="420" r="11" fill="var(--cc-advanced)" opacity="0.6"/>
+
+      <!-- Advanced Edges -->
+      <line x1="722" y1="258" x2="738" y2="302" class="kg-edge"/>
+      <line x1="740" y1="320" x2="707" y2="363" class="kg-edge"/>
+      <line x1="740" y1="320" x2="768" y2="363" class="kg-edge"/>
+      <line x1="695" y1="375" x2="734" y2="409" class="kg-edge"/>
+      <line x1="780" y1="375" x2="746" y2="409" class="kg-edge"/>
+
+      <!-- Advanced Labels -->
+      <text x="740" y="287" class="kg-cluster-label" fill="var(--cc-advanced)">Advanced</text>
+      <text x="740" y="304" class="kg-sublabel" font-size="8">高级</text>
+      <text x="695" y="391" class="kg-sublabel" font-size="8">Hook</text>
+      <text x="780" y="391" class="kg-sublabel" font-size="8">Plugin</text>
+      <text x="740" y="436" class="kg-sublabel" font-size="8">Benchmark</text>
+
+      <!-- Edges from Center Hub -->
+      <line x1="430" y1="200" x2="302" y2="140" class="kg-edge"/>
+      <line x1="450" y1="200" x2="585" y2="140" class="kg-edge"/>
+      <line x1="478" y1="205" x2="722" y2="155" class="kg-edge"/>
+      <line x1="475" y1="220" x2="722" y2="305" class="kg-edge"/>
+
+      <!-- Legend -->
+      <circle cx="40" cy="440" r="6" fill="var(--cc-architecture)"/>
+      <text x="52" y="444" class="kg-legend">Architecture</text>
+      <circle cx="160" cy="440" r="6" fill="var(--cc-engine)"/>
+      <text x="172" y="444" class="kg-legend">Engine</text>
+      <circle cx="265" cy="440" r="6" fill="var(--cc-tools)"/>
+      <text x="277" y="444" class="kg-legend">Tools</text>
+      <circle cx="365" cy="440" r="6" fill="var(--cc-security)"/>
+      <text x="377" y="444" class="kg-legend">Security</text>
+      <circle cx="465" cy="440" r="6" fill="var(--cc-advanced)"/>
+      <text x="477" y="444" class="kg-legend">Advanced</text>
+
+      <!-- Note -->
+      <text x="450" y="462" class="kg-graph-note">OQ1 双保险：83 主显 + 74 脚注</text>
+    </svg>
+  </div>
+
+  <!-- ===== Q1 Guidance ===== -->
+  <div class="q1-guidance">
+    全书分为六个部分，你可以按顺序读，也可以根据兴趣跳读。
+  </div>
+
+  <!-- ===== 6 Part Cards Grid ===== -->
+  <div class="parts-grid">
+
+    <div class="part-card">
+      <div class="part-number">Part 1</div>
+      <div class="part-title">认识这个系统</div>
+      <div class="part-desc">用五分钟看懂整体架构</div>
+      <div class="part-meta">适合所有读者</div>
+    </div>
+
+    <div class="part-card">
+      <div class="part-number">Part 2</div>
+      <div class="part-title">代码架构完全解构</div>
+      <div class="part-desc">本书"地基"——这一部分不能跳</div>
+      <div class="part-meta">约 Part 2</div>
+    </div>
+
+    <div class="part-card">
+      <div class="part-number">Part 3</div>
+      <div class="part-title">好奇心驱动的深度问答</div>
+      <div class="part-desc">25 个问题</div>
+      <div class="part-meta">适合随机翻阅</div>
+    </div>
+
+    <div class="part-card">
+      <div class="part-number">Part 4</div>
+      <div class="part-title">子系统完全解析</div>
+      <div class="part-desc">28 个核心子系统</div>
+      <div class="part-meta">适合需要精确细节时查阅</div>
+    </div>
+
+    <div class="part-card part-star">
+      <div class="part-number">Part 5 ★★</div>
+      <div class="part-title">工程哲学</div>
+      <div class="part-desc">六条工程哲学（含 Prompt 八大设计智慧）</div>
+      <div class="part-meta">被两类读者共同推荐</div>
+    </div>
+
+    <div class="part-card">
+      <div class="part-number">Part 6</div>
+      <div class="part-title">批判与超越</div>
+      <div class="part-desc">复杂度代价分析</div>
+      <div class="part-meta">创业者核心章节</div>
+    </div>
+
+  </div>
+
+  <!-- ===== 0.4-B Performance Inline ===== -->
+  <div class="perf-inline">
+    <div class="perf-title">五大加速策略</div>
+
+    <div class="perf-item">
+      <div class="perf-item-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--cc-engine)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </div>
+      Prompt Cache
+    </div>
+
+    <div class="perf-item">
+      <div class="perf-item-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--cc-engine)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </div>
+      流式执行
+    </div>
+
+    <div class="perf-item">
+      <div class="perf-item-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--cc-engine)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      投机执行
+    </div>
+
+    <div class="perf-more">等五大加速策略</div>
+  </div>
+
+  <!-- ===== Q2 Sub-title ===== -->
+  <div class="q2-subtitle">三条阅读路线：找到适合你的入口</div>
+
+  <!-- ===== 3 Reader Path Cards ===== -->
+  <div class="reader-paths">
+
+    <!-- Path 1 -->
+    <div class="path-card">
+      <div class="path-badge">路径一</div>
+      <div class="path-title">CS 学生（ 或刚学编程不久）</div>
+      <div class="path-route">序章 → Part 1 → Part 3</div>
+      <div class="path-hero">
+        <strong>Hero 句：</strong>「遇到不懂的术语别焦虑，直接跳过」
+      </div>
+      <a class="path-ref" href="#">
+        <svg class="path-ref-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        操作系统类比表（就在上面）
+      </a>
+    </div>
+
+    <!-- Path 2 -->
+    <div class="path-card">
+      <div class="path-badge">路径二</div>
+      <div class="path-title">高级工程师（已经在用 Claude Code 或类似工具）</div>
+      <div class="path-route">Part 4 → Part 5 → Part 2</div>
+      <div class="path-hero">
+        <strong>Hero 句：</strong>「直接跳到你关心的子系统」
+      </div>
+      <a class="path-ref" href="#">
+        <svg class="path-ref-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <line x1="9" y1="9" x2="15" y2="15"/>
+          <line x1="15" y1="9" x2="9" y2="15"/>
+        </svg>
+        跳转到子系统详情
+      </a>
+    </div>
+
+    <!-- Path 3 -->
+    <div class="path-card">
+      <div class="path-badge">路径三</div>
+      <div class="path-title">AI 工具创业者或产品经理（想理解 Agent 架构决策）</div>
+      <div class="path-route">Part 6 → 序章 → Part 5</div>
+      <div class="path-hero">
+        <strong>Hero 句：</strong>「从批判视角重新认识系统」
+      </div>
+      <a class="path-ref" href="#">
+        <svg class="path-ref-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        序章的行业背景和竞品全景
+      </a>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="hero-footer">
+  <strong>序章 · Block 08</strong> · 阅读分流 · Claude Code 2.1.88 源码白皮书
+</div>
+
+</body>
+</html>
