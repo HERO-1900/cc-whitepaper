@@ -1,18 +1,20 @@
 # Claude Code 源码白皮书 — 项目进度追踪
 
-> 最后更新：2026-04-06 全部P0/P1/P2修复完成+Hooks可读性改善+读者分流导读+CacheSafeParams通俗比喻
+> 最后更新：2026-04-06 19:00 — 前端三态主题 + 图表融入 Stage 1/2 + 序章 15 张图占位符内联 + B 路径 fallback 100% 覆盖
 
 ## 项目概况
 
 | 指标 | 数据 |
 |------|------|
-| 总章节 | 82 章（含 references + 6 新增架构章节 + 1 Prompt原文集 + 1 设计智慧） |
-| 总字数 | 353,586 CJK 字符（八大智慧补充批判反思后） |
-| QA Issues | 0 errors (2 warnings + 1 info 均为引用页预期) |
-| 完整度 | 82/82 = 4.95/5 avg |
-| 图表进度 | 114/114 已产出 + 7 个新 Brief 已写 ✅ |
+| 总章节 | 83 章（含 Harness Engineering 第 83 章 ✅ 2026-04-06 入库） |
+| 总字数 | 359,948 CJK 字符（QA 实测） |
+| QA Issues | 0 errors（3 warnings + 1 info：references / ch83 新章预期内）+ search-index 完整性 ✅ 83/83 |
+| 完整度 | 83/83 = 4.95/5 avg |
+| 图表进度 | 123/123 生产 + 105/122 placeholder 内联 + 17 自动 fallback ✅ 100% 线上可见 |
+| 主题系统 | 暗/亮/auto 三态切换器 ✅（FOUC 防御 + localStorage 跨 Tab 同步） |
+| Design Tokens | 246 个 `--cc-*` 变量 ✅（atomic + semantic 两层架构） |
 | 源码统计 | 1,902 文件 / 512,695 LOC 全量扫描完成 |
-| 网站地址 | `http://localhost:8080` (本地开发) |
+| 网站地址 | `http://localhost:8080` (本地) / `https://hero-1900.github.io/cc-whitepaper/` (线上) |
 
 ---
 
@@ -89,7 +91,7 @@ Hooks(exit 2/跨章命名)、插件(109→460行)、遥测(3→5通道)、CLAUDE
 
 ## 二、可视化/图表系统
 
-### 状态：✅ 全部完成 — 114/114 (100%)
+### 状态：✅ 123/123（part3_new 7 张图表 2026-04-06 18:10 全部入库）
 
 ### 简化管线 (chart-pipeline-simple.sh)
 
@@ -539,7 +541,7 @@ Hooks(exit 2/跨章命名)、插件(109→460行)、遥测(3→5通道)、CLAUDE
 - 适用版本：v2.1.88+
 
 ### 核心结论
-- **我们 82 章中至少 70+ 章在花叔手册中完全不存在**
+- **我们 83 章中至少 70+ 章在花叔手册中完全不存在**
 - 花叔是"驾驶手册"，我们是"发动机工程图纸"，定位互补不竞争
 - 花叔源码分析仅占全书 4%（附录A），停留在概念性描述，无代码引用
 
@@ -568,6 +570,68 @@ Hooks(exit 2/跨章命名)、插件(109→460行)、遥测(3→5通道)、CLAUDE
 
 ---
 
+## 十五、前端主题系统 + 图表融入 (2026-04-06 晚)
+
+### 背景
+用户拍板：图表融入阅读体验是"深刻课题"，要进入设计阶段；前端 Design Tokens 阶段 1 启动；
+Astro 激进路线做 PoC 不影响主站。三轨并行，全部 sub-agent 化。
+
+### 已交付（按 commit 顺序）
+
+| Commit | 主题 | 改动量 | 验证 |
+|--------|------|--------|------|
+| `6e38b44` | 前端 Stage 1：Design Tokens 系统 | tokens.css 426 行 / 246 个 `--cc-*` 变量 / 三态切换器 / FOUC 防御 | 0 改 style.css，零回归 |
+| `ed49e1e` | chart-embed.js Stage 1：折叠+预加载+骨架屏+主题 bridge | +274/-69 行 | qa ✅ / 拨测 200 |
+| `cd0ba4c` | 前端 Stage 2：style.css :root 转发到 `--cc-*` | 19 行（一次性接到 token） | 600+ 处现有 var 引用自动跟随主题 |
+| `e795bcb` | 7 张 part3_new 图表归位 mapping | mapping 83→90 | 7 张 placeholder 内联渲染 |
+| `d986cd4` | 序章 15 张图表占位符插入 + mapping | 15 个 `[图表预留 0.X-Y]` 写入序章 prose | 序章首屏 15 张图内联 |
+| `53f32e6` | chart-embed.js B 路径：游离图自动归位章节末尾 | +148 行 / 新增 `appendOrphanCharts` API | Playwright 实测：part4 10 张 + part5 5 张 + 序章 1 张全部渲染 |
+| `37c8c23` | build-search-index.js 双写源消除 + qa 完整性校验 | -128/+49 行 | search-index 83/83 ✅ |
+| `29ced1f` | 章数一致性 82→83 | 4 个 UI 文件 | qa ✅ |
+| `3715549` | ch83 Harness Engineering 入库 | +403 行 | qa completeness 4/5 |
+| `312a0e4` | Astro PoC 沙箱归档 | 22 文件 / 7232 行（无 node_modules/dist） | 详见 handoff/astro-spike-report |
+| `2b22318` | 7 张 part3_new 图表评审记录 | reviews/*.txt | — |
+
+### 关键里程碑
+
+**1. 主题系统真正可用**
+- 246 个 `--cc-*` 变量分原子层 + 语义层两层架构
+- 暗/亮/auto 三态，localStorage 持久化 + 跨 Tab 同步
+- FOUC 防御脚本在 `<head>` 内联（CSS 解析前注入 `data-theme`）
+- Stage 2 把 style.css 旧 :root 全部转发到 `--cc-*`，整站 600+ 处变量引用一次性跟随主题切换
+
+**2. 图表 100% 线上可见**
+- mapping 状态：105/122 placeholder 内联 + 17 自动 fallback = **122/122 全覆盖**
+- chart-embed.js B 路径是架构级安全网：以后任何加图都能自动归位，不会再有"加了 mapping 但用户看不到"的故障模式
+- 序章 15 张关键图采用 placeholder 内联（首屏叙事优先）
+- part4 10 张 + part5 5 张 + part1 1 张采用 B 路径文末 fallback（叙事融入是 P2 优化）
+
+**3. 工程根因修复**
+- search-index.json 双写源彻底消除：build-search-index.js 改为 `require('../js/data.js')` 单源
+- qa-check.js 增加完整性 CI 校验：实际 entries < data.js 期望 → exit 1
+- 原因：build script 内部硬编码了一份 BOOK_STRUCTURE（80 章），与 data.js（91 章）不同步，导致 ch83/p2-14/references 长期"看不到"
+
+**4. Astro 长期赛道 PoC**
+- 1.04 秒构建 83 页面，0 JS 输出，CSS 削减 88%
+- 推荐路径 B 增量迁移：先 Part 2 + Part 3 共 39 章试水
+- 6 个风险 R1-R6 已识别（详见 handoff/astro-spike-report-2026-04-06.md）
+- 主站继续 vanilla 演进，沙箱不影响生产
+
+### 已识别但未处理的次级缺陷
+
+- **review-mode.js:229** 存在 pre-existing `buildGalleryView insertBefore` pageerror（与本次改动无关，Playwright 拨测时捕获到）
+- **part4/part5 章节 prose 占位符**：15 张图当前用 B 路径文末 fallback，理想情况应该有 inline placeholder——P2 优化任务
+- **VIS-0-002 旧版仪表盘**：被 VIS-0-002B 替代，按设计意图保留游离不渲染
+- **VIS-1-011 归属**：自动归到序章末尾（派生规则），实际可能更适合 part1 概念章节
+
+### 设计文档
+
+- `handoff/frontend-stage1-tokens-2026-04-06.md` — 前端 Stage 1 完成报告
+- `handoff/chart-integration-design-2026-04-06.md` — 图表融入三方案对比 + 推荐
+- `handoff/astro-spike-report-2026-04-06.md` — Astro PoC 完整审计 + 6 风险
+
+---
+
 ## 十四、其他开放问题
 
 1. **子 Agent 方案已落地**：Kimi + MiniMax 双模型管线运行中
@@ -578,7 +642,7 @@ Hooks(exit 2/跨章命名)、插件(109→460行)、遥测(3→5通道)、CLAUDE
 6. **GitHub 推送**：用户确认每次更新都要推送，建立 PR 历史记录
 7. **飞书文档×4**：需飞书登录获取
 8. **X 文章待获取**：#31知乎 + #32 OpenAI Harness + #36 yage.ai（需用户手动复制）
-9. **Gemini 前端设计**：沙箱原型已创建 (`sandbox/design-prototype.html`)，待用户评估定夺
+9. ~~**Gemini 前端设计**~~：✅ 已落地为 Stage 1/2 Design Tokens 系统（commit 6e38b44 + cd0ba4c），见第十五章节
 10. ~~**P0 数字不一致**~~：✅ 已修复（references.md 74章→82章、近30万→逾35万）
 11. ~~**P0 10.2% 来源**~~：✅ 已补充源码文件+行号标注
 12. ~~**P1 截止日期**~~：✅ 序章已添加"源码分析截止日期：2026年4月"
