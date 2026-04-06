@@ -1377,8 +1377,8 @@
             
             title.textContent = d.id;
             title.style.color = clusters[d.cluster].color;
-            inDegree.textContent = d.inDegree || Math.floor(Math.random() * 10) + 1;
-            outDegree.textContent = d.outDegree || Math.floor(Math.random() * 8) + 1;
+            inDegree.textContent = (d.inDegree !== undefined) ? d.inDegree : '—';
+            outDegree.textContent = (d.outDegree !== undefined) ? d.outDegree : '—';
             desc.textContent = d.desc || `${d.id} 是 Claude Code ${clusters[d.cluster].name} 模块的一部分，负责处理 ${clusters[d.cluster].name.toLowerCase()} 相关的核心逻辑。`;
             
             panel.classList.add('active');
