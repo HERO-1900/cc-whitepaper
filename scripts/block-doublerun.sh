@@ -26,22 +26,28 @@ MODEL="${1:-kimi}"
 case "${WHICH:-both}" in
   kimi)
     echo "[$(date +%H:%M:%S)] Kimi 启动"
-    ANTHROPIC_BASE_URL="https://api.kimi.com/coding/" \
-    ANTHROPIC_API_KEY="${KIMI_API_KEY}" \
-    ENABLE_TOOL_SEARCH=false \
-    claude -p "$FULL_PROMPT" --output-format text < /dev/null \
-      > "${OUT_DIR}/kimi-${STAMP}.html" 2>"${OUT_DIR}/kimi-${STAMP}.log"
+    (
+      exec </dev/null
+      ANTHROPIC_BASE_URL="https://api.kimi.com/coding/" \
+      ANTHROPIC_API_KEY="${KIMI_API_KEY}" \
+      ENABLE_TOOL_SEARCH=false \
+      claude -p "$FULL_PROMPT" --output-format text \
+        > "${OUT_DIR}/kimi-${STAMP}.html" 2>"${OUT_DIR}/kimi-${STAMP}.log"
+    ) & disown
     echo "[$(date +%H:%M:%S)] Kimi 完成 → ${OUT_DIR}/kimi-${STAMP}.html"
     ;;
   minimax)
     echo "[$(date +%H:%M:%S)] MiniMax 启动"
-    ANTHROPIC_BASE_URL="https://api.minimaxi.com/anthropic" \
-    ANTHROPIC_API_KEY="${MINIMAX_API_KEY}" \
-    ANTHROPIC_MODEL="MiniMax-M2.7" \
-    API_TIMEOUT_MS=600000 \
-    ENABLE_TOOL_SEARCH=false \
-    claude -p "$FULL_PROMPT" --output-format text < /dev/null \
-      > "${OUT_DIR}/minimax-${STAMP}.html" 2>"${OUT_DIR}/minimax-${STAMP}.log"
+    (
+      exec </dev/null
+      ANTHROPIC_BASE_URL="https://api.minimaxi.com/anthropic" \
+      ANTHROPIC_API_KEY="${MINIMAX_API_KEY}" \
+      ANTHROPIC_MODEL="MiniMax-M2.7" \
+      API_TIMEOUT_MS=600000 \
+      ENABLE_TOOL_SEARCH=false \
+      claude -p "$FULL_PROMPT" --output-format text \
+        > "${OUT_DIR}/minimax-${STAMP}.html" 2>"${OUT_DIR}/minimax-${STAMP}.log"
+    ) & disown
     echo "[$(date +%H:%M:%S)] MiniMax 完成 → ${OUT_DIR}/minimax-${STAMP}.html"
     ;;
 esac

@@ -1,0 +1,511 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Block 9 · 收尾合一</title>
+  <style>
+    :root {
+      --cc-color-bg: #0a0a0a;
+      --cc-color-surface: #141414;
+      --cc-color-surface-secondary: #1a1a1a;
+      --cc-color-surface-tertiary: #222222;
+      --cc-color-border: #2a2a2a;
+      --cc-color-text: #f5f5f5;
+      --cc-color-text-secondary: #888888;
+      --cc-color-brand: #d4a574;
+      --cc-color-brand-hover: #e8c9a8;
+      --cc-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --cc-font-mono: "SF Mono", Monaco, "Cascadia Code", Consolas, monospace;
+      --cc-font-size-base: 1rem;
+      --cc-font-size-lg: 1.125rem;
+      --cc-font-size-xl: 1.25rem;
+      --cc-font-size-2xl: 1.5rem;
+      --cc-font-size-3xl: 2rem;
+      --cc-font-size-4xl: 2.5rem;
+      --cc-font-size-5xl: 3.5rem;
+      --cc-font-weight-bold: 700;
+      --cc-leading-snug: 1.3;
+      --cc-leading-relaxed: 1.8;
+      --cc-measure-prose: 65ch;
+      --cc-space-4: 1rem;
+      --cc-space-6: 1.5rem;
+      --cc-space-8: 2rem;
+      --cc-space-10: 2.5rem;
+      --cc-space-12: 3rem;
+      --cc-space-16: 4rem;
+      --cc-space-20: 5rem;
+    }
+
+    [data-theme="light"] {
+      --cc-color-bg: #fafafa;
+      --cc-color-surface: #ffffff;
+      --cc-color-surface-secondary: #f5f5f5;
+      --cc-color-surface-tertiary: #eeeeee;
+      --cc-color-border: #e0e0e0;
+      --cc-color-text: #1a1a1a;
+      --cc-color-text-secondary: #666666;
+      --cc-color-brand: #8b6914;
+      --cc-color-brand-hover: #6b510f;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--cc-font-sans);
+      font-size: var(--cc-font-size-lg);
+      line-height: var(--cc-leading-relaxed);
+      color: var(--cc-color-text);
+      background-color: var(--cc-color-bg);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--cc-space-12) var(--cc-space-6);
+    }
+
+    section {
+      padding: var(--cc-space-16) 0;
+    }
+
+    h2 {
+      font-size: var(--cc-font-size-4xl);
+      font-weight: var(--cc-font-weight-bold);
+      margin-bottom: var(--cc-space-8);
+      color: var(--cc-color-text);
+    }
+
+    p {
+      max-width: var(--cc-measure-prose);
+      margin-bottom: var(--cc-space-6);
+    }
+
+    /* Pull Quote */
+    .pull-quote {
+      font-size: clamp(1.875rem, 4vw, 3rem);
+      line-height: var(--cc-leading-snug);
+      font-weight: var(--cc-font-weight-bold);
+      color: var(--cc-color-brand);
+      margin: var(--cc-space-10) 0;
+      padding: var(--cc-space-8) var(--cc-space-6);
+      border-left: 4px solid var(--cc-color-brand);
+      background: linear-gradient(90deg, var(--cc-color-surface-secondary) 0%, transparent 100%);
+    }
+
+    /* Principle Banner */
+    .principle-banner {
+      margin: var(--cc-space-10) 0;
+      padding: var(--cc-space-8);
+      background-color: var(--cc-color-surface);
+      border-radius: 8px;
+      border: 1px solid var(--cc-color-border);
+    }
+
+    .principle-title {
+      font-size: var(--cc-font-size-3xl);
+      font-weight: var(--cc-font-weight-bold);
+      color: var(--cc-color-brand);
+      margin-bottom: var(--cc-space-6);
+    }
+
+    blockquote {
+      font-style: italic;
+      color: var(--cc-color-text-secondary);
+      border-left: 3px solid var(--cc-color-border);
+      padding-left: var(--cc-space-6);
+      margin: var(--cc-space-6) 0;
+    }
+
+    /* Metaphor Cards Grid */
+    .metaphor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--cc-space-6);
+      margin: var(--cc-space-10) 0;
+    }
+
+    .metaphor-card {
+      background-color: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 12px;
+      padding: var(--cc-space-6);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .metaphor-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--cc-color-brand);
+    }
+
+    .metaphor-icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: var(--cc-space-4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--cc-font-size-3xl);
+    }
+
+    .metaphor-name {
+      font-size: var(--cc-font-size-2xl);
+      font-weight: var(--cc-font-weight-bold);
+      margin-bottom: var(--cc-space-2);
+      color: var(--cc-color-text);
+    }
+
+    .metaphor-domain {
+      font-size: var(--cc-font-size-base);
+      color: var(--cc-color-brand);
+      margin-bottom: var(--cc-space-4);
+    }
+
+    .metaphor-concepts {
+      font-size: var(--cc-font-size-base);
+      color: var(--cc-color-text-secondary);
+      line-height: 1.6;
+    }
+
+    .metaphor-note {
+      font-size: var(--cc-font-size-base);
+      color: var(--cc-color-text-secondary);
+      margin-top: var(--cc-space-6);
+      font-style: italic;
+    }
+
+    /* Group Tag Cards */
+    .group-section {
+      margin: var(--cc-space-10) 0;
+    }
+
+    .group-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: var(--cc-space-4);
+      margin-top: var(--cc-space-6);
+    }
+
+    .group-card {
+      background-color: var(--cc-color-surface-secondary);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 8px;
+      padding: var(--cc-space-4) var(--cc-space-6);
+      text-align: center;
+      transition: background-color 0.2s;
+    }
+
+    .group-card:hover {
+      background-color: var(--cc-color-surface-tertiary);
+    }
+
+    .group-name {
+      font-size: var(--cc-font-size-base);
+      font-weight: var(--cc-font-weight-bold);
+      color: var(--cc-color-text);
+    }
+
+    .group-subtitle {
+      font-size: 0.875rem;
+      color: var(--cc-color-text-secondary);
+      margin-top: var(--cc-space-2);
+    }
+
+    /* Horizontal Divider */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--cc-color-border);
+      margin: var(--cc-space-16) 0;
+    }
+
+    /* Acknowledgement Card */
+    .acknowledgement-card {
+      background-color: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 12px;
+      padding: var(--cc-space-10);
+      margin: var(--cc-space-10) 0;
+    }
+
+    .acknowledgement-card p {
+      max-width: none;
+    }
+
+    .let-us-begin {
+      font-size: var(--cc-font-size-3xl);
+      font-weight: var(--cc-font-weight-bold);
+      text-align: center;
+      color: var(--cc-color-brand);
+      margin-top: var(--cc-space-8);
+    }
+
+    /* Source Entry Block */
+    .source-entry {
+      background-color: var(--cc-color-surface-secondary);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 8px;
+      padding: var(--cc-space-6);
+      margin: var(--cc-space-8) 0;
+      overflow-x: auto;
+    }
+
+    .source-entry pre {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-base);
+      line-height: 1.8;
+      color: var(--cc-color-text);
+      white-space: pre;
+      margin: 0;
+    }
+
+    .source-path {
+      color: var(--cc-color-brand);
+    }
+
+    .source-comment {
+      color: var(--cc-color-text-secondary);
+    }
+
+    .footnote {
+      font-size: var(--cc-font-size-base);
+      color: var(--cc-color-text-secondary);
+      margin-top: var(--cc-space-4);
+      font-style: italic;
+    }
+
+    /* CTA Button */
+    .cta-container {
+      margin-top: var(--cc-space-16);
+      text-align: center;
+    }
+
+    .cta-button {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: var(--cc-space-20);
+      padding: var(--cc-space-8);
+      background-color: var(--cc-color-brand);
+      color: var(--cc-color-bg);
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+      text-decoration: none;
+    }
+
+    .cta-button:hover {
+      background-color: var(--cc-color-brand-hover);
+      transform: scale(1.02);
+    }
+
+    .cta-guide {
+      font-size: var(--cc-font-size-xl);
+      opacity: 0.9;
+      margin-bottom: var(--cc-space-2);
+    }
+
+    .cta-title {
+      font-size: var(--cc-font-size-4xl);
+      font-weight: var(--cc-font-weight-bold);
+    }
+
+    .cta-arrow {
+      font-size: var(--cc-font-size-3xl);
+      margin-left: var(--cc-space-4);
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      position: fixed;
+      top: var(--cc-space-4);
+      right: var(--cc-space-4);
+      background: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      color: var(--cc-color-text);
+      padding: var(--cc-space-2) var(--cc-space-4);
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: var(--cc-font-size-base);
+      z-index: 100;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .metaphor-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .group-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .cta-title {
+        font-size: var(--cc-font-size-2xl);
+      }
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" onclick="toggleTheme()">🌓 切换主题</button>
+  
+  <div class="container">
+    <!-- Section 1: About Metaphors -->
+    <section id="about-metaphors">
+      <h2>关于比喻</h2>
+      
+      <p>这本书会大量使用比喻和类比。这不是为了"通俗化"——是因为 Claude Code 涉及的很多概念（投机执行、提示词缓存边界、权限状态机、Token 预算）本身就很抽象。</p>
+      
+      <div class="pull-quote">
+        「好的比喻不是降低精度，是提供另一个入口。」
+      </div>
+      
+      <p>我们遵循一个原则：</p>
+      
+      <div class="principle-banner">
+        <div class="principle-title">「比喻先行，精确随后。」</div>
+        <blockquote>
+          先用你已经懂的东西（操作系统、机场安检、城市财政）建立直觉，再用源代码和行号确认这个直觉是否准确。如果比喻和现实有出入，我们会明确指出哪里类比不成立。
+        </blockquote>
+      </div>
+      
+      <p>你会在书中看到几个反复出现的比喻家族：</p>
+      
+      <div class="metaphor-grid">
+        <div class="metaphor-card">
+          <div class="metaphor-icon">🖥️</div>
+          <div class="metaphor-name">操作系统</div>
+          <div class="metaphor-domain">（全局框架）</div>
+          <div class="metaphor-concepts">内核、系统调用、文件系统、进程调度……</div>
+        </div>
+        
+        <div class="metaphor-card">
+          <div class="metaphor-icon">🛂</div>
+          <div class="metaphor-name">机场安检</div>
+          <div class="metaphor-domain">（安全模型）</div>
+          <div class="metaphor-concepts">安检通道、PreCheck、登机牌、海关……</div>
+        </div>
+        
+        <div class="metaphor-card">
+          <div class="metaphor-icon">🏛️</div>
+          <div class="metaphor-name">城市财政</div>
+          <div class="metaphor-domain">（Token 经济学）</div>
+          <div class="metaphor-concepts">预算、税收、基础设施复用……</div>
+        </div>
+        
+        <div class="metaphor-card">
+          <div class="metaphor-icon">🥪</div>
+          <div class="metaphor-name">三明治组装线</div>
+          <div class="metaphor-domain">（提示词构建）</div>
+          <div class="metaphor-concepts">食材顺序、配方固定部分、个性化配料……</div>
+        </div>
+        
+        <div class="metaphor-card">
+          <div class="metaphor-icon">💾</div>
+          <div class="metaphor-name">游戏存档</div>
+          <div class="metaphor-domain">（文件历史）</div>
+          <div class="metaphor-concepts">自动存档、存档点、读档回滚……</div>
+        </div>
+      </div>
+      
+      <p class="metaphor-note">每个比喻第一次出现时都会完整展开，后续引用时只用简称。</p>
+      
+      <div class="group-section">
+        <p><strong>【图表预留 0.5-A】</strong>：Claude Code 概念速查表——25 个核心概念分 5 组，阅读后续章节时可随时回这里查对。</p>
+        
+        <div class="group-grid">
+          <div class="group-card">
+            <div class="group-name">循环与执行</div>
+            <div class="group-subtitle">25 个核心概念分 5 组</div>
+          </div>
+          <div class="group-card">
+            <div class="group-name">工具与 Agent</div>
+            <div class="group-subtitle">25 个核心概念分 5 组</div>
+          </div>
+          <div class="group-card">
+            <div class="group-name">安全与权限</div>
+            <div class="group-subtitle">25 个核心概念分 5 组</div>
+          </div>
+          <div class="group-card">
+            <div class="group-name">上下文与 Token</div>
+            <div class="group-subtitle">25 个核心概念分 5 组</div>
+          </div>
+          <div class="group-card">
+            <div class="group-name">扩展与配置</div>
+            <div class="group-subtitle">25 个核心概念分 5 组</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <hr class="divider">
+    
+    <!-- Section 2: A Declaration -->
+    <section id="declaration">
+      <h2>一个声明</h2>
+      
+      <div class="acknowledgement-card">
+        <p>本书的分析基于 Claude Code <strong>2.1.88</strong> 版本的泄露源代码。我们对 Anthropic 的工程团队怀有真诚的敬意——这是一个设计精良的系统，很多决策在深入分析后让人由衷佩服。我们的批评同样真诚：指出设计取舍和潜在问题不是贬低，而是工程分析应有的态度。</p>
+        
+        <p>代码会演进，版本会更新。书中的行号和具体实现可能在你阅读时已经改变。但设计理念和架构决策的生命力远比具体代码长——这才是本书试图传递的核心价值。</p>
+        
+        <div class="let-us-begin">让我们开始。</div>
+      </div>
+    </section>
+    
+    <hr class="divider">
+    
+    <!-- Section 3: Quick Navigation -->
+    <section id="source-entry">
+      <h2>快速导航：源码入口</h2>
+      
+      <p>本书分析的核心源码入口：</p>
+      
+      <div class="source-entry">
+        <pre><span class="source-path">src/main.tsx</span>          <span class="source-comment">— 启动入口（4,684 行的巨型文件）</span>
+<span class="source-path">src/services/claude.ts</span> <span class="source-comment">— 查询循环核心（query 函数）</span>
+<span class="source-path">src/tools/</span>            <span class="source-comment">— 38 个内置工具的实现</span>
+<span class="source-path">src/utils/permissions/</span> <span class="source-comment">— 权限系统（约 1,400 行）</span>
+<span class="source-path">src/memdir/</span>           <span class="source-comment">— 记忆系统</span></pre>
+      </div>
+      
+      <p class="footnote">* 此处统计 src/tools/ 目录下的工具实现文件，与 0.3-A 的 43 个对外可调用工具在口径上不同</p>
+    </section>
+    
+    <hr class="divider">
+    
+    <!-- CTA -->
+    <div class="cta-container">
+      <a href="#" class="cta-button">
+        <span class="cta-guide">→ 翻到 Part 1 第一章</span>
+        <span class="cta-title">这不是聊天机器人 <span class="cta-arrow">→</span></span>
+      </a>
+    </div>
+  </div>
+  
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+    
+    // Load saved theme
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+  </script>
+</body>
+</html>
+```

@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V2 序章 Block 4 · 数字震撼</title>
+    <style>
+        :root {
+            --cc-font-sans: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --cc-font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+            --cc-font-size-6xl: clamp(3rem, 10vw, 8rem);
+            --cc-font-size-5xl: clamp(2rem, 6vw, 4.5rem);
+            --cc-font-size-4xl: clamp(1.5rem, 4vw, 2.5rem);
+            --cc-font-size-3xl: clamp(1.25rem, 3vw, 1.875rem);
+            --cc-font-size-2xl: clamp(1.125rem, 2vw, 1.5rem);
+            --cc-font-size-xl: clamp(1rem, 1.5vw, 1.25rem);
+            --cc-font-size-lg: clamp(0.9375rem, 1.25vw, 1.0625rem);
+            --cc-font-size-base: 1rem;
+            --cc-font-size-sm: 0.875rem;
+            --cc-font-size-xs: 0.75rem;
+            --cc-leading-none: 1;
+            --cc-leading-tight: 1.25;
+            --cc-leading-snug: 1.375;
+            --cc-leading-normal: 1.5;
+            --cc-leading-relaxed: 1.625;
+            --cc-measure-prose: 65ch;
+            --cc-space-1: 0.25rem;
+            --cc-space-2: 0.5rem;
+            --cc-space-3: 0.75rem;
+            --cc-space-4: 1rem;
+            --cc-space-5: 1.25rem;
+            --cc-space-6: 1.5rem;
+            --cc-space-8: 2rem;
+            --cc-space-10: 2.5rem;
+            --cc-space-12: 3rem;
+            --cc-space-16: 4rem;
+            --cc-space-20: 5rem;
+            --cc-space-24: 6rem;
+            --cc-color-bg: #0d1117;
+            --cc-color-surface: #161b22;
+            --cc-color-surface-secondary: #21262d;
+            --cc-color-surface-elevated: #2d333b;
+            --cc-color-border: #30363d;
+            --cc-color-text-primary: #e6edf3;
+            --cc-color-text-secondary: #8b949e;
+            --cc-color-text-tertiary: #6e7681;
+            --cc-color-brand: #58a6ff;
+            --cc-color-brand-secondary: #79c0ff;
+            --cc-color-accent-orange: #d29922;
+            --cc-color-accent-green: #3fb950;
+            --cc-color-accent-purple: #a371f7;
+            --cc-color-accent-red: #f85149;
+            --cc-color-accent-cyan: #39d0d8;
+            --cc-radius-sm: 4px;
+            --cc-radius-md: 8px;
+            --cc-radius-lg: 12px;
+            --cc-radius-xl: 16px;
+        }
+
+        [data-theme="light"] {
+            --cc-color-bg: #ffffff;
+            --cc-color-surface: #f6f8fa;
+            --cc-color-surface-secondary: #eaeef2;
+            --cc-color-surface-elevated: #ffffff;
+            --cc-color-border: #d0d7de;
+            --cc-color-text-primary: #1f2328;
+            --cc-color-text-secondary: #656d76;
+            --cc-color-text-tertiary: #8c959f;
+            --cc-color-brand: #0969da;
+            --cc-color-brand-secondary: #0550ae;
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 16px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: var(--cc-font-sans);
+            background: var(--cc-color-bg);
+            color: var(--cc-color-text-primary);
+            line-height: var(--cc-leading-relaxed);
+            min-height: 100vh;
+        }
+
+        .block4-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--cc-space-16) var(--cc-space-6);
+        }
+
+        /* Q-pre: break-the-grid full-width introduction quote */
+        .q-pre {
+            font-size: var(--cc-font-size-2xl);
+            font-weight: 500;
+            color: var(--cc-color-text-secondary);
+            line-height: var(--cc-leading-relaxed);
+            max-width: var(--cc-measure-prose);
+            margin: 0 auto var(--cc-space-16);
+            text-align: center;
+            font-style: italic;
+            position: relative;
+            padding: var(--cc-space-8) 0;
+        }
+
+        .q-pre::before,
+        .q-pre::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cc-color-border), transparent);
+        }
+
+        .q-pre::before { top: 0; }
+        .q-pre::after { bottom: 0; }
+
+        /* Hero 5 mega-stat-grid */
+        .mega-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: var(--cc-space-6);
+            margin-bottom: var(--cc-space-12);
+        }
+
+        @media (max-width: 1024px) {
+            .mega-stat-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        @media (max-width: 640px) {
+            .mega-stat-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .hero-stat {
+            text-align: center;
+            padding: var(--cc-space-6);
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-lg);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .hero-stat:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+        }
+
+        .hero-stat-value {
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-6xl);
+            font-weight: 700;
+            color: var(--cc-color-brand);
+            line-height: var(--cc-leading-none);
+            margin-bottom: var(--cc-space-2);
+        }
+
+        .hero-stat:nth-child(2) .hero-stat-value { color: var(--cc-color-accent-green); }
+        .hero-stat:nth-child(3) .hero-stat-value { color: var(--cc-color-accent-orange); }
+        .hero-stat:nth-child(4) .hero-stat-value { color: var(--cc-color-accent-purple); }
+        .hero-stat:nth-child(5) .hero-stat-value { color: var(--cc-color-accent-cyan); }
+
+        .hero-stat-label {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .hero-stat-sub {
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-color-text-tertiary);
+            margin-top: var(--cc-space-1);
+            font-family: var(--cc-font-mono);
+        }
+
+        /* Q1: Giant pull-quote - the emotional peak */
+        .q1-pullquote {
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: 700;
+            color: var(--cc-color-text-primary);
+            line-height: var(--cc-leading-tight);
+            text-align: center;
+            padding: var(--cc-space-12) var(--cc-space-4);
+            margin: var(--cc-space-12) 0;
+            position: relative;
+            font-family: var(--cc-font-sans);
+        }
+
+        .q1-pullquote::before {
+            content: '「';
+            position: absolute;
+            top: var(--cc-space-4);
+            left: var(--cc-space-4);
+            font-size: 4em;
+            color: var(--cc-color-brand);
+            opacity: 0.3;
+            font-family: var(--cc-font-mono);
+            line-height: 1;
+        }
+
+        .q1-pullquote::after {
+            content: '」';
+            position: absolute;
+            bottom: var(--cc-space-4);
+            right: var(--cc-space-4);
+            font-size: 4em;
+            color: var(--cc-color-brand);
+            opacity: 0.3;
+            font-family: var(--cc-font-mono);
+            line-height: 1;
+        }
+
+        /* Q3: Follow-up punch */
+        .q3-followup {
+            font-size: var(--cc-font-size-xl);
+            color: var(--cc-color-text-secondary);
+            text-align: center;
+            margin-bottom: var(--cc-space-12);
+            max-width: var(--cc-measure-prose);
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Dual chart frame */
+        .dual-chart-frame {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--cc-space-8);
+            margin: var(--cc-space-12) 0;
+        }
+
+        @media (max-width: 1024px) {
+            .dual-chart-frame { grid-template-columns: 1fr; }
+        }
+
+        .chart-panel {
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-lg);
+            overflow: hidden;
+        }
+
+        .chart-panel-header {
+            padding: var(--cc-space-4) var(--cc-space-5);
+            border-bottom: 1px solid var(--cc-color-border);
+            background: var(--cc-color-surface-secondary);
+        }
+
+        .chart-panel-title {
+            font-size: var(--cc-font-size-base);
+            font-weight: 600;
+            color: var(--cc-color-text-primary);
+        }
+
+        .chart-panel-subtitle {
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-color-text-tertiary);
+            margin-top: var(--cc-space-1);
+            font-family: var(--cc-font-mono);
+        }
+
+        .chart-panel-body {
+            padding: var(--cc-space-5);
+        }
+
+        /* Mini dashboard inside panel */
+        .mini-dashboard {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--cc-space-3);
+        }
+
+        .mini-kpi {
+            background: var(--cc-color-surface-secondary);
+            border-radius: var(--cc-radius-md);
+            padding: var(--cc-space-3);
+            text-align: center;
+        }
+
+        .mini-kpi-value {
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-2xl);
+            font-weight: 700;
+            color: var(--cc-color-brand);
+            line-height: var(--cc-leading-none);
+        }
+
+        .mini-kpi:nth-child(2) .mini-kpi-value { color: var(--cc-color-accent-green); }
+        .mini-kpi:nth-child(3) .mini-kpi-value { color: var(--cc-color-accent-orange); }
+        .mini-kpi:nth-child(4) .mini-kpi-value { color: var(--cc-color-accent-purple); }
+
+        .mini-kpi-label {
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-color-text-tertiary);
+            margin-top: var(--cc-space-1);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Mini bar chart */
+        .mini-barchart {
+            margin-top: var(--cc-space-4);
+        }
+
+        .mini-barchart-item {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-3);
+            margin-bottom: var(--cc-space-2);
+        }
+
+        .mini-barchart-name {
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-color-text-secondary);
+            width: 100px;
+            flex-shrink: 0;
+        }
+
+        .mini-barchart-bar {
+            flex: 1;
+            height: 12px;
+            background: var(--cc-color-surface-elevated);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .mini-barchart-fill {
+            height: 100%;
+            background: var(--cc-color-brand);
+            border-radius: 6px;
+            transition: width 1s ease-out;
+        }
+
+        .mini-barchart-value {
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-color-text-tertiary);
+            width: 50px;
+            text-align: right;
+        }
+
+        /* Mini architecture diagram */
+        .mini-arch {
+            display: flex;
+            flex-direction: column;
+            gap: var(--cc-space-3);
+        }
+
+        .mini-arch-row {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-2);
+        }
+
+        .mini-arch-node {
+            background: var(--cc-color-surface-secondary);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-sm);
+            padding: var(--cc-space-2) var(--cc-space-3);
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-color-text-primary);
+            white-space: nowrap;
+        }
+
+        .mini-arch-node.main {
+            border-color: var(--cc-color-brand);
+            background: rgba(88, 166, 255, 0.1);
+        }
+
+        .mini-arch-node.core {
+            border-color: var(--cc-color-accent-orange);
+            background: rgba(210, 153, 34, 0.1);
+        }
+
+        .mini-arch-arrow {
+            color: var(--cc-color-text-tertiary);
+            font-size: var(--cc-font-size-xs);
+        }
+
+        .mini-arch-subsystems {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--cc-space-2);
+            margin-top: var(--cc-space-3);
+            padding-top: var(--cc-space-3);
+            border-top: 1px dashed var(--cc-color-border);
+        }
+
+        .mini-arch-sub {
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-color-text-tertiary);
+            background: var(--cc-color-surface-secondary);
+            padding: var(--cc-space-1) var(--cc-space-2);
+            border-radius: var(--cc-radius-sm);
+        }
+
+        /* Secondary stats row */
+        .secondary-stats {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: var(--cc-space-4);
+            margin: var(--cc-space-10) 0;
+        }
+
+        .secondary-stat {
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-lg);
+            color: var(--cc-color-text-secondary);
+        }
+
+        .secondary-stat-value {
+            color: var(--cc-color-text-primary);
+            font-weight: 600;
+        }
+
+        .secondary-stat-highlight {
+            color: var(--cc-color-accent-green);
+            font-weight: 600;
+        }
+
+        /* Agent behavior stat */
+        .behavior-stat {
+            text-align: center;
+            margin: var(--cc-space-8) 0;
+            padding: var(--cc-space-4);
+            background: linear-gradient(135deg, var(--cc-color-surface) 0%, var(--cc-color-surface-secondary) 100%);
+            border-radius: var(--cc-radius-lg);
+            border: 1px solid var(--cc-color-border);
+        }
+
+        .behavior-stat-value {
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-4xl);
+            font-weight: 700;
+            color: var(--cc-color-accent-orange);
+        }
+
+        .behavior-stat-label {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-secondary);
+            margin-top: var(--cc-space-2);
+        }
+
+        /* Prompt breakdown card */
+        .prompt-card {
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-lg);
+            padding: var(--cc-space-6);
+            margin: var(--cc-space-8) 0;
+        }
+
+        .prompt-card-title {
+            font-size: var(--cc-font-size-lg);
+            font-weight: 600;
+            color: var(--cc-color-text-primary);
+            margin-bottom: var(--cc-space-4);
+        }
+
+        .prompt-breakdown {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--cc-space-2);
+            margin-bottom: var(--cc-space-4);
+        }
+
+        .prompt-chip {
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-sm);
+            background: var(--cc-color-surface-secondary);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-md);
+            padding: var(--cc-space-1) var(--cc-space-3);
+            color: var(--cc-color-text-secondary);
+        }
+
+        .prompt-chip-main {
+            background: rgba(88, 166, 255, 0.15);
+            border-color: var(--cc-color-brand);
+            color: var(--cc-color-brand);
+            font-weight: 600;
+        }
+
+        .prompt-longest {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-tertiary);
+            padding-top: var(--cc-space-3);
+            border-top: 1px dashed var(--cc-color-border);
+        }
+
+        .prompt-longest strong {
+            color: var(--cc-color-accent-purple);
+            font-weight: 600;
+        }
+
+        /* TODO/FIXME反差 stat */
+        .的反差 {
+            display: flex;
+            justify-content: center;
+            gap: var(--cc-space-6);
+            margin: var(--cc-space-6) 0;
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-base);
+        }
+
+        .反差-item {
+            color: var(--cc-color-text-secondary);
+        }
+
+        .反差-value {
+            color: var(--cc-color-accent-green);
+            font-weight: 700;
+        }
+
+        .反差-value.zero {
+            color: var(--cc-color-text-tertiary);
+        }
+
+        /* Caveat card - block ending */
+        .caveat-card {
+            background: var(--cc-color-surface-secondary);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-lg);
+            padding: var(--cc-space-6);
+            margin: var(--cc-space-12) auto;
+            max-width: var(--cc-measure-prose);
+        }
+
+        .caveat-card p {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-color-text-secondary);
+            line-height: var(--cc-leading-relaxed);
+            margin-bottom: var(--cc-space-3);
+        }
+
+        .caveat-card p:last-child {
+            margin-bottom: 0;
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-tertiary);
+        }
+
+        .caveat-card strong {
+            color: var(--cc-color-text-primary);
+            font-weight: 600;
+        }
+
+        /* Theme toggle */
+        .theme-toggle {
+            position: fixed;
+            top: var(--cc-space-4);
+            right: var(--cc-space-4);
+            z-index: 100;
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-md);
+            padding: var(--cc-space-2) var(--cc-space-3);
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-secondary);
+            cursor: pointer;
+            font-family: var(--cc-font-sans);
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--cc-color-surface-secondary);
+            color: var(--cc-color-text-primary);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+        .delay-5 { animation-delay: 0.5s; }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">切换主题</button>
+
+    <div class="block4-container">
+        <!-- Q-pre: break-the-grid introduction -->
+        <blockquote class="q-pre animate-in">
+            它有自己的进程调度器、安全沙箱、文件版本管理、多实例协调器、遥测管线、插件生态——如果你非要用一个词来描述它，最准确的说法是……
+        </blockquote>
+
+        <!-- Hero 5 mega-stat-grid -->
+        <div class="mega-stat-grid">
+            <div class="hero-stat animate-in delay-1">
+                <div class="hero-stat-value" data-target="1884">0</div>
+                <div class="hero-stat-label">TypeScript 文件</div>
+                <div class="hero-stat-sub">1,332 .ts + 552 .tsx</div>
+            </div>
+            <div class="hero-stat animate-in delay-2">
+                <div class="hero-stat-value" data-target="476875">0</div>
+                <div class="hero-stat-label">有效代码行</div>
+                <div class="hero-stat-sub">（含空行 512,695）</div>
+            </div>
+            <div class="hero-stat animate-in delay-3">
+                <div class="hero-stat-value" data-target="40">0</div>
+                <div class="hero-stat-label">AI 工具数</div>
+                <div class="hero-stat-sub">核心内置工具</div>
+            </div>
+            <div class="hero-stat animate-in delay-4">
+                <div class="hero-stat-value" data-target="98">0</div>
+                <div class="hero-stat-label">斜杠命令</div>
+                <div class="hero-stat-sub">86 子目录 + 12 根文件</div>
+            </div>
+            <div class="hero-stat animate-in delay-5">
+                <div class="hero-stat-value" data-target="185">0</div>
+                <div class="hero-stat-label">独立 Prompt</div>
+                <div class="hero-stat-sub">穷尽审计单元</div>
+            </div>
+        </div>
+
+        <!-- Q1: Giant pull-quote - emotional peak -->
+        <div class="q1-pullquote animate-in">
+            一个为 AI 智能体设计的操作系统。
+        </div>
+
+        <!-- Q3: Follow-up punch -->
+        <p class="q3-followup">
+            只不过它管理的不是硬件进程，而是 AI 智能体的生命周期。
+        </p>
+
+        <!-- Dual chart frame -->
+        <div class="dual-chart-frame">
+            <!-- Left: VIS-0-002 Dashboard -->
+            <div class="chart-panel animate-in">
+                <div class="chart-panel-header">
+                    <div class="chart-panel-title">源码统计仪表盘</div>
+                    <div class="chart-panel-subtitle">Source Code Statistics · 穷举式全景数字</div>
+                </div>
+                <div class="chart-panel-body">
+                    <div class="mini-dashboard">
+                        <div class="mini-kpi">
+                            <div class="mini-kpi-value" data-target="476875">0</div>
+                            <div class="mini-kpi-label">有效代码行</div>
+                        </div>
+                        <div class="mini-kpi">
+                            <div class="mini-kpi-value" data-target="1884">0</div>
+                            <div class="mini-kpi-label">TS 文件</div>
+                        </div>
+                        <div class="mini-kpi">
+                            <div class="mini-kpi-value" data-target="40">0</div>
+                            <div class="mini-kpi-label">AI 工具</div>
+                        </div>
+                        <div class="mini-kpi">
+                            <div class="mini-kpi-value" data-target="98">0</div>
+                            <div class="mini-kpi-label">斜杠命令</div>
+                        </div>
+                    </div>
+                    <div class="mini-barchart">
+                        <div class="mini-barchart-item">
+                            <span class="mini-barchart-name">queryLoop.ts</span>
+                            <div class="mini-barchart-bar"><div class="mini-barchart-fill" style="width: 100%"></div></div>
+                            <span class="mini-barchart-value">2,847</span>
+                        </div>
+                        <div class="mini-barchart-item">
+                            <span class="mini-barchart-name">Tool.ts</span>
+                            <div class="mini-barchart-bar"><div class="mini-barchart-fill" style="width: 75%"></div></div>
+                            <span class="mini-barchart-value">2,156</span>
+                        </div>
+                        <div class="mini-barchart-item">
+                            <span class="mini-barchart-name">permissions.ts</span>
+                            <div class="mini-barchart-bar"><div class="mini-barchart-fill" style="width: 66%"></div></div>
+                            <span class="mini-barchart-value">1,892</span>
+                        </div>
+                        <div class="mini-barchart-item">
+                            <span class="mini-barchart-name">Bash.ts</span>
+                            <div class="mini-barchart-bar"><div class="mini-barchart-fill" style="width: 58%"></div></div>
+                            <span class="mini-barchart-value">1,654</span>
+                        </div>
+                        <div class="mini-barchart-item">
+                            <span class="mini-barchart-name">Agent.ts</span>
+                            <div class="mini-barchart-bar"><div class="mini-barchart-fill" style="width: 52%"></div></div>
+                            <span class="mini-barchart-value">1,489</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: VIS-0-001 Architecture -->
+            <div class="chart-panel animate-in">
+                <div class="chart-panel-header">
+                    <div class="chart-panel-title">英雄架构图</div>
+                    <div class="chart-panel-subtitle">Hero Architecture · 9节点主链路 + 6子系统</div>
+                </div>
+                <div class="chart-panel-body">
+                    <div class="mini-arch">
+                        <div class="mini-arch-row">
+                            <span class="mini-arch-node">REPL</span>
+                            <span class="mini-arch-arrow">→</span>
+                            <span class="mini-arch-node">CLI</span>
+                            <span class="mini-arch-arrow">→</span>
+                            <span class="mini-arch-node main">权限</span>
+                            <span class="mini-arch-arrow">→</span>
+                            <span class="mini-arch-node main">Prompt</span>
+                        </div>
+                        <div class="mini-arch-row" style="justify-content: center;">
+                            <span class="mini-arch-arrow">↙</span>
+                            <span class="mini-arch-node core">Agent Query Loop</span>
+                            <span class="mini-arch-arrow">↘</span>
+                        </div>
+                        <div class="mini-arch-row">
+                            <span class="mini-arch-node">← API</span>
+                            <span class="mini-arch-arrow">←</span>
+                            <span class="mini-arch-node">← 工具调度</span>
+                            <span class="mini-arch-arrow">←</span>
+                            <span class="mini-arch-node">← 响应解析</span>
+                        </div>
+                        <div class="mini-arch-subsystems">
+                            <span class="mini-arch-sub">权限系统</span>
+                            <span class="mini-arch-sub">配置系统</span>
+                            <span class="mini-arch-sub">MCP 协议</span>
+                            <span class="mini-arch-sub">Hooks</span>
+                            <span class="mini-arch-sub">沙箱</span>
+                            <span class="mini-arch-sub">上下文</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Secondary stats row -->
+        <div class="secondary-stats">
+            <div class="secondary-stat">
+                <span class="secondary-stat-value">35,799</span> 空白行
+            </div>
+            <div class="secondary-stat">
+                <span class="secondary-stat-value secondary-stat-highlight">93.0%</span> 有效代码率
+            </div>
+            <div class="secondary-stat">
+                <span class="secondary-stat-value">35</span> 顶层子系统
+            </div>
+            <div class="secondary-stat">
+                <span class="secondary-stat-value">5,469</span> await 表达式
+            </div>
+        </div>
+
+        <!-- Behavior stat: 7 concurrent agents -->
+        <div class="behavior-stat">
+            <div class="behavior-stat-value">7</div>
+            <div class="behavior-stat-label">一次回复背后并发工作的 AI 实例数</div>
+        </div>
+
+        <!-- Prompt breakdown card -->
+        <div class="prompt-card">
+            <div class="prompt-card-title">185 个独立 Prompt 单元的构成</div>
+            <div class="prompt-breakdown">
+                <span class="prompt-chip prompt-chip-main">185 总计</span>
+                <span class="prompt-chip">24 系统段</span>
+                <span class="prompt-chip">54 工具描述</span>
+                <span class="prompt-chip">12 Agent</span>
+                <span class="prompt-chip">20 Skill</span>
+                <span class="prompt-chip">19 服务层</span>
+                <span class="prompt-chip">12 记忆</span>
+            </div>
+            <div class="prompt-longest">
+                最长单一 Prompt：<strong>12,000 字</strong>（/init 命令的 8 阶段引导流程）
+            </div>
+        </div>
+
+        <!-- TODO/FIXME反差 -->
+        <div class="反差">
+            <div class="反差-item"><span class="反差-value">138</span> TODO</div>
+            <div class="反差-item"><span class="反差-value zero">0</span> FIXME</div>
+            <div class="反差-item"><span class="反差-value zero">0</span> HACK</div>
+        </div>
+
+        <!-- Caveat card - Q4 & Q5 -->
+        <div class="caveat-card">
+            <p>
+                "操作系统"是一个帮助理解的类比，不是精确的技术定义——Claude Code 运行在 Node.js 之上，本身仍是一个用户态应用程序。但它承担的<strong>职责</strong>（资源调度、安全隔离、生命周期管理、扩展机制）确实和操作系统高度同构。
+            </p>
+            <p>
+                这个类比的价值不在于字面准确，而在于它提供了一个你已经熟悉的思维框架来理解一个全新的系统。
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // countUp animation with IntersectionObserver
+        function animateCountUp(element, target, duration) {
+            const start = performance.now();
+            const startValue = 0;
+
+            function update(now) {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                const currentValue = Math.floor(startValue + (target - startValue) * easeOut);
+
+                element.textContent = currentValue.toLocaleString();
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        // Theme toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+        }
+
+        // Initialize animations when elements are visible
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const el = entry.target;
+                    if (el.classList.contains('hero-stat-value')) {
+                        const target = parseInt(el.dataset.target);
+                        animateCountUp(el, target, 2000);
+                    }
+                    if (el.classList.contains('mini-kpi-value')) {
+                        const target = parseInt(el.dataset.target);
+                        animateCountUp(el, target, 1800);
+                    }
+                    observer.unobserve(el);
+                }
+            });
+        }, { threshold: 0.3 });
+
+        // Observe all stat values
+        document.querySelectorAll('.hero-stat-value, .mini-kpi-value').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>
