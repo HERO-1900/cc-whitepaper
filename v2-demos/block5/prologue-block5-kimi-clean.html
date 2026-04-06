@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>这本书要做什么 - Claude Code 白皮书 V2</title>
+    <style>
+        :root {
+            --cc-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --cc-font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+            
+            --cc-color-bg: #0a0a0f;
+            --cc-color-surface: #12121a;
+            --cc-color-surface-secondary: #1a1a24;
+            --cc-color-text: #f0f0f5;
+            --cc-color-text-secondary: #a0a0b0;
+            --cc-color-text-muted: #606070;
+            --cc-color-primary: #e17055;
+            --cc-color-primary-dim: #c45c3e;
+            --cc-color-border: #2a2a3a;
+            --cc-color-accent: #00b894;
+            --cc-color-accent-dim: #00a382;
+            
+            --cc-font-size-xs: 0.75rem;
+            --cc-font-size-sm: 0.875rem;
+            --cc-font-size-base: 1rem;
+            --cc-font-size-lg: 1.125rem;
+            --cc-font-size-xl: 1.25rem;
+            --cc-font-size-2xl: 1.5rem;
+            --cc-font-size-3xl: 1.875rem;
+            --cc-font-size-4xl: 2.25rem;
+            --cc-font-size-5xl: 3rem;
+            
+            --cc-font-weight-normal: 400;
+            --cc-font-weight-medium: 500;
+            --cc-font-weight-semibold: 600;
+            --cc-font-weight-bold: 700;
+            
+            --cc-leading-relaxed: 1.75;
+            --cc-leading-normal: 1.6;
+            
+            --cc-space-1: 0.25rem;
+            --cc-space-2: 0.5rem;
+            --cc-space-3: 0.75rem;
+            --cc-space-4: 1rem;
+            --cc-space-6: 1.5rem;
+            --cc-space-8: 2rem;
+            --cc-space-10: 2.5rem;
+            --cc-space-12: 3rem;
+            --cc-space-16: 4rem;
+            --cc-space-20: 5rem;
+            --cc-space-24: 6rem;
+            
+            --cc-measure-prose: 65ch;
+            --cc-radius-sm: 4px;
+            --cc-radius-md: 8px;
+            --cc-radius-lg: 12px;
+        }
+        
+        [data-theme="light"] {
+            --cc-color-bg: #fafafa;
+            --cc-color-surface: #ffffff;
+            --cc-color-surface-secondary: #f5f5f7;
+            --cc-color-text: #1a1a2e;
+            --cc-color-text-secondary: #4a4a5a;
+            --cc-color-text-muted: #8a8a9a;
+            --cc-color-border: #e0e0e5;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--cc-font-sans);
+            background: var(--cc-color-bg);
+            color: var(--cc-color-text);
+            line-height: var(--cc-leading-normal);
+            font-size: var(--cc-font-size-base);
+            transition: background 0.3s, color 0.3s;
+        }
+        
+        .block-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--cc-space-24) var(--cc-space-6);
+        }
+        
+        /* Section 1: Header & Methodology */
+        .section-header {
+            margin-bottom: var(--cc-space-20);
+        }
+        
+        .block-title {
+            font-size: var(--cc-font-size-4xl);
+            font-weight: var(--cc-font-weight-bold);
+            margin-bottom: var(--cc-space-6);
+            color: var(--cc-color-text);
+        }
+        
+        .methodology-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--cc-space-3);
+            margin-bottom: var(--cc-space-8);
+        }
+        
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: var(--cc-space-2) var(--cc-space-4);
+            background: var(--cc-color-surface-secondary);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-md);
+            font-size: var(--cc-font-size-sm);
+            font-family: var(--cc-font-mono);
+            color: var(--cc-color-text-secondary);
+        }
+        
+        .badge-primary {
+            background: var(--cc-color-primary-dim);
+            color: white;
+            border-color: var(--cc-color-primary);
+        }
+        
+        .badge-accent {
+            background: var(--cc-color-accent-dim);
+            color: white;
+            border-color: var(--cc-color-accent);
+        }
+        
+        .pull-quote {
+            font-size: var(--cc-font-size-2xl);
+            font-weight: var(--cc-font-weight-medium);
+            line-height: var(--cc-leading-relaxed);
+            color: var(--cc-color-text);
+            padding-left: var(--cc-space-6);
+            border-left: 3px solid var(--cc-color-primary);
+            margin-bottom: var(--cc-space-12);
+            max-width: var(--cc-measure-prose);
+        }
+        
+        /* Section 2: 5 Bullets */
+        .bullet-section {
+            margin-bottom: var(--cc-space-20);
+        }
+        
+        .section-intro {
+            font-size: var(--cc-font-size-lg);
+            color: var(--cc-color-text-secondary);
+            margin-bottom: var(--cc-space-8);
+        }
+        
+        .bullet-grid {
+            display: grid;
+            gap: var(--cc-space-4);
+        }
+        
+        .bullet-item {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--cc-space-4);
+            padding: var(--cc-space-6);
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-lg);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .bullet-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .bullet-number {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--cc-color-surface-secondary);
+            border-radius: var(--cc-radius-md);
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-sm);
+            font-weight: var(--cc-font-weight-bold);
+            color: var(--cc-color-primary);
+        }
+        
+        .bullet-content {
+            flex: 1;
+        }
+        
+        .bullet-text {
+            font-size: var(--cc-font-size-lg);
+            line-height: var(--cc-leading-relaxed);
+            color: var(--cc-color-text);
+        }
+        
+        .bullet-text strong {
+            color: var(--cc-color-primary);
+            font-weight: var(--cc-font-weight-bold);
+        }
+        
+        /* Bullet 4 Special: Token Explanation */
+        .bullet-with-tooltip {
+            position: relative;
+        }
+        
+        .insight-card {
+            margin-top: var(--cc-space-4);
+            padding: var(--cc-space-4);
+            background: linear-gradient(135deg, rgba(225, 112, 85, 0.1), rgba(0, 184, 148, 0.05));
+            border: 1px solid var(--cc-color-primary-dim);
+            border-radius: var(--cc-radius-md);
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-secondary);
+            line-height: var(--cc-leading-normal);
+        }
+        
+        .insight-label {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-2);
+            font-weight: var(--cc-font-weight-semibold);
+            color: var(--cc-color-primary);
+            margin-bottom: var(--cc-space-2);
+        }
+        
+        /* Section 3: Data Flow Chart */
+        .chart-section {
+            margin-bottom: var(--cc-space-20);
+        }
+        
+        .chart-container {
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-lg);
+            padding: var(--cc-space-8);
+            overflow-x: auto;
+        }
+        
+        .chart-title {
+            font-size: var(--cc-font-size-xl);
+            font-weight: var(--cc-font-weight-semibold);
+            margin-bottom: var(--cc-space-6);
+            color: var(--cc-color-text);
+        }
+        
+        .dataflow-chart {
+            min-width: 900px;
+        }
+        
+        .flow-lanes {
+            display: grid;
+            grid-template-rows: repeat(3, auto);
+            gap: var(--cc-space-6);
+        }
+        
+        .flow-lane {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-2);
+            padding: var(--cc-space-4);
+            background: var(--cc-color-surface-secondary);
+            border-radius: var(--cc-radius-md);
+        }
+        
+        .lane-label {
+            width: 80px;
+            font-size: var(--cc-font-size-xs);
+            font-family: var(--cc-font-mono);
+            color: var(--cc-color-text-muted);
+            text-transform: uppercase;
+        }
+        
+        .lane-stages {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-2);
+        }
+        
+        .stage-node {
+            padding: var(--cc-space-2) var(--cc-space-3);
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-sm);
+            font-size: var(--cc-font-size-xs);
+            font-family: var(--cc-font-mono);
+            white-space: nowrap;
+        }
+        
+        .stage-arrow {
+            color: var(--cc-color-text-muted);
+            font-size: var(--cc-font-size-xs);
+        }
+        
+        .data-format {
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-color-accent);
+            font-family: var(--cc-font-mono);
+            margin-left: var(--cc-space-2);
+        }
+        
+        .agent-loop {
+            margin-top: var(--cc-space-4);
+            padding: var(--cc-space-3);
+            background: rgba(225, 112, 85, 0.1);
+            border: 1px dashed var(--cc-color-primary-dim);
+            border-radius: var(--cc-radius-md);
+            text-align: center;
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-primary);
+        }
+        
+        /* Section 4: Dual Position Card */
+        .position-section {
+            margin-bottom: var(--cc-space-20);
+        }
+        
+        .dual-card {
+            display: grid;
+            gap: var(--cc-space-4);
+        }
+        
+        .position-card {
+            padding: var(--cc-space-8);
+            border-radius: var(--cc-radius-lg);
+            border: 2px solid;
+        }
+        
+        .position-negative {
+            background: var(--cc-color-surface-secondary);
+            border-color: var(--cc-color-border);
+            opacity: 0.7;
+        }
+        
+        .position-positive {
+            background: linear-gradient(135deg, var(--cc-color-surface), var(--cc-color-surface-secondary));
+            border-color: var(--cc-color-primary);
+        }
+        
+        .position-label {
+            font-size: var(--cc-font-size-sm);
+            font-family: var(--cc-font-mono);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: var(--cc-space-3);
+        }
+        
+        .position-negative .position-label {
+            color: var(--cc-color-text-muted);
+        }
+        
+        .position-positive .position-label {
+            color: var(--cc-color-primary);
+        }
+        
+        .position-title {
+            font-size: var(--cc-font-size-3xl);
+            font-weight: var(--cc-font-weight-bold);
+            margin-bottom: var(--cc-space-4);
+        }
+        
+        .position-negative .position-title {
+            color: var(--cc-color-text-muted);
+        }
+        
+        .position-positive .position-title {
+            color: var(--cc-color-text);
+        }
+        
+        .position-desc {
+            font-size: var(--cc-font-size-lg);
+            line-height: var(--cc-leading-relaxed);
+            color: var(--cc-color-text-secondary);
+        }
+        
+        .position-positive .position-desc {
+            color: var(--cc-color-text);
+        }
+        
+        /* Section 5: Tech Stack Chart */
+        .techstack-chart {
+            display: grid;
+            gap: var(--cc-space-2);
+        }
+        
+        .stack-layer {
+            display: flex;
+            align-items: center;
+            gap: var(--cc-space-4);
+            padding: var(--cc-space-4) var(--cc-space-6);
+            background: var(--cc-color-surface-secondary);
+            border-radius: var(--cc-radius-md);
+            border-left: 4px solid;
+        }
+        
+        .stack-layer:nth-child(1) { border-left-color: #3178c6; }
+        .stack-layer:nth-child(2) { border-left-color: #339933; }
+        .stack-layer:nth-child(3) { border-left-color: #ff6b6b; }
+        .stack-layer:nth-child(4) { border-left-color: #f7b731; }
+        .stack-layer:nth-child(5) { border-left-color: #5f27cd; }
+        .stack-layer:nth-child(6) { border-left-color: #10ac84; }
+        .stack-layer:nth-child(7) { border-left-color: #ee5a6f; }
+        .stack-layer:nth-child(8) { border-left-color: #00d2d3; }
+        
+        .layer-num {
+            width: 24px;
+            font-family: var(--cc-font-mono);
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-color-text-muted);
+        }
+        
+        .layer-name {
+            width: 120px;
+            font-size: var(--cc-font-size-sm);
+            font-weight: var(--cc-font-weight-semibold);
+            color: var(--cc-color-text);
+        }
+        
+        .layer-techs {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--cc-space-2);
+        }
+        
+        .tech-tag {
+            padding: var(--cc-space-1) var(--cc-space-3);
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-sm);
+            font-size: var(--cc-font-size-xs);
+            font-family: var(--cc-font-mono);
+            color: var(--cc-color-text-secondary);
+        }
+        
+        .tech-tag.wasm {
+            background: rgba(95, 39, 205, 0.2);
+            border-color: #5f27cd;
+            color: #a78bfa;
+        }
+        
+        /* Section 6: Personas & Position Badge */
+        .personas-section {
+            margin-bottom: var(--cc-space-16);
+        }
+        
+        .position-badge {
+            text-align: center;
+            margin-bottom: var(--cc-space-12);
+            padding: var(--cc-space-8);
+            background: linear-gradient(135deg, rgba(225, 112, 85, 0.1), rgba(0, 184, 148, 0.1));
+            border: 2px solid var(--cc-color-primary-dim);
+            border-radius: var(--cc-radius-lg);
+        }
+        
+        .position-badge-title {
+            font-size: var(--cc-font-size-3xl);
+            font-weight: var(--cc-font-weight-bold);
+            color: var(--cc-color-text);
+            margin-bottom: var(--cc-space-3);
+        }
+        
+        .position-badge-note {
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-muted);
+            font-style: italic;
+        }
+        
+        .personas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--cc-space-6);
+        }
+        
+        .persona-card {
+            padding: var(--cc-space-6);
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-lg);
+            transition: transform 0.2s;
+        }
+        
+        .persona-card:hover {
+            transform: translateY(-4px);
+        }
+        
+        .persona-icon {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--cc-color-surface-secondary);
+            border-radius: var(--cc-radius-md);
+            font-size: var(--cc-font-size-2xl);
+            margin-bottom: var(--cc-space-4);
+        }
+        
+        .persona-title {
+            font-size: var(--cc-font-size-lg);
+            font-weight: var(--cc-font-weight-semibold);
+            margin-bottom: var(--cc-space-2);
+            color: var(--cc-color-text);
+        }
+        
+        .persona-desc {
+            font-size: var(--cc-font-size-base);
+            color: var(--cc-color-text-secondary);
+            line-height: var(--cc-leading-relaxed);
+        }
+        
+        /* Footer: Scale Microbar */
+        .scale-microbar {
+            display: flex;
+            justify-content: center;
+            gap: var(--cc-space-8);
+            padding: var(--cc-space-6);
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-lg);
+            flex-wrap: wrap;
+        }
+        
+        .scale-item {
+            text-align: center;
+        }
+        
+        .scale-num {
+            display: block;
+            font-size: var(--cc-font-size-xl);
+            font-weight: var(--cc-font-weight-bold);
+            font-family: var(--cc-font-mono);
+            color: var(--cc-color-primary);
+        }
+        
+        .scale-label {
+            font-size: var(--cc-font-size-xs);
+            color: var(--cc-color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        /* Transitions */
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Sticky chart for desktop */
+        @media (min-width: 1024px) {
+            .sticky-wrapper {
+                display: grid;
+                grid-template-columns: 1fr 1.5fr;
+                gap: var(--cc-space-8);
+                align-items: start;
+            }
+            
+            .sticky-content {
+                position: sticky;
+                top: var(--cc-space-8);
+            }
+        }
+        
+        /* Theme toggle */
+        .theme-toggle {
+            position: fixed;
+            top: var(--cc-space-4);
+            right: var(--cc-space-4);
+            padding: var(--cc-space-2) var(--cc-space-4);
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: var(--cc-radius-md);
+            cursor: pointer;
+            font-size: var(--cc-font-size-sm);
+            color: var(--cc-color-text-secondary);
+            z-index: 100;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .block-container {
+                padding: var(--cc-space-12) var(--cc-space-4);
+            }
+            
+            .block-title {
+                font-size: var(--cc-font-size-3xl);
+            }
+            
+            .pull-quote {
+                font-size: var(--cc-font-size-lg);
+            }
+            
+            .position-title {
+                font-size: var(--cc-font-size-2xl);
+            }
+            
+            .methodology-badges {
+                justify-content: flex-start;
+            }
+            
+            .scale-microbar {
+                gap: var(--cc-space-4);
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">🌓 切换主题</button>
+    
+    <div class="block-container">
+        <!-- Section 1: Header & Methodology -->
+        <header class="section-header fade-in">
+            <h1 class="block-title">这本书要做什么</h1>
+            
+            <div class="methodology-badges">
+                <span class="badge badge-primary">2.1.88 版本</span>
+                <span class="badge badge-accent">2026 年 4 月截止日期</span>
+                <span class="badge">逆向解剖</span>
+            </div>
+            
+            <blockquote class="pull-quote">
+                我们不猜测，不臆断——所有结论都标注了源文件路径和行号。
+            </blockquote>
+        </header>
+        
+        <!-- Section 2: 5 Bullets -->
+        <section class="bullet-section fade-in">
+            <p class="section-intro">你会在书中看到：</p>
+            
+            <div class="bullet-grid">
+                <div class="bullet-item">
+                    <span class="bullet-number">01</span>
+                    <div class="bullet-content">
+                        <p class="bullet-text">系统如何在你按下 Enter 之后，经历<strong>数十个步骤</strong>才把问题送到 AI 面前</p>
+                    </div>
+                </div>
+                
+                <div class="bullet-item">
+                    <span class="bullet-number">02</span>
+                    <div class="bullet-content">
+                        <p class="bullet-text">为什么一条看似简单的回复背后，可能有<strong>7 个 AI 实例</strong>在同时工作</p>
+                    </div>
+                </div>
+                
+                <div class="bullet-item">
+                    <span class="bullet-number">03</span>
+                    <div class="bullet-content">
+                        <p class="bullet-text">一个"编辑文件"操作如何穿越权限检查、沙箱隔离、文件快照<strong>三道关卡</strong></p>
+                    </div>
+                </div>
+                
+                <div class="bullet-item bullet-with-tooltip">
+                    <span class="bullet-number">04</span>
+                    <div class="bullet-content">
+                        <p class="bullet-text">Token（词元）如何像<strong>货币</strong>一样被精打细算，缓存命中率如何像<strong>汇率</strong>一样影响所有决策</p>
+                        
+                        <div class="insight-card">
+                            <div class="insight-label">
+                                <span>💡</span>
+                                <span>通俗理解</span>
+                            </div>
+                            <p>就像出国旅行时，你需要用人民币"购买"外币。Token 是 AI 世界的货币——每输入一个字、每生成一个回答，都要"付费"。而缓存命中率就像汇率：当系统发现"这个问题我之前回答过"，就能直接用缓存（高汇率/划算）；反之就要重新计算（低汇率/ expensive）。系统时刻在计算怎么"花钱"最省。</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bullet-item">
+                    <span class="bullet-number">05</span>
+                    <div class="bullet-content">
+                        <p class="bullet-text">企业管理员如何通过<strong>九层配置体系</strong>，远程控制每一台开发者机器上的 Claude Code</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Section 3: Data Flow Chart -->
+        <section class="chart-section fade-in">
+            <div class="chart-container">
+                <h3 class="chart-title">0.2-A 数据流完整旅程图</h3>
+                <p style="font-size: var(--cc-font-size-sm); color: var(--cc-color-text-muted); margin-bottom: var(--cc-space-6);">
+                    从"帮我重构这个函数"到最终输出，一次交互穿越 10 个阶段的完整数据形态演化
+                </p>
+                
+                <div class="dataflow-chart">
+                    <div class="flow-lanes">
+                        <div class="flow-lane">
+                            <span class="lane-label">Client</span>
+                            <div class="lane-stages">
+                                <div class="stage-node">Input<span class="data-format">string</span></div>
+                                <span class="stage-arrow">→</span>
+                                <div class="stage-node">Parse<span class="data-format">object</span></div>
+                                <span class="stage-arrow">→</span>
+                                <div class="stage-node">Validate<span class="data-format">JSON</span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-lane">
+                            <span class="lane-label">Network</span>
+                            <div class="lane-stages">
+                                <div class="stage-node">Serialize<span class="data-format">JSON</span></div>
+                                <span class="stage-arrow">→</span>
+                                <div class="stage-node">SSE Stream<span class="data-format">SSE</span></div>
+                                <span class="stage-arrow">→</span>
+                                <div class="stage-node">Buffer<span class="data-format">chunks</span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flow-lane">
+                            <span class="lane-label">Server</span>
+                            <div class="lane-stages">
+                                <div class="stage-node">Dispatch<span class="data-format">event</span></div>
+                                <span class="stage-arrow">→</span>
+                                <div class="stage-node">Process<span class="data-format">ReactNode</span></div>
+                                <span class="stage-arrow">→</span>
+                                <div class="stage-node">Render<span class="data-format">UI</span></div>
+                                <span class="stage-arrow">→</span>
+                                <div class="stage-node">Output<span class="data-format">DOM</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-loop">
+                        ↻ Agent Loop: 复杂任务可能循环多次 (string → object → JSON → SSE → ReactNode)
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Section 4: Dual Position Card -->
+        <section class="position-section fade-in">
+            <div class="dual-card">
+                <div class="position-card position-negative">
+                    <div class="position-label">定位声明 · 反面</div>
+                    <h2 class="position-title">这不是使用指南。</h2>
+                    <p class="position-desc">你不会在这里学到怎么用 Claude Code——官方文档已经做得很好了。</p>
+                </div>
+                
+                <div class="position-card position-positive">
+                    <div class="position-label">定位声明 · 正面</div>
+                    <h2 class="position-title">这是工程解剖。</h2>
+                    <p class="position-desc">我们要搞清楚它<em>为什么</em>这样设计、这些设计背后做了<em>什么取舍</em>、以及你能从中<em>学到什么</em>可以用在自己项目里的工程智慧。</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Section 5: Tech Stack Chart -->
+        <section class="chart-section fade-in">
+            <div class="chart-container">
+                <h3 class="chart-title">0.2-B 技术栈全景</h3>
+                <p style="font-size: var(--cc-font-size-sm); color: var(--cc-color-text-muted); margin-bottom: var(--cc-space-6);">
+                    从 L2 语言层（TypeScript）到 L8 沙箱层（Seatbelt/Namespace）的 8 层技术栈分布
+                </p>
+                
+                <div class="techstack-chart">
+                    <div class="stack-layer">
+                        <span class="layer-num">L8</span>
+                        <span class="layer-name">沙箱层</span>
+                        <div class="layer-techs">
+                            <span class="tech-tag">Seatbelt</span>
+                            <span class="tech-tag">Namespace</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stack-layer">
+                        <span class="layer-num">L7</span>
+                        <span class="layer-name">AI 层</span>
+                        <div class="layer-techs">
+                            <span class="tech-tag">Anthropic API</span>
+                            <span class="tech-tag">MCP</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stack-layer">
+                        <span class="layer-num">L6</span>
+                        <span class="layer-name">通信层</span>
+                        <div class="layer-techs">
+                            <span class="tech-tag">SSE</span>
+                            <span class="tech-tag">JSON-RPC</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stack-layer">
+                        <span class="layer-num">L5</span>
+                        <span class="layer-name">解析层</span>
+                        <div class="layer-techs">
+                            <span class="tech-tag wasm">tree-sitter (WASM)</span>
+                            <span class="tech-tag">remark</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stack-layer">
+                        <span class="layer-num">L4</span>
+                        <span class="layer-name">进程层</span>
+                        <div class="layer-techs">
+                            <span class="tech-tag">execa</span>
+                            <span class="tech-tag">zx</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stack-layer">
+                        <span class="layer-num">L3</span>
+                        <span class="layer-name">UI 层</span>
+                        <div class="layer-techs">
+                            <span class="tech-tag">React</span>
+                            <span class="tech-tag">Ink</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stack-layer">
+                        <span class="layer-num">L2</span>
+                        <span class="layer-name">语言层</span>
+                        <div class="layer-techs">
+                            <span class="tech-tag">TypeScript</span>
+                            <span class="tech-tag">Zod</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stack-layer">
+                        <span class="layer-num">L1</span>
+                        <span class="layer-name">基础层</span>
+                        <div class="layer-techs">
+                            <span class="tech-tag">Node.js</span>
+                            <span class="tech-tag">esbuild</span>
+                            <span class="tech-tag">tsup</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Section 6: Personas & Position Badge -->
+        <section class="personas-section fade-in">
+            <div class="position-badge">
+                <h2 class="position-badge-title">中文第一部 AI Agent 架构白皮书</h2>
+                <p class="position-badge-note">读者评审建议语</p>
+            </div>
+            
+            <div class="personas-grid">
+                <div class="persona-card">
+                    <div class="persona-icon">⚡</div>
+                    <h3 class="persona-title">工程师</h3>
+                    <p class="persona-desc">如果你想搞清楚一个 36 万字系统是怎么从 0 设计到 100 的</p>
+                </div>
+                
+                <div class="persona-card">
+                    <div class="persona-icon">🚀</div>
+                    <h3 class="persona-title">创业者 / 产品经理</h3>
+                    <p class="persona-desc">如果你正在做 AI 产品，想看看一个成熟系统是如何做权衡的</p>
+                </div>
+                
+                <div class="persona-card">
+                    <div class="persona-icon">📚</div>
+                    <h3 class="persona-title">CS 学生</h3>
+                    <p class="persona-desc">如果你正在学操作系统课，Claude Code 是一个完美的现代 OS 案例</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Footer: Scale Microbar -->
+        <footer class="fade-in">
+            <div class="scale-microbar">
+                <div class="scale-item">
+                    <span class="scale-num">83</span>
+                    <span class="scale-label">章节</span>
+                </div>
+                <div class="scale-item">
+                    <span class="scale-num">360,583</span>
+                    <span class="scale-label">CJK 字符</span>
+                </div>
+                <div class="scale-item">
+                    <span class="scale-num">122</span>
+                    <span class="scale-label">图表</span>
+                </div>
+                <div class="scale-item">
+                    <span class="scale-num">185</span>
+                    <span class="scale-label">Prompt 完整收录</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+        }
+        
+        // Intersection Observer for fade-in animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+        
+        document.querySelectorAll('.fade-in').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'opacity 0.8s ease-out, transform 0.8s ease-out';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

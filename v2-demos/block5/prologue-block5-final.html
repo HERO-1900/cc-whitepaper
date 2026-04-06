@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>这本书要做什么 · Claude Code 源码白皮书 v2 序章 Block 5</title>
+  <style>
+    :root {
+      --cc-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --cc-font-mono: "SF Mono", "Fira Code", "Fira Mono", Menlo, monospace;
+      --cc-color-bg: #0a0a0f;
+      --cc-color-surface: #12121a;
+      --cc-color-surface-secondary: #1a1a24;
+      --cc-color-border: #2a2a3a;
+      --cc-color-text: #e8e8ed;
+      --cc-color-text-secondary: #8888a0;
+      --cc-color-accent: #6366f1;
+      --cc-color-accent-hover: #818cf8;
+      --cc-color-success: #22c55e;
+      --cc-color-warning: #f59e0b;
+      --cc-color-danger: #ef4444;
+      --cc-color-code-bg: #1e1e2e;
+      --cc-font-size-xs: 0.75rem;
+      --cc-font-size-sm: 0.875rem;
+      --cc-font-size-base: 1rem;
+      --cc-font-size-lg: 1.125rem;
+      --cc-font-size-xl: 1.25rem;
+      --cc-font-size-2xl: 1.5rem;
+      --cc-font-size-3xl: 1.875rem;
+      --cc-font-size-4xl: 2.25rem;
+      --cc-font-size-5xl: 3rem;
+      --cc-leading-normal: 1.5;
+      --cc-leading-relaxed: 1.75;
+      --cc-space-1: 0.25rem;
+      --cc-space-2: 0.5rem;
+      --cc-space-3: 0.75rem;
+      --cc-space-4: 1rem;
+      --cc-space-6: 1.5rem;
+      --cc-space-8: 2rem;
+      --cc-space-12: 3rem;
+      --cc-space-16: 4rem;
+      --cc-measure-prose: 65ch;
+    }
+    [data-theme="light"] {
+      --cc-color-bg: #f8f9fc;
+      --cc-color-surface: #ffffff;
+      --cc-color-surface-secondary: #f1f3f8;
+      --cc-color-border: #d0d4e4;
+      --cc-color-text: #1a1a2e;
+      --cc-color-text-secondary: #5a5a7a;
+      --cc-color-accent: #4f46e5;
+      --cc-color-accent-hover: #6366f1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--cc-font-sans);
+      font-size: var(--cc-font-size-lg);
+      line-height: var(--cc-leading-relaxed);
+      color: var(--cc-color-text);
+      background: var(--cc-color-bg);
+      padding: var(--cc-space-12) var(--cc-space-6);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h2 {
+      font-size: var(--cc-font-size-4xl);
+      font-weight: 700;
+      margin-bottom: var(--cc-space-8);
+      color: var(--cc-color-text);
+    }
+    h3 {
+      font-size: var(--cc-font-size-xl);
+      font-weight: 600;
+      margin-bottom: var(--cc-space-4);
+    }
+    .section { margin-bottom: var(--cc-space-16); }
+
+    /* Methodology Badge Trio */
+    .badge-trio {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--cc-space-3);
+      margin-bottom: var(--cc-space-8);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--cc-space-2);
+      padding: var(--cc-space-2) var(--cc-space-4);
+      background: var(--cc-color-surface-secondary);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 9999px;
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-accent);
+    }
+    .badge strong { color: var(--cc-color-text); }
+
+    /* Pull Quote Q1 */
+    .pull-quote {
+      font-size: var(--cc-font-size-2xl);
+      font-weight: 500;
+      color: var(--cc-color-text);
+      padding: var(--cc-space-6);
+      border-left: 4px solid var(--cc-color-accent);
+      background: var(--cc-color-surface);
+      margin-bottom: var(--cc-space-12);
+      max-width: var(--cc-measure-prose);
+    }
+
+    /* Bullet Cards Visual List */
+    .bullet-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--cc-space-4);
+      margin-bottom: var(--cc-space-8);
+    }
+    .bullet-card {
+      background: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 12px;
+      padding: var(--cc-space-6);
+      position: relative;
+    }
+    .bullet-card .bullet-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--cc-color-accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--cc-space-3);
+      font-size: var(--cc-font-size-sm);
+    }
+    .bullet-card .bullet-num {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-xs);
+      color: var(--cc-color-accent);
+      margin-bottom: var(--cc-space-2);
+    }
+    .bullet-card .bullet-text {
+      font-size: var(--cc-font-size-base);
+      color: var(--cc-color-text);
+      line-height: var(--cc-leading-normal);
+    }
+    .bullet-card .bullet-text strong {
+      color: var(--cc-color-accent);
+      font-weight: 600;
+    }
+
+    /* Bul-4 💡 Tooltip */
+    .tooltip-card {
+      background: linear-gradient(135deg, var(--cc-color-surface) 0%, var(--cc-color-surface-secondary) 100%);
+      border: 1px solid var(--cc-color-accent);
+      border-radius: 12px;
+      padding: var(--cc-space-6);
+      margin-top: var(--cc-space-4);
+      position: relative;
+    }
+    .tooltip-card::before {
+      content: "💡 通俗理解";
+      position: absolute;
+      top: -12px;
+      left: var(--cc-space-4);
+      background: var(--cc-color-accent);
+      color: #fff;
+      font-size: var(--cc-font-size-xs);
+      padding: var(--cc-space-1) var(--cc-space-3);
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+    .tooltip-card p {
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-secondary);
+      line-height: var(--cc-leading-relaxed);
+    }
+    .tooltip-card .highlight {
+      color: var(--cc-color-warning);
+      font-weight: 600;
+    }
+
+    /* Q2 Dual Positioning Cards */
+    .dual-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--cc-space-6);
+      margin: var(--cc-space-12) 0;
+    }
+    @media (max-width: 768px) {
+      .dual-cards { grid-template-columns: 1fr; }
+    }
+    .pos-card {
+      padding: var(--cc-space-8);
+      border-radius: 16px;
+      position: relative;
+    }
+    .pos-card.negative {
+      background: var(--cc-color-surface-secondary);
+      border: 1px solid var(--cc-color-border);
+      opacity: 0.7;
+    }
+    .pos-card.positive {
+      background: linear-gradient(135deg, var(--cc-color-accent) 0%, #4f46e5 100%);
+      border: 2px solid var(--cc-color-accent);
+    }
+    .pos-card .pos-title {
+      font-size: var(--cc-font-size-3xl);
+      font-weight: 700;
+      margin-bottom: var(--cc-space-3);
+      color: var(--cc-color-text);
+    }
+    .pos-card.positive .pos-title { color: #ffffff; }
+    .pos-card .pos-sub {
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-secondary);
+      line-height: var(--cc-leading-relaxed);
+    }
+    .pos-card.positive .pos-sub { color: rgba(255,255,255,0.85); }
+    .pos-card .pos-label {
+      position: absolute;
+      top: var(--cc-space-4);
+      right: var(--cc-space-4);
+      font-size: var(--cc-font-size-xs);
+      padding: var(--cc-space-1) var(--cc-space-2);
+      border-radius: 4px;
+      font-family: var(--cc-font-mono);
+    }
+    .pos-card.negative .pos-label {
+      background: var(--cc-color-border);
+      color: var(--cc-color-text-secondary);
+    }
+    .pos-card.positive .pos-label {
+      background: rgba(255,255,255,0.2);
+      color: #ffffff;
+    }
+
+    /* Chart Containers */
+    .chart-section {
+      margin: var(--cc-space-12) 0;
+    }
+    .chart-label {
+      font-size: var(--cc-font-size-xs);
+      font-family: var(--cc-font-mono);
+      color: var(--cc-color-accent);
+      margin-bottom: var(--cc-space-2);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .chart-title {
+      font-size: var(--cc-font-size-xl);
+      font-weight: 600;
+      margin-bottom: var(--cc-space-6);
+    }
+
+    /* Data Flow Diagram (0.2-A) */
+    .dataflow-sticky {
+      position: sticky;
+      top: var(--cc-space-4);
+      background: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 12px;
+      padding: var(--cc-space-6);
+      margin-bottom: var(--cc-space-8);
+    }
+    .dataflow-diagram {
+      overflow-x: auto;
+    }
+    .flow-lanes {
+      display: flex;
+      flex-direction: column;
+      gap: var(--cc-space-2);
+      min-width: 800px;
+    }
+    .flow-lane {
+      display: flex;
+      align-items: center;
+      gap: var(--cc-space-2);
+    }
+    .flow-lane-label {
+      width: 80px;
+      font-size: var(--cc-font-size-xs);
+      font-family: var(--cc-font-mono);
+      color: var(--cc-color-text-secondary);
+      flex-shrink: 0;
+    }
+    .flow-lane-track {
+      flex: 1;
+      height: 40px;
+      background: var(--cc-color-surface-secondary);
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .flow-node {
+      position: absolute;
+      top: 4px;
+      height: 32px;
+      background: var(--cc-color-accent);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--cc-font-size-xs);
+      font-family: var(--cc-font-mono);
+      color: #fff;
+      white-space: nowrap;
+      padding: 0 var(--cc-space-2);
+    }
+    .flow-node.client { background: #3b82f6; }
+    .flow-node.network { background: #8b5cf6; }
+    .flow-node.server { background: #22c55e; }
+    .flow-formats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--cc-space-2);
+      margin-top: var(--cc-space-4);
+      padding-top: var(--cc-space-4);
+      border-top: 1px solid var(--cc-color-border);
+    }
+    .flow-format {
+      font-size: var(--cc-font-size-xs);
+      font-family: var(--cc-font-mono);
+      padding: var(--cc-space-1) var(--cc-space-2);
+      background: var(--cc-color-code-bg);
+      border-radius: 4px;
+      color: var(--cc-color-text-secondary);
+    }
+    .flow-format span { color: var(--cc-color-accent); }
+
+    /* Tech Stack Diagram (0.2-B) */
+    .techstack-container {
+      background: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 12px;
+      padding: var(--cc-space-6);
+    }
+    .tech-layers {
+      display: flex;
+      flex-direction: column;
+      gap: var(--cc-space-2);
+    }
+    .tech-layer {
+      display: flex;
+      align-items: center;
+      gap: var(--cc-space-4);
+      padding: var(--cc-space-3) var(--cc-space-4);
+      border-radius: 8px;
+      position: relative;
+    }
+    .tech-layer.l1 { background: #1e3a5f; }
+    .tech-layer.l2 { background: #2563eb; }
+    .tech-layer.l3 { background: #7c3aed; }
+    .tech-layer.l4 { background: #db2777; }
+    .tech-layer.l5 { background: #ea580c; }
+    .tech-layer.l6 { background: #16a34a; }
+    .tech-layer.l7 { background: #0891b2; }
+    .tech-layer.l8 { background: #475569; }
+    .tech-layer-label {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-xs);
+      color: rgba(255,255,255,0.7);
+      width: 32px;
+      flex-shrink: 0;
+    }
+    .tech-layer-name {
+      font-size: var(--cc-font-size-sm);
+      font-weight: 600;
+      color: #fff;
+      flex: 1;
+    }
+    .tech-layer-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--cc-space-2);
+    }
+    .tech-item {
+      font-size: var(--cc-font-size-xs);
+      background: rgba(255,255,255,0.15);
+      padding: var(--cc-space-1) var(--cc-space-2);
+      border-radius: 4px;
+      color: rgba(255,255,255,0.9);
+    }
+    .tech-wasm-badge {
+      font-size: var(--cc-font-size-xs);
+      background: #a855f7;
+      padding: var(--cc-space-1) var(--cc-space-2);
+      border-radius: 4px;
+      color: #fff;
+      font-weight: 600;
+    }
+    .tech-layer-count {
+      font-size: var(--cc-font-size-xs);
+      color: rgba(255,255,255,0.5);
+      font-family: var(--cc-font-mono);
+    }
+
+    /* Reader Personas */
+    .reader-trio {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: var(--cc-space-4);
+      margin: var(--cc-space-8) 0;
+    }
+    .reader-card {
+      background: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 12px;
+      padding: var(--cc-space-6);
+    }
+    .reader-card .reader-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--cc-color-accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--cc-space-4);
+      font-size: var(--cc-font-size-xl);
+    }
+    .reader-card .reader-type {
+      font-size: var(--cc-font-size-base);
+      font-weight: 700;
+      color: var(--cc-color-text);
+      margin-bottom: var(--cc-space-2);
+    }
+    .reader-card .reader-desc {
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-secondary);
+      line-height: var(--cc-leading-relaxed);
+    }
+
+    /* Whitepaper Position Badge */
+    .wp-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--cc-color-accent) 0%, #4f46e5 100%);
+      color: #fff;
+      padding: var(--cc-space-4) var(--cc-space-8);
+      border-radius: 9999px;
+      font-size: var(--cc-font-size-lg);
+      font-weight: 700;
+      margin: var(--cc-space-8) 0;
+      position: relative;
+    }
+    .wp-badge-sub {
+      display: block;
+      font-size: var(--cc-font-size-xs);
+      font-weight: 400;
+      margin-top: var(--cc-space-1);
+      opacity: 0.8;
+    }
+    .review-note {
+      font-size: var(--cc-font-size-xs);
+      color: var(--cc-color-text-secondary);
+      margin-top: var(--cc-space-2);
+    }
+
+    /* Whitepaper Scale Microbar */
+    .microbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--cc-space-6);
+      padding: var(--cc-space-6);
+      background: var(--cc-color-surface-secondary);
+      border-radius: 12px;
+      margin: var(--cc-space-8) 0;
+    }
+    .micro-stat {
+      text-align: center;
+    }
+    .micro-stat .stat-num {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-2xl);
+      font-weight: 700;
+      color: var(--cc-color-accent);
+    }
+    .micro-stat .stat-label {
+      font-size: var(--cc-font-size-xs);
+      color: var(--cc-color-text-secondary);
+      margin-top: var(--cc-space-1);
+    }
+
+    /* Transition to Block 6 */
+    .transition {
+      font-size: var(--cc-font-size-base);
+      color: var(--cc-color-text-secondary);
+      padding: var(--cc-space-8) 0;
+      border-top: 1px solid var(--cc-color-border);
+      margin-top: var(--cc-space-8);
+      max-width: var(--cc-measure-prose);
+    }
+    .transition strong {
+      color: var(--cc-color-text);
+      font-weight: 500;
+    }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      position: fixed;
+      top: var(--cc-space-4);
+      right: var(--cc-space-4);
+      background: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 8px;
+      padding: var(--cc-space-2) var(--cc-space-3);
+      font-size: var(--cc-font-size-sm);
+      cursor: pointer;
+      color: var(--cc-color-text);
+    }
+
+    /* Sticky/Pin capability */
+    .pin-btn {
+      font-size: var(--cc-font-size-xs);
+      background: var(--cc-color-surface-secondary);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 4px;
+      padding: var(--cc-space-1) var(--cc-space-2);
+      cursor: pointer;
+      color: var(--cc-color-text-secondary);
+      margin-left: var(--cc-space-2);
+    }
+    .pinned .pin-btn { background: var(--cc-color-accent); color: #fff; }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">切换主题</button>
+
+  <!-- Section 1: Methodological Badges + Q1 Pull Quote -->
+  <section class="section">
+    <h2>这本书要做什么</h2>
+
+    <!-- Methodology Badge Trio -->
+    <div class="badge-trio">
+      <span class="badge"><strong>2.1.88</strong> 版本</span>
+      <span class="badge"><strong>2026 年 4 月</strong> 截止日期</span>
+      <span class="badge"><strong>逆向解剖</strong> 分析方法</span>
+    </div>
+
+    <!-- Q1 Pull Quote -->
+    <blockquote class="pull-quote">
+      我们不猜测，不臆断——所有结论都标注了源文件路径和行号。
+    </blockquote>
+  </section>
+
+  <!-- Section 2: 5 Bullets Visual List -->
+  <section class="section">
+    <h3>你会在书中看到：</h3>
+
+    <div class="bullet-grid">
+      <div class="bullet-card">
+        <div class="bullet-icon">→</div>
+        <div class="bullet-num">Bul-1</div>
+        <div class="bullet-text">系统如何在你按下 Enter 之后，经历<strong>数十个步骤</strong>才把问题送到 AI 面前</div>
+      </div>
+
+      <div class="bullet-card">
+        <div class="bullet-icon">⚡</div>
+        <div class="bullet-num">Bul-2</div>
+        <div class="bullet-text">为什么一条看似简单的回复背后，可能有 <strong>7 个 AI 实例</strong>在同时工作</div>
+      </div>
+
+      <div class="bullet-card">
+        <div class="bullet-icon">🛡️</div>
+        <div class="bullet-num">Bul-3</div>
+        <div class="bullet-text">一个"编辑文件"操作如何穿越权限检查、沙箱隔离、文件快照<strong>三道关卡</strong></div>
+      </div>
+
+      <div class="bullet-card">
+        <div class="bullet-icon">💰</div>
+        <div class="bullet-num">Bul-4</div>
+        <div class="bullet-text">Token（词元）如何像货币一样被精打细算，缓存命中率如何像<strong>汇率</strong>一样影响所有决策</div>
+
+        <!-- 💡 通俗理解 Tooltip for Bul-4 -->
+        <div class="tooltip-card">
+          <p>想象你在国外旅行：<span class="highlight">Token 就是你兜里的零钱</span>，每次让 AI 思考都要"花钱"（消耗 Token）。<span class="highlight">缓存命中率就像汇率</span>——如果你之前问过类似的问题，系统会直接从记忆里提取答案（高汇率/低成本），而不需要重新"兑换"新想法。</p>
+        </div>
+      </div>
+
+      <div class="bullet-card">
+        <div class="bullet-icon">🏢</div>
+        <div class="bullet-num">Bul-5</div>
+        <div class="bullet-text">企业管理员如何通过<strong>九层配置体系</strong>，远程控制每一台开发者机器上的 Claude Code</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: Data Flow Diagram (0.2-A) -->
+  <section class="section chart-section">
+    <div class="chart-label">图表 0.2-A · 数据流完整旅程图</div>
+    <div class="chart-title">一次交互如何穿越 10 个阶段</div>
+
+    <div class="dataflow-sticky" id="dataflow-chart">
+      <div style="display:flex;align-items:center;margin-bottom:var(--cc-space-4)">
+        <span style="font-size:var(--cc-font-size-sm);color:var(--cc-color-text-secondary)">数据形态演化全程</span>
+        <button class="pin-btn" onclick="this.parentElement.parentElement.classList.toggle('pinned')">📌 固定</button>
+      </div>
+
+      <div class="dataflow-diagram">
+        <div class="flow-lanes">
+          <!-- Client Lane: 3 stages (0-30%) -->
+          <div class="flow-lane">
+            <div class="flow-lane-label">Client</div>
+            <div class="flow-lane-track">
+              <div class="flow-node client" style="left:1%;width:9%">输入 string</div>
+              <div class="flow-node client" style="left:11%;width:9%">解析 object</div>
+              <div class="flow-node client" style="left:21%;width:9%">校验 JSON</div>
+            </div>
+          </div>
+
+          <!-- Network Lane: 3 stages (31-60%) -->
+          <div class="flow-lane">
+            <div class="flow-lane-label">Network</div>
+            <div class="flow-lane-track">
+              <div class="flow-node network" style="left:31%;width:9%">JSON 序列化</div>
+              <div class="flow-node network" style="left:41%;width:9%">SSE 流式</div>
+              <div class="flow-node network" style="left:51%;width:9%">chunks 缓冲</div>
+            </div>
+          </div>
+
+          <!-- Server Lane: 4 stages (61-100%) -->
+          <div class="flow-lane">
+            <div class="flow-lane-label">Server</div>
+            <div class="flow-lane-track">
+              <div class="flow-node server" style="left:61%;width:9%">事件分发</div>
+              <div class="flow-node server" style="left:71%;width:9%">MCP 工具</div>
+              <div class="flow-node server" style="left:81%;width:9%">ReactNode</div>
+              <div class="flow-node server" style="left:91%;width:8%">渲染 DOM</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-formats">
+          <span class="flow-format"><span>string</span> →</span>
+          <span class="flow-format"><span>object</span> →</span>
+          <span class="flow-format"><span>JSON</span> →</span>
+          <span class="flow-format"><span>SSE</span> →</span>
+          <span class="flow-format"><span>ReactNode</span> →</span>
+          <span class="flow-format"><span>DOM</span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Q2 Dual Positioning Cards -->
+  <section class="section">
+    <div class="chart-label">定位宣言</div>
+
+    <div class="dual-cards">
+      <div class="pos-card negative">
+        <span class="pos-label">✗ 非目标</span>
+        <div class="pos-title">这不是使用指南。</div>
+        <div class="pos-sub">你不会在这里学到怎么用 Claude Code——官方文档已经做得很好了。</div>
+      </div>
+
+      <div class="pos-card positive">
+        <span class="pos-label">✓ 核心定位</span>
+        <div class="pos-title">这是工程解剖。</div>
+        <div class="pos-sub">我们要搞清楚它为什么这样设计、这些设计背后做了什么取舍、以及你能从中想到什么可以用在自己项目里的工程智慧。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Tech Stack Diagram (0.2-B) -->
+  <section class="section chart-section">
+    <div class="chart-label">图表 0.2-B · 技术栈全景图</div>
+    <div class="chart-title">从 TypeScript 到沙箱的 8 层技术栈</div>
+
+    <div class="techstack-container">
+      <div class="tech-layers">
+        <div class="tech-layer l1">
+          <span class="tech-layer-label">L1</span>
+          <span class="tech-layer-name">基础层 Build &amp; Runtime</span>
+          <div class="tech-layer-items">
+            <span class="tech-item">Node.js</span>
+            <span class="tech-item">esbuild</span>
+            <span class="tech-item">tsup</span>
+          </div>
+        </div>
+
+        <div class="tech-layer l2">
+          <span class="tech-layer-label">L2</span>
+          <span class="tech-layer-name">语言层 TypeScript</span>
+          <div class="tech-layer-items">
+            <span class="tech-item">TypeScript</span>
+          </div>
+        </div>
+
+        <div class="tech-layer l3">
+          <span class="tech-layer-label">L3</span>
+          <span class="tech-layer-name">运行时与工具链</span>
+          <div class="tech-layer-items">
+            <span class="tech-item">execa</span>
+          </div>
+        </div>
+
+        <div class="tech-layer l4">
+          <span class="tech-layer-label">L4</span>
+          <span class="tech-layer-name">CLI 框架</span>
+          <div class="tech-layer-items">
+            <span class="tech-item">Commander.js</span>
+            <span class="tech-item">Ink (React)</span>
+          </div>
+        </div>
+
+        <div class="tech-layer l5">
+          <span class="tech-layer-label">L5</span>
+          <span class="tech-layer-name">解析与代码分析</span>
+          <div class="tech-layer-items">
+            <span class="tech-item">tree-sitter</span>
+            <span class="tech-wasm-badge">WASM</span>
+            <span class="tech-item">remark</span>
+          </div>
+        </div>
+
+        <div class="tech-layer l6">
+          <span class="tech-layer-label">L6</span>
+          <span class="tech-layer-name">验证与类型</span>
+          <div class="tech-layer-items">
+            <span class="tech-item">Zod</span>
+          </div>
+        </div>
+
+        <div class="tech-layer l7">
+          <span class="tech-layer-label">L7</span>
+          <span class="tech-layer-name">通信协议</span>
+          <div class="tech-layer-items">
+            <span class="tech-item">MCP</span>
+            <span class="tech-item">SSE</span>
+            <span class="tech-item">Anthropic API</span>
+          </div>
+        </div>
+
+        <div class="tech-layer l8">
+          <span class="tech-layer-label">L8</span>
+          <span class="tech-layer-name">沙箱隔离层</span>
+          <div class="tech-layer-items">
+            <span class="tech-item">Seatbelt</span>
+            <span class="tech-item">Namespace</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 6: Reader Personas -->
+  <section class="section">
+    <h3>这本书写给谁</h3>
+
+    <div class="reader-trio">
+      <div class="reader-card">
+        <div class="reader-icon">🔧</div>
+        <div class="reader-type">工程师</div>
+        <div class="reader-desc">如果你想搞清楚一个 50 万行系统是怎么从 0 设计到 100 的</div>
+      </div>
+
+      <div class="reader-card">
+        <div class="reader-icon">🚀</div>
+        <div class="reader-type">创业者 / 产品经理</div>
+        <div class="reader-desc">如果你正在做 AI 产品，想看看一个成熟系统是如何做权衡的</div>
+      </div>
+
+      <div class="reader-card">
+        <div class="reader-icon">📚</div>
+        <div class="reader-type">CS 学生</div>
+        <div class="reader-desc">如果你正在学操作系统课，Claude Code 是一个完美的现代 OS 案例</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 7: Whitepaper Position Badge -->
+  <section class="section">
+    <div style="text-align:center">
+      <div class="wp-badge">
+        中文第一部 AI Agent 架构白皮书
+        <span class="wp-badge-sub">系统化、规模化、工程化地呈现 Claude Code 内部机制</span>
+      </div>
+      <div class="review-note">* 读者评审建议语</div>
+    </div>
+  </section>
+
+  <!-- Section 8: Whitepaper Scale Microbar -->
+  <section class="section">
+    <div class="microbar">
+      <div class="micro-stat">
+        <div class="stat-num">83</div>
+        <div class="stat-label">全书章节</div>
+      </div>
+      <div class="micro-stat">
+        <div class="stat-num">360,583</div>
+        <div class="stat-label">CJK 字符</div>
+      </div>
+      <div class="micro-stat">
+        <div class="stat-num">122</div>
+        <div class="stat-label">图表总数</div>
+      </div>
+      <div class="micro-stat">
+        <div class="stat-num">185</div>
+        <div class="stat-label">Prompt 全收录</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 9: Transition to Block 6 -->
+  <section class="section">
+    <div class="transition">
+      好了，现在你知道了这本书的规模和野心。<strong>那么，让我们打开引擎盖，看看里面是怎么运转的</strong>——从一个你已经熟悉的框架开始：<strong>操作系统</strong>。
+    </div>
+  </section>
+
+  <script>
+    // Minimal vanilla JS for sticky/pin functionality
+    document.querySelectorAll('.pin-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        this.parentElement.parentElement.classList.toggle('pinned');
+      });
+    });
+  </script>
+</body>
+</html>
