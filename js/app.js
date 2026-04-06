@@ -402,8 +402,11 @@
       }
     });
     // Embed interactive charts (replaces [图表预留 X.X-X] placeholders)
+    // 传入 bookFile 启用 B 路径：游离图表会在章节末尾"本章配图"附录里自动归位
     if (window.ChartEmbed) {
-      ChartEmbed.embed(chapterBody);
+      ChartEmbed.embed(chapterBody, {
+        bookFile: currentChapter ? currentChapter.file : null
+      });
     }
     // Annotate glossary terms, difficulty badge, and Q&A panel
     if (window.GlossarySystem && currentChapter) {

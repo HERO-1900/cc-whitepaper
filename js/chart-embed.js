@@ -12,6 +12,7 @@
 
   // ===== STATE =====
   let chartMappings = null;   // placeholder_id -> mapping object
+  let rawMappings = null;     // 原始 mapping 数组（保留重复 placeholder_id，用于按 book_file 扫描游离图）
   let mapLoaded = false;
   let mapLoadPromise = null;
 
@@ -118,6 +119,32 @@
       .chart-embed-arrow {
         transition: transform 200ms ease;
       }
+      /* ===== STAGE 1 - B 路径：章节末尾游离图附录区 ===== */
+      .chart-embed-appendix {
+        margin-top: 4rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--cc-border-default, #444);
+      }
+      .chart-embed-appendix-title {
+        color: var(--cc-text-primary, #fff);
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem 0;
+        padding: 0;
+        letter-spacing: 0.02em;
+      }
+      .chart-embed-appendix-note {
+        color: var(--cc-text-muted, #888);
+        font-size: 0.9rem;
+        margin: 0 0 1.75rem 0;
+        line-height: 1.6;
+      }
+      .chart-embed-appendix .chart-embed-container {
+        margin-top: 1.5rem;
+      }
+      .chart-embed-appendix .chart-embed-container:first-of-type {
+        margin-top: 0;
+      }
     `;
     (document.head || document.documentElement).appendChild(style);
   }
@@ -222,6 +249,32 @@
     document.body.style.userSelect = '';
   });
 
+  // ===== B 路径：游离图表派生目标章节 =====
+  // 对于 unmatched_charts（JSON 中缺 book_file 的条目），按 chart_id 前缀归位到"该 Part 的封面章节"
+  // 这是 B 路径"安全网"策略：让每张图至少有一个可见的家，而不是彻底消失
+  function deriveBookFileForUnmatched(entry) {
+    if (!entry || !entry.chart_id) return null;
+    // 显式标注为"历史版本/避免重复/已被替代"的图表不追加到附录
+    const reason = entry.reason || '';
+    if (/历史版本|避免重复|已被.*替代|已归位|不再嵌入/.test(reason)) {
+      return null;
+    }
+    const chartId = entry.chart_id;
+    // 序章总览：所有 VIS-0-* + VIS-1-011（本书阅读路径图）
+    if (chartId.indexOf('VIS-0-') === 0 || chartId === 'VIS-1-011') {
+      return 'book/part0_序章/00_序章.md';
+    }
+    // Part 4 工程哲学：封面章节 = 01_在等待时间里藏工作.md
+    if (chartId.indexOf('VIS-4-') === 0) {
+      return 'book/part4_工程哲学/01_在等待时间里藏工作.md';
+    }
+    // Part 5 批判与超越：封面章节 = 01_这个系统的代价.md
+    if (chartId.indexOf('VIS-5-') === 0) {
+      return 'book/part5_批判与超越/01_这个系统的代价.md';
+    }
+    return null;
+  }
+
   // ===== LOAD MAPPING DATA =====
   function loadChartMap() {
     if (mapLoadPromise) return mapLoadPromise;
@@ -232,6 +285,7 @@
       })
       .then(data => {
         chartMappings = {};
+        rawMappings = [];
         if (data.mappings && Array.isArray(data.mappings)) {
           data.mappings.forEach(m => {
             if (m.placeholder_id && m.chart_file) {
@@ -240,14 +294,30 @@
               // we store by placeholder_id. The chart is the same for duplicates.
               chartMappings[m.placeholder_id] = m;
             }
+            // 原始数组保留所有条目（含重复 placeholder_id 及"无 placeholder_id 的游离条目"），
+            // 供 B 路径按 book_file 精确匹配使用
+            if (m.chart_file && m.book_file) {
+              rawMappings.push(m);
+            }
+          });
+        }
+        // 把 unmatched_charts 也纳入：这些图表在 JSON 里没有 book_file，
+        // 需要根据 chart_id 前缀派生一个目标章节（见 deriveBookFileForUnmatched）
+        if (data.unmatched_charts && Array.isArray(data.unmatched_charts)) {
+          data.unmatched_charts.forEach(m => {
+            if (!m.chart_file || !m.chart_id) return;
+            const derivedBookFile = deriveBookFileForUnmatched(m);
+            if (!derivedBookFile) return;
+            rawMappings.push(Object.assign({}, m, { book_file: derivedBookFile, _orphan: true }));
           });
         }
         mapLoaded = true;
-        console.log(`[chart-embed] Loaded ${Object.keys(chartMappings).length} chart mappings`);
+        console.log(`[chart-embed] Loaded ${Object.keys(chartMappings).length} chart mappings, ${rawMappings.length} raw entries`);
       })
       .catch(err => {
         console.warn('[chart-embed] Failed to load chart mapping:', err);
         chartMappings = {};
+        rawMappings = [];
         mapLoaded = true;
       });
     return mapLoadPromise;
@@ -468,11 +538,16 @@
   }
 
   // ===== MAIN: EMBED CHARTS INTO RENDERED DOM =====
-  function embedCharts(containerEl) {
+  function embedCharts(containerEl, options) {
     if (!mapLoaded || !chartMappings) {
       console.warn('[chart-embed] Map not loaded yet, deferring embedCharts');
       return;
     }
+    const opts = options || {};
+    const bookFile = opts.bookFile || null;
+
+    // 本次调用中已渲染过的 chart_file（按绝对路径去重），供 B 路径排除占位符已经吃掉的条目
+    const renderedInThisCall = new Set();
 
     // Strategy: walk the DOM tree and find text nodes or elements containing placeholder text.
     // Placeholders can appear in:
@@ -543,6 +618,7 @@
 
         if (mapping) {
           fragment.appendChild(createChartContainer(placeholderId, mapping));
+          renderedInThisCall.add(mapping.chart_file);
           embeddedCount++;
         } else {
           fragment.appendChild(createUnmatchedContainer(placeholderId, match[0]));
@@ -556,6 +632,65 @@
     if (embeddedCount > 0) {
       console.log(`[chart-embed] Embedded ${embeddedCount} charts in this chapter`);
     }
+
+    // ===== B 路径：章节末尾追加"本章配图"附录（游离图表 fallback） =====
+    // 只在调用方明确传入 bookFile 时启用，向后兼容旧调用
+    if (bookFile && Array.isArray(rawMappings) && rawMappings.length > 0) {
+      appendOrphanCharts(containerEl, bookFile, renderedInThisCall);
+    }
+  }
+
+  // ===== B 路径实现 =====
+  // 调用方可能传入带或不带 "book/" 前缀的路径（app.js 里 currentChapter.file 是相对 book/ 的），
+  // 而 JSON 里的 book_file 统一带 "book/" 前缀。这里做一次归一化再比较。
+  function normalizeBookFile(p) {
+    if (!p) return '';
+    return p.indexOf('book/') === 0 ? p : 'book/' + p;
+  }
+
+  function appendOrphanCharts(containerEl, bookFile, renderedInThisCall) {
+    // 1. 按 book_file 精确匹配当前章节的所有条目
+    const normalized = normalizeBookFile(bookFile);
+    const chapterEntries = rawMappings.filter(m => normalizeBookFile(m.book_file) === normalized);
+    if (chapterEntries.length === 0) return;
+
+    // 2. 排除已被占位符路径渲染的（按 chart_file 去重）
+    const orphans = [];
+    const seen = new Set();
+    chapterEntries.forEach(m => {
+      if (renderedInThisCall && renderedInThisCall.has(m.chart_file)) return;
+      if (seen.has(m.chart_file)) return;
+      seen.add(m.chart_file);
+      orphans.push(m);
+    });
+
+    if (orphans.length === 0) return;
+
+    // 3. 构建附录容器
+    const appendix = document.createElement('section');
+    appendix.className = 'chart-embed-appendix';
+    appendix.dataset.chapterFile = bookFile;
+
+    const heading = document.createElement('h2');
+    heading.className = 'chart-embed-appendix-title';
+    heading.textContent = '本章配图';
+    appendix.appendChild(heading);
+
+    const note = document.createElement('p');
+    note.className = 'chart-embed-appendix-note';
+    note.textContent = '以下图表与本章主题相关，已统一附在文末。';
+    appendix.appendChild(note);
+
+    // 4. 逐个追加图表容器
+    orphans.forEach(mapping => {
+      // 优先使用 placeholder_id，缺失时退化为 chart_id 作为 DOM 标识
+      const chartId = mapping.placeholder_id || mapping.chart_id || mapping.chart_file;
+      const chartContainer = createChartContainer(chartId, mapping);
+      appendix.appendChild(chartContainer);
+    });
+
+    containerEl.appendChild(appendix);
+    console.log(`[chart-embed] Appendix: appended ${orphans.length} orphan charts for ${bookFile}`);
   }
 
   // ===== PUBLIC API =====
@@ -564,12 +699,16 @@
      * Call after markdown is rendered into DOM.
      * Ensures mapping is loaded first, then scans and replaces placeholders.
      * @param {HTMLElement} containerEl - The DOM element containing rendered markdown
+     * @param {Object} [options]
+     * @param {string} [options.bookFile] - 当前章节相对路径（如 "book/part0_序章/00_序章.md"）。
+     *   传入后会启用 B 路径：把本章映射中未被占位符吃掉的游离图表追加到文末"本章配图"附录。
+     *   不传时仅跑原始占位符替换路径，保持向后兼容。
      */
-    embed: function (containerEl) {
+    embed: function (containerEl, options) {
       if (mapLoaded) {
-        embedCharts(containerEl);
+        embedCharts(containerEl, options);
       } else {
-        loadChartMap().then(() => embedCharts(containerEl));
+        loadChartMap().then(() => embedCharts(containerEl, options));
       }
     },
 
