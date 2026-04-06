@@ -1,0 +1,45 @@
+总分: 15/20
+
+布局: 3/5 — 多列对齐尚可，但 Push 区域 CLIENT/SERVER 角色错位（第 3/4 行 CLIENT 仍在左、SERVER 赫然在右），方向语义混乱
+
+信息: 4/5 — 层级清晰、色标 Legend 完整，但步骤编号 + step-card 重叠的视觉区隔被 Arrow ↓ 打断，关键路径（Pull step3 / Push step4）强调动画过强喧宾夺主
+
+美学: 4/5 — 配色方案专业（深空背景 + Cyan/Magenta 双主色）、字体组合恰当，但 pulse 动画过于密集（每个 important 卡都闪），背景 glow + grid 叠加偏重
+
+完整: 4/5 — 语法正确、CDN 字体可访问、可直接运行；媒体查询存在但缺少对 step-number 的移动端特殊处理
+
+---
+
+**缺陷：**
+
+1. **Push 流程方向语义反转**（行 220–280 区域）
+   - CLIENT 为发起点，SERVER 为接收端，CLIENT 应始终在右、箭头向右
+   - 当前第 3/4 行（Push Delta 检测、密钥扫描）CLIENT 在左、SERVER 在右 → 与 Pull 拉取方向视觉混淆
+   - 第 5 行（乐观并发判断）SERVER 返回结果，SERVER 在左是对的，但同一 Push 流程内方向不一致
+
+2. **重要步骤动画过载**（行 194 `.step-card.important` + 行 418 `animation: pulse-magenta`）
+   - Pull section 和 Push section 各有 1 个 `.important` 卡，每张卡 2s 无限循环 pulse
+   - 两张卡同时闪烁时主流程信息被干扰；背景已有 glow + grid 动态元素，视觉噪音过高
+
+3. **step-number 圆点遮挡内容**（行 177 `left: -12px`）
+   - 在窄屏或 Actor 列较宽时，圆点向左溢出被裁剪；移动端 flex-direction: column 布局下可能看不到编号
+
+4. **Actor 隐藏行导致列宽不一致感**（行 256 `visibility: hidden`）
+   - Pull step4 / Push step6 的 SERVER actor 使用 `visibility: hidden` 保留网格占位，但 140px 空白与实际内容区产生视觉空洞
+
+5. **HTTP method 与路径混用中英文**（行 154/165/220 等）
+   - 标签同时出现 `GET /api/team-memory`（英文技术词）和 `变更触发`（中文描述），专有名词统一用英文（GET、POST、ETag、412）但步骤标题全中文，造成语调断层
+
+---
+
+**修改建议：**
+
+1. **统一 Push 流程方向**：CLIENT 始终在 flow-row 右侧（对应步骤 1/2/3 的 action 发出端），SERVER 在左侧（结果返回端）；或引入双向箭头 `⇄` 而非单向 `↓`，显式标注"请求→"和"←响应"
+
+2. **降低动画权重**：将 `animation: pulse` 改为 `:hover` 触发（仅悬停时闪烁），或将 infinite 改为 `animation-fill-mode: forwards` 只在首次出现时闪 1–2 次
+
+3. **step-number 改用绝对定位在左上角**：`left: 8px; top: 8px; transform: none;`，避免被父容器裁剪
+
+4. **用 `min-height` 替代 `visibility: hidden`**：SERVER 占位行设置 `min-height: 80px` 保持网格一致性，或在隐藏行去掉 actor 列直接合并 flow-content
+
+5. **语调统一**：技术术语（GET/POST、ETag、412）保持原样，步骤标题统一用动词短语（"发送 GET 请求"、"比对 ETag"），避免同一行内中英混杂

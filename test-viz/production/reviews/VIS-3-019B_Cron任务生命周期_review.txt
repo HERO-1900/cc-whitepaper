@@ -1,0 +1,62 @@
+总分: 13/20
+
+布局: 3/5 — 状态节点水平排列基本对齐，但循环回溯箭头弧度偏大，路径穿越标签，缺乏统一终点标记
+
+信息: 4/5 — 7个状态覆盖完整，悬停交互细节丰富，但关键阈值（7天/Jitter/lock）初看不够醒目
+
+美学: 3/5 — 配色体系一致（深色+三色语义），字体选择考究，但 recurring 状态边框未随节点变色而同步
+
+完整: 3/5 — 存在**循环箭头无箭头标记**（marker-end 缺失），导致 SVG 渲染不完整；Legend CSS hack 存在浏览器兼容风险
+
+---
+
+**缺陷:**
+
+1. **[SVG L280] — `Completed -> Waiting (Recurring)` 路径缺少 `marker-end`**
+   - 路径 `<path class="arrow-path recurring" d="..."/>` 无 `marker-end="url(#arrowhead-recurring)"`
+   - 导致循环箭头末端无三角形标记，视觉不完整
+   - 对比：`Expired`（L295）和 `Deleted`（L302-305）路径均有正确的 `marker-end`
+
+2. **[SVG L280] — 循环路径穿过标签区**
+   - 路径 `Q 620 340`，标签位于 `translate(620, 345)`
+   - 箭头线从标签文字上跨越，应偏移标签或路径
+
+3. **[SVG L268] — 循环 label 背景色错误**
+   - `<rect ... fill="#1a2332"/>` 覆盖了 CSS 中的 `var(--bg-secondary)`
+   - 导致该矩形在深色背景中几乎不可见（应继承或用透明色）
+
+4. **[SVG L200] — Completed 状态脉冲指示器位置不一致**
+   - `circle cx="0" cy="42"` 超出 state-rect 高度范围（70px / y 从 -35 到 +35）
+   - 其他状态节点（Created、Waiting）脉冲均在 `cy=-25`，此处应保持一致
+
+5. **[SVG L195] — 周期性状态（Completed）未继承 recurring 悬停效果**
+   - CSS 中 `.state-node.recurring:hover .state-rect` 仅定义了 stroke glow
+   - 但 `Completed`（L199）的 `stroke="#f59e0b"` 已在默认态应用，悬停效果应与 `Waiting` 一致
+
+6. **[CSS L137-142] — Legend recurring 样式使用 CSS hack**
+   ```css
+   .legend-line.recurring {
+       height: 0;
+       border: 2px dashed var(--accent-recurring);
+   }
+   ```
+   `height: 0` + `border` 制造虚线效果在部分浏览器渲染不稳定，应用 `background: repeating-linear-gradient` 或 SVG `<line>` 元素替代
+
+7. **[SVG L294-296] — Expired 路径 label 偏移方向错误**
+   - 路径 `M 500 270 L 500 385`，标签却在右侧 `translate(555, 330)`
+   - 标签应位于路径左侧（`translate(445, 330)`）或路径右侧偏移更大
+
+---
+
+**修改建议:**
+
+1. 在 `L280` 路径添加 `marker-end="url(#arrowhead-recurring)"`
+2. 调整循环路径控制点或标签偏移，使箭头绕过标签区（建议 label 改至 `translate(700, 320)` 弧顶位置）
+3. 修正 L268 label 背景色为 `fill="transparent"` 或移除该 fill 属性
+4. 将 Completed 脉冲圆改为 `cy="-25"` 与其他状态一致
+5. 确保 CSS 中 `.state-node.recurring:hover .state-rect` stroke 宽度生效，或在 SVG 中对 Completed 添加显式 stroke
+6. 将 `.legend-line.recurring` 替换为 SVG `<line>` 元素：
+   ```html
+   <svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6,4"/></svg>
+   ```
+7. 将 Expired 标签移至路径左侧 `translate(445, 330)` 或路径上方偏移

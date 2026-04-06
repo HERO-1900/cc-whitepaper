@@ -1,0 +1,39 @@
+直接分析代码本身。
+
+---
+
+总分: **12/20**
+
+**布局: 2/5** — `.stage` 阶段卡等高但 `.stage-card` 高度由内容撑起，各列内容行数不一致（Stage 2/4/6 无 popover 导致视觉重心偏移），且 `.latch-connector` 的水平线 `left: -100px; width: 200px` 硬编码偏移值极易因容器宽度变化而错位。
+
+**信息: 3/5** — 六阶段流程方向清晰，但"典型 Cache Break 原因"侧边栏与主流程视觉权重相近喧宾夺主；Stage 3 的 popover 内容是伪代码而非真实字段说明，与其他 popover 风格不统一。
+
+**美学: 3/5** — 霓虹配色有赛博朋克质感，字体搭配合理，但 `--neon-violet` 色值 `#8338ec` 在深色背景上与 `--neon-rose` `#ff006e` 色相差过小易混淆；`.stage-number` 透明度 0.03 几乎不可见，属于冗余代码。
+
+**完整: 4/5** — 无外部依赖（Tailwind CDN + Google Fonts 均稳定），语法正确，可直接浏览器打开。
+
+---
+
+### 缺陷明细
+
+| # | 位置 | 严重度 | 描述 |
+|---|------|--------|------|
+| 1 | `.pipeline` | **高** | 六列 `flex: 1` 等宽，但 Stage 2/4/6 无 `detail-popover`，导致实际高度参差不齐，底部不在同一水平线 |
+| 2 | `.latch-connector::before` | **高** | `left: -100px; width: 200px` 硬编码居中，容器宽度任何变化（响应式/翻译字符宽度）都会导致箭头偏离 |
+| 3 | `font-size: 42px` `.title` | **中** | 42px 在 1440px 以下可能溢出换行，标题无 `overflow-wrap` 保护 |
+| 4 | `.causes-panel` | **中** | 在 Stage pipeline 之前渲染，DOM 顺序与视觉流（右上角漂浮）不一致；`position: absolute` 依赖外层 `position: relative`，但 pipeline 外层无此定义 |
+| 5 | `.stage-connector` | **中** | 只有 Stage 1/3/5 有 popover，2/4/6 没有，视觉重心偏向前三个 stage |
+| 6 | Stage 3 popover | **低** | 内容是伪代码 `hit_rate = read / total` 而非具体字段示例，与其他 popover 的 JSON 示例风格不一致 |
+| 7 | `.stage-number` | **低** | `color: rgba(255,255,255,0.03)` — 透明度 3% 几乎不可见，装饰性元素名存实亡 |
+| 8 | `.stats-bar` | **低** | `stat-value` 全大写（如 "Per-Tool Level"）与 `.stage-title` 混排时风格不协调；"727 lines" 硬编码值与实际源码行数无验证机制 |
+
+---
+
+### 修改建议
+
+1. **等高对齐**：给 `.pipeline` 加 `align-items: stretch`，或给所有 `.stage-card` 统一 `min-height`，确保 popover 有无不影响底部基准线。
+2. **latch 连接线居中**：改用 `left: 50%; transform: translateX(-50%)` 而非 `left: -100px; width: 200px` 硬编码。
+3. **标题溢出保护**：`.title` 加 `overflow-wrap: break-word; max-width: 100%`。
+4. **侧边栏定位基准**：给 `.container` 加 `position: relative`，确保 `.causes-panel` 的 absolute 锚点正确。
+5. **补齐 popover**：Stage 2/4/6 也加上与内容对应的 `detail-popover`，或统一移除全部 popover 改为 hover 时高亮边框。
+6. **统一 popover 风格**：Stage 3 popover 改为与 Stage 1/5 一致的 JSON 格式字段示例。

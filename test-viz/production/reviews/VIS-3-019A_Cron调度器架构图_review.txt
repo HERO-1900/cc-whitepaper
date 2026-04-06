@@ -1,0 +1,43 @@
+总分: 15/20
+
+**布局: 3/5** — 五个层级定位清晰，但"持久化层"与"锁层"Y轴相同导致右侧区块头重脚轻；Execution Layer 高度达480px与左侧多层总高失衡；箭头起点/终点与组件实际边界存在像素偏移。
+
+**信息: 4/5** — 核心数据（CronScheduler、文件路径、行号）有效传达；生命周期管理的"不回传结果"是关键发现；但"7d TTL 硬编码不可配置"这样的工程缺陷未在标题或视觉权重上区分于普通特性。
+
+**美学: 4/5** — 深色赛博朋克配色协调且有层次；毛玻璃层叠和噪声纹理提升质感；JetBrains Mono 字体选择得当；但"Active Session"脉冲动画与整体静态图基调不一致；layer-header 的小写 Uppercase 风格略显随意。
+
+**完整: 4/5** — 语法正确可直接运行；SVG marker、渐变、动画全部有效；缺少响应式（1400×900 固定尺寸）；`flow-line animated` 的 dasharray/-offset 逻辑在多浏览器可能存在帧率差异。
+
+---
+
+**缺陷:**
+
+1. **布局** — `layer-persistence`（top:400px, height:180px）和 `layer-lock`（top:400px, height:180px）完全等高，视觉上像是平级而非从属关系；两层的 Y 轴边界对齐但 X 轴间距不均匀（scheduler left:360→lock left:700，跨度过大）
+
+2. **布局** — `layer-execution` 高度 480px，而 User(200) + Scheduler(280) + 中间间距 = 约 380px，导致执行层与调度层在右侧形成明显的纵向失衡
+
+3. **信息** — `CronCreate` 标签坐标 x=345，但 User Layer 右侧实际边界约在 x=330，标签已超出层内；`trigger` 标签 x=890 落在 Execution Layer 左侧边界之外（该层 left:1100，实际内容区从约1130开始）
+
+4. **美学** — `.session-indicator` 的脉冲动画（2s循环）与整体静态图风格割裂；若保留动画，应在 Legend 或 Title 旁加注释说明其含义
+
+5. **代码** — Google Fonts `@import` 在内网/离线环境会阻塞渲染；`backdrop-filter: blur(10px)` 在低版本Safari上无回退
+
+6. **信息** — "防多会话冲突"和"30s 超时释放"属于锁机制核心语义，但文字颜色与普通 detail-list 无区分（均为 #94a3b8），视觉权重过低
+
+7. **布局** — `jitter-config` 盒（left:540, top:240）和 `layer-scheduler`（left:360, width:320，即右边界620）右侧已超出层边界约80px，夹在 Scheduler 和 Persistence 之间位置尴尬
+
+---
+
+**修改建议:**
+
+1. **布局** — 将 Lock Layer 叠放在 Persistence Layer 右侧（共享 Y 轴 top:400），明确锁→存储的从属关系；Execution Layer 高度收缩至 ~320px，与左侧总高均衡
+
+2. **信息** — 给锁层的"30s 超时释放"和"防多会话冲突"加上 `font-weight: 600` 和 `color: #f59e0b`，使其在视觉权重上等同于组件标题
+
+3. **美学** — 移除 `.session-dot` 的 pulse 动画，或将其替换为静态的半透明圆点+tooltip（"当前活跃调度会话计数"），避免动效喧宾夺主
+
+4. **代码** — 将 Google Fonts `@import` 改为 `<link>` 标签并加 `preconnect`；`backdrop-filter` 加 `-webkit-` 前缀和 `rgba(0,0,0,0.5)` 纯色 fallback
+
+5. **布局** — `jitter-config` 改为浮在 Scheduler 层右上角（top:100, right:scheduler右侧），消除与 Persistence 层边界的歧义
+
+6. **信息** — Execution Layer 内"生命周期管理"组件中的"硬编码不可配置"是重要工程约束，应用红色 tag（`tag-red`）或加 ⚠️ 图标在视觉上一层区分
