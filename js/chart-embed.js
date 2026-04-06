@@ -633,10 +633,29 @@
       console.log(`[chart-embed] Embedded ${embeddedCount} charts in this chapter`);
     }
 
-    // ===== B 路径：章节末尾追加"本章配图"附录（游离图表 fallback） =====
-    // 只在调用方明确传入 bookFile 时启用，向后兼容旧调用
+    // ===== B 路径已禁用 =====
+    // 用户验收反馈（2026-04-06）：fallback "本章配图" 文末堆放体验极差，
+    // 阅读时突兀地出现一堆 iframe，无法理解为什么这里突然来一组图，
+    // 违反"以用户体验为第一中心"原则。
+    //
+    // 真正的解法（V2 范式）：每个章节作为一个"页面设计项目"，
+    // 文字和图表从一开始就共生设计，而不是事后 fallback 堆放。
+    //
+    // appendOrphanCharts 函数代码保留，供 V2 调试期复用（console.warn 出游离图清单）。
     if (bookFile && Array.isArray(rawMappings) && rawMappings.length > 0) {
-      appendOrphanCharts(containerEl, bookFile, renderedInThisCall);
+      logOrphanChartsToConsole(bookFile, renderedInThisCall);
+    }
+  }
+
+  // V2 调试辅助：把当前章节的游离图打到 console，不渲染 UI
+  function logOrphanChartsToConsole(bookFile, renderedInThisCall) {
+    const normalized = normalizeBookFile(bookFile);
+    const chapterEntries = rawMappings.filter(m => normalizeBookFile(m.book_file) === normalized);
+    if (chapterEntries.length === 0) return;
+    const orphans = chapterEntries.filter(m => !renderedInThisCall || !renderedInThisCall.has(m.chart_file));
+    if (orphans.length > 0) {
+      console.warn(`[chart-embed] ${bookFile} 有 ${orphans.length} 张游离图（未渲染）：`,
+        orphans.map(m => m.chart_id || m.chart_file));
     }
   }
 
