@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>序章：当你打开一个'聊天助手'的引擎盖 — Claude Code 源码白皮书</title>
+<link rel="stylesheet" href="../test-viz/cc-design-tokens.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --cc-font-sans: 'Noto Sans SC', 'Space Grotesk', system-ui, sans-serif;
+  --cc-font-mono: 'Space Grotesk', monospace;
+  --cc-radius-sm: 6px;
+  --cc-radius-md: 12px;
+  --cc-radius-lg: 20px;
+  --cc-radius-xl: 28px;
+  --cc-shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --cc-shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+  --cc-shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  --cc-transition: 0.2s ease;
+}
+
+[data-theme="light"] {
+  --cc-bg-primary: #FAFBFC;
+  --cc-bg-secondary: #FFFFFF;
+  --cc-bg-tertiary: #F3F4F6;
+  --cc-text-primary: #1A1D23;
+  --cc-text-secondary: #4B5563;
+  --cc-text-muted: #9CA3AF;
+  --cc-brand: #5B5FE8;
+  --cc-brand-light: #EEF0FF;
+  --cc-accent: #F59E0B;
+  --cc-border: #E5E7EB;
+  --cc-kpi-bg: linear-gradient(135deg, #5B5FE8 0%, #8B8FF8 100%);
+  --cc-card-bg: #FFFFFF;
+  --cc-nav-bg: rgba(250,251,252,0.92);
+}
+
+[data-theme="dark"] {
+  --cc-bg-primary: #0F1117;
+  --cc-bg-secondary: #1A1D27;
+  --cc-bg-tertiary: #252A38;
+  --cc-text-primary: #F3F4F6;
+  --cc-text-secondary: #9CA3AF;
+  --cc-text-muted: #6B7280;
+  --cc-brand: #8B8FF8;
+  --cc-brand-light: #2A2D4A;
+  --cc-accent: #FBBF24;
+  --cc-border: #374151;
+  --cc-kpi-bg: linear-gradient(135deg, #3B3D8C 0%, #5B5FE8 100%);
+  --cc-card-bg: #1A1D27;
+  --cc-nav-bg: rgba(15,17,23,0.92);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--cc-font-sans);
+  background: var(--cc-bg-primary);
+  color: var(--cc-text-primary);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+/* Navigation */
+.cc-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--cc-nav-bg);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--cc-border);
+  padding: 0 24px;
+}
+.cc-nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  gap: 16px;
+}
+.cc-nav-brand {
+  font-family: var(--cc-font-mono);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--cc-brand);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.cc-nav-links {
+  display: flex;
+  gap: 4px;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cc-nav-links::-webkit-scrollbar { display: none; }
+.cc-nav-links a {
+  display: block;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--cc-text-secondary);
+  text-decoration: none;
+  border-radius: var(--cc-radius-sm);
+  transition: var(--cc-transition);
+  white-space: nowrap;
+}
+.cc-nav-links a:hover {
+  background: var(--cc-brand-light);
+  color: var(--cc-brand);
+}
+.cc-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cc-theme-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--cc-border);
+  background: var(--cc-card-bg);
+  border-radius: var(--cc-radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cc-text-secondary);
+  font-size: 18px;
+  transition: var(--cc-transition);
+}
+.cc-theme-btn:hover {
+  border-color: var(--cc-brand);
+  color: var(--cc-brand);
+}
+
+/* Main container */
+.cc-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Hero Section */
+.cc-hero {
+  padding: 80px 0 60px;
+  text-align: center;
+}
+.cc-hero-eyebrow {
+  display: inline-block;
+  font-family: var(--cc-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cc-brand);
+  background: var(--cc-brand-light);
+  padding: 6px 16px;
+  border-radius: 100px;
+  margin-bottom: 24px;
+}
+.cc-hero h1 {
+  font-size: clamp(28px, 5vw, 48px);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+}
+.cc-hero-hook {
+  font-size: clamp(18px, 3vw, 24px);
+  color: var(--cc-text-secondary);
+  max-width: 680px;
+  margin: 0 auto 32px;
+  line-height: 1.5;
+}
+.cc-hero-meta {
+  font-size: 14px;
+  color: var(--cc-text-muted);
+}
+
+/* Section Groups */
+.cc-group {
+  margin-bottom: 64px;
+}
+.cc-group-header {
+  margin-bottom: 24px;
+}
+.cc-section-num {
+  font-family: var(--cc-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cc-brand);
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+.cc-group h2 {
+  font-size: clamp(22px, 4vw, 32px);
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 16px;
+}
+.cc-lead {
+  font-size: 17px;
+  color: var(--cc-text-secondary);
+  line-height: 1.8;
+  max-width: 720px;
+}
+.cc-group p {
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--cc-text-secondary);
+  margin-bottom: 16px;
+  max-width: 720px;
+}
+
+/* Quote Block */
+.cc-quote-block {
+  position: relative;
+  padding: 24px 28px;
+  background: var(--cc-card-bg);
+  border-radius: var(--cc-radius-lg);
+  border-left: 4px solid var(--cc-brand);
+  margin: 24px 0;
+  box-shadow: var(--cc-shadow-sm);
+}
+.cc-quote-block p {
+  font-size: clamp(20px, 3vw, 26px);
+  font-weight: 600;
+  color: var(--cc-text-primary);
+  margin: 0;
+  line-height: 1.4;
+}
+.cc-quote-block .attribution {
+  font-size: 14px;
+  color: var(--cc-text-muted);
+  margin-top: 12px;
+  font-weight: 400;
+}
+
+/* KPI Grid */
+.cc-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 32px 0;
+}
+.cc-kpi-card {
+  background: var(--cc-kpi-bg);
+  border-radius: var(--cc-radius-lg);
+  padding: 24px 16px;
+  text-align: center;
+  color: #fff;
+}
+.cc-kpi-value {
+  font-family: var(--cc-font-mono);
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+.cc-kpi-label {
+  font-size: 13px;
+  opacity: 0.85;
+  font-weight: 500;
+}
+
+/* Timeline */
+.cc-timeline {
+  position: relative;
+  padding: 24px 0;
+  margin: 24px 0;
+}
+.cc-timeline-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--cc-border);
+  border-radius: 2px;
+  transform: translateY(-50%);
+}
+.cc-timeline-items {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  gap: 12px;
+}
+.cc-timeline-item {
+  flex: 1;
+  text-align: center;
+  position: relative;
+  padding-top: 60px;
+}
+.cc-timeline-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--cc-border);
+  border: 4px solid var(--cc-bg-primary);
+  box-shadow: var(--cc-shadow-sm);
+}
+.cc-timeline-item.active::before {
+  background: var(--cc-brand);
+  box-shadow: 0 0 0 6px var(--cc-brand-light);
+}
+.cc-timeline-item.active::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  background: var(--cc-brand);
+  border-radius: 50%;
+}
+.cc-timeline-phase {
+  font-family: var(--cc-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cc-brand);
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+.cc-timeline-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.cc-timeline-desc {
+  font-size: 12px;
+  color: var(--cc-text-muted);
+  line-height: 1.5;
+}
+
+/* Chart Card */
+.cc-chart-card {
+  background: var(--cc-card-bg);
+  border-radius: var(--cc-radius-xl);
+  border: 1px solid var(--cc-border);
+  overflow: hidden;
+  margin: 24px 0;
+  box-shadow: var(--cc-shadow-md);
+}
+.cc-chart-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--cc-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cc-chart-id {
+  font-family: var(--cc-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cc-brand);
+  background: var(--cc-brand-light);
+  padding: 4px 10px;
+  border-radius: 100px;
+}
+.cc-chart-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.cc-chart-caption {
+  font-size: 13px;
+  color: var(--cc-text-muted);
+  font-weight: 400;
+}
+.cc-chart-body {
+  padding: 16px;
+}
+.cc-chart-body iframe {
+  width: 100%;
+  height: 640px;
+  border: none;
+  border-radius: var(--cc-radius-lg);
+  background: var(--cc-bg-tertiary);
+}
+.cc-chart-body iframe.cc-short { height: 520px; }
+.cc-chart-body iframe.cc-tall { height: 720px; }
+
+/* Table */
+.cc-table-wrapper {
+  overflow-x: auto;
+  margin: 24px 0;
+  border-radius: var(--cc-radius-lg);
+  border: 1px solid var(--cc-border);
+}
+.cc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.cc-table th {
+  background: var(--cc-bg-tertiary);
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cc-text-secondary);
+  border-bottom: 1px solid var(--cc-border);
+}
+.cc-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--cc-border);
+  color: var(--cc-text-secondary);
+}
+.cc-table tr:last-child td { border-bottom: none; }
+.cc-table tr:hover td { background: var(--cc-bg-tertiary); }
+.cc-table .cc-name { font-weight: 600; color: var(--cc-text-primary); }
+.cc-table .cc-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: var(--cc-brand-light);
+  color: var(--cc-brand);
+  font-weight: 500;
+}
+
+/* OS Translation Cards */
+.cc-os-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+.cc-os-card {
+  background: var(--cc-card-bg);
+  border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius-md);
+  padding: 16px;
+  transition: var(--cc-transition);
+}
+.cc-os-card:hover {
+  border-color: var(--cc-brand);
+  box-shadow: var(--cc-shadow-sm);
+}
+.cc-os-term {
+  font-family: var(--cc-font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cc-brand);
+  margin-bottom: 6px;
+}
+.cc-os-translation {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cc-text-primary);
+}
+
+/* Part Cards */
+.cc-parts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+.cc-part-card {
+  background: var(--cc-card-bg);
+  border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius-lg);
+  padding: 20px;
+  transition: var(--cc-transition);
+}
+.cc-part-card:hover {
+  border-color: var(--cc-brand);
+  transform: translateY(-2px);
+  box-shadow: var(--cc-shadow-md);
+}
+.cc-part-num {
+  font-family: var(--cc-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cc-brand);
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+.cc-part-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.cc-part-desc {
+  font-size: 13px;
+  color: var(--cc-text-muted);
+  line-height: 1.5;
+}
+
+/* Reader Path Cards - Hero Visual Module */
+.cc-paths-section {
+  margin: 48px 0;
+}
+.cc-paths-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.cc-paths-header h3 {
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.cc-paths-header p {
+  font-size: 17px;
+  color: var(--cc-text-secondary);
+}
+.cc-paths-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.cc-path-card {
+  background: var(--cc-card-bg);
+  border: 2px solid var(--cc-border);
+  border-radius: var(--cc-radius-xl);
+  padding: 32px 24px;
+  text-align: center;
+  transition: var(--cc-transition);
+  position: relative;
+  overflow: hidden;
+}
+.cc-path-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--cc-kpi-bg);
+}
+.cc-path-card:hover {
+  border-color: var(--cc-brand);
+  transform: translateY(-4px);
+  box-shadow: var(--cc-shadow-lg);
+}
+.cc-path-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  background: var(--cc-brand-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+.cc-path-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.cc-path-audience {
+  font-size: 13px;
+  color: var(--cc-brand);
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+.cc-path-desc {
+  font-size: 14px;
+  color: var(--cc-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+.cc-path-route {
+  font-size: 13px;
+  color: var(--cc-text-muted);
+  margin-bottom: 20px;
+  padding: 12px;
+  background: var(--cc-bg-tertiary);
+  border-radius: var(--cc-radius-sm);
+}
+.cc-path-cta {
+  display: inline-block;
+  padding: 10px 24px;
+  background: var(--cc-brand);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 100px;
+  text-decoration: none;
+  transition: var(--cc-transition);
+}
+.cc-path-cta:hover {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+
+/* Metaphor Families */
+.cc-metaphor-list {
+  margin: 24px 0;
+}
+.cc-metaphor-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--cc-border);
+}
+.cc-metaphor-item:last-child { border-bottom: none; }
+.cc-metaphor-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--cc-brand-light);
+  border-radius: var(--cc-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.cc-metaphor-content h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.cc-metaphor-content p {
+  font-size: 14px;
+  color: var(--cc-text-secondary);
+  margin: 0;
+}
+
+/* CTA Section */
+.cc-cta-section {
+  text-align: center;
+  padding: 64px 0;
+  margin-top: 48px;
+  border-top: 1px solid var(--cc-border);
+}
+.cc-cta-title {
+  font-size: clamp(24px, 4vw, 32px);
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.cc-cta-text {
+  font-size: 17px;
+  color: var(--cc-text-secondary);
+  margin-bottom: 32px;
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.cc-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 40px;
+  background: var(--cc-brand);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+  border-radius: 100px;
+  text-decoration: none;
+  transition: var(--cc-transition);
+  box-shadow: var(--cc-shadow-md);
+}
+.cc-cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--cc-shadow-lg);
+}
+
+/* Footer */
+.cc-footer {
+  text-align: center;
+  padding: 32px 24px;
+  border-top: 1px solid var(--cc-border);
+  font-size: 14px;
+  color: var(--cc-text-muted);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .cc-nav-links { display: none; }
+  .cc-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .cc-timeline-items { flex-direction: column; gap: 24px; }
+  .cc-timeline-track { display: none; }
+  .cc-timeline-item { text-align: left; padding-left: 60px; padding-top: 0; }
+  .cc-timeline-item::before { left: 0; top: 4px; transform: none; }
+  .cc-timeline-item.active::after { left: 4px; top: 8px; }
+  .cc-parts-grid { grid-template-columns: repeat(2, 1fr); }
+  .cc-paths-grid { grid-template-columns: 1fr; }
+  .cc-os-cards { grid-template-columns: 1fr; }
+  .cc-chart-body iframe { height: 480px; }
+  .cc-group { margin-bottom: 48px; }
+  .cc-hero { padding: 48px 0 40px; }
+  .cc-cta-section { padding: 48px 0; }
+}
+@media (max-width: 480px) {
+  .cc-kpi-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cc-kpi-card { padding: 16px 12px; }
+  .cc-parts-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="cc-nav">
+<div class="cc-nav-inner">
+<a href="#" class="cc-nav-brand">cc-whitepaper</a>
+<ul class="cc-nav-links">
+<li><a href="#misunderstanding">误解</a></li>
+<li><a href="#coordinate">坐标系</a></li>
+<li><a href="#ecosystem">生态</a></li>
+<li><a href="#numbers">数字</a></li>
+<li><a href="#os-model">OS</a></li>
+<li><a href="#reading-route">路线</a></li>
+<li><a href="#metaphors">比喻</a></li>
+</ul>
+<div class="cc-nav-actions">
+<button class="cc-theme-btn" onclick="toggleTheme()" aria-label="切换主题">
+<span id="theme-icon">&#9788;</span>
+</button>
+</div>
+</div>
+</nav>
+
+<main class="cc-container">
+
+<!-- Hero Section -->
+<section class="cc-hero">
+<div class="cc-hero-eyebrow">序章</div>
+<h1>当你打开一个"聊天助手"的引擎盖</h1>
+<p class="cc-hero-hook">你以为你在用 ChatGPT，其实你打开的是一台精密的 AI 操作系统——只是它的界面恰好是个聊天框。</p>
+<p class="cc-hero-meta">Claude Code 源码白皮书 &middot; 全文 83 章 &middot; 约 36 万中文字符</p>
+</section>
+
+<!-- §1 一个误解的开始 -->
+<section class="cc-group" id="misunderstanding">
+<div class="cc-group-header">
+<span class="cc-section-num">&#9655; 第一章</span>
+<h2>一个误解的开始</h2>
+<p class="cc-lead">"不就是个终端里的 ChatGPT 吗？"</p>
+</div>
+
+<p>2023 年秋，Claude Code 刚发布时，很多人的第一反应是：<strong>这不就是个增强版 ChatGPT 吗？</strong> 在终端里聊聊天，让 AI 帮忙写代码，跟在网页上问问题没多大区别。</p>
+
+<div class="cc-quote-block">
+<p>"不是。差远了。"</p>
+<span class="attribution">&#8212;&#8212; 这是我们花了半年时间研究完 1,884 个 TypeScript 文件后才敢说的话</span>
+</div>
+
+<p>当你真正钻进它的源码，会发现：聊天界面只是冰山一角。水面之下是一套完整的<strong> Harness Engineering 体系</strong>——Harness，这个在中文语境里几乎找不到对应词的术语，恰恰是理解 Claude Code 的核心。</p>
+
+<p>用一个过时的比喻来类比：如果你把 Claude Code 当作"会写代码的聊天机器人"，就像把 macOS 当作"会显示图标的终端"。技术上没错，但你错过了整个生态。</p>
+</section>
+
+<!-- §2 行业坐标系 -->
+<section class="cc-group" id="coordinate">
+<div class="cc-group-header">
+<span class="cc-section-num">&#9655; 第二章</span>
+<h2>行业坐标系：2026 年 AI 编程助手的竞争版图</h2>
+</div>
+
+<p>今天的 AI 编程助手赛道已经分化出多个层次的玩家。GitHub Copilot 占据通用市场，Cursor 在产品体验上持续创新，Kimi Code 凭借长上下文窗口异军突起，还有 Devin、CodeX、Antigravity 等新生力量正在抢占细分场景。</p>
+
+<div class="cc-timeline">
+<div class="cc-timeline-track"></div>
+<div class="cc-timeline-items">
+<div class="cc-timeline-item">
+<span class="cc-timeline-phase">第一阶段</span>
+<div class="cc-timeline-title">Prompt Engineering</div>
+<div class="cc-timeline-desc">给模型写更好的指令<br>2022-2023</div>
+</div>
+<div class="cc-timeline-item active">
+<span class="cc-timeline-phase">第二阶段</span>
+<div class="cc-timeline-title">Context Engineering</div>
+<div class="cc-timeline-desc">把代码库完整塞给模型<br>2023-2025</div>
+</div>
+<div class="cc-timeline-item">
+<span class="cc-timeline-phase">第三阶段</span>
+<div class="cc-timeline-title">Harness Engineering</div>
+<div class="cc-timeline-desc">为 AI 智能体设计操作系统<br>2025-</div>
+</div>
+</div>
+</div>
+
+<p>Claude Code 之所以值得单独写成一本白皮书，不是因为它的模型能力最强，而是因为它是目前<strong> Harness Engineering 理念落地最彻底的产品</strong>——它不只是把代码给 AI，它为 AI 构建了一个完整的执行环境、权限系统、事件驱动机制和扩展生态。</p>
+</section>
+
+<!-- §3 泄露催化的生态爆发 -->
+<section class="cc-group" id="ecosystem">
+<div class="cc-group-header">
+<span class="cc-section-num">&#9655; 第三章</span>
+<h2>泄露催化的生态爆发</h2>
+</div>
+
+<p>2024 年中，Claude Code 部分源码意外泄露，在开发者社区引发了一场"淘金热"。短短数月内，一系列开源项目如雨后春笋般涌现，围绕 Claude Code 的二次开发生态迅速成型。</p>
+
+<div class="cc-table-wrapper">
+<table class="cc-table">
+<thead>
+<tr>
+<th>项目名称</th>
+<th>类型</th>
+<th>核心功能</th>
+<th>活跃度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="cc-name">ccunpacked.dev</td>
+<td><span class="cc-tag">工具站</span></td>
+<td>源码镜像与全文检索</td>
+<td>日均 1.2k UV</td>
+</tr>
+<tr>
+<td class="cc-name">harness-books</td>
+<td><span class="cc-tag">文档</span></td>
+<td>Harness 理论体系整理</td>
+<td>持续更新</td>
+</tr>
+<tr>
+<td class="cc-name">claude-code-fork</td>
+<td><span class="cc-tag">开源</span></td>
+<td>社区分支版本</td>
+<td>Star 2.3k</td>
+</tr>
+<tr>
+<td class="cc-name">@anthropic-ai/harness-sdk</td>
+<td><span class="cc-tag">SDK</span></td>
+<td>第三方 Harness 封装</td>
+<td>周下载 800+</td>
+</tr>
+<tr>
+<td class="cc-name">claude-vscode-bridge</td>
+<td><span class="cc-tag">插件</span></td>
+<td>VS Code 集成适配</td>
+<td>Beta</td>
+</tr>
+<tr>
+<td class="cc-name">harness-playground</td>
+<td><span class="cc-tag">沙盒</span></td>
+<td>在线 Harness 调试环境</td>
+<td>内测中</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<p>这些项目共同指向一个事实：<strong>Harness Engineering 不是一个封闭的概念，而是一套可以独立于 Claude Code 存在的方法论。</strong> 任何想要为 AI 智能体构建执行环境的团队，都可以从这套体系中汲取灵感。</p>
+</section>
+
+<!-- §4 数字震撼 -->
+<section class="cc-group" id="numbers">
+<div class="cc-group-header">
+<span class="cc-section-num">&#9655; 第四章</span>
+<h2>数字震撼：一个 AI 智能体操作系统的规模</h2>
+</div>
+
+<p>让我们用真实的数字说话。Claude Code 的源码规模远超大多数人的预期：</p>
+
+<div class="cc-kpi-grid">
+<div class="cc-kpi-card">
+<div class="cc-kpi-value">1,884</div>
+<div class="cc-kpi-label">TypeScript 文件</div>
+</div>
+<div class="cc-kpi-card">
+<div class="cc-kpi-value">476,875</div>
+<div class="cc-kpi-label">有效代码行数</div>
+</div>
+<div class="cc-kpi-card">
+<div class="cc-kpi-value">40</div>
+<div class="cc-kpi-label">核心工具函数</div>
+</div>
+<div class="cc-kpi-card">
+<div class="cc-kpi-value">98</div>
+<div class="cc-kpi-label">斜杠命令</div>
+</div>
+</div>
+
+<p>这四个数字放在一起，勾勒出一个核心事实：<strong>Claude Code 不是一个聊天机器人，而是一个为 AI 智能体设计的操作系统。</strong> 它有进程管理（任务队列）、有文件系统（项目上下文）、有权限模型（MCP 安全沙箱）、有网络 IO（HTTP 工具调用）、有插件生态（扩展协议）。</p>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.1-A</span>
+<span class="cc-chart-title">源码统计仪表盘</span>
+</div>
+<span class="cc-chart-caption">Source Code Statistics Dashboard</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-002B_CC源码全量统计仪表盘.html" loading="lazy" class="cc-short"></iframe>
+</div>
+</div>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.1-B</span>
+<span class="cc-chart-title">英雄架构图</span>
+</div>
+<span class="cc-chart-caption">Hero Architecture Overview</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-001_英雄架构图.html" loading="lazy"></iframe>
+</div>
+</div>
+</section>
+
+<!-- §5 这本书要做什么 -->
+<section class="cc-group">
+<div class="cc-group-header">
+<span class="cc-section-num">&#9655; 第五章</span>
+<h2>这本书要做什么</h2>
+</div>
+
+<p>这本白皮书的目标很简单：用 83 章的篇幅，把 Claude Code 的每一寸"电路板"都呈现给你。</p>
+
+<p>具体来说，我们会覆盖：</p>
+
+<ul style="margin: 16px 0 24px 24px; color: var(--cc-text-secondary); line-height: 2;">
+<li>Claude Code 的整体架构与核心设计哲学</li>
+<li>40 个核心工具函数的实现机制与调用协议</li>
+<li>98 个斜杠命令的设计逻辑与交互模式</li>
+<li>权限模型与安全沙箱的实现细节</li>
+<li>扩展协议（MCP）的设计与生态</li>
+<li>配置系统的完整地图</li>
+<li>Hook 机制与事件驱动架构</li>
+<li>性能优化的全景视角</li>
+</ul>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.2-A</span>
+<span class="cc-chart-title">数据流完整旅程图</span>
+</div>
+<span class="cc-chart-caption">Complete Data Flow Journey</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-004_数据流完整旅程图.html" loading="lazy"></iframe>
+</div>
+</div>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.2-B</span>
+<span class="cc-chart-title">技术栈全景</span>
+</div>
+<span class="cc-chart-caption">Technology Stack Overview</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-003_技术栈全景.html" loading="lazy"></iframe>
+</div>
+</div>
+</section>
+
+<!-- §6 为什么用"操作系统"来理解 -->
+<section class="cc-group" id="os-model">
+<div class="cc-group-header">
+<span class="cc-section-num">&#9655; 第六章</span>
+<h2>为什么用"操作系统"来理解 Claude Code</h2>
+</div>
+
+<p>"操作系统"不是修辞，而是精确的技术类比。Claude Code 的每一层设计都可以找到传统 OS 概念的对应：</p>
+
+<div class="cc-os-cards">
+<div class="cc-os-card">
+<div class="cc-os-term">PROCESS</div>
+<div class="cc-os-translation">任务队列与生命周期管理</div>
+</div>
+<div class="cc-os-card">
+<div class="cc-os-term">FILESYSTEM</div>
+<div class="cc-os-translation">项目上下文与虚拟文件系统</div>
+</div>
+<div class="cc-os-card">
+<div class="cc-os-term">NETWORK_IO</div>
+<div class="cc-os-translation">HTTP 工具调用与响应解析</div>
+</div>
+<div class="cc-os-card">
+<div class="cc-os-term">SECURITY_SANDBOX</div>
+<div class="cc-os-translation">MCP 协议与权限沙箱</div>
+</div>
+<div class="cc-os-card">
+<div class="cc-os-term">PACKAGE_MGR</div>
+<div class="cc-os-translation">扩展生态与第三方集成</div>
+</div>
+<div class="cc-os-card">
+<div class="cc-os-term">EVENT_LOOP</div>
+<div class="cc-os-translation">Hook 机制与事件驱动</div>
+</div>
+</div>
+
+<p>理解了这个翻译对照表，你就掌握了理解 Claude Code 的第一把钥匙。以下八张图表将带你深入每个模块的内部实现：</p>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.3-A</span>
+<span class="cc-chart-title">43 个工具完整目录</span>
+</div>
+<span class="cc-chart-caption">Complete Tool Registry</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-010_43个工具完整目录.html" loading="lazy" class="cc-tall"></iframe>
+</div>
+</div>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.3-B</span>
+<span class="cc-chart-title">安全模型全景图</span>
+</div>
+<span class="cc-chart-caption">Security Model Overview</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-006_安全模型全景图.html" loading="lazy"></iframe>
+</div>
+</div>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.3-C</span>
+<span class="cc-chart-title">权限模型对照表</span>
+</div>
+<span class="cc-chart-caption">Permission Model Reference</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-009_权限模型对照表.html" loading="lazy"></iframe>
+</div>
+</div>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.3-D</span>
+<span class="cc-chart-title">MCP 传输方式对比</span>
+</div>
+<span class="cc-chart-caption">MCP Transport Comparison</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-013_MCP传输方式对比.html" loading="lazy"></iframe>
+</div>
+</div>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.3-E</span>
+<span class="cc-chart-title">配置文件完整地图</span>
+</div>
+<span class="cc-chart-caption">Configuration Files Map</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-011_配置文件完整地图.html" loading="lazy"></iframe>
+</div>
+</div>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.3-F</span>
+<span class="cc-chart-title">Hook 事件完整目录</span>
+</div>
+<span class="cc-chart-caption">Hook Event Registry</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-012_Hook事件完整目录.html" loading="lazy"></iframe>
+</div>
+</div>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.3-G</span>
+<span class="cc-chart-title">扩展生态地图</span>
+</div>
+<span class="cc-chart-caption">Extension Ecosystem Map</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-007_扩展生态地图.html" loading="lazy"></iframe>
+</div>
+</div>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.3-H</span>
+<span class="cc-chart-title">模块依赖网络图</span>
+</div>
+<span class="cc-chart-caption">Module Dependency Network</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-005_模块依赖网络图.html" loading="lazy"></iframe>
+</div>
+</div>
+</section>
+
+<!-- §7 阅读路线 -->
+<section class="cc-group" id="reading-route">
+<div class="cc-group-header">
+<span class="cc-section-num">&#9655; 第七章</span>
+<h2>阅读路线：六个 Part，完整覆盖</h2>
+</div>
+
+<p>全书分为六个 Part，形成从表层到内核的递进路径：</p>
+
+<div class="cc-parts-grid">
+<div class="cc-part-card">
+<div class="cc-part-num">Part 1</div>
+<div class="cc-part-title">基础篇：Architecture & Philosophy</div>
+<div class="cc-part-desc">整体架构设计哲学、核心模块划分、设计决策背后的why</div>
+</div>
+<div class="cc-part-card">
+<div class="cc-part-num">Part 2</div>
+<div class="cc-part-title">工具篇：40 Tools in Depth</div>
+<div class="cc-part-desc">每个工具函数的实现细节、参数协议、边界情况处理</div>
+</div>
+<div class="cc-part-card">
+<div class="cc-part-num">Part 3</div>
+<div class="cc-part-title">命令篇：98 斜杠命令解析</div>
+<div class="cc-part-desc">斜杠命令的设计模式、交互逻辑与扩展机制</div>
+</div>
+<div class="cc-part-card">
+<div class="cc-part-num">Part 4</div>
+<div class="cc-part-title">安全篇：Permission & Sandbox</div>
+<div class="cc-part-desc">权限模型、MCP 协议、安全沙箱的实现细节</div>
+</div>
+<div class="cc-part-card">
+<div class="cc-part-num">Part 5</div>
+<div class="cc-part-title">生态篇：Extension & Hook</div>
+<div class="cc-part-desc">扩展协议、Hook 机制、第三方集成最佳实践</div>
+</div>
+<div class="cc-part-card">
+<div class="cc-part-num">Part 6</div>
+<div class="cc-part-title">实战篇：Performance & Tuning</div>
+<div class="cc-part-desc">性能优化、配置调优、生产环境部署指南</div>
+</div>
+</div>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.4-A</span>
+<span class="cc-chart-title">本书知识图谱</span>
+</div>
+<span class="cc-chart-caption">Knowledge Graph of the Book</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-014_本书知识图谱.html" loading="lazy"></iframe>
+</div>
+</div>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.4-B</span>
+<span class="cc-chart-title">性能优化全景</span>
+</div>
+<span class="cc-chart-caption">Performance Optimization Overview</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-008_性能优化全景.html" loading="lazy"></iframe>
+</div>
+</div>
+</section>
+
+<!-- §8 三条阅读路径分流入口 -->
+<section class="cc-paths-section">
+<div class="cc-paths-header">
+<h3>三条阅读路径，找到你的入口</h3>
+<p>不同的背景，不同的目标，需要不同的阅读顺序</p>
+</div>
+
+<div class="cc-paths-grid">
+<div class="cc-path-card">
+<div class="cc-path-icon">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--cc-brand)">
+<path d="M12 2L2 7l10 5 10-5-10-5z"/>
+<path d="M2 17l10 5 10-5"/>
+<path d="M2 12l10 5 10-5"/>
+</svg>
+</div>
+<div class="cc-path-title">CS 学生</div>
+<div class="cc-path-audience">计算机科学在读本科生</div>
+<div class="cc-path-desc">从 Part 1 基础篇开始，按顺序阅读。每章配合源码阅读，形成对 AI Native 开发范式的系统认知。</div>
+<div class="cc-path-route">推荐路径：Part 1 &#8594; Part 2 &#8594; Part 3 &#8594; Part 4 &#8594; Part 5 &#8594; Part 6</div>
+<a href="#" class="cc-path-cta">开始学习</a>
+</div>
+
+<div class="cc-path-card">
+<div class="cc-path-icon">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--cc-brand)">
+<polyline points="16 18 22 12 16 6"/>
+<polyline points="8 6 2 12 8 18"/>
+</svg>
+</div>
+<div class="cc-path-title">高级工程师</div>
+<div class="cc-path-audience">5 年以上后端/架构经验</div>
+<div class="cc-path-desc">直接从 Part 4 安全篇和 Part 5 生态篇切入，重点关注权限模型、Hook 机制和扩展协议，这些是你在别处找不到的内容。</div>
+<div class="cc-path-route">推荐路径：Part 4 &#8594; Part 5 &#8594; Part 3 &#8594; Part 6 &#8594; Part 2</div>
+<a href="#" class="cc-path-cta">直接深入</a>
+</div>
+
+<div class="cc-path-card">
+<div class="cc-path-icon">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--cc-brand)">
+<circle cx="12" cy="12" r="10"/>
+<line x1="12" y1="8" x2="12" y2="12"/>
+<line x1="12" y1="16" x2="12.01" y2="16"/>
+</svg>
+</div>
+<div class="cc-path-title">创业者 & PM</div>
+<div class="cc-path-audience">AI 产品负责人与决策者</div>
+<div class="cc-path-desc">先读本章（序章）的全部图表，建立全局感。再读 Part 1 架构篇和 Part 5 生态篇，理解 Claude Code 能做什么、不能做什么。</div>
+<div class="cc-path-route">推荐路径：序章图表 &#8594; Part 1 &#8594; Part 5 &#8594; Part 6</div>
+<a href="#" class="cc-path-cta">建立全局</a>
+</div>
+</div>
+</section>
+
+<!-- §9 关于比喻 -->
+<section class="cc-group" id="metaphors">
+<div class="cc-group-header">
+<span class="cc-section-num">&#9655; 第九章</span>
+<h2>关于比喻：五大家族的平行宇宙</h2>
+</div>
+
+<p>理解 Claude Code 有多种路径，不同背景的人会自然选择不同的隐喻系统。以下五大家族并非互相排斥，恰恰相反——<strong>同时使用多个比喻能让你理解得更全面</strong>。</p>
+
+<div class="cc-metaphor-list">
+<div class="cc-metaphor-item">
+<div class="cc-metaphor-icon">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--cc-brand)">
+<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+<line x1="8" y1="21" x2="16" y2="21"/>
+<line x1="12" y1="17" x2="12" y2="21"/>
+</svg>
+</div>
+<div class="cc-metaphor-content">
+<h4>操作系统家族</h4>
+<p>Claude Code = AI 时代的 macOS。有进程管理、文件系统、权限沙箱、事件驱动。这是本书最核心的比喻体系。</p>
+</div>
+</div>
+<div class="cc-metaphor-item">
+<div class="cc-metaphor-icon">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--cc-brand)">
+<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+</svg>
+</div>
+<div class="cc-metaphor-content">
+<h4>工厂流水线家族</h4>
+<p>Claude Code = 自动化工厂。工具函数是工序，Hook 是质检节点，MCP 协议是来料检验标准。</p>
+</div>
+</div>
+<div class="cc-metaphor-item">
+<div class="cc-metaphor-icon">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--cc-brand)">
+<circle cx="12" cy="12" r="3"/>
+<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+</svg>
+</div>
+<div class="cc-metaphor-content">
+<h4>厨房料理家族</h4>
+<p>Claude Code = 米其林厨房。模型是主厨，工具是厨具，配置是食谱，Hook 是摆盘规则。</p>
+</div>
+</div>
+<div class="cc-metaphor-item">
+<div class="cc-metaphor-icon">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--cc-brand)">
+<rect x="1" y="3" width="15" height="13"/>
+<polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+<circle cx="5.5" cy="18.5" r="2.5"/>
+<circle cx="18.5" cy="18.5" r="2.5"/>
+</svg>
+</div>
+<div class="cc-metaphor-content">
+<h4>快递物流家族</h4>
+<p>Claude Code = 智能物流中枢。上下文是包裹，工具是分拣机器人，斜杠命令是投递协议。</p>
+</div>
+</div>
+<div class="cc-metaphor-item">
+<div class="cc-metaphor-icon">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--cc-brand)">
+<polygon points="12 2 2 7 12 12 22 7 12 2"/>
+<polyline points="2 17 12 22 22 17"/>
+<polyline points="2 12 12 17 22 12"/>
+</svg>
+</div>
+<div class="cc-metaphor-content">
+<h4>城市交通家族</h4>
+<p>Claude Code = 智慧城市交通系统。权限模型是红绿灯，MCP 协议是公共交通标准，Hook 是摄像头事件。</p>
+</div>
+</div>
+</div>
+
+<div class="cc-chart-card">
+<div class="cc-chart-header">
+<div>
+<span class="cc-chart-id">图表 0.5-A</span>
+<span class="cc-chart-title">概念速查表</span>
+</div>
+<span class="cc-chart-caption">Concept Quick Reference</span>
+</div>
+<div class="cc-chart-body">
+<iframe src="../test-viz/production/html/VIS-0-015_概念速查表.html" loading="lazy"></iframe>
+</div>
+</div>
+</section>
+
+<!-- §10 一个声明 -->
+<section class="cc-group">
+<div class="cc-group-header">
+<span class="cc-section-num">&#9655; 终章</span>
+<h2>一个声明</h2>
+</div>
+
+<p>这本白皮书是<strong>独立研究项目</strong>，由研究团队基于公开源码、API 文档、社区讨论和实际测试编写。Claude Code 本身是 Anthropic 的产品，本书不代表 Anthropic 的官方立场。</p>
+
+<p>我们尽力保证信息的准确性，但源码会随版本迭代而变化。如果发现本书内容与最新版本存在出入，欢迎通过 GitHub 提交 Issue。</p>
+
+<p><strong>所有的热情，都源于一个信念：理解"引擎盖下面是怎么工作的"，是真正用好一个工具的前提。</strong></p>
+</section>
+
+<!-- CTA -->
+<section class="cc-cta-section">
+<h2 class="cc-cta-title">准备好打开引擎盖了吗？</h2>
+<p class="cc-cta-text">83 章完整内容，185 个 Prompt 全收录，122 张技术图表。Claude Code 源码白皮书，迄今为止最完整的中文解析。</p>
+<a href="#" class="cc-cta-btn">
+开始阅读第一章
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<line x1="5" y1="12" x2="19" y2="12"/>
+<polyline points="12 5 19 12 12 19"/>
+</svg>
+</a>
+</section>
+
+</main>
+
+<footer class="cc-footer">
+<p>Claude Code 源码白皮书 &middot; cc-whitepaper &middot; 持续更新中</p>
+<p style="margin-top: 8px; font-size: 12px;">Made with curiosity in Beijing</p>
+</footer>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('cc-theme', next);
+  document.getElementById('theme-icon').innerHTML = next === 'light' ? '&#9788;' : '&#9790;';
+}
+
+// Restore theme
+(function() {
+  const saved = localStorage.getItem('cc-theme');
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+    document.getElementById('theme-icon').innerHTML = saved === 'light' ? '&#9788;' : '&#9790;';
+  }
+})();
+</script>
+
+</body>
+</html>

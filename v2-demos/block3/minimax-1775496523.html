@@ -1,0 +1,612 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V2 序章 · 块 3 · 泄露催化的生态爆发</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cc-font-sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+      --cc-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --cc-color-brand: #7c3aed;
+      --cc-color-brand-light: #a78bfa;
+      --cc-color-surface: #0f0f0f;
+      --cc-color-surface-raised: #1a1a1a;
+      --cc-color-surface-hover: #252525;
+      --cc-color-border: #2a2a2a;
+      --cc-color-text: #f5f5f5;
+      --cc-color-text-muted: #a3a3a3;
+      --cc-color-text-subtle: #737373;
+      --cc-color-accent-green: #22c55e;
+      --cc-color-accent-orange: #f97316;
+      --cc-color-accent-red: #ef4444;
+      --cc-color-accent-blue: #3b82f6;
+      --cc-font-size-xs: 0.75rem;
+      --cc-font-size-sm: 0.875rem;
+      --cc-font-size-base: 1rem;
+      --cc-font-size-lg: 1.125rem;
+      --cc-font-size-xl: 1.25rem;
+      --cc-font-size-2xl: 1.5rem;
+      --cc-font-size-3xl: 1.875rem;
+      --cc-font-size-4xl: 2.25rem;
+      --cc-font-size-5xl: 3rem;
+      --cc-font-size-6xl: 3.75rem;
+      --cc-font-size-7xl: 4.5rem;
+      --cc-font-weight-normal: 400;
+      --cc-font-weight-medium: 500;
+      --cc-font-weight-semibold: 600;
+      --cc-font-weight-bold: 700;
+      --cc-leading-none: 1;
+      --cc-leading-tight: 1.25;
+      --cc-leading-snug: 1.375;
+      --cc-leading-normal: 1.5;
+      --cc-leading-relaxed: 1.7;
+      --cc-space-1: 0.25rem;
+      --cc-space-2: 0.5rem;
+      --cc-space-3: 0.75rem;
+      --cc-space-4: 1rem;
+      --cc-space-5: 1.25rem;
+      --cc-space-6: 1.5rem;
+      --cc-space-8: 2rem;
+      --cc-space-10: 2.5rem;
+      --cc-space-12: 3rem;
+      --cc-space-16: 4rem;
+      --cc-space-20: 5rem;
+      --cc-measure-prose: 65ch;
+    }
+
+    [data-theme="light"] {
+      --cc-color-brand: #7c3aed;
+      --cc-color-brand-light: #7c3aed;
+      --cc-color-surface: #ffffff;
+      --cc-color-surface-raised: #f9fafb;
+      --cc-color-surface-hover: #f3f4f6;
+      --cc-color-border: #e5e7eb;
+      --cc-color-text: #111827;
+      --cc-color-text-muted: #6b7280;
+      --cc-color-text-subtle: #9ca3af;
+    }
+
+    html { font-size: 16px; }
+    body {
+      font-family: var(--cc-font-sans);
+      background-color: var(--cc-color-surface);
+      color: var(--cc-color-text);
+      line-height: var(--cc-leading-relaxed);
+      min-height: 100vh;
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: var(--cc-space-4);
+      right: var(--cc-space-4);
+      z-index: 100;
+      background: var(--cc-color-surface-raised);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 6px;
+      padding: var(--cc-space-2) var(--cc-space-3);
+      color: var(--cc-color-text);
+      font-family: var(--cc-font-sans);
+      font-size: var(--cc-font-size-sm);
+      cursor: pointer;
+    }
+
+    .prologue-block3 {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: var(--cc-space-12) var(--cc-space-6);
+    }
+
+    /* Section Header */
+    .section-header {
+      margin-bottom: var(--cc-space-10);
+    }
+    .section-label {
+      display: inline-block;
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-xs);
+      color: var(--cc-color-brand);
+      background: var(--cc-color-brand);
+      background: rgba(124, 58, 237, 0.1);
+      padding: var(--cc-space-1) var(--cc-space-3);
+      border-radius: 4px;
+      margin-bottom: var(--cc-space-3);
+      letter-spacing: 0.05em;
+    }
+    .section-title {
+      font-size: var(--cc-font-size-4xl);
+      font-weight: var(--cc-font-weight-bold);
+      line-height: var(--cc-leading-tight);
+      color: var(--cc-color-text);
+    }
+
+    /* Stat Grid */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--cc-space-4);
+      margin-bottom: var(--cc-space-12);
+    }
+    .stat-item {
+      background: var(--cc-color-surface-raised);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 12px;
+      padding: var(--cc-space-6);
+      text-align: center;
+    }
+    .stat-number {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-5xl);
+      font-weight: var(--cc-font-weight-bold);
+      color: var(--cc-color-brand);
+      line-height: var(--cc-leading-none);
+      margin-bottom: var(--cc-space-2);
+    }
+    .stat-number.accent-orange { color: var(--cc-color-accent-orange); }
+    .stat-number.accent-green { color: var(--cc-color-accent-green); }
+    .stat-label {
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-muted);
+      line-height: var(--cc-leading-snug);
+    }
+    .stat-sublabel {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-xs);
+      color: var(--cc-color-text-subtle);
+      margin-top: var(--cc-space-1);
+    }
+
+    /* Narrative intro */
+    .narrative {
+      font-size: var(--cc-font-size-lg);
+      line-height: var(--cc-leading-relaxed);
+      color: var(--cc-color-text-muted);
+      margin-bottom: var(--cc-space-10);
+      max-width: var(--cc-measure-prose);
+    }
+
+    /* Projects Section */
+    .projects-section {
+      margin-bottom: var(--cc-space-12);
+    }
+    .projects-section-title {
+      font-size: var(--cc-font-size-xl);
+      font-weight: var(--cc-font-weight-semibold);
+      color: var(--cc-color-text);
+      margin-bottom: var(--cc-space-5);
+    }
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--cc-space-4);
+    }
+    .project-card {
+      background: var(--cc-color-surface-raised);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 10px;
+      padding: var(--cc-space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--cc-space-2);
+    }
+    .project-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--cc-space-3);
+    }
+    .project-name {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-sm);
+      font-weight: var(--cc-font-weight-medium);
+      color: var(--cc-color-brand-light);
+    }
+    .project-stars {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-sm);
+      font-weight: var(--cc-font-weight-bold);
+      color: var(--cc-color-accent-orange);
+      white-space: nowrap;
+    }
+    .project-bar-container {
+      height: 6px;
+      background: var(--cc-color-surface-hover);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .project-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cc-color-brand), var(--cc-color-brand-light));
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .project-desc {
+      font-size: var(--cc-font-size-xs);
+      color: var(--cc-color-text-subtle);
+      line-height: var(--cc-leading-snug);
+    }
+
+    /* Claw-code Highlight Card */
+    .claw-highlight {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(34, 197, 94, 0.1) 100%);
+      border: 2px solid var(--cc-color-brand);
+      border-radius: 16px;
+      padding: var(--cc-space-6);
+      margin-bottom: var(--cc-space-12);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--cc-space-6);
+      align-items: center;
+    }
+    .claw-name {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-2xl);
+      font-weight: var(--cc-font-weight-bold);
+      color: var(--cc-color-text);
+      margin-bottom: var(--cc-space-2);
+    }
+    .claw-stars {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-6xl);
+      font-weight: var(--cc-font-weight-bold);
+      color: var(--cc-color-accent-orange);
+      line-height: var(--cc-leading-none);
+    }
+    .claw-stars-unit {
+      font-size: var(--cc-font-size-3xl);
+      color: var(--cc-color-accent-orange);
+    }
+    .claw-event {
+      font-size: var(--cc-font-size-lg);
+      color: var(--cc-color-text-muted);
+    }
+    .claw-event strong {
+      color: var(--cc-color-accent-green);
+      font-weight: var(--cc-font-weight-semibold);
+    }
+    .claw-milestone {
+      display: flex;
+      flex-direction: column;
+      gap: var(--cc-space-2);
+    }
+
+    /* Sister Projects */
+    .sister-projects {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--cc-space-4);
+      margin-bottom: var(--cc-space-12);
+    }
+    .sister-card {
+      background: var(--cc-color-surface-raised);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 10px;
+      padding: var(--cc-space-5);
+    }
+    .sister-tag {
+      display: inline-block;
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-xs);
+      color: var(--cc-color-accent-blue);
+      background: rgba(59, 130, 246, 0.1);
+      padding: var(--cc-space-1) var(--cc-space-2);
+      border-radius: 4px;
+      margin-bottom: var(--cc-space-3);
+    }
+    .sister-name {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-base);
+      font-weight: var(--cc-font-weight-semibold);
+      color: var(--cc-color-text);
+      margin-bottom: var(--cc-space-2);
+    }
+    .sister-desc {
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-muted);
+      line-height: var(--cc-leading-snug);
+    }
+    .sister-stars {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-accent-orange);
+      margin-top: var(--cc-space-2);
+    }
+
+    /* Pull Quote */
+    .pull-quote-section {
+      margin-bottom: var(--cc-space-12);
+    }
+    .pull-quote {
+      position: relative;
+      padding: var(--cc-space-6) var(--cc-space-8);
+      border-left: 4px solid var(--cc-color-brand);
+      background: var(--cc-color-surface-raised);
+      border-radius: 0 10px 10px 0;
+    }
+    .pull-quote-text {
+      font-size: var(--cc-font-size-2xl);
+      line-height: var(--cc-leading-snug);
+      color: var(--cc-color-text);
+      font-style: italic;
+    }
+    .pull-quote-author {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-subtle);
+      margin-top: var(--cc-space-4);
+    }
+
+    /* Tip Block */
+    .tip-block {
+      background: rgba(34, 197, 94, 0.08);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 10px;
+      padding: var(--cc-space-5);
+      margin-bottom: var(--cc-space-8);
+    }
+    .tip-header {
+      display: flex;
+      align-items: center;
+      gap: var(--cc-space-2);
+      margin-bottom: var(--cc-space-3);
+    }
+    .tip-icon {
+      font-size: var(--cc-font-size-lg);
+    }
+    .tip-label {
+      font-size: var(--cc-font-size-sm);
+      font-weight: var(--cc-font-weight-semibold);
+      color: var(--cc-color-accent-green);
+    }
+    .tip-content {
+      font-size: var(--cc-font-size-base);
+      color: var(--cc-color-text-muted);
+      line-height: var(--cc-leading-relaxed);
+    }
+    .tip-content strong {
+      color: var(--cc-color-text);
+      font-weight: var(--cc-font-weight-medium);
+    }
+
+    /* Second Quote */
+    .quote-section {
+      margin-bottom: var(--cc-space-12);
+    }
+    .quote-text {
+      font-size: var(--cc-font-size-xl);
+      line-height: var(--cc-leading-relaxed);
+      color: var(--cc-color-text-muted);
+      margin-bottom: var(--cc-space-3);
+    }
+    .quote-author {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-subtle);
+    }
+
+    /* Transition Hook */
+    .transition-hook {
+      background: linear-gradient(135deg, var(--cc-color-surface-raised) 0%, var(--cc-color-surface-hover) 100%);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 12px;
+      padding: var(--cc-space-6);
+      text-align: center;
+    }
+    .transition-text {
+      font-size: var(--cc-font-size-lg);
+      color: var(--cc-color-text-muted);
+      line-height: var(--cc-leading-relaxed);
+    }
+    .transition-text strong {
+      color: var(--cc-color-brand);
+      font-weight: var(--cc-font-weight-semibold);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .stat-grid { grid-template-columns: 1fr; }
+      .projects-grid { grid-template-columns: 1fr; }
+      .claw-highlight { grid-template-columns: 1fr; }
+      .sister-projects { grid-template-columns: 1fr; }
+      .section-title { font-size: var(--cc-font-size-3xl); }
+      .stat-number { font-size: var(--cc-font-size-4xl); }
+      .claw-stars { font-size: var(--cc-font-size-4xl); }
+      .pull-quote-text { font-size: var(--cc-font-size-xl); }
+    }
+
+    @media (max-width: 480px) {
+      .prologue-block3 { padding: var(--cc-space-8) var(--cc-space-4); }
+      .section-title { font-size: var(--cc-font-size-2xl); }
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'">切换主题</button>
+
+  <article class="prologue-block3">
+    <!-- Section Header -->
+    <header class="section-header">
+      <span class="section-label">V2 序章 · 块 3</span>
+      <h2 class="section-title">泄露催化的生态爆发</h2>
+    </header>
+
+    <!-- Stat Grid -->
+    <div class="stat-grid">
+      <div class="stat-item">
+        <div class="stat-number">9,000+</div>
+        <div class="stat-label">一周内累计星标数</div>
+        <div class="stat-sublabel">6 个 CC 相关项目总和</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number accent-orange">6/10</div>
+        <div class="stat-label">趋势榜前 10 占位</div>
+        <div class="stat-sublabel">GitHub Agent Skills 趋势榜</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number accent-green">121K+</div>
+        <div class="stat-label">claw-code 星标</div>
+        <div class="stat-sublabel">累计星标总数</div>
+      </div>
+    </div>
+
+    <!-- Narrative Intro -->
+    <p class="narrative">
+      源码泄露不仅引发了技术讨论，更催生了一场开源生态的集中爆发。泄露后一周内，GitHub Agent Skills 趋势榜前 10 中有 6 个是 CC 相关项目，累计获得 9,000+ 星标。
+    </p>
+
+    <!-- Claw-code Highlight -->
+    <div class="claw-highlight">
+      <div class="claw-milestone">
+        <div class="claw-name">claw-code</div>
+        <div class="claw-stars">121K<span class="claw-stars-unit">+ ⭐</span></div>
+      </div>
+      <div class="claw-event">
+        <strong>2 小时内</strong>冲到 <strong>50,000</strong> 星<br>
+        事件级传播速度，GitHub 历史最快增长纪录之一
+      </div>
+    </div>
+
+    <!-- 6 Projects Grid -->
+    <section class="projects-section">
+      <h3 class="projects-section-title">社区六大核心项目</h3>
+      <div class="projects-grid">
+        <div class="project-card">
+          <div class="project-card-header">
+            <span class="project-name">byterover-cli</span>
+            <span class="project-stars">3,638 ⭐</span>
+          </div>
+          <div class="project-bar-container">
+            <div class="project-bar" style="width: 100%"></div>
+          </div>
+          <div class="project-desc">Agent 记忆层——为 Claude Code 提供持久化上下文管理</div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-card-header">
+            <span class="project-name">open-agent-sdk-typescript</span>
+            <span class="project-stars">1,822 ⭐</span>
+          </div>
+          <div class="project-bar-container">
+            <div class="project-bar" style="width: 50.1%"></div>
+          </div>
+          <div class="project-desc">SDK 替代方案——TypeScript 开发者桥接 CC 生态</div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-card-header">
+            <span class="project-name">taches-cc-resources</span>
+            <span class="project-stars">1,731 ⭐</span>
+          </div>
+          <div class="project-bar-container">
+            <div class="project-bar" style="width: 47.6%"></div>
+          </div>
+          <div class="project-desc">配置合集——CC 最佳实践与资源汇总</div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-card-header">
+            <span class="project-name">claude-reviews-claude</span>
+            <span class="project-stars">988 ⭐</span>
+          </div>
+          <div class="project-bar-container">
+            <div class="project-bar" style="width: 27.2%"></div>
+          </div>
+          <div class="project-desc">自我审查工具——用 CC 审查 CC 输出</div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-card-header">
+            <span class="project-name">how-claude-code-works</span>
+            <span class="project-stars">808 ⭐</span>
+          </div>
+          <div class="project-bar-container">
+            <div class="project-bar" style="width: 22.2%"></div>
+          </div>
+          <div class="project-desc">机制剖析——深入理解 CC 内部工作原理</div>
+        </div>
+
+        <div class="project-card">
+          <div class="project-card-header">
+            <span class="project-name">claude-code-from-scratch</span>
+            <span class="project-stars">472 ⭐</span>
+          </div>
+          <div class="project-bar-container">
+            <div class="project-bar" style="width: 13%"></div>
+          </div>
+          <div class="project-desc">从零教学——手把手构建类 CC 系统</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sister Projects -->
+    <section class="sister-projects">
+      <div class="sister-card">
+        <span class="sister-tag">英文 · 交互动画</span>
+        <div class="sister-name">ccunpacked.dev</div>
+        <div class="sister-desc">
+          构建了一个英文可视化导览站，将 Agent Loop 的 11 步流程做成交互动画，成为非中文社区理解 CC 架构的首选入口。
+        </div>
+        <div class="sister-stars">架构可视化标杆</div>
+      </div>
+      <div class="sister-card">
+        <span class="sister-tag">中文 · 系统框架</span>
+        <div class="sister-name">harness-books</div>
+        <div class="sister-desc">
+          从中文视角出发，尝试建立系统性的套控工程框架书，与本书形成互补。
+        </div>
+        <div class="sister-stars">1.1k ⭐</div>
+      </div>
+    </section>
+
+    <!-- Pull Quote -->
+    <div class="pull-quote-section">
+      <blockquote class="pull-quote">
+        <p class="pull-quote-text">"Claude Code 家后院起火，我让 CC 把桌椅搬出来盖了新房，大家免费住。"</p>
+        <cite class="pull-quote-author">— @idoubicc</cite>
+      </blockquote>
+    </div>
+
+    <!-- Second Quote + Tip Block -->
+    <div class="quote-section">
+      <blockquote>
+        <p class="quote-text">"越花时间 vibe coding，越觉得软件工程的重要性"</p>
+        <cite class="quote-author">— @IceBearMiner</cite>
+      </blockquote>
+    </div>
+
+    <!-- Tip Block -->
+    <div class="tip-block">
+      <div class="tip-header">
+        <span class="tip-icon">💡</span>
+        <span class="tip-label">通俗理解</span>
+      </div>
+      <div class="tip-content">
+        <strong>Vibe coding</strong> 是指让 AI 根据"氛围感"直接生成代码，自己不太深入理解细节。这位开发者的感悟是：越是让 AI 写代码，越发现<strong>人类的工程设计能力</strong>才是决定最终产品质量的关键——AI 能写代码，但架构设计、安全边界、性能权衡这些"软件工程"的活，还得人来把关。
+      </div>
+    </div>
+
+    <!-- Transition Hook -->
+    <div class="transition-hook">
+      <p class="transition-text">
+        一次源码泄露，意外地为整个行业提供了一份<strong>"AI Agent 架构参考实现"</strong>。<br><br>
+        那这家产品的源码到底有多少？规模多大？
+      </p>
+    </div>
+  </article>
+
+  <script>
+    // Theme toggle - minimal vanilla JS only
+    (function() {
+      const html = document.documentElement;
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (!prefersDark) {
+        html.dataset.theme = 'light';
+      }
+    })();
+  </script>
+</body>
+</html>
+```

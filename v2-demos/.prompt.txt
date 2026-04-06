@@ -1,0 +1,276 @@
+你是 Claude Code 源码白皮书的 V2 范式设计 sub-agent。
+
+# 任务
+为白皮书第 83 章「Harness Engineering：从 Claude Code 看 Agent 工程化范式」生成一个**单文件 self-contained HTML 网页 demo**。
+
+这是一次范式探索：现有 V1 是「一段文字 + 文末堆放图表」，体验差。
+V2 范式的核心是：**以章节为整体出发，按网页逻辑设计——文字与图表深度融合、共生排版，不再是文末附录**。
+
+# 你必须只输出 HTML 代码
+- 不要任何前后说明
+- 不要 markdown 代码块包裹
+- 第一行必须是 `<!DOCTYPE html>`
+- 最后一行必须是 `</html>`
+
+# 设计要求
+
+## 1. 章节内容（必须全部呈现，不可省略）
+
+章节标题：Harness Engineering：从 Claude Code 看 Agent 工程化范式
+板块：补遗与延伸
+
+章节有 7 个核心主题，请按下列结构组织（你可以自由设计每一段的视觉表达，不必拘泥于线性的二级标题）：
+
+### A. 引子：为什么要多讲一章
+- 关键背景：前 82 章讲 Claude Code 的源码机制；行业出现"Harness Engineering"新词；Claude Code 是被反复引用的核心案例
+- 三个理由：① 名字本身就是知识；② Claude Code 是当事人；③ 影响你应该花多少工程精力在 harness 层
+- 通俗类比：AI 模型像厨师，harness 是整个厨房（炉灶、刀具、操作规程、出菜标准）
+
+### B. 概念溯源时间线
+关键事件（必须做成视觉化时间线，不要纯文字罗列）：
+- 2025-07-15: Zhang 等 arXiv 2507.11633，最早在标题用 harness（游戏 AI 视角）
+- 2025-09-23: Vivek Trivedy（LangChain）发表《Claude Code SDK and the Birth of HaaS》——工业界首次系统定义
+- 2025-09-29: Anthropic 发表《Effective Context Engineering》（harness 一词零次出现）；同一天 Shihipar 等首次在博客提及"agent harness"
+- 2025-11-26: Justin Young（Anthropic）发表《Effective Harnesses for Long-Running Agents》——Anthropic 标题首次采用
+- 2026-01-09: Anthropic《Demystifying Evals》区分 evaluation harness 与 agent harness
+- 2026-02-11: Ryan Lopopolo（OpenAI）《Harness engineering: leveraging Codex in an agent-first world》——爆发点，"harness engineering"作为专有术语流行
+- 2026-03-24: Rajasekaran《Harness Design for Long-Running Application Development》——Anthropic 第二篇 harness 主题文章
+
+关键金句：
+- Trivedy: "Agent = Model + Harness"，"If you're not the model, you're the harness."
+- Rajasekaran: "Every component in a harness encodes an assumption about what the model can't do on its own, and those assumptions are worth stress testing."
+
+相邻概念边界（请用"卡片对比"或"三栏图"表达）：
+- Agent Framework（LangChain、CrewAI、OpenAI Agents SDK——抽象层）
+- Agent Runtime（LangGraph、Temporal、Inngest——生产执行引擎）
+- Agent Harness（Claude Code、Cursor 等"batteries-included"预置方案）
+- Scaffolding vs Harness（OpenDev 论文）：scaffolding=构建期；harness=运行期
+
+### C. 五代范式演化（重要！请用视觉强烈的"演化阶梯"或"时间轴+卡片"表达）
+
+- 第 1 代 Pure Prompt（2022 年前后）：写 prompt → 发 → 收 → 结束。无工具、无循环、无状态。
+  通俗类比：发短信叫外卖，对方回一条就完了。
+- 第 2 代 Tool Use（2023）：function calling、MCP 工具调用。
+  通俗类比：外卖平台接入了地图、库存、支付，但还是无状态单轮。
+- 第 3 代 Multi-Agent / Orchestration（2023-2024）：CrewAI、AutoGen、LangGraph，工程师设计 agent 协作关系。
+  通俗类比：物流公司有调度员/骑手/客服，但流程靠工程师事先画好。
+- 第 4 代 Harness（2025 至今，**当前位置**）：精心设计 agent 运行的环境本身——进度文件、特性清单、启动脚本、lint 规则、反馈循环、垃圾回收……
+  通俗类比：赛车的安全带+仪表盘+赛道规则。
+  代表实践：Young 的 initializer + coding agent；Lopopolo 的 AGENTS.md-as-table-of-contents；LangChain 的 generator-evaluator 循环。
+- 第 5 代 端到端 RL（行业争议中）：Noam Brown 等认为 harness 是打补丁，会被更强的模型自然消灭。但 Rajasekaran 反驳："the space of interesting harness combinations doesn't shrink as models improve. Instead, it moves."
+
+### D. 三家实现对比（必须做成对比表 + 视觉化卡片，重点强调差异理念）
+
+| 维度 | Anthropic (Claude Code) | OpenAI (Codex Harness) | LangChain |
+|---|---|---|---|
+| 核心信条 | "Thinnest wrapper"；harness 补差 | "Humans steer, agents execute" | "Agent = Model + Harness"，可移植 |
+| Loop 机制 | gather→act→verify；multi-session | Ralph Wiggum 持续循环；6h+ 独立运行 | generator-evaluator 反馈循环 |
+| 上下文策略 | Compaction + Context Reset + Skills | AGENTS.md 目录（~100 行）+ structured docs | 可移植自然语言 harness（NLAH） |
+| 规范文件 | CLAUDE.md + feature_list.json | AGENTS.md + docs/ | .langchain/ rules（生态分散） |
+| 多 agent | Task tool subagent；GAN 3-agent | Background GC agent；Skills with Owners | DeepAgents；generator/evaluator |
+| 关键数据 | 200+ features；DAW 构建 $124.70 | 1M 行代码；3.5 PR/人/天；6h+ per run | +13.7% Terminal Bench（仅改 harness） |
+| 比喻 | 极简主义装修师 | 楼盘质检体系+自动巡检机器人 | 餐饮管理咨询公司 |
+
+OpenAI 重要数字（必须用"大数字仪表盘"突出展示）：
+- 5 个月时间
+- 起始 3 名工程师，扩至 7 名
+- ~100 万行代码
+- ~1500 个 merged PR
+- 平均 3.5 PR/工程师/天
+- 0 manually-written code
+- 单次 Codex run 可独立运行 6 小时以上
+
+LangChain 关键实证：
+- 只改 harness 不动模型（gpt-5.2-codex），Terminal Bench 2.0 从 52.8% → 66.5%（+13.7 百分点）
+- 同 harness 下 Claude Opus 4.6 得分 59.6%（未针对 Opus 优化）
+
+### E. 四篇学术论文速览（请用"论文卡片网格"表达，每张卡片：标题、作者机构、发布日期、关键发现、对范式的贡献）
+
+1. **arXiv 2507.11633** - General Modular Harness（Zhang 等，UCSD/UCSB，2025-07-15）
+   - 感知/记忆/推理三模块
+   - Sokoban、2048、Candy Crush、Tetris 上完整 harness vs baseline 提升显著（p<0.05）；Candy Crush 中位+217.50 分
+   - 贡献：证明 harness 组件对 agent 性能有可测量、可分解的因果影响
+
+2. **arXiv 2603.03329** - AutoHarness（Lou 等，Google DeepMind，2026-02-10）
+   - 三种 harness 变体：action-filter / action-verifier / code-as-policy
+   - 145 个 TextArena 游戏上 100% 合法动作率
+   - Gemini-2.5-Flash + AutoHarness vs Gemini-2.5-Pro 胜率 56.3% vs 38.2%
+   - code-as-policy 平均 reward 0.870，超过 GPT-5.2-High 的 0.844
+   - 贡献：harness 本身可由模型自动生成
+
+3. **arXiv 2603.25723** - NLAH（Pan 等，2026-03-26）
+   - Natural-Language Agent Harnesses + Intelligent Harness Runtime
+   - 三维定义：Control / Contracts / State
+   - SWE-bench Verified：Full IHR TRAE 74.4%；OSWorld：Native 30.4% → NLAH 47.2%（+16.8 百分点）
+   - 贡献：harness 作为可研究的科学对象的最严谨学术表述
+   - 关键发现："Module effects concentrate on a small solved frontier rather than shifting the whole benchmark uniformly"
+
+4. **arXiv 2603.05344** - OpenDev（Bui，2026-03-05/13）
+   - Rust 实现的 terminal-native AI 编程 agent
+   - compound AI system + 双 agent 架构 + lazy tool discovery + adaptive context compaction
+   - 给出最清晰的 scaffolding vs harness 区分
+   - 五条 Lessons Learned 与 Claude Code 白皮书前 82 章高度呼应
+
+### F. 行业争议（核心冲突，请用"VS 双栏对峙"视觉表达）
+
+**怀疑阵营：**
+- Chayenne Zhao 的"新名旧物"批评：每隔几个月就新造一个词，同一件事换不同包装
+- Noam Brown 的 Bitter Lesson 立场：harness 是"在 pre-training 不够强时打的补丁"
+- METR 研究：专业 harness 相比 basic scaffold 的优势 negligible
+- Scale AI SWE-Atlas：harness 选择产生的性能差异在实验误差范围内
+- HumanLayer 的 Kyle 反直觉发现：Opus 4.6 在 Claude Code 官方 harness 下排名 #33，在 LangChain 重设的 harness 下排名 #5——可能是「模型对自己 harness 过拟合」
+
+**支持阵营：**
+- 分层是软件工程的基本方法，OS 在应用层之下，没人认为分层是"拐杖"
+- Rajasekaran 的实证：从 Opus 4.5 升级到 4.6 时，sprint 结构被简化、context reset 被移除，但 planner 和 evaluator 保留。"the space of interesting harness combinations doesn't shrink as models improve. Instead, it moves."
+- NLAH 的发现：harness 作用区域在"模型差一点但做不到"的边界——边界往外移，harness 在新边界继续有价值
+- LangChain 实证：只改 harness 让同一模型在 Terminal Bench 2.0 提升 13.7 百分点
+
+swyx 的总结："**Big Model vs Big Harness**"——"You can engineer your way above the Bitter Lesson, and harnesses can survive even reasoning paradigm changes."
+
+**作者判断**：harness engineering 是真实工程需求的系统化表达，不是全新发明，但值得独立命名；它是成熟软件工程原则（分层、约束、反馈循环、渐进增量）在 LLM agent 场景的具体化。
+
+### G. Harness 六要素 × Claude Code 章节映射
+
+把 Trivedy 定义的 harness 六类核心要素与 Claude Code 源码白皮书章节交叉对照：
+
+1. Conversation & Context Management → 第 28、29、31、51 章（Compaction、/clear、外部 memory、子 agent 防火墙）
+2. Tool Invocation Layer → 第 7-14、44-47、39 章（内置工具集、MCP、权限模型）
+3. Permissions → 第 39、36、40 章（Permission system、CLAUDE.md allowed_tools、Hooks）
+4. Session & File-System State → 第 17、36、12 章（git、CLAUDE.md、TodoWrite）
+5. Loop Control & Error Handling → 第 6、40、20 章（agent loop、Hook exit code 反馈、错误恢复）
+6. Basic Observability & Telemetry → 第 15、5、40 章（对话历史、--debug、PostToolUse 日志）
+
+请用"6 行卡片 + 章节锚点 chip"形式呈现，让读者一眼看到「harness 抽象 ↔ 源码实现」的映射。
+
+### H. 给读者的五条行动建议（必须显眼，建议做成「编号大字 + 简短解释」的视觉块）
+
+1. 先让 agent 失败，再添加 harness 组件。不要"预防性"过度设计。
+2. 用"load-bearing test"检验 harness 组件——逐一移除，看影响。
+3. CLAUDE.md / AGENTS.md 是目录，不是手册（Lopopolo 的 ~100 行原则）。
+4. 反馈循环比正向指令更有效——"可验证的失败比不可测量的成功更有价值"。
+5. Harness 有模型特异性，移植要重新 calibrate。
+
+## 2. V2 范式核心原则（给你的设计指南）
+
+### 文字与"图表元素"必须共生
+不要把所有"卡片/数字大字号/时间线"堆在文末。每一段的解释文字旁边/下面/穿插着属于它的视觉表达。例如：
+- "Trivedy 在 2025 年 9 月 23 日…" → 旁边就是时间线上对应那一格的高亮
+- "OpenAI 5 个月写了 100 万行代码" → 这段文字旁边就是"100 万 / 5 月 / 1500 PR / 6h+"四个大数字
+- "三家对比" → 三栏对比卡片就在介绍三家的段落正下方
+- "Harness 六要素 × CC 章节" → 一个视觉化映射表，章节号是 chip 形式
+
+### 视觉层次要丰富
+- 大字号引言（pull quote）
+- 数字大字号 stat（48~72px）
+- 章节"段位"标签（"01 · 引子"这种）
+- 双栏对峙（VS 视觉）
+- 时间线（横向或竖向都可，关键节点要有日期和高亮节点）
+- 卡片网格（论文卡片、对比卡片）
+- 引用块（金句单独成块）
+- 通俗类比的特殊视觉容器（带"💡"图标的提示块）
+
+### 移动端响应式
+- 桌面 ≥1024px：多栏布局
+- 平板 768-1024px：两栏
+- 手机 <768px：单栏，时间线变竖向，对比表变堆叠卡片
+
+## 3. 强制使用的设计 Token 系统
+
+整个 HTML 必须用以下 CSS 变量，**不要写死十六进制颜色**（除非是 token 系统未覆盖的渐变效果，可以用 token 颜色派生）。
+将这段 token CSS **完整内嵌**在 `<style>` 块顶部：
+
+```css
+:root, :root[data-theme="dark"] {
+  --cc-bg-primary: #0a0e17;
+  --cc-bg-secondary: #0d1520;
+  --cc-bg-elevated: #111827;
+  --cc-bg-hover: #1a2332;
+  --cc-border-default: #1e2d42;
+  --cc-border-strong: rgba(255,255,255,0.12);
+  --cc-text-primary: #e0e6ed;
+  --cc-text-secondary: #8a9bb5;
+  --cc-text-muted: #4a5568;
+  --cc-accent-primary: #00d4ff;
+  --cc-accent-hover: #33ddff;
+  --cc-accent-bg: rgba(0,212,255,0.08);
+  --cc-accent-bg-strong: rgba(0,212,255,0.15);
+  --cc-accent-secondary: #7b61ff;
+  --cc-color-gold: #ffd93d;
+  --cc-color-green: #48bb78;
+  --cc-color-red: #ff6b6b;
+  --cc-color-teal: #4ecdc4;
+  --cc-color-blue: #63b3ed;
+  --cc-color-pink: #e88dff;
+  --cc-shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --cc-shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --cc-shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --cc-bg-primary: #f8f9fc;
+  --cc-bg-secondary: #f0f2f7;
+  --cc-bg-elevated: #ffffff;
+  --cc-bg-hover: #e8ecf4;
+  --cc-border-default: #d0d7e8;
+  --cc-border-strong: #b0bcd6;
+  --cc-text-primary: #1a2035;
+  --cc-text-secondary: #4a5878;
+  --cc-text-muted: #7a8ba8;
+  --cc-accent-primary: #0099cc;
+  --cc-accent-hover: #007aad;
+  --cc-accent-bg: rgba(0,153,204,0.08);
+  --cc-accent-bg-strong: rgba(0,153,204,0.14);
+  --cc-accent-secondary: #6c5ce7;
+  --cc-color-gold: #c8900a;
+  --cc-color-green: #1a8a4a;
+  --cc-color-red: #d93535;
+  --cc-color-teal: #1a9b96;
+  --cc-color-blue: #2d7ab5;
+  --cc-color-pink: #a050c8;
+  --cc-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --cc-shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --cc-shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+  color-scheme: light;
+}
+```
+
+所有组件颜色必须用 `var(--cc-*)`。禁止写 `#fff`、`#000`、`#1a1a2e` 等硬编码值。
+
+## 4. 主题切换按钮（必须包含）
+
+页面右上角放一个简单的主题切换按钮（"暗 / 亮"），点击切换 `<html>` 的 `data-theme` 属性。代码示例：
+
+```html
+<button id="themeToggle" style="position:fixed;top:16px;right:16px;z-index:999;background:var(--cc-bg-elevated);color:var(--cc-text-primary);border:1px solid var(--cc-border-default);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px;">切换主题</button>
+<script>
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const html = document.documentElement;
+  const cur = html.getAttribute('data-theme') || 'dark';
+  html.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+});
+</script>
+```
+
+## 5. 字体与排版
+
+- 中文正文行高 1.8
+- 字体族用 system stack：`-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif`
+- 等宽字体（章节号、数字大字、代码片段）：`"SF Mono", "JetBrains Mono", monospace`
+
+## 6. 输出长度
+
+完整、不省略。这是 Demo，必须有信息密度。预计 1500-2500 行 HTML 是正常的。**不要"省略号"，不要"以下省略"**。
+
+# 最关键的提醒
+
+V1 痛点 = 文末堆图。
+V2 价值 = 段落与图表共生。
+
+请你把每一段解释文字旁边都放上属于它的视觉元素。例如：
+- 介绍 Trivedy 名言时 → 旁边就是巨大的引用块「Agent = Model + Harness」
+- 介绍 OpenAI 数字时 → 旁边就是 `1M / 3.5 / 6h+ / 0` 四个 stat 大数字
+- 介绍 5 代演化时 → 横向时间轴 + 每代都有视觉化的"代次徽章"
+- 介绍六要素映射时 → 6 行 grid，每行左边是要素名右边是章节 chip
+
+现在开始输出 HTML。第一个字符必须是 `<`。

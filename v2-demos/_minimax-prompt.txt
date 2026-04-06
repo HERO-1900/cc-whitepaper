@@ -1,0 +1,84 @@
+你是 Claude Code 源码白皮书项目的 V2 范式探索专家。请输出**一个完整的、self-contained 的 HTML 文件**作为 V2 Demo（"序章"页面），展示一种全新的"章节即网页"设计范式。
+
+==========================================================
+【背景：V1 的痛点】
+==========================================================
+当前网站每章是"先一段长文 → 文末再堆放 15 张图表"。读者读完文字才看到图，文图割裂。
+用户希望 V2 改成：**子标题 → 一小段话 → 图表（或图表组）**——每个 group 自然推进，把所有要展示的文字和图表全部融合在一起考虑，就像以网页的逻辑来设计。
+
+==========================================================
+【任务：生成"序章"完整 V2 Demo HTML】
+==========================================================
+要求：
+
+1. **整体结构**：按"子标题 → 段落（≤200 字） → 图表（iframe 嵌入）"的 group 重新组织全部内容。每个 group 是一个独立的视觉单元，不要把图表全部堆到底部。
+
+2. **必须包含的章节顺序**（来自源 markdown 序章）：
+   - Hero 区：标题"序章：当你打开一个'聊天助手'的引擎盖" + 一句 hook
+   - § 1 一个误解的开始：计算器类比 → "不就是个终端里的 ChatGPT 吗？" → "不是。差远了。"
+   - § 2 行业坐标系：2026 年 AI 编程助手竞争（GitHub Copilot、Cursor、Kimi Code、CodeX、Devin、Antigravity……）+ 三阶段演进（Prompt → Context → Harness Engineering）
+   - § 3 泄露催化的生态爆发：6 个开源项目表 + ccunpacked.dev / harness-books
+   - § 4 数字震撼：1,884 个 TS 文件 / 476,875 行有效代码 / 40 个工具 / 98 个斜杠命令 → **"一个为 AI 智能体设计的操作系统"** → 嵌入【图表 0.1-A 源码统计仪表盘】+【图表 0.1-B 英雄架构图】
+   - § 5 这本书要做什么：6 条目录 + 嵌入【图表 0.2-A 数据流旅程】+【图表 0.2-B 技术栈全景】
+   - § 6 为什么用"操作系统"来理解：OS 翻译对照表（精简成卡片），关键节点嵌入图表 0.3-A（43 工具目录）/ 0.3-B（安全模型）/ 0.3-C（权限对照）/ 0.3-D（MCP 传输）/ 0.3-E（配置地图）/ 0.3-F（Hook 目录）/ 0.3-G（扩展生态）/ 0.3-H（模块依赖）
+   - § 7 阅读路线：6 个 Part 卡片 + 嵌入【图表 0.4-A 知识图谱】+【图表 0.4-B 性能优化全景】
+   - § 8 三条阅读路径分流入口（**重点视觉模块**）：CS 学生 / 高级工程师 / 创业者&PM 三张并排卡片
+   - § 9 关于比喻：5 个比喻家族 + 嵌入【图表 0.5-A 概念速查表】
+   - § 10 一个声明 + 翻页 CTA
+
+3. **图表嵌入方式**：用 `<iframe>` 嵌入，src 路径如下（相对于 v2-demos/ 目录）：
+   - 0.1-A → ../test-viz/production/html/VIS-0-002B_CC源码全量统计仪表盘.html
+   - 0.1-B → ../test-viz/production/html/VIS-0-001_英雄架构图.html
+   - 0.2-A → ../test-viz/production/html/VIS-0-004_数据流完整旅程图.html
+   - 0.2-B → ../test-viz/production/html/VIS-0-003_技术栈全景.html
+   - 0.3-A → ../test-viz/production/html/VIS-0-010_43个工具完整目录.html
+   - 0.3-B → ../test-viz/production/html/VIS-0-006_安全模型全景图.html
+   - 0.3-C → ../test-viz/production/html/VIS-0-009_权限模型对照表.html
+   - 0.3-D → ../test-viz/production/html/VIS-0-013_MCP传输方式对比.html
+   - 0.3-E → ../test-viz/production/html/VIS-0-011_配置文件完整地图.html
+   - 0.3-F → ../test-viz/production/html/VIS-0-012_Hook事件完整目录.html
+   - 0.3-G → ../test-viz/production/html/VIS-0-007_扩展生态地图.html
+   - 0.3-H → ../test-viz/production/html/VIS-0-005_模块依赖网络图.html
+   - 0.4-A → ../test-viz/production/html/VIS-0-014_本书知识图谱.html
+   - 0.4-B → ../test-viz/production/html/VIS-0-008_性能优化全景.html
+   - 0.5-A → ../test-viz/production/html/VIS-0-015_概念速查表.html
+   每个 iframe 设 loading="lazy"、宽度 100%、高度 600~720px、border: none、圆角 var(--cc-radius-lg)，外面包一个图表卡片容器（带图表编号 + 图表标题 + 一句 caption）。
+
+4. **必须使用 Design Tokens**：在 `<head>` 内嵌 `<link rel="stylesheet" href="../test-viz/cc-design-tokens.css">`。所有颜色、字号、间距、圆角、阴影都用 `var(--cc-*)` 引用，不要硬编码颜色。支持 `data-theme="light"` 切换。
+
+5. **关键 Hooks 视觉张力**：
+   - "1,884 / 476,875 / 40 / 98" 用超大字号（var(--cc-font-size-3xl) 或更大）做 KPI grid
+   - "不是。差远了。" 用大字引言块、加 brand 色侧边线
+   - 行业三阶段演进做横向时间轴（Prompt Engineering → Context Engineering → Harness Engineering），高亮当前阶段
+   - "三条阅读路径" 是 hero 级的视觉模块——三张并排 large card，配 icon、目标读者描述、推荐阅读路径、CTA 按钮
+
+6. **顶部导航**：sticky top bar，含章节锚点（误解 / 坐标系 / 生态 / 数字 / OS / 路线 / 比喻）+ 暗/亮主题切换按钮（toggle data-theme，本地存储记忆）
+
+7. **Responsive**：移动端（≤768px）所有 grid 自动塌缩为单列，iframe 高度可缩到 480px，KPI 字号自动缩小
+
+8. **技术约束**：
+   - 单文件 HTML，所有 CSS 内联在 <style>，所有 JS 内联在 <script>
+   - 不引入任何 npm 包或外部 JS 框架
+   - 字体可以用 Google Fonts CDN（Space Grotesk + Noto Sans SC）
+   - 不要 emoji 表情符号（除非源 markdown 里有 💡 📚 🌍 🔑 这些章节性图标，可以保留作为段落标识）
+   - 中文字符为主
+
+9. **质量底线**：
+   - 完整 HTML 结构（DOCTYPE、html、head、body）
+   - 至少 15 个图表 iframe 全部出现
+   - 不要省略章节内容——每个 group 都要有真实的中文段落
+   - 段落用源 markdown 的实际文字裁剪/改写，不要凭空编造
+
+==========================================================
+【输出要求 — 极其重要，违反会被立即拒绝】
+==========================================================
+
+**严禁调用任何工具（Write / Edit / Read / Bash 等都已禁用）。**
+**只能输出纯文本响应。直接把 HTML 源码作为你的回答 message 文本写出来。**
+
+不要任何 markdown 代码块包裹，不要任何解释性文字，不要任何前后说明。
+你的整条 message 内容就是 HTML 本身：
+- 第一个字符必须是 `<`（即 `<!DOCTYPE html>` 的开头）
+- 最后一个字符必须是 `>`（即 `</html>` 的结尾）
+
+再次强调：**不要调用 Write 工具**。**不要把 HTML 当作 tool input**。直接当作 assistant 的最终文字 reply 输出。

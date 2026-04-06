@@ -1,0 +1,573 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>泄露催化的生态爆发 | Claude Code 源码白皮书</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --cc-font-sans: system-ui, -apple-system, sans-serif;
+      --cc-font-mono: ui-monospace, monospace;
+      --cc-color-bg: #0a0a0f;
+      --cc-color-surface: #14141f;
+      --cc-color-surface-2: #1e1e2e;
+      --cc-color-border: #2a2a3a;
+      --cc-color-text: #e4e4f0;
+      --cc-color-text-muted: #8888a0;
+      --cc-color-brand: #7c5af0;
+      --cc-color-brand-dim: rgba(124, 90, 240, 0.15);
+      --cc-color-accent: #f0a05a;
+      --cc-color-accent-dim: rgba(240, 160, 90, 0.15);
+      --cc-color-success: #5af0c0;
+      --cc-color-warning: #f0d05a;
+      --cc-font-size-xs: 0.75rem;
+      --cc-font-size-sm: 0.875rem;
+      --cc-font-size-base: 1rem;
+      --cc-font-size-lg: 1.125rem;
+      --cc-font-size-xl: 1.25rem;
+      --cc-font-size-2xl: 1.5rem;
+      --cc-font-size-3xl: 1.875rem;
+      --cc-font-size-4xl: 2.25rem;
+      --cc-font-size-5xl: 3rem;
+      --cc-font-size-6xl: 3.75rem;
+      --cc-font-weight-normal: 400;
+      --cc-font-weight-medium: 500;
+      --cc-font-weight-semibold: 600;
+      --cc-font-weight-bold: 700;
+      --cc-leading-none: 1;
+      --cc-leading-tight: 1.25;
+      --cc-leading-snug: 1.375;
+      --cc-leading-normal: 1.5;
+      --cc-leading-relaxed: 1.7;
+      --cc-space-1: 0.25rem;
+      --cc-space-2: 0.5rem;
+      --cc-space-3: 0.75rem;
+      --cc-space-4: 1rem;
+      --cc-space-5: 1.25rem;
+      --cc-space-6: 1.5rem;
+      --cc-space-8: 2rem;
+      --cc-space-10: 2.5rem;
+      --cc-space-12: 3rem;
+      --cc-space-16: 4rem;
+      --cc-measure-prose: 65ch;
+    }
+    [data-theme="light"] {
+      --cc-color-bg: #fafafa;
+      --cc-color-surface: #ffffff;
+      --cc-color-surface-2: #f5f5f7;
+      --cc-color-border: #e0e0e8;
+      --cc-color-text: #1a1a2e;
+      --cc-color-text-muted: #666680;
+      --cc-color-brand: #6b4ee6;
+      --cc-color-brand-dim: rgba(107, 78, 230, 0.1);
+      --cc-color-accent: #d68a3a;
+      --cc-color-accent-dim: rgba(214, 138, 58, 0.1);
+      --cc-color-success: #2ab898;
+      --cc-color-warning: #c9a82c;
+    }
+    html { font-size: 16px; }
+    body {
+      font-family: var(--cc-font-sans);
+      background: var(--cc-color-bg);
+      color: var(--cc-color-text);
+      line-height: var(--cc-leading-relaxed);
+      min-height: 100vh;
+      padding: var(--cc-space-6);
+    }
+    article { max-width: 900px; margin: 0 auto; }
+    .section-header { margin-bottom: var(--cc-space-12); }
+    h2 {
+      font-size: var(--cc-font-size-4xl);
+      font-weight: var(--cc-font-weight-bold);
+      line-height: var(--cc-leading-tight);
+      margin-bottom: var(--cc-space-4);
+      background: linear-gradient(135deg, var(--cc-color-text) 0%, var(--cc-color-brand) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .intro-prose {
+      font-size: var(--cc-font-size-lg);
+      max-width: var(--cc-measure-prose);
+      color: var(--cc-color-text-muted);
+    }
+
+    /* Stat Grid */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--cc-space-6);
+      margin: var(--cc-space-12) 0;
+    }
+    .stat-card {
+      background: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 12px;
+      padding: var(--cc-space-6);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--cc-color-brand), var(--cc-color-accent));
+    }
+    .stat-card.highlight::before {
+      background: linear-gradient(90deg, var(--cc-color-accent), var(--cc-color-warning));
+    }
+    .stat-number {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-5xl);
+      font-weight: var(--cc-font-weight-bold);
+      color: var(--cc-color-brand);
+      line-height: var(--cc-leading-none);
+      margin-bottom: var(--cc-space-2);
+    }
+    .stat-card.highlight .stat-number { color: var(--cc-color-accent); }
+    .stat-label {
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .stat-sub {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-xs);
+      color: var(--cc-color-text-muted);
+      margin-top: var(--cc-space-2);
+    }
+
+    /* Projects Grid */
+    .projects-section { margin: var(--cc-space-12) 0; }
+    .section-title {
+      font-size: var(--cc-font-size-xl);
+      font-weight: var(--cc-font-weight-semibold);
+      margin-bottom: var(--cc-space-6);
+      color: var(--cc-color-text);
+    }
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: var(--cc-space-5);
+    }
+    .project-card {
+      background: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 10px;
+      padding: var(--cc-space-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--cc-space-3);
+    }
+    .project-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--cc-space-3);
+    }
+    .project-name {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-sm);
+      font-weight: var(--cc-font-weight-medium);
+      color: var(--cc-color-brand);
+      word-break: break-all;
+    }
+    .project-stars {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-lg);
+      font-weight: var(--cc-font-weight-bold);
+      color: var(--cc-color-accent);
+      white-space: nowrap;
+    }
+    .project-bar-wrap {
+      background: var(--cc-color-surface-2);
+      border-radius: 4px;
+      height: 8px;
+      overflow: hidden;
+    }
+    .project-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cc-color-brand-dim), var(--cc-color-brand));
+      border-radius: 4px;
+      transition: width 0.6s ease;
+    }
+    .project-desc {
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-muted);
+      line-height: var(--cc-leading-snug);
+    }
+
+    /* Claw-code Highlight */
+    .claw-highlight {
+      background: linear-gradient(135deg, var(--cc-color-surface) 0%, var(--cc-color-surface-2) 100%);
+      border: 1px solid var(--cc-color-accent);
+      border-radius: 12px;
+      padding: var(--cc-space-8);
+      margin: var(--cc-space-10) 0;
+      text-align: center;
+      position: relative;
+    }
+    .claw-badge {
+      display: inline-block;
+      background: var(--cc-color-accent-dim);
+      color: var(--cc-color-accent);
+      font-size: var(--cc-font-size-xs);
+      font-weight: var(--cc-font-weight-semibold);
+      padding: var(--cc-space-1) var(--cc-space-3);
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--cc-space-4);
+    }
+    .claw-name {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-2xl);
+      font-weight: var(--cc-font-weight-bold);
+      color: var(--cc-color-accent);
+      margin-bottom: var(--cc-space-3);
+    }
+    .claw-stars {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-5xl);
+      font-weight: var(--cc-font-weight-bold);
+      color: var(--cc-color-text);
+      line-height: var(--cc-leading-none);
+    }
+    .claw-stars span { color: var(--cc-color-accent); }
+    .claw-time {
+      font-size: var(--cc-font-size-lg);
+      color: var(--cc-color-text-muted);
+      margin-top: var(--cc-space-3);
+    }
+    .claw-time strong { color: var(--cc-color-warning); }
+
+    /* Sister Projects */
+    .sister-section { margin: var(--cc-space-10) 0; }
+    .sister-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--cc-space-5);
+    }
+    .sister-card {
+      background: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 10px;
+      padding: var(--cc-space-6);
+    }
+    .sister-label {
+      font-size: var(--cc-font-size-xs);
+      color: var(--cc-color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--cc-space-2);
+    }
+    .sister-name {
+      font-family: var(--cc-font-mono);
+      font-size: var(--cc-font-size-lg);
+      font-weight: var(--cc-font-weight-semibold);
+      color: var(--cc-color-brand);
+      margin-bottom: var(--cc-space-2);
+    }
+    .sister-desc {
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-muted);
+      line-height: var(--cc-leading-snug);
+    }
+    .sister-link {
+      display: inline-block;
+      margin-top: var(--cc-space-3);
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-brand);
+      text-decoration: none;
+    }
+    .sister-link:hover { text-decoration: underline; }
+
+    /* Pull Quote */
+    .pullquote {
+      margin: var(--cc-space-12) 0;
+      padding: var(--cc-space-8);
+      border-left: 4px solid var(--cc-color-brand);
+      background: var(--cc-color-brand-dim);
+      border-radius: 0 10px 10px 0;
+    }
+    .pullquote-text {
+      font-size: var(--cc-font-size-2xl);
+      font-weight: var(--cc-font-weight-medium);
+      line-height: var(--cc-leading-snug);
+      color: var(--cc-color-text);
+      font-style: italic;
+    }
+    .pullquote-author {
+      margin-top: var(--cc-space-4);
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-muted);
+    }
+    .pullquote-author strong { color: var(--cc-color-brand); }
+
+    /* Tip Block */
+    .tip-block {
+      background: linear-gradient(135deg, var(--cc-color-accent-dim) 0%, var(--cc-color-surface) 100%);
+      border: 1px solid var(--cc-color-accent);
+      border-radius: 10px;
+      padding: var(--cc-space-6);
+      margin: var(--cc-space-10) 0;
+    }
+    .tip-header {
+      display: flex;
+      align-items: center;
+      gap: var(--cc-space-3);
+      margin-bottom: var(--cc-space-4);
+    }
+    .tip-icon {
+      font-size: var(--cc-font-size-2xl);
+      line-height: 1;
+    }
+    .tip-label {
+      font-size: var(--cc-font-size-sm);
+      font-weight: var(--cc-font-weight-semibold);
+      color: var(--cc-color-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .tip-title {
+      font-size: var(--cc-font-size-lg);
+      font-weight: var(--cc-font-weight-semibold);
+      color: var(--cc-color-text);
+      margin-bottom: var(--cc-space-3);
+    }
+    .tip-content {
+      font-size: var(--cc-font-size-base);
+      color: var(--cc-color-text-muted);
+      line-height: var(--cc-leading-relaxed);
+    }
+    .tip-highlight {
+      color: var(--cc-color-warning);
+      font-weight: var(--cc-font-weight-medium);
+    }
+
+    /* Next Hook */
+    .next-hook {
+      margin-top: var(--cc-space-16);
+      padding: var(--cc-space-8);
+      background: var(--cc-color-surface);
+      border: 1px dashed var(--cc-color-border);
+      border-radius: 10px;
+      text-align: center;
+    }
+    .next-hook-label {
+      font-size: var(--cc-font-size-xs);
+      color: var(--cc-color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: var(--cc-space-3);
+    }
+    .next-hook-text {
+      font-size: var(--cc-font-size-xl);
+      font-weight: var(--cc-font-weight-medium);
+      color: var(--cc-color-text);
+    }
+    .next-hook-text strong { color: var(--cc-color-brand); }
+
+    /* Theme Toggle */
+    .theme-toggle {
+      position: fixed;
+      top: var(--cc-space-4);
+      right: var(--cc-space-4);
+      background: var(--cc-color-surface);
+      border: 1px solid var(--cc-color-border);
+      border-radius: 8px;
+      padding: var(--cc-space-2) var(--cc-space-3);
+      font-size: var(--cc-font-size-sm);
+      color: var(--cc-color-text-muted);
+      cursor: pointer;
+      font-family: var(--cc-font-sans);
+      transition: all 0.2s ease;
+    }
+    .theme-toggle:hover {
+      background: var(--cc-color-surface-2);
+      color: var(--cc-color-text);
+    }
+
+    @media (max-width: 600px) {
+      h2 { font-size: var(--cc-font-size-3xl); }
+      .stat-grid { grid-template-columns: 1fr 1fr; gap: var(--cc-space-4); }
+      .stat-number { font-size: var(--cc-font-size-4xl); }
+      .projects-grid { grid-template-columns: 1fr; }
+      .sister-grid { grid-template-columns: 1fr; }
+      .pullquote-text { font-size: var(--cc-font-size-xl); }
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" onclick="document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark'">Toggle Theme</button>
+
+  <article>
+    <header class="section-header">
+      <h2>泄露催化的生态爆发</h2>
+      <p class="intro-prose">源码泄露不仅引发了技术讨论，更催生了一场开源生态的集中爆发。泄露后一周内，GitHub Agent Skills 趋势榜前 10 中有 6 个是 CC 相关项目，累计获得 9,000+ 星标。</p>
+    </header>
+
+    <!-- Stat Grid: Big Numbers -->
+    <section class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-number">9,000+</div>
+        <div class="stat-label">一周累计星标</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">6/10</div>
+        <div class="stat-label">趋势榜占位</div>
+        <div class="stat-sub">前 10 中 CC 相关项目数</div>
+      </div>
+      <div class="stat-card highlight">
+        <div class="stat-number">121K+</div>
+        <div class="stat-label">claw-code 星标</div>
+      </div>
+    </section>
+
+    <!-- Claw-code Event Highlight -->
+    <section class="claw-highlight">
+      <div class="claw-badge">现象级事件</div>
+      <div class="claw-name">claw-code</div>
+      <div class="claw-stars">121K+ <span>⭐</span></div>
+      <div class="claw-time">2 小时内达成 <strong>50K</strong> stars 里程碑</div>
+    </section>
+
+    <!-- 6 Projects Grid -->
+    <section class="projects-section">
+      <h3 class="section-title">社区衍生项目生态</h3>
+      <div class="projects-grid">
+        <div class="project-card">
+          <div class="project-header">
+            <span class="project-name">byterover-cli</span>
+            <span class="project-stars">3,638 ⭐</span>
+          </div>
+          <div class="project-bar-wrap">
+            <div class="project-bar" style="width: 100%"></div>
+          </div>
+          <p class="project-desc">Agent 记忆层方案，提供持久化上下文管理能力</p>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <span class="project-name">open-agent-sdk-typescript</span>
+            <span class="project-stars">1,822 ⭐</span>
+          </div>
+          <div class="project-bar-wrap">
+            <div class="project-bar" style="width: 50.1%"></div>
+          </div>
+          <p class="project-desc">SDK 替代方案，TypeScript 优先的开发者工具</p>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <span class="project-name">taches-cc-resources</span>
+            <span class="project-stars">1,731 ⭐</span>
+          </div>
+          <div class="project-bar-wrap">
+            <div class="project-bar" style="width: 47.6%"></div>
+          </div>
+          <p class="project-desc">配置合集，收录最佳实践与调参秘籍</p>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <span class="project-name">claude-reviews-claude</span>
+            <span class="project-stars">988 ⭐</span>
+          </div>
+          <div class="project-bar-wrap">
+            <div class="project-bar" style="width: 27.2%"></div>
+          </div>
+          <p class="project-desc">自我审查工具，让 CC 帮你 Review 自己</p>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <span class="project-name">how-claude-code-works</span>
+            <span class="project-stars">808 ⭐</span>
+          </div>
+          <div class="project-bar-wrap">
+            <div class="project-bar" style="width: 22.2%"></div>
+          </div>
+          <p class="project-desc">机制剖析，深入理解 Claude Code 内部原理</p>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <span class="project-name">claude-code-from-scratch</span>
+            <span class="project-stars">472 ⭐</span>
+          </div>
+          <div class="project-bar-wrap">
+            <div class="project-bar" style="width: 13%"></div>
+          </div>
+          <p class="project-desc">从零教学，手把手构建自己的 Claude Code</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sister Projects -->
+    <section class="sister-section">
+      <h3 class="section-title">互补项目生态</h3>
+      <div class="sister-grid">
+        <div class="sister-card">
+          <div class="sister-label">英文 · 交互导览</div>
+          <div class="sister-name">ccunpacked.dev</div>
+          <p class="sister-desc">英文可视化导览站，将 Agent Loop 的 11 步流程做成交互动画，成为非中文社区理解 CC 架构的首选入口。</p>
+          <a href="https://ccunpacked.dev" class="sister-link" target="_blank" rel="noopener">访问站点 →</a>
+        </div>
+        <div class="sister-card">
+          <div class="sister-label">中文 · 系统框架</div>
+          <div class="sister-name">harness-books</div>
+          <p class="sister-desc">中文视角系统性套控工程框架书，尝试建立完整的 Harness 理论体系，与本书形成互补。</p>
+          <span class="sister-link">1.1k ⭐</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pull Quote -->
+    <blockquote class="pullquote">
+      <p class="pullquote-text">"Claude Code 家后院起火，我让 CC 把桌椅搬出来盖了新房，大家免费住。"</p>
+      <footer class="pullquote-author">— <strong>@idoubicc</strong>，社区开发者</footer>
+    </blockquote>
+
+    <!-- IceBearMiner Quote + Tip -->
+    <section class="tip-block">
+      <div class="tip-header">
+        <span class="tip-icon">💡</span>
+        <span class="tip-label">通俗理解</span>
+      </div>
+      <p class="tip-title">@IceBearMiner 的感悟</p>
+      <p class="tip-content">
+        "越花时间 vibe coding，越觉得软件工程的重要性。"
+        <br><br>
+        Vibe coding 是指让 AI 根据"氛围感"直接生成代码，自己不太深入理解细节。这位开发者的感悟是：越是让 AI 写代码，越发现<span class="tip-highlight">人类的工程设计能力</span>才是决定最终产品质量的关键——AI 能写代码，但架构设计、安全边界、性能权衡这些"软件工程"的活，还得人来把关。
+      </p>
+    </section>
+
+    <!-- Next Block Hook -->
+    <section class="next-hook">
+      <p class="next-hook-label">下一章预告</p>
+      <p class="next-hook-text">这些社区项目究竟基于多少代码？Claude Code 的<strong>真实规模</strong>有多大？</p>
+    </section>
+  </article>
+
+  <script>
+    // Theme persistence
+    (function() {
+      const saved = localStorage.getItem('theme');
+      if (saved) document.documentElement.dataset.theme = saved;
+    })();
+    document.querySelector('.theme-toggle').addEventListener('click', function() {
+      const t = document.documentElement.dataset.theme;
+      localStorage.setItem('theme', t === 'dark' ? 'light' : 'dark');
+    });
+  </script>
+</body>
+</html>
+```
