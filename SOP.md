@@ -555,7 +555,7 @@ call_minimax() {
 ANTHROPIC_API_KEY="${KIMI_API_KEY}"
 
 # 错误（绝对禁止）
-ANTHROPIC_API_KEY="REDACTED..."
+ANTHROPIC_API_KEY="sk-kimi-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
 `.env` 文件必须在 `.gitignore` 里。仓库里只提交 `.env.example`（所有 value 用 `xxxx` 占位）。
