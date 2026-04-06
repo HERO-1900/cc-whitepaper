@@ -1,0 +1,123 @@
+---
+// 首页 — 白皮书封面 + 章节入口
+import Layout from '../layouts/Layout.astro';
+import { BOOK_STRUCTURE } from '../data/book-structure';
+---
+
+<Layout title="Claude Code 2.1.88 源码白皮书">
+  <section class="home-hero">
+    <h1>Claude Code 白皮书</h1>
+    <p>
+      1,884 个 TypeScript 文件、87 章中文深度解析，
+      完整解构 Claude Code 2.1.88 的每一层架构。
+    </p>
+    <div class="home-hero__meta">
+      <span class="home-hero__badge">
+        <strong>87</strong> 章
+      </span>
+      <span class="home-hero__badge">
+        <strong>114</strong> 张图表
+      </span>
+      <span class="home-hero__badge">
+        <strong>185</strong> 个 Prompt
+      </span>
+      <span class="home-hero__badge">
+        <strong>35.4万</strong> CJK 字符
+      </span>
+    </div>
+  </section>
+
+  <!-- 章节目录卡片 -->
+  <section class="toc-section">
+    <h2 class="toc-heading">目录</h2>
+    {BOOK_STRUCTURE.map((part) => (
+      <div class="toc-part">
+        <h3 class="toc-part__title">{part.title}</h3>
+        <ul class="toc-part__list">
+          {part.chapters.map((chapter) => (
+            <li class="toc-part__item">
+              <a href={`/chapters/${chapter.slug}`} class="toc-chapter-link">
+                {chapter.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </section>
+</Layout>
+
+<style>
+  .toc-section {
+    margin-top: 3rem;
+    max-width: 800px;
+  }
+
+  .toc-heading {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-6);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .toc-part {
+    margin-bottom: var(--space-8);
+  }
+
+  .toc-part__title {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-accent);
+    margin: 0 0 var(--space-3);
+  }
+
+  .toc-part__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: var(--space-1);
+  }
+
+  .toc-part__item {
+    margin: 0;
+  }
+
+  .toc-chapter-link {
+    display: flex;
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    border-left: 2px solid transparent;
+    transition: all var(--transition-fast);
+  }
+
+  .toc-chapter-link:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-elevated);
+    border-left-color: var(--color-accent);
+    padding-left: calc(var(--space-3) + 4px);
+  }
+
+  /* PoC 说明横幅 */
+  .poc-banner {
+    background: var(--color-accent-bg);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-6);
+    margin-bottom: var(--space-8);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+  }
+
+  .poc-banner strong {
+    color: var(--color-accent);
+  }
+</style>

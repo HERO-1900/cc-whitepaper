@@ -1,0 +1,49 @@
+---
+// ChartEmbed.astro — 图表 iframe 嵌入组件
+// 策略 A：保持 iframe，零改动，原样输出
+// 图表文件在 public/charts/ 下（或通过路径引用 test-viz/production/html/）
+
+interface Props {
+  /** 图表文件名（不含路径，仅文件名），位于 public/charts/ 下 */
+  src: string;
+  /** 图表标题，显示在 header 区 */
+  title?: string;
+  /** iframe 高度，默认 520px */
+  height?: number;
+  /** 图表唯一标识符（用于无障碍） */
+  id?: string;
+}
+
+const {
+  src,
+  title = '图表',
+  height = 520,
+  id,
+} = Astro.props;
+
+// 判断是绝对 URL 还是 public/ 相对路径
+const iframeSrc = src.startsWith('http') ? src : `/charts/${src}`;
+---
+
+<figure class="chart-embed" id={id}>
+  <div class="chart-embed__header">
+    <span class="chart-embed__title">{title}</span>
+    <span class="chart-embed__hint">交互式图表 · 可缩放</span>
+  </div>
+  <iframe
+    src={iframeSrc}
+    title={title}
+    height={height}
+    loading="lazy"
+    sandbox="allow-scripts allow-same-origin"
+    aria-label={title}
+  ></iframe>
+</figure>
+
+<style>
+  .chart-embed__hint {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+</style>

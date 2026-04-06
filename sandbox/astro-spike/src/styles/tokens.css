@@ -1,0 +1,236 @@
+/* ============================================================
+   theme-tokens.css
+   ------------------------------------------------------------
+   CC 白皮书主题 Token 文件 — 沙箱版本
+
+   设计哲学（why）：
+   把 token 拆成两层是为了把"美感决策"和"使用决策"解耦。
+   未来设计师想把强调色从紫色换成蓝色，只需要改 1 行原子层；
+   未来工程师想给 .button 换 hover 色，只需要改 1 行语义层。
+   两层之间靠 var(...) 引用串联，互不污染。
+
+   ┌──────────────────────────────────────────┐
+   │  Layer 1: 原子层 (Primitives)              │
+   │  纯色值/字号/距离，不带"用途"语义           │
+   │  命名：--primitive-{family}-{shade}        │
+   ├──────────────────────────────────────────┤
+   │  Layer 2: 语义层 (Semantic)                │
+   │  带"用途"语义，组件只引用这一层             │
+   │  命名：--color-{role}, --space-{role}      │
+   └──────────────────────────────────────────┘
+
+   切主题机制：
+   - 原子层永远不变（紫色永远是 #7c6cf0）
+   - 语义层在 [data-theme="dark"] / [data-theme="light"]
+     下指向不同的原子层值（暗色下背景指向 slate-950，
+     亮色下背景指向 slate-50）
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   Layer 1: 原子层
+   ------------------------------------------------------------
+   不带任何"用途"含义。仅声明"我们这套设计里有这些颜色"。
+   组件层禁止直接引用本层变量。
+   ------------------------------------------------------------ */
+:root {
+  /* —— 中性灰阶（slate 系，轻微偏冷蓝）—— */
+  --primitive-slate-50:  #fafafa;
+  --primitive-slate-100: #f0f0f5;
+  --primitive-slate-200: #e8e8f0;
+  --primitive-slate-300: #d4d4de;
+  --primitive-slate-400: #9898a8;
+  --primitive-slate-500: #6a6a7a;
+  --primitive-slate-600: #4a4a5a;
+  --primitive-slate-700: #2a2a3a;
+  --primitive-slate-800: #1e1e2e;
+  --primitive-slate-850: #1a1a26;
+  --primitive-slate-900: #12121a;
+  --primitive-slate-950: #0a0a0f;
+
+  /* —— 强调紫（accent，品牌色）—— */
+  --primitive-violet-400: #9588f5;
+  --primitive-violet-500: #7c6cf0;
+  --primitive-violet-600: #6c5ce7;
+  --primitive-violet-700: #5a4bd6;
+
+  /* —— 状态色（语义恒定，不分主题）—— */
+  --primitive-green-400:  #34d399;
+  --primitive-amber-400:  #fbbf24;
+  --primitive-red-400:    #f87171;
+  --primitive-blue-400:   #60a5fa;
+
+  /* —— 字号阶梯（rem 单位，方便用户字体缩放）—— */
+  --primitive-font-xs:   0.75rem;
+  --primitive-font-sm:   0.875rem;
+  --primitive-font-base: 1rem;
+  --primitive-font-lg:   1.125rem;
+  --primitive-font-xl:   1.25rem;
+  --primitive-font-2xl:  1.5rem;
+  --primitive-font-3xl:  1.875rem;
+  --primitive-font-4xl:  2.25rem;
+
+  /* —— 间距阶梯 —— */
+  --primitive-space-1:  0.25rem;
+  --primitive-space-2:  0.5rem;
+  --primitive-space-3:  0.75rem;
+  --primitive-space-4:  1rem;
+  --primitive-space-6:  1.5rem;
+  --primitive-space-8:  2rem;
+  --primitive-space-12: 3rem;
+  --primitive-space-16: 4rem;
+
+  /* —— 圆角 —— */
+  --primitive-radius-sm: 4px;
+  --primitive-radius-md: 8px;
+  --primitive-radius-lg: 12px;
+  --primitive-radius-xl: 16px;
+
+  /* —— 动效曲线 —— */
+  --primitive-ease-fast:   150ms ease;
+  --primitive-ease-normal: 250ms ease;
+  --primitive-ease-slow:   400ms ease;
+
+  /* —— 字体族 —— */
+  --primitive-font-sans: "Inter", -apple-system, "PingFang SC",
+                         "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --primitive-font-mono: "JetBrains Mono", "Fira Code",
+                         "Source Code Pro", monospace;
+  --primitive-font-serif: "Noto Serif SC", "Source Han Serif SC",
+                          "STSong", serif;
+}
+
+/* ------------------------------------------------------------
+   Layer 2: 语义层 — 暗色（默认）
+   ------------------------------------------------------------
+   why default = dark：
+   - 生产站点目前是暗色，默认暗色可以保证用户首次访问视觉
+     一致，避免"先白闪一下再变暗"。
+   - data-theme 属性必须放在 <html> 上（不是 body），早期
+     脚本就能在 CSS 解析前注入正确属性。
+   ------------------------------------------------------------ */
+:root,
+:root[data-theme="dark"] {
+  /* 背景层级（从最深到最浅）*/
+  --color-bg-primary:    var(--primitive-slate-950);  /* 页面底色 */
+  --color-bg-secondary:  var(--primitive-slate-900);  /* 导航/面板底色 */
+  --color-bg-elevated:   var(--primitive-slate-850);  /* 卡片底色 */
+  --color-bg-hover:      var(--primitive-slate-700);  /* 悬停态底色 */
+
+  /* 边框 */
+  --color-border:        var(--primitive-slate-700);
+  --color-border-subtle: var(--primitive-slate-800);
+
+  /* 文字 */
+  --color-text-primary:   #e4e4ed;                    /* 正文 */
+  --color-text-secondary: var(--primitive-slate-400); /* 副文 */
+  --color-text-muted:     var(--primitive-slate-500); /* 弱化文字 */
+
+  /* 强调色 */
+  --color-accent:       var(--primitive-violet-500);
+  --color-accent-hover: var(--primitive-violet-400);
+  --color-accent-bg:    rgba(124, 108, 240, 0.08);
+
+  /* 状态色（暗色下亮度足够，不需要换色）*/
+  --color-success: var(--primitive-green-400);
+  --color-warning: var(--primitive-amber-400);
+  --color-error:   var(--primitive-red-400);
+  --color-info:    var(--primitive-blue-400);
+
+  /* 阴影（暗色下需要更深的黑） */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  /* 给 chart-iframe 注入用的"主题信号"
+     图表 JS 可以读这个字段做内部色板切换 */
+  --theme-mode: "dark";
+
+  color-scheme: dark; /* 让浏览器原生 UI（滚动条/表单）也跟随 */
+}
+
+/* ------------------------------------------------------------
+   Layer 2: 语义层 — 亮色
+   ------------------------------------------------------------ */
+:root[data-theme="light"] {
+  --color-bg-primary:    var(--primitive-slate-50);
+  --color-bg-secondary:  var(--primitive-slate-100);
+  --color-bg-elevated:   #ffffff;
+  --color-bg-hover:      var(--primitive-slate-200);
+
+  --color-border:        var(--primitive-slate-300);
+  --color-border-subtle: var(--primitive-slate-200);
+
+  --color-text-primary:   #1a1a2e;
+  --color-text-secondary: var(--primitive-slate-600);
+  --color-text-muted:     #8a8a9a;
+
+  --color-accent:       var(--primitive-violet-600);
+  --color-accent-hover: var(--primitive-violet-700);
+  --color-accent-bg:    rgba(108, 92, 231, 0.06);
+
+  /* 状态色亮色下需要稍微加深，否则白底上看不清 */
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-error:   #dc2626;
+  --color-info:    #2563eb;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  --theme-mode: "light";
+
+  color-scheme: light;
+}
+
+/* ------------------------------------------------------------
+   排版/CJK 通用 token（与主题无关，放语义层方便组件直接用）
+   ------------------------------------------------------------ */
+:root {
+  --font-sans:  var(--primitive-font-sans);
+  --font-mono:  var(--primitive-font-mono);
+  --font-serif: var(--primitive-font-serif);
+
+  --font-size-xs:   var(--primitive-font-xs);
+  --font-size-sm:   var(--primitive-font-sm);
+  --font-size-base: var(--primitive-font-base);
+  --font-size-lg:   var(--primitive-font-lg);
+  --font-size-xl:   var(--primitive-font-xl);
+  --font-size-2xl:  var(--primitive-font-2xl);
+  --font-size-3xl:  var(--primitive-font-3xl);
+  --font-size-4xl:  var(--primitive-font-4xl);
+
+  /* CJK 行高比 Latin 大约高 0.2 ~ 0.3 */
+  --line-height-tight:   1.4;
+  --line-height-normal:  1.8;
+  --line-height-relaxed: 2.0;
+
+  --space-1:  var(--primitive-space-1);
+  --space-2:  var(--primitive-space-2);
+  --space-3:  var(--primitive-space-3);
+  --space-4:  var(--primitive-space-4);
+  --space-6:  var(--primitive-space-6);
+  --space-8:  var(--primitive-space-8);
+  --space-12: var(--primitive-space-12);
+  --space-16: var(--primitive-space-16);
+
+  --radius-sm: var(--primitive-radius-sm);
+  --radius-md: var(--primitive-radius-md);
+  --radius-lg: var(--primitive-radius-lg);
+  --radius-xl: var(--primitive-radius-xl);
+
+  --transition-fast:   var(--primitive-ease-fast);
+  --transition-normal: var(--primitive-ease-normal);
+  --transition-slow:   var(--primitive-ease-slow);
+}
+
+/* ------------------------------------------------------------
+   无障碍：尊重用户的"减少动效"偏好
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast:   0ms;
+    --transition-normal: 0ms;
+    --transition-slow:   0ms;
+  }
+}
