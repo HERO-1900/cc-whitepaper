@@ -730,10 +730,18 @@ src/memdir/                   — 记忆系统</pre>
       const toggle = document.getElementById('themeToggle');
       const html = document.documentElement;
 
+      // Initialize theme from localStorage or OS preference
+      const saved = localStorage.getItem('theme');
+      const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+      const initial = saved || (prefersLight ? 'light' : 'dark');
+      html.setAttribute('data-theme', initial);
+      toggle.textContent = initial === 'dark' ? '☾ 浅色' : '☀ 深色';
+
       toggle.addEventListener('click', function() {
         const current = html.getAttribute('data-theme');
         const next = current === 'dark' ? 'light' : 'dark';
         html.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
         toggle.textContent = next === 'dark' ? '☾ 浅色' : '☀ 深色';
       });
     })();
