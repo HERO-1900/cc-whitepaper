@@ -550,7 +550,7 @@
   </style>
 </head>
 <body>
-  <button class="theme-toggle" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">切换主题</button>
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="切换主题">切换主题</button>
 
   <!-- Marginal Label -->
   <div class="prologue-marginal-label">
@@ -842,6 +842,22 @@
   </section>
 
   <script>
+    // Theme toggle with localStorage persistence + OS preference fallback
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }
+
+    (function initTheme() {
+      const saved = localStorage.getItem('theme');
+      const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+      const theme = saved || (prefersLight ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+
     // Minimal vanilla JS for sticky/pin functionality
     document.querySelectorAll('.pin-btn').forEach(btn => {
       btn.addEventListener('click', function() {
