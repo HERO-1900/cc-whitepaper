@@ -770,85 +770,351 @@
         <div class="vis-embed">
             <div class="vis-header">
                 <div>
-                    <div class="vis-title"><span class="number">43</span> 个内置工具完整目录</div>
-                    <div class="vis-subtitle">按 6 个类别分组，标注每个工具的权限要求、输入 schema 与适用场景</div>
+                    <div class="vis-title"><span class="number">40</span> 个内置工具完整目录</div>
+                    <div class="vis-subtitle">按 6 个类别分组，标注每个工具的权限要求与适用场景（数据来自 <code>cc-recovered-main/src/tools/</code> 真实目录）</div>
                 </div>
             </div>
 
             <div class="tool-categories">
-                <button class="category-btn active">全部 <span class="count">43</span></button>
-                <button class="category-btn">File <span class="count">12</span></button>
-                <button class="category-btn">Search <span class="count">6</span></button>
+                <button class="category-btn active">全部 <span class="count">40</span></button>
+                <button class="category-btn">File <span class="count">7</span></button>
+                <button class="category-btn">Search <span class="count">3</span></button>
                 <button class="category-btn">Execute <span class="count">4</span></button>
-                <button class="category-btn">Agent <span class="count">3</span></button>
-                <button class="category-btn">Web <span class="count">2</span></button>
-                <button class="category-btn">Other <span class="count">16</span></button>
+                <button class="category-btn">Agent <span class="count">14</span></button>
+                <button class="category-btn">Web <span class="count">3</span></button>
+                <button class="category-btn">Other <span class="count">9</span></button>
             </div>
 
             <div class="tool-grid">
-                <!-- File Tools -->
-                <div class="tool-card">
-                    <div class="tool-name">Read</div>
-                    <div class="tool-desc">读取文件内容，支持指定行范围</div>
+                <!-- ============ File 类（7） ============ -->
+                <div class="tool-card" data-tool-name="FileReadTool" data-category="File">
+                    <div class="tool-name">FileReadTool</div>
+                    <div class="tool-desc">从本地文件系统读取文件，支持文本/图片/PDF/Notebook，可指定行范围 offset+limit</div>
                     <div class="tool-tags">
                         <span class="tool-tag readonly">只读</span>
                         <span class="tool-tag">并发</span>
                     </div>
                 </div>
-                <div class="tool-card">
-                    <div class="tool-name">Edit</div>
-                    <div class="tool-desc">基于 old_string/new_string 精确替换文件内容</div>
+                <div class="tool-card" data-tool-name="FileWriteTool" data-category="File">
+                    <div class="tool-name">FileWriteTool</div>
+                    <div class="tool-desc">将文件写入本地文件系统：覆盖已有文件或创建新文件，编辑已有文件前必须先 Read</div>
                     <div class="tool-tags">
                         <span class="tool-tag writable">可写</span>
                         <span class="tool-tag destructive">破坏性</span>
                     </div>
                 </div>
-                <div class="tool-card">
-                    <div class="tool-name">Write</div>
-                    <div class="tool-desc">创建新文件或覆盖写入</div>
+                <div class="tool-card" data-tool-name="FileEditTool" data-category="File">
+                    <div class="tool-name">FileEditTool</div>
+                    <div class="tool-desc">在文件中执行精确字符串替换；old_string 必须唯一，否则报错（防误改）</div>
                     <div class="tool-tags">
                         <span class="tool-tag writable">可写</span>
-                        <span class="tool-tag destructive">破坏性</span>
+                        <span class="tool-tag">需确认</span>
                     </div>
                 </div>
-                <div class="tool-card">
-                    <div class="tool-name">Glob</div>
-                    <div class="tool-desc">按通配符模式搜索文件路径</div>
+                <div class="tool-card" data-tool-name="NotebookEditTool" data-category="File">
+                    <div class="tool-name">NotebookEditTool</div>
+                    <div class="tool-desc">替换 Jupyter notebook 指定 cell 的内容，支持 replace / insert / delete 三种 edit_mode</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="GlobTool" data-category="File">
+                    <div class="tool-name">GlobTool</div>
+                    <div class="tool-desc">基于 glob 模式快速匹配文件路径（如 <code>**/*.ts</code>），按 mtime 排序返回</div>
                     <div class="tool-tags">
                         <span class="tool-tag readonly">只读</span>
                         <span class="tool-tag">并发</span>
                     </div>
                 </div>
-                <div class="tool-card">
-                    <div class="tool-name">Grep</div>
-                    <div class="tool-desc">在文件内容中搜索正则匹配</div>
+                <div class="tool-card" data-tool-name="EnterWorktreeTool" data-category="File">
+                    <div class="tool-name">EnterWorktreeTool</div>
+                    <div class="tool-desc">创建一个隔离的 git worktree 并将当前会话切入，仅在用户明确说"worktree"时使用</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="ExitWorktreeTool" data-category="File">
+                    <div class="tool-name">ExitWorktreeTool</div>
+                    <div class="tool-desc">退出由 EnterWorktree 创建的 worktree 会话；action 可选 keep / remove</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+
+                <!-- ============ Search 类（3） ============ -->
+                <div class="tool-card" data-tool-name="GrepTool" data-category="Search">
+                    <div class="tool-name">GrepTool</div>
+                    <div class="tool-desc">基于 ripgrep 的强大搜索工具，支持完整正则、glob/type 过滤、多种 output_mode、multiline 跨行匹配</div>
                     <div class="tool-tags">
                         <span class="tool-tag readonly">只读</span>
                         <span class="tool-tag">并发</span>
                     </div>
                 </div>
-                <div class="tool-card">
-                    <div class="tool-name">Bash</div>
-                    <div class="tool-desc">执行 shell 命令</div>
+                <div class="tool-card" data-tool-name="LSPTool" data-category="Search">
+                    <div class="tool-name">LSPTool</div>
+                    <div class="tool-desc">通过 Language Server Protocol 获取代码智能：goToDefinition / findReferences / hover / symbol / callHierarchy</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="WebSearchTool" data-category="Search">
+                    <div class="tool-name">WebSearchTool</div>
+                    <div class="tool-desc">允许 Claude 搜索网络并用结果作答；支持域名过滤；返回结果含 markdown 链接，要求作答末尾必带 Sources 段</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+
+                <!-- ============ Execute 类（4） ============ -->
+                <div class="tool-card" data-tool-name="BashTool" data-category="Execute">
+                    <div class="tool-name">BashTool</div>
+                    <div class="tool-desc">在持久 shell 会话中执行 bash 命令，支持 timeout / cwd / run_in_background；含 git 安全协议与提交流程指导</div>
                     <div class="tool-tags">
                         <span class="tool-tag destructive">破坏性</span>
                         <span class="tool-tag">需确认</span>
                     </div>
                 </div>
-                <!-- Agent Tools -->
-                <div class="tool-card">
-                    <div class="tool-name">Agent</div>
-                    <div class="tool-desc">创建子 Agent 执行独立任务</div>
+                <div class="tool-card" data-tool-name="PowerShellTool" data-category="Execute">
+                    <div class="tool-name">PowerShellTool</div>
+                    <div class="tool-desc">在 Windows 上执行 PowerShell 命令（自动检测 5.1 / 7+ 版本），与 BashTool 对偶</div>
                     <div class="tool-tags">
+                        <span class="tool-tag destructive">破坏性</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="REPLTool" data-category="Execute">
+                    <div class="tool-name">REPLTool</div>
+                    <div class="tool-desc">在 REPL 模式下执行 JavaScript 代码片段；REPL 模式默认对 ant 内部用户开启，把 Bash/Read 等工具下沉为 VM 内 primitive</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag destructive">破坏性</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="SleepTool" data-category="Execute">
+                    <div class="tool-name">SleepTool</div>
+                    <div class="tool-desc">等待指定时长，可被用户中断；优先于 <code>Bash(sleep ...)</code>，因为不占 shell 进程，可与其它工具并发</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
                         <span class="tool-tag">并发</span>
                     </div>
                 </div>
-                <!-- Web Tools -->
-                <div class="tool-card">
-                    <div class="tool-name">WebFetch</div>
-                    <div class="tool-desc">抓取网页内容并转换为 markdown</div>
+
+                <!-- ============ Agent 类（14） ============ -->
+                <div class="tool-card" data-tool-name="AgentTool" data-category="Agent">
+                    <div class="tool-name">AgentTool</div>
+                    <div class="tool-desc">派发 sub-agent 子任务执行；含 6 个内置 agent (claudeCodeGuide / explore / generalPurpose / plan / statuslineSetup / verificationAgent) + fork 模式</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag">需确认</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="TaskCreateTool" data-category="Agent">
+                    <div class="tool-name">TaskCreateTool</div>
+                    <div class="tool-desc">在任务列表中创建一个新任务，用于追踪复杂多步工作；支持指派给团队成员（teammate）</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="TaskGetTool" data-category="Agent">
+                    <div class="tool-name">TaskGetTool</div>
+                    <div class="tool-desc">通过 ID 从任务列表获取任务，返回 subject / description / status / blocks / blockedBy 全量信息</div>
                     <div class="tool-tags">
                         <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="TaskListTool" data-category="Agent">
+                    <div class="tool-name">TaskListTool</div>
+                    <div class="tool-desc">列出任务列表中所有任务（摘要形式）；teammate 可据此寻找无 owner 且未阻塞的待领取任务</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="TaskUpdateTool" data-category="Agent">
+                    <div class="tool-name">TaskUpdateTool</div>
+                    <div class="tool-desc">更新任务列表中的任务：标记完成 / 改 owner / 改 status / 设置 blockedBy / 删除</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="TaskStopTool" data-category="Agent">
+                    <div class="tool-name">TaskStopTool</div>
+                    <div class="tool-desc">通过 task_id 停止一个正在运行的后台任务，返回成功或失败状态</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag destructive">破坏性</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="TaskOutputTool" data-category="Agent">
+                    <div class="tool-name">TaskOutputTool</div>
+                    <div class="tool-desc">获取后台任务的实时输出（stdout / stderr / 进度），用于轮询长跑任务</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="SendMessageTool" data-category="Agent">
+                    <div class="tool-name">SendMessageTool</div>
+                    <div class="tool-desc">向另一个 agent 发送消息（团队内或 UDS_INBOX 跨会话点对点）；用 ListPeers 发现目标</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="TeamCreateTool" data-category="Agent">
+                    <div class="tool-name">TeamCreateTool</div>
+                    <div class="tool-desc">创建一个新团队来协调多个 agent 协同工作；Team 与 TaskList 1:1 对应</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="TeamDeleteTool" data-category="Agent">
+                    <div class="tool-name">TeamDeleteTool</div>
+                    <div class="tool-desc">移除团队目录与任务目录（<code>~/.claude/teams/</code> 和 <code>~/.claude/tasks/</code>）；要求所有 teammate 已优雅退出</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag destructive">破坏性</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="EnterPlanModeTool" data-category="Agent">
+                    <div class="tool-name">EnterPlanModeTool</div>
+                    <div class="tool-desc">进入 plan 模式：调研代码库 → 设计实现方案 → 提交用户审批；优先于直接动手实施非简单任务</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="ExitPlanModeTool" data-category="Agent">
+                    <div class="tool-name">ExitPlanModeTool</div>
+                    <div class="tool-desc">在 plan 模式下完成 plan 文件后调用，向用户提交计划等待审批；不接收 plan 内容参数（从文件读）</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="SkillTool" data-category="Agent">
+                    <div class="tool-name">SkillTool</div>
+                    <div class="tool-desc">在主对话中执行一个 skill（专门能力 / 领域知识 / 工作流），含 1% 上下文预算的发现机制</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="BriefTool" data-category="Agent">
+                    <div class="tool-name">BriefTool</div>
+                    <div class="tool-desc">向用户发送一条会被实际看到的消息（SendUserMessage）；status 标 normal / proactive；replies / 状态汇报的唯一出口</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+
+                <!-- ============ Web 类（3） ============ -->
+                <div class="tool-card" data-tool-name="WebFetchTool" data-category="Web">
+                    <div class="tool-name">WebFetchTool</div>
+                    <div class="tool-desc">抓取指定 URL 内容、HTML 转 markdown，再用小而快的模型按 prompt 提取信息；含 15 分钟自清理缓存</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="RemoteTriggerTool" data-category="Web">
+                    <div class="tool-name">RemoteTriggerTool</div>
+                    <div class="tool-desc">通过 claude.ai CCR API 管理远程 Claude Code 触发器（list / get / create / update / run）；OAuth token 进程内注入，从不暴露给 shell</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="ScheduleCronTool" data-category="Web">
+                    <div class="tool-name">ScheduleCronTool</div>
+                    <div class="tool-desc">调度定时任务（含 Create / Delete / List 三个子工具）：cron 表达式 + jitter；recurring 默认 30 天后过期；REPL idle 时触发</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+
+                <!-- ============ Other 类（9） ============ -->
+                <div class="tool-card" data-tool-name="ConfigTool" data-category="Other">
+                    <div class="tool-name">ConfigTool</div>
+                    <div class="tool-desc">读写 Claude Code 的全局 / 项目级配置项（settings.json）；动态枚举 SUPPORTED_SETTINGS 注册表</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="TodoWriteTool" data-category="Other">
+                    <div class="tool-name">TodoWriteTool</div>
+                    <div class="tool-desc">为当前会话创建并管理结构化待办列表，用于多步任务追踪与可视化进度（与 TaskList 系列互补）</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="AskUserQuestionTool" data-category="Other">
+                    <div class="tool-name">AskUserQuestionTool</div>
+                    <div class="tool-desc">向用户发起多选题以收集信息、消歧义、了解偏好或让用户做选择；支持 preview 字段并排展示对照选项</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="SyntheticOutputTool" data-category="Other">
+                    <div class="tool-name">SyntheticOutputTool</div>
+                    <div class="tool-desc">以请求的结构化格式返回最终响应；session 末尾必须调用一次以提供 structured output</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="MCPTool" data-category="Other">
+                    <div class="tool-name">MCPTool</div>
+                    <div class="tool-desc">MCP 通用工具调用桥（描述与 schema 在 mcpClient.ts 由各 MCP server 动态覆盖注入）</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="McpAuthTool" data-category="Other">
+                    <div class="tool-name">McpAuthTool</div>
+                    <div class="tool-desc">触发某个 MCP server 的 OAuth 认证流：返回授权 URL → 用户在浏览器完成 → 服务器真实工具自动可用</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag writable">可写</span>
+                        <span class="tool-tag">需确认</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="ListMcpResourcesTool" data-category="Other">
+                    <div class="tool-name">ListMcpResourcesTool</div>
+                    <div class="tool-desc">列出已配置 MCP 服务器中的可用资源；每个 resource 含 server 字段；可按 server 名过滤</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="ReadMcpResourceTool" data-category="Other">
+                    <div class="tool-name">ReadMcpResourceTool</div>
+                    <div class="tool-desc">从指定 MCP 服务器读取一个具体资源（按 server 名 + URI），返回 MCP 协议原始字段</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
+                    </div>
+                </div>
+                <div class="tool-card" data-tool-name="ToolSearchTool" data-category="Other">
+                    <div class="tool-name">ToolSearchTool</div>
+                    <div class="tool-desc">为延迟加载的 deferred tools 拉取完整 schema 定义，使其变得可调用（KAIROS / 子 agent 工具按需展开）</div>
+                    <div class="tool-tags">
+                        <span class="tool-tag readonly">只读</span>
+                        <span class="tool-tag">并发</span>
                     </div>
                 </div>
             </div>
