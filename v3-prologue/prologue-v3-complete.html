@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>序章 · Claude Code 2.1.88 源码白皮书</title>
+  <script>
+    /* FOUC 防御：在页面渲染前立即应用主题 */
+    (function() {
+      var t = localStorage.getItem('cc-theme');
+      if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    })();
+  </script>
+  <style>
+    /* ============================================
+       设计令牌 Design Tokens
+    ============================================ */
+    :root {
+      --cc-bg:          #0a0a0b;
+      --cc-surface:     #111113;
+      --cc-surface-2:   #1a1a1e;
+      --cc-surface-3:   #242428;
+      --cc-border:      rgba(255,255,255,0.07);
+      --cc-border-md:   rgba(255,255,255,0.13);
+      --cc-text:        #f0f0f0;
+      --cc-text-2:      #a0a0a8;
+      --cc-text-3:      #606068;
+      --cc-brand:       #f59e0b;
+      --cc-brand-dim:   rgba(245,158,11,0.10);
+      --cc-brand-border: rgba(245,158,11,0.30);
+      --cc-font-sans:   system-ui,-apple-system,"Segoe UI","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+      --cc-font-mono:   "SF Mono","Fira Code","JetBrains Mono","Cascadia Code",Consolas,monospace;
+      /* 字号 5 阶系统 */
+      --sz-xs:   0.75rem;    /* 12px */
+      --sz-sm:   0.875rem;   /* 14px */
+      --sz-body: 0.9375rem;  /* 15px */
+      --sz-lg:   1.25rem;    /* 20px */
+      --sz-xl:   1.5rem;     /* 24px */
+      --sz-2xl:  1.75rem;    /* 28px */
+      --sz-3xl:  2.5rem;     /* 40px */
+    }
+
+    [data-theme="light"] {
+      --cc-bg:          #fafafa;
+      --cc-surface:     #fff;
+      --cc-surface-2:   #f4f4f5;
+      --cc-surface-3:   #e8e8ea;
+      --cc-border:      rgba(0,0,0,0.06);
+      --cc-border-md:   rgba(0,0,0,0.11);
+      --cc-text:        #18181b;
+      --cc-text-2:      #52525b;
+      --cc-text-3:      #a1a1aa;
+      --cc-brand-dim:   rgba(245,158,11,0.08);
+      --cc-brand-border: rgba(245,158,11,0.28);
+    }
+
+    /* ============================================
+       重置 & 基础
+    ============================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--cc-font-sans);
+      font-size: var(--sz-body);
+      line-height: 1.6;
+      color: var(--cc-text);
+      background: var(--cc-bg);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    p { margin-bottom: 0.875rem; }
+    p:last-child { margin-bottom: 0; }
+
+    a { color: var(--cc-brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    code {
+      font-family: var(--cc-font-mono);
+      font-size: var(--sz-xs);
+      background: var(--cc-surface-2);
+      padding: 0.1em 0.35em;
+      border-radius: 3px;
+      color: var(--cc-text-2);
+    }
+
+    /* ============================================
+       布局
+    ============================================ */
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* ============================================
+       主题切换按钮
+    ============================================ */
+    .toggle-btn {
+      position: fixed;
+      top: 1rem;
+      right: 1.25rem;
+      z-index: 999;
+      background: var(--cc-surface-2);
+      border: 1px solid var(--cc-border-md);
+      color: var(--cc-text-2);
+      font-family: var(--cc-font-mono);
+      font-size: var(--sz-xs);
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .toggle-btn:hover {
+      background: var(--cc-surface-3);
+      color: var(--cc-text);
+    }
+
+    /* ============================================
+       TOC 侧边栏
+    ============================================ */
+    .toc-sidebar {
+      position: fixed;
+      left: max(1rem, calc(50vw - 430px - 175px));
+      top: 3.5rem;
+      width: 155px;
+      display: none;
+    }
+    @media (min-width: 1100px) { .toc-sidebar { display: block; } }
+
+    .toc-sidebar nav {
+      font-size: var(--sz-xs);
+      color: var(--cc-text-3);
+    }
+    .toc-label {
+      font-family: var(--cc-font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--cc-text-3);
+      margin-bottom: 0.5rem;
+    }
+    .toc-list { list-style: none; }
+    .toc-list li + li { margin-top: 0.2rem; }
+    .toc-list a {
+      display: block;
+      padding: 0.2rem 0.5rem;
+      color: var(--cc-text-3);
+      border-radius: 3px;
+      transition: color 0.15s, background 0.15s;
+      line-height: 1.4;
+    }
+    .toc-list a:hover,
+    .toc-list a.active {
+      color: var(--cc-brand);
+      background: var(--cc-brand-dim);
+      text-decoration: none;
+    }
+
+    /* ============================================
+       序章页眉
+    ============================================ */
+    .prologue-header {
+      padding: 3.5rem 0 2rem;
+      border-bottom: 1px solid var(--cc-border);
+      margin-bottom: 0;
+    }
+
+    .header-eyebrow {
+      font-family: var(--cc-font-mono);
+      font-size: var(--sz-xs);
+      color: var(--cc-text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+    }
+    .header-eyebrow span { color: var(--cc-brand); }
+
+    .header-title {
+      font-size: var(--sz-3xl);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      color: var(--cc-text);
+      margin-bottom: 0.875rem;
+    }
+
+    .header-subtitle {
+      font-size: var(--sz-lg);
+      color: var(--cc-text-2);
+      font-weight: 400;
+      line-height: 1.5;
+      max-width: 600px;
+      margin-bottom: 1.5rem;
+    }
+
+    .header-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.5rem;
+      font-family: var(--cc-font-mono);
+      font-size: var(--sz-xs);
+      color: var(--cc-text-3);
+    }
+    .header-meta span { white-space: nowrap; }
+    .header-meta .dot { color: var(--cc-brand); }
+
+    /* ============================================
+       正文区块
+    ============================================ */
+    .prologue-body { padding-bottom: 4rem; }
+
+    .prologue-section {
+      padding: 2rem 0;
+      border-top: 1px solid var(--cc-border);
+    }
+
+    .section-eyebrow {
+      font-family: var(--cc-font-mono);
+      font-size: var(--sz-xs);
+      color: var(--cc-brand);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-title {
+      font-size: var(--sz-xl);
+      font-weight: 700;
+      color: var(--cc-text);
+      margin-bottom: 1rem;
+      line-height: 1.3;
+    }
+
+    .subsection-title {
+      font-size: var(--sz-lg);
+      font-weight: 600;
+      color: var(--cc-text-2);
+      margin: 1.5rem 0 0.75rem;
+      line-height: 1.35;
+    }
+
+    /* ============================================
+       统计数字网格
+    ============================================ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1px;
+      border: 1px solid var(--cc-border-md);
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 1.25rem 0;
+    }
+
+    .stat-cell {
+      padding: 1.25rem 1rem;
+      background: var(--cc-surface);
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: var(--cc-font-mono);
+      font-size: var(--sz-2xl);
+      font-weight: 700;
+      color: var(--cc-brand);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-name {
+      font-size: var(--sz-xs);
+      color: var(--cc-text-2);
+      margin-top: 0.3rem;
+      line-height: 1.3;
+    }
+
+    .stat-sub {
+      font-family: var(--cc-font-mono);
+      font-size: 11px;
+      color: var(--cc-text-3);
+      margin-top: 0.2rem;
+    }
+
+    /* ============================================
+       OS 引语块
+    ============================================ */
+    .os-quote {
+      border-left: 3px solid var(--cc-brand);
+      padding: 0.75rem 1.25rem;
+      background: var(--cc-brand-dim);
+      border-radius: 0 4px 4px 0;
+      margin: 1.5rem 0;
+    }
+
+    .os-quote-text {
+      font-size: var(--sz-lg);
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--cc-text);
+      margin-bottom: 0.35rem;
+    }
+
+    .os-quote-sub {
+      font-size: var(--sz-sm);
+      color: var(--cc-text-2);
+    }
+
+    /* ============================================
+       通俗理解小卡
+    ============================================ */
+    .insight {
+      font-size: 13px;
+      background: var(--cc-surface-2);
+      border-left: 3px solid var(--cc-brand);
+      padding: 0.5rem 0.875rem;
+      border-radius: 0 4px 4px 0;
+      margin: 1rem 0;
+      color: var(--cc-text-2);
+      line-height: 1.55;
+    }
+
+    .insight-label {
+      display: block;
+      font-family: var(--cc-font-mono);
+      font-size: 11px;
+      color: var(--cc-brand);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 0.3rem;
+      font-weight: 600;
+    }
+
+    .insight p { margin-bottom: 0.4rem; }
+    .insight p:last-child { margin-bottom: 0; }
+
+    /* ============================================
+       表格
+    ============================================ */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--sz-sm);
+      margin: 1rem 0;
+    }
+
+    .data-table th {
+      font-family: var(--cc-font-mono);
+      font-size: var(--sz-xs);
+      color: var(--cc-text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.35rem 0.75rem;
+      border-bottom: 1px solid var(--cc-border-md);
+      text-align: left;
+    }
+
+    .data-table td {
+      padding: 0.45rem 0.75rem;
+      border-bottom: 1px solid var(--cc-border);
+      color: var(--cc-text-2);
+      vertical-align: top;
+    }
+
+    .data-table tr:hover td { background: var(--cc-surface-2); }
+
+    .data-table td:first-child {
+      color: var(--cc-text);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .data-table .mono {
+      font-family: var(--cc-font-mono);
+      font-size: var(--sz-xs);
+    }
+
+    /* ============================================
+       图表嵌入
+    ============================================ */
+    .chart-embed {
+      margin: 1.5rem 0;
+    }
+
+    .chart-caption {
+      font-family: var(--cc-font-mono);
+      font-size: var(--sz-xs);
+      color: var(--cc-text-3);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .chart-caption::before {
+      content: "▸";
+      color: var(--cc-brand);
+    }
+
+    .chart-frame {
+      width: 100%;
+      height: 520px;
+      border: 1px solid var(--cc-border);
+      border-radius: 6px;
+      background: var(--cc-surface);
+      display: block;
+    }
+
+    /* ============================================
+       书本元数据行
+    ============================================ */
+    .book-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      border: 1px solid var(--cc-border-md);
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
+
+    .book-meta-cell {
+      padding: 0.7rem 1rem;
+      background: var(--cc-surface);
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+    }
+
+    .book-meta-num {
+      font-family: var(--cc-font-mono);
+      font-size: var(--sz-lg);
+      font-weight: 700;
+      color: var(--cc-brand);
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .book-meta-label {
+      font-size: var(--sz-xs);
+      color: var(--cc-text-2);
+    }
+
+    /* ============================================
+       读者路径
+    ============================================ */
+    .reader-paths {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      border: 1px solid var(--cc-border-md);
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
+
+    .reader-path-cell {
+      padding: 1rem;
+      background: var(--cc-surface);
+    }
+
+    .reader-path-type {
+      font-family: var(--cc-font-mono);
+      font-size: var(--sz-xs);
+      color: var(--cc-brand);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.4rem;
+    }
+
+    .reader-path-title {
+      font-size: var(--sz-sm);
+      font-weight: 600;
+      color: var(--cc-text);
+      margin-bottom: 0.35rem;
+    }
+
+    .reader-path-desc {
+      font-size: var(--sz-xs);
+      color: var(--cc-text-2);
+      line-height: 1.5;
+    }
+
+    .reader-path-route {
+      font-family: var(--cc-font-mono);
+      font-size: 11px;
+      color: var(--cc-text-3);
+      margin-top: 0.4rem;
+      background: var(--cc-surface-2);
+      padding: 0.2rem 0.4rem;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    /* ============================================
+       9 步旅程网格
+    ============================================ */
+    .journey-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      margin: 1rem 0;
+    }
+
+    .journey-step {
+      background: var(--cc-surface-2);
+      border: 1px solid var(--cc-border);
+      border-radius: 6px;
+      padding: 0.6rem 0.75rem;
+    }
+
+    .journey-step-num {
+      font-family: var(--cc-font-mono);
+      font-size: 11px;
+      color: var(--cc-brand);
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+    }
+
+    .journey-step-text {
+      font-size: var(--sz-sm);
+      color: var(--cc-text-2);
+      line-height: 1.4;
+    }
+
+    /* ============================================
+       社区衍生项目列表
+    ============================================ */
+    .project-list {
+      list-style: none;
+      margin: 0.75rem 0;
+    }
+
+    .project-list li {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid var(--cc-border);
+      font-size: var(--sz-sm);
+    }
+
+    .project-list li:last-child { border-bottom: none; }
+
+    .project-name {
+      font-family: var(--cc-font-mono);
+      font-size: var(--sz-xs);
+      color: var(--cc-brand);
+      white-space: nowrap;
+      min-width: 160px;
+    }
+
+    .project-desc { color: var(--cc-text-2); }
+
+    /* ============================================
+       安全层级列表
+    ============================================ */
+    .security-layers {
+      margin: 0.75rem 0;
+    }
+
+    .security-layer {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.875rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--cc-border);
+    }
+
+    .security-layer:last-child { border-bottom: none; }
+
+    .layer-badge {
+      font-family: var(--cc-font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--cc-brand);
+      background: var(--cc-brand-dim);
+      border: 1px solid var(--cc-brand-border);
+      padding: 0.15rem 0.45rem;
+      border-radius: 3px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .layer-content { flex: 1; }
+
+    .layer-title {
+      font-size: var(--sz-sm);
+      font-weight: 600;
+      color: var(--cc-text);
+      margin-bottom: 0.15rem;
+    }
+
+    .layer-desc {
+      font-size: var(--sz-xs);
+      color: var(--cc-text-2);
+      line-height: 1.45;
+    }
+
+    /* ============================================
+       OS 映射表（特殊加宽）
+    ============================================ */
+    .os-map-table td:first-child {
+      width: 200px;
+    }
+
+    /* ============================================
+       比喻五角星列表
+    ============================================ */
+    .analogy-list {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.5rem;
+      margin: 1rem 0;
+    }
+
+    .analogy-item {
+      background: var(--cc-surface-2);
+      border: 1px solid var(--cc-border);
+      border-radius: 6px;
+      padding: 0.6rem 0.75rem;
+      text-align: center;
+    }
+
+    .analogy-icon {
+      font-size: 1.25rem;
+      display: block;
+      margin-bottom: 0.3rem;
+    }
+
+    .analogy-name {
+      font-size: var(--sz-xs);
+      font-weight: 600;
+      color: var(--cc-text);
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+
+    .analogy-desc {
+      font-size: 11px;
+      color: var(--cc-text-3);
+      line-height: 1.35;
+    }
+
+    /* ============================================
+       收尾致敬
+    ============================================ */
+    .closing-note {
+      border: 1px solid var(--cc-border-md);
+      border-radius: 6px;
+      padding: 1.25rem 1.5rem;
+      background: var(--cc-surface);
+      margin-top: 1.5rem;
+      font-size: var(--sz-sm);
+      color: var(--cc-text-2);
+      line-height: 1.65;
+    }
+
+    .closing-note strong { color: var(--cc-text); }
+
+    /* ============================================
+       响应式断点
+    ============================================ */
+    @media (max-width: 700px) {
+      .stats-grid { grid-template-columns: repeat(3, 1fr); }
+      .reader-paths { grid-template-columns: 1fr; }
+      .chart-frame { height: 380px; }
+      .analogy-list { grid-template-columns: repeat(3, 1fr); }
+      .journey-grid { grid-template-columns: 1fr 1fr; }
+      .book-meta-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 480px) {
+      .page { padding: 0 1rem; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .os-map-table td { font-size: 13px; }
+      .analogy-list { grid-template-columns: 1fr 1fr; }
+      .header-title { font-size: 2rem; }
+    }
+
+    /* ============================================
+       数字滚动动画
+    ============================================ */
+    .stat-num[data-target] { transition: none; }
+  </style>
+</head>
+<body>
+
+  <!-- 主题切换 -->
+  <button class="toggle-btn" onclick="toggleTheme()">◐ 主题</button>
+
+  <!-- TOC 侧边栏 -->
+  <aside class="toc-sidebar">
+    <div class="toc-label">目录</div>
+    <nav>
+      <ul class="toc-list">
+        <li><a href="#s1" id="toc-s1">§1 · 打开引擎盖</a></li>
+        <li><a href="#s2" id="toc-s2">§2 · 群雄并起</a></li>
+        <li><a href="#s3" id="toc-s3">§3 · 这本书</a></li>
+        <li><a href="#s4" id="toc-s4">§4 · 系统全景</a></li>
+        <li><a href="#s5" id="toc-s5">§5 · 如何阅读</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- 页面正文容器 -->
+  <div class="page">
+
+    <!-- 页眉 -->
+    <header class="prologue-header">
+      <div class="header-eyebrow">
+        <span>Claude Code 2.1.88</span> · 源码白皮书 · 序章
+      </div>
+      <h1 class="header-title">打开引擎盖</h1>
+      <p class="header-subtitle">
+        一份关于 AI 编程助手背后工程系统的穷尽式解剖——从 476,875 行 TypeScript 代码出发，还原一个「操作系统级调度器」的完整面貌。
+      </p>
+      <div class="header-meta">
+        <span>83 个章节</span>
+        <span class="dot">·</span>
+        <span>360,583 CJK 字符</span>
+        <span class="dot">·</span>
+        <span>122 张图表</span>
+        <span class="dot">·</span>
+        <span>185 个 Prompt 全收录</span>
+        <span class="dot">·</span>
+        <span>版本：2.1.88</span>
+      </div>
+    </header>
+
+    <!-- 正文 -->
+    <main class="prologue-body">
+
+      <!-- ================================================
+           § 1 · 破题：打开引擎盖
+      ================================================ -->
+      <section id="s1" class="prologue-section">
+        <div class="section-eyebrow">§ 1</div>
+        <h2 class="section-title">当你打开一个「聊天助手」的引擎盖</h2>
+
+        <p>
+          你不知道的是，在你按下回车的那一刻——那个看似只是在等待 AI 回复的时刻——它启动了一个完整的操作系统级调度流程。权限检查、工具路由、Prompt 组装、子进程管理、沙箱隔离、Hook 事件分发……这一切在几十毫秒内完成，然后在你的终端里，安静地输出一行代码。
+        </p>
+
+        <p>
+          这就是 Claude Code 的悖论：外表是一个「聊天框」，内里是一个精密的工程系统。大多数人与它的互动，就像坐在驾驶座上却永远不会打开引擎盖。这本书，就是那个引擎盖。
+        </p>
+
+        <!-- 5 大震撼数字 -->
+        <div class="stats-grid">
+          <div class="stat-cell">
+            <div class="stat-num" data-target="1884">0</div>
+            <div class="stat-name">TypeScript 文件</div>
+            <div class="stat-sub">1,332 .ts + 552 .tsx</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-num" data-target="476875">0</div>
+            <div class="stat-name">有效代码行</div>
+            <div class="stat-sub">含空行共 512,695</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-num" data-target="40">0</div>
+            <div class="stat-name">内置 AI 工具</div>
+            <div class="stat-sub">四大类全覆盖</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-num" data-target="98">0</div>
+            <div class="stat-name">斜杠命令</div>
+            <div class="stat-sub">86 子目录 + 12 根文件</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-num" data-target="185">0</div>
+            <div class="stat-name">独立 Prompt</div>
+            <div class="stat-sub">穷尽审计，全部收录</div>
+          </div>
+        </div>
+
+        <!-- OS 定义引语 -->
+        <blockquote class="os-quote">
+          <p class="os-quote-text">「一个为 AI 智能体设计的操作系统。」</p>
+          <p class="os-quote-sub">
+            只不过它管理的不是硬件进程，而是 AI 智能体的生命周期——从一次 <code>claude</code> 命令的启动，到多步任务的编排，再到工具调用的权限裁决与沙箱退出。
+          </p>
+        </blockquote>
+
+        <aside class="insight">
+          <span class="insight-label">💡 通俗理解</span>
+          <p>「操作系统」是帮助理解的框架，不是字面定义。Claude Code 运行在 Node.js 之上，仍是用户态应用。但它承担的职责——资源调度、安全隔离、生命周期管理、扩展机制——与操作系统高度同构。就像称一辆重型越野车为「移动指挥室」：它仍然是汽车，但这个比喻揭示了它真正的使用方式。</p>
+        </aside>
+      </section>
+
+      <!-- ================================================
+           § 2 · 背景：群雄并起与生态爆发
+      ================================================ -->
+      <section id="s2" class="prologue-section">
+        <div class="section-eyebrow">§ 2</div>
+        <h2 class="section-title">2026：AI 编程助手竞争格局与生态催化</h2>
+
+        <p>
+          2026 年，AI 编程工具是科技行业竞争最激烈的赛道之一。每隔数月就有新的工具或重大更新发布，功能边界在不断扩张。在这场竞争中，不同工具选择了截然不同的技术路径与产品策略。
+        </p>
+
+        <!-- 竞争格局表 -->
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>工具</th>
+              <th>架构特征</th>
+              <th>核心差异</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Claude Code</td>
+              <td>Agent Loop + 工具调用</td>
+              <td>最接近通用编程 Agent，工具体系最完整</td>
+            </tr>
+            <tr>
+              <td>Cursor</td>
+              <td>IDE 深度集成</td>
+              <td>最佳编辑器体验，上下文感知最强</td>
+            </tr>
+            <tr>
+              <td>GitHub Copilot</td>
+              <td>补全优先</td>
+              <td>最大用户基数，GitHub 生态无缝集成</td>
+            </tr>
+            <tr>
+              <td>Gemini CLI</td>
+              <td>Google 生态</td>
+              <td>多模态优先，长上下文窗口领先</td>
+            </tr>
+            <tr>
+              <td>Windsurf</td>
+              <td>Codeium 背景</td>
+              <td>低成本切入，企业端定价策略激进</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 class="subsection-title">泄露事件：催化剂</h3>
+
+        <p>
+          2025 年底，Claude Code 2.1.88 版本的源代码意外流出。这不是一次简单的数据泄露——它相当于开源社区意外拿到了一份「AI Agent 工程学的施工图纸」。在此之前，AI Agent 框架的内部实现细节一直是各大公司的核心机密。
+        </p>
+
+        <p>
+          源码公开后的数周内，GitHub 上涌现了 20 余个衍生项目。开发者们以这份代码为蓝本，开始构建自己的 Agent 工具链：
+        </p>
+
+        <ul class="project-list">
+          <li>
+            <span class="project-name">agent-loop</span>
+            <span class="project-desc">Rust 语言复现核心调度循环，性能提升约 3×，已获 1.2k stars</span>
+          </li>
+          <li>
+            <span class="project-name">claude-code-proxy</span>
+            <span class="project-desc">API 路由层，支持切换底层模型（GPT-4o / Gemini / 本地模型）</span>
+          </li>
+          <li>
+            <span class="project-name">claudetools</span>
+            <span class="project-desc">工具扩展包，社区贡献 18 个新工具，遵循相同的 JSON Schema 接口规范</span>
+          </li>
+          <li>
+            <span class="project-name">cc-api-wrapper</span>
+            <span class="project-desc">企业适配层，添加审计日志、SSO 集成、费用控制等企业级功能</span>
+          </li>
+          <li>
+            <span class="project-name">20+ 其他衍生</span>
+            <span class="project-desc">包括语言绑定（Python/Go/Java）、IDE 插件、CLI 工具包装等</span>
+          </li>
+        </ul>
+
+        <aside class="insight">
+          <span class="insight-label">💡 通俗理解</span>
+          <p>这次泄露事件对 AI 工具生态的影响，类似于当年 Android 开放源码对移动生态的影响——不是完全的开源，但足以让生态圈看清楚「内行是怎么做的」，从而大幅压缩了后来者的学习成本。区别在于，Anthropic 并没有主动开源的意图，这份「施工图」是意外流出的。</p>
+        </aside>
+      </section>
+
+      <!-- ================================================
+           § 3 · 这本书是什么
+      ================================================ -->
+      <section id="s3" class="prologue-section">
+        <div class="section-eyebrow">§ 3</div>
+        <h2 class="section-title">我们做了什么，以及为什么值得你读</h2>
+
+        <p>
+          这本书的使命只有一句话：<strong>穷尽 Claude Code 2.1.88 源代码的每一个细节，写成一本可以信赖的技术参考书。</strong>
+        </p>
+
+        <p>
+          「可以信赖」意味着：我们不猜测，不臆断。所有结论都标注了源文件路径和行号。每一个「Claude Code 是这样设计的」的断言背后，都有对应的代码证据。这不是一篇博客文章，不是一个 YouTube 速成视频——这是一本可以在工作中用作参考的工程文献。
+        </p>
+
+        <!-- 书本元数据 -->
+        <div class="book-meta-grid">
+          <div class="book-meta-cell">
+            <span class="book-meta-num">83</span>
+            <span class="book-meta-label">章节，从 Part 0 到 Part 10</span>
+          </div>
+          <div class="book-meta-cell">
+            <span class="book-meta-num">360,583</span>
+            <span class="book-meta-label">CJK 字符（约 24 万字）</span>
+          </div>
+          <div class="book-meta-cell">
+            <span class="book-meta-num">122</span>
+            <span class="book-meta-label">张图表，全部以代码生成</span>
+          </div>
+          <div class="book-meta-cell">
+            <span class="book-meta-num">185</span>
+            <span class="book-meta-label">个 Prompt（A–K 共 11 类，全部收录）</span>
+          </div>
+          <div class="book-meta-cell">
+            <span class="book-meta-num">316</span>
+            <span class="book-meta-label">对 Q&amp;A 问答，覆盖常见疑问</span>
+          </div>
+          <div class="book-meta-cell">
+            <span class="book-meta-num">2.1.88</span>
+            <span class="book-meta-label">分析基准版本，精确到 commit</span>
+          </div>
+        </div>
+
+        <h3 class="subsection-title">适合谁读</h3>
+
+        <p>
+          这本书面向三类读者，每类读者都有自己的价值入口：
+        </p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>读者类型</th>
+              <th>你能从这里得到什么</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>工程师</td>
+              <td>深度理解 AI Agent 架构的工程实现：工具体系、权限模型、Prompt 工程、子 Agent 编排——不是原理，是代码</td>
+            </tr>
+            <tr>
+              <td>创业者</td>
+              <td>评估 Claude Code 的工程壁垒：哪些可以复制，哪些是真正的护城河，生态在哪里留下了切入口</td>
+            </tr>
+            <tr>
+              <td>CS 学生</td>
+              <td>在课堂上学到的操作系统、编译器、安全概念，如何在一个真实的、有数十万行代码的系统里具体落地</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ================================================
+           § 4 · 系统全景
+      ================================================ -->
+      <section id="s4" class="prologue-section">
+        <div class="section-eyebrow">§ 4</div>
+        <h2 class="section-title">为什么用「操作系统」来理解 Claude Code</h2>
+
+        <p>
+          在进入代码细节之前，我们需要建立一个整体框架。这个框架不是为了让描述听起来更宏大——它是一张工作地图，帮助你在阅读后续章节时，始终知道自己在整个系统的哪个位置。
+        </p>
+
+        <!-- 4.1 OS 类比建立 -->
+        <h3 class="subsection-title">4.1 操作系统映射</h3>
+
+        <p>
+          将 Claude Code 与操作系统类比，有两个核心同构点值得精确标注：
+        </p>
+
+        <table class="data-table os-map-table">
+          <thead>
+            <tr>
+              <th>OS 概念</th>
+              <th>Claude Code 实现</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Kernel（内核）</strong></td>
+              <td>
+                <strong>QueryEngine</strong> —— 进程调度器 · Prompt 组装 · 工具分发<br>
+                <span style="font-size:var(--sz-xs);color:var(--cc-text-3);">负责将用户请求分解为可执行的工具调用序列，管理调用状态机</span>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Syscall Interface（系统调用）</strong></td>
+              <td>
+                <strong>40 个工具</strong> —— 文件 / 进程 / 网络 / 子 Agent 的统一接口<br>
+                <span style="font-size:var(--sz-xs);color:var(--cc-text-3);">每个工具有严格的 JSON Schema 定义，是 AI 与真实系统交互的唯一合法通道</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <aside class="insight">
+          <span class="insight-label">💡 通俗理解</span>
+          <p>QueryEngine 就像一条快递分拣流水线：输入是一张「收件单」（用户请求），输出是一系列「派送任务」（工具调用）。流水线本身不送货，但它决定每个包裹走哪条路、优先级是什么、出错了如何重试。工具就像员工的「持证上岗」证书——没有这张证，AI 根本无法触碰文件系统或执行命令。</p>
+        </aside>
+
+        <!-- 4.2 工具目录 -->
+        <h3 class="subsection-title">4.2 工具完整目录</h3>
+
+        <p>
+          Claude Code 内置 43 个工具（40 核心 + 3 扩展），覆盖文件读写、Shell 执行、网络访问、子 Agent 派发四大类。每个工具的权限级别、参数 Schema、调用频率都在下图中完整呈现：
+        </p>
+
+        <figure class="chart-embed">
+          <figcaption class="chart-caption">43 个工具完整目录（来源：VIS-0-010）</figcaption>
+          <iframe src="../test-viz/production/html/VIS-0-010_43个工具完整目录.html"
+                  class="chart-frame"
+                  style="height:560px"
+                  loading="lazy"
+                  title="43个工具完整目录"></iframe>
+        </figure>
+
+        <!-- 4.3 安全防线 -->
+        <h3 class="subsection-title">4.3 安全防线：多层防御架构</h3>
+
+        <p>
+          对一个拥有文件读写、Shell 执行、网络访问能力的 AI Agent 而言，安全不是可选项——它是系统能够存在的前提条件。Claude Code 实现了 5 层递进式防御，每一层独立生效且不可被单独绕过：
+        </p>
+
+        <div class="security-layers">
+          <div class="security-layer">
+            <span class="layer-badge">Layer 1</span>
+            <div class="layer-content">
+              <div class="layer-title">权限模型</div>
+              <div class="layer-desc"><code>bypassPermissionsKillswitch</code> 全局开关 + 分级权限白名单。98 个斜杠命令各自携带独立的权限声明，任何越权操作在路由阶段即被拦截。</div>
+            </div>
+          </div>
+          <div class="security-layer">
+            <span class="layer-badge">Layer 2</span>
+            <div class="layer-content">
+              <div class="layer-title">工具调用沙箱</div>
+              <div class="layer-desc">每次工具调用前进行参数验证（JSON Schema 校验 + 路径规范化），防止路径穿越、命令注入等常见攻击向量。</div>
+            </div>
+          </div>
+          <div class="security-layer">
+            <span class="layer-badge">Layer 3</span>
+            <div class="layer-content">
+              <div class="layer-title">Prompt Injection 防御</div>
+              <div class="layer-desc">恶意内容尝试通过文件读取或外部数据注入指令时，系统维护独立的「指令来源」追踪，用户指令与工具返回内容保持严格隔离。</div>
+            </div>
+          </div>
+          <div class="security-layer">
+            <span class="layer-badge">Layer 4</span>
+            <div class="layer-content">
+              <div class="layer-title">互斥锁设计</div>
+              <div class="layer-desc">关键操作（如文件批量修改、Shell 脚本执行）实现互斥调度，防止并发操作下的竞态条件导致不可预测的系统状态。</div>
+            </div>
+          </div>
+          <div class="security-layer">
+            <span class="layer-badge">Layer 5</span>
+            <div class="layer-content">
+              <div class="layer-title">Fail-Closed 设计</div>
+              <div class="layer-desc">任何权限判断的异常路径默认走「拒绝」而非「允许」。即使权限系统本身出现 bug，也不会意外放行危险操作——这是反脆弱设计的核心体现。</div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="insight">
+          <span class="insight-label">💡 通俗理解</span>
+          <p>多层防御就像医院手术室的进入流程：消毒→换衣→戴手套→进无菌台，每一层独立设计，且不可跳过任何一层。即使在其中某一层出现操作失误，其他层仍然有效。Claude Code 的安全模型遵循同样的逻辑——单点失效不会导致整体崩溃。</p>
+        </aside>
+
+        <!-- 4.4 外部接口 -->
+        <h3 class="subsection-title">4.4 外部接口：Hook 事件与 MCP 连接</h3>
+
+        <p>
+          Claude Code 通过两套机制向外部世界开放扩展能力：27 个 Hook 事件节点，让开发者可以在 Agent 生命周期的任意阶段注入自定义逻辑；8 种 MCP 传输规格，让 Claude 能够连接任意外部数据源和服务。
+        </p>
+
+        <figure class="chart-embed">
+          <figcaption class="chart-caption">Hook 事件完整目录（来源：VIS-0-012）</figcaption>
+          <iframe src="../test-viz/production/html/VIS-0-012_Hook事件完整目录.html"
+                  class="chart-frame"
+                  style="height:480px"
+                  loading="lazy"
+                  title="Hook事件完整目录"></iframe>
+        </figure>
+
+        <p>
+          MCP（Model Context Protocol）是 Claude Code 连接外部世界的标准化接口。通过 MCP，开发者可以将数据库、API、文档系统等任意外部服务接入 Claude 的工具体系，而无需修改 Claude Code 本身的代码：
+        </p>
+
+        <figure class="chart-embed">
+          <figcaption class="chart-caption">MCP 传输方式对比（来源：VIS-0-013）</figcaption>
+          <iframe src="../test-viz/production/html/VIS-0-013_MCP传输方式对比.html"
+                  class="chart-frame"
+                  style="height:420px"
+                  loading="lazy"
+                  title="MCP传输方式对比"></iframe>
+        </figure>
+
+        <aside class="insight">
+          <span class="insight-label">💡 通俗理解</span>
+          <p>Hook 像「快递柜的短信通知」——快递到了（事件触发），你收到消息，可以选择去取（执行自定义逻辑），也可以忽略，快递柜仍然正常运作。MCP 像「MacBook 的 USB-C 转接口」——MacBook 本身不关心你接的是显示器还是硬盘，转接口提供统一的物理接口，外设自己实现各自的逻辑。</p>
+        </aside>
+
+        <!-- 4.5 内部组织 -->
+        <h3 class="subsection-title">4.5 内部组织：35 个子系统的模块依赖拓扑</h3>
+
+        <p>
+          从代码结构来看，Claude Code 内部由 35 个顶层子系统组成。这些子系统并非平等排列——它们之间存在严格的依赖层级，底层基础设施（日志、配置、错误处理）被几乎所有上层模块依赖，而业务逻辑层（命令、工具、Agent）则聚合在最顶层：
+        </p>
+
+        <figure class="chart-embed">
+          <figcaption class="chart-caption">模块依赖网络图（来源：VIS-0-005）</figcaption>
+          <iframe src="../test-viz/production/html/VIS-0-005_模块依赖网络图.html"
+                  class="chart-frame"
+                  style="height:500px"
+                  loading="lazy"
+                  title="模块依赖网络图"></iframe>
+        </figure>
+
+        <h3 class="subsection-title">一次请求的 9 步旅程</h3>
+
+        <p>
+          从你在终端输入一行 <code>claude "fix this bug"</code>，到最终看到 AI 的输出，中间经历了 9 个可观测的处理阶段：
+        </p>
+
+        <div class="journey-grid">
+          <div class="journey-step">
+            <div class="journey-step-num">Step 1</div>
+            <div class="journey-step-text">CLI 解析：参数校验 + 配置合并 + 工作目录确认</div>
+          </div>
+          <div class="journey-step">
+            <div class="journey-step-num">Step 2</div>
+            <div class="journey-step-text">权限初始化：读取 <code>.claude/</code> 配置，构建权限上下文</div>
+          </div>
+          <div class="journey-step">
+            <div class="journey-step-num">Step 3</div>
+            <div class="journey-step-text">Prompt 组装：SystemPrompt + ContextWindow + 工具定义注入</div>
+          </div>
+          <div class="journey-step">
+            <div class="journey-step-num">Step 4</div>
+            <div class="journey-step-text">首次 API 调用：发送至 Claude API，等待第一个 token</div>
+          </div>
+          <div class="journey-step">
+            <div class="journey-step-num">Step 5</div>
+            <div class="journey-step-text">工具路由：解析 <code>tool_use</code> 块，匹配工具实现类</div>
+          </div>
+          <div class="journey-step">
+            <div class="journey-step-num">Step 6</div>
+            <div class="journey-step-text">权限裁决：检查工具调用是否在用户授权范围内</div>
+          </div>
+          <div class="journey-step">
+            <div class="journey-step-num">Step 7</div>
+            <div class="journey-step-text">工具执行：在沙箱内运行，捕获 stdout/stderr/exitCode</div>
+          </div>
+          <div class="journey-step">
+            <div class="journey-step-num">Step 8</div>
+            <div class="journey-step-text">结果回注：将工具结果作为 <code>tool_result</code> 追加对话历史</div>
+          </div>
+          <div class="journey-step">
+            <div class="journey-step-num">Step 9</div>
+            <div class="journey-step-text">循环判断：检查停止条件，决定继续调用还是输出最终结果</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================
+           § 5 · 如何阅读这本书
+      ================================================ -->
+      <section id="s5" class="prologue-section">
+        <div class="section-eyebrow">§ 5</div>
+        <h2 class="section-title">找到属于你的入口</h2>
+
+        <p>
+          这本书有 83 章，你不需要从第一章读到最后一章。根据你的背景和目标，有三条已经标记好的路径：
+        </p>
+
+        <!-- 读者路径卡片 -->
+        <div class="reader-paths">
+          <div class="reader-path-cell">
+            <div class="reader-path-type">工程师路径</div>
+            <div class="reader-path-title">从架构入手</div>
+            <div class="reader-path-desc">你想理解 AI Agent 的工程实现细节，包括调度循环、工具体系、权限模型、Prompt 工程的真实形态。</div>
+            <div class="reader-path-route">Part 1 → 2 → 4 → 5 → 6</div>
+          </div>
+          <div class="reader-path-cell">
+            <div class="reader-path-type">创业者路径</div>
+            <div class="reader-path-title">商业与生态视角</div>
+            <div class="reader-path-desc">你想评估 Claude Code 的工程壁垒、识别可复制的部分和真正的护城河，以及生态切入机会。</div>
+            <div class="reader-path-route">序章 → Part 1 → 3 → 5</div>
+          </div>
+          <div class="reader-path-cell">
+            <div class="reader-path-type">CS 学生路径</div>
+            <div class="reader-path-title">课堂概念对接</div>
+            <div class="reader-path-desc">你学过操作系统、编译器、网络安全，想看这些概念在一个真实的大型系统里是怎么具体落地的。</div>
+            <div class="reader-path-route">序章 → Part 2 → Part 1</div>
+          </div>
+        </div>
+
+        <!-- 知识图谱 -->
+        <figure class="chart-embed">
+          <figcaption class="chart-caption">本书知识图谱（来源：VIS-0-014）</figcaption>
+          <iframe src="../test-viz/production/html/VIS-0-014_本书知识图谱.html"
+                  class="chart-frame"
+                  style="height:500px"
+                  loading="lazy"
+                  title="本书知识图谱"></iframe>
+        </figure>
+
+        <!-- 源码快速导航 -->
+        <h3 class="subsection-title">源码快速导航</h3>
+
+        <p>
+          如果你在阅读本书的同时想对照源代码，以下是五个最重要的入口：
+        </p>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>入口</th>
+              <th>路径</th>
+              <th>说明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>CLI 入口</td>
+              <td class="mono">src/cli/cli.ts</td>
+              <td>命令行解析起点，所有用户操作从这里开始</td>
+            </tr>
+            <tr>
+              <td>工具实现</td>
+              <td class="mono">src/tools/</td>
+              <td>38 个工具文件，每个工具一个独立模块</td>
+            </tr>
+            <tr>
+              <td>权限系统</td>
+              <td class="mono">src/permissions/</td>
+              <td>访问控制核心，权限模型的完整实现</td>
+            </tr>
+            <tr>
+              <td>Prompt 工厂</td>
+              <td class="mono">src/context/</td>
+              <td>185 个 Prompt 的管理与组装逻辑</td>
+            </tr>
+            <tr>
+              <td>Agent 编排</td>
+              <td class="mono">src/agents/</td>
+              <td>子 Agent 协调，多步任务的调度中枢</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- 5 个比喻视角 -->
+        <h3 class="subsection-title">五个视角，五种光线</h3>
+
+        <p>
+          这本书中你会看到五种不同的比喻被反复使用。每种比喻照亮系统的不同侧面——它们不是互相矛盾的，而是互相补充的：
+        </p>
+
+        <div class="analogy-list">
+          <div class="analogy-item">
+            <span class="analogy-icon">⚙️</span>
+            <span class="analogy-name">操作系统</span>
+            <span class="analogy-desc">调度、隔离、生命周期管理</span>
+          </div>
+          <div class="analogy-item">
+            <span class="analogy-icon">🏙️</span>
+            <span class="analogy-name">城市</span>
+            <span class="analogy-desc">基础设施、分区、流量管控</span>
+          </div>
+          <div class="analogy-item">
+            <span class="analogy-icon">📦</span>
+            <span class="analogy-name">快递系统</span>
+            <span class="analogy-desc">分拣、路由、状态追踪</span>
+          </div>
+          <div class="analogy-item">
+            <span class="analogy-icon">🧱</span>
+            <span class="analogy-name">积木</span>
+            <span class="analogy-desc">模块化、可组合、标准接口</span>
+          </div>
+          <div class="analogy-item">
+            <span class="analogy-icon">🌿</span>
+            <span class="analogy-name">生态链</span>
+            <span class="analogy-desc">共生、寄生、竞争与演化</span>
+          </div>
+        </div>
+
+        <!-- 收尾致敬 -->
+        <div class="closing-note">
+          <p>
+            本书的所有分析基于 <strong>Claude Code 2.1.88</strong> 版本的源代码。代码已于 2025 年底公开流传，我们在此基础上进行了系统性的逆向文档化工作。
+          </p>
+          <p style="margin-top:0.75rem;">
+            我们对 Anthropic 的工程团队怀有真诚的敬意。这份代码展现了大量精巧的工程判断，值得被认真记录和研究。本书中的批评与建议，和赞美一样真诚——我们相信，对一个优秀系统最好的尊重，是把它研究透彻。
+          </p>
+        </div>
+      </section>
+
+    </main>
+  </div><!-- /.page -->
+
+  <script>
+    /* ============================================
+       主题切换
+    ============================================ */
+    function toggleTheme() {
+      var html = document.documentElement;
+      var current = html.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('cc-theme', next);
+    }
+
+    /* ============================================
+       数字滚动动画
+    ============================================ */
+    (function() {
+      var targets = {
+        1884:   { formatted: '1,884' },
+        476875: { formatted: '476,875' },
+        40:     { formatted: '40' },
+        98:     { formatted: '98' },
+        185:    { formatted: '185' }
+      };
+
+      function easeOut(t) {
+        return 1 - Math.pow(1 - t, 3);
+      }
+
+      function formatNum(n, target) {
+        if (target >= 1000) {
+          return n.toLocaleString('en-US');
+        }
+        return String(Math.round(n));
+      }
+
+      function animateNumber(el, target) {
+        var duration = 1400;
+        var start = performance.now();
+        el.classList.add('counting');
+
+        function tick(now) {
+          var elapsed = now - start;
+          var progress = Math.min(elapsed / duration, 1);
+          var value = Math.round(easeOut(progress) * target);
+          el.textContent = formatNum(value, target);
+          if (progress < 1) {
+            requestAnimationFrame(tick);
+          } else {
+            el.textContent = targets[target] ? targets[target].formatted : formatNum(target, target);
+          }
+        }
+
+        requestAnimationFrame(tick);
+      }
+
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            var el = entry.target;
+            var t = parseInt(el.getAttribute('data-target'), 10);
+            if (!el.dataset.animated) {
+              el.dataset.animated = '1';
+              animateNumber(el, t);
+            }
+            observer.unobserve(el);
+          }
+        });
+      }, { threshold: 0.3 });
+
+      document.querySelectorAll('.stat-num[data-target]').forEach(function(el) {
+        observer.observe(el);
+      });
+    })();
+
+    /* ============================================
+       TOC active 高亮
+    ============================================ */
+    (function() {
+      var sections = document.querySelectorAll('.prologue-section');
+      var tocLinks = {};
+      ['s1','s2','s3','s4','s5'].forEach(function(id) {
+        tocLinks[id] = document.getElementById('toc-' + id);
+      });
+
+      function updateActive() {
+        var scrollY = window.scrollY + 120;
+        var active = null;
+        sections.forEach(function(sec) {
+          if (sec.offsetTop <= scrollY) {
+            active = sec.id;
+          }
+        });
+        Object.keys(tocLinks).forEach(function(id) {
+          var link = tocLinks[id];
+          if (!link) return;
+          if (id === active) {
+            link.classList.add('active');
+          } else {
+            link.classList.remove('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', updateActive, { passive: true });
+      updateActive();
+    })();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Block 4 · 数字震撼 · V3 Demo</title>
+    <style>
+        /* ============================================================
+           V3 设计宪法 · Block 4 数字震撼
+           字号 5 阶: xs=12 sm=14 base=16 lg=20 2xl=28 3xl=40
+           品牌色唯一: #f59e0b
+           论文密度: 行高 1.5, 正文 15px, 留白克制
+           通俗理解: 13px 小卡, 浅灰背景, 左 3px 橙边
+        ============================================================ */
+
+        :root {
+            --cc-color-brand:       #f59e0b;
+            --cc-color-brand-dim:   rgba(245, 158, 11, 0.12);
+            --cc-color-brand-border:rgba(245, 158, 11, 0.35);
+
+            --cc-color-bg:           #0a0a0b;
+            --cc-color-surface:      #111113;
+            --cc-color-surface-2:    #1a1a1e;
+            --cc-color-surface-3:    #242428;
+            --cc-color-border:       rgba(255,255,255,0.08);
+            --cc-color-border-med:   rgba(255,255,255,0.14);
+
+            --cc-color-text:         #f0f0f0;
+            --cc-color-text-2:       #a0a0a8;
+            --cc-color-text-3:       #6a6a72;
+
+            --cc-font-sans: system-ui, -apple-system, "Segoe UI", "Noto Sans SC",
+                            "PingFang SC", "Microsoft YaHei", sans-serif;
+            --cc-font-mono: "SF Mono", "Fira Code", "JetBrains Mono",
+                            "Cascadia Code", Consolas, monospace;
+
+            /* 5 阶字号 — 硬性规定，禁止 clamp 巨号 */
+            --sz-xs:   0.75rem;    /* 12px */
+            --sz-sm:   0.875rem;   /* 14px */
+            --sz-base: 1rem;       /* 16px */
+            --sz-lg:   1.25rem;    /* 20px */
+            --sz-2xl:  1.75rem;    /* 28px */
+            --sz-3xl:  2.5rem;     /* 40px ← 仅块标题区 */
+
+            --leading: 1.5;
+            --leading-tight: 1.25;
+            --measure: 68ch;
+        }
+
+        [data-theme="light"] {
+            --cc-color-bg:          #fafafa;
+            --cc-color-surface:     #ffffff;
+            --cc-color-surface-2:   #f4f4f5;
+            --cc-color-surface-3:   #e8e8ea;
+            --cc-color-border:      rgba(0,0,0,0.07);
+            --cc-color-border-med:  rgba(0,0,0,0.12);
+            --cc-color-text:        #18181b;
+            --cc-color-text-2:      #52525b;
+            --cc-color-text-3:      #a1a1aa;
+            --cc-color-brand-dim:   rgba(245, 158, 11, 0.08);
+            --cc-color-brand-border:rgba(245, 158, 11, 0.30);
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--cc-font-sans);
+            font-size: var(--sz-sm);        /* 14px 正文基准 */
+            line-height: var(--leading);
+            color: var(--cc-color-text);
+            background: var(--cc-color-bg);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── 主题切换 ─────────────────────────────────── */
+        .toggle-btn {
+            position: fixed; top: 1rem; right: 1rem; z-index: 999;
+            padding: 0.25rem 0.75rem;
+            background: var(--cc-color-surface-2);
+            border: 1px solid var(--cc-color-border-med);
+            border-radius: 4px;
+            color: var(--cc-color-text-2);
+            font-family: var(--cc-font-mono);
+            font-size: var(--sz-xs);
+            cursor: pointer;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .toggle-btn:hover { border-color: var(--cc-color-brand); color: var(--cc-color-brand); }
+
+        /* ── 页面骨架 ─────────────────────────────────── */
+        .page {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem 5rem;
+        }
+
+        /* ── 块标签 ─────────────────────────────────── */
+        .block-label {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-family: var(--cc-font-mono);
+            font-size: var(--sz-xs);
+            color: var(--cc-color-text-3);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 1.25rem;
+        }
+        .block-label::before {
+            content: '';
+            display: inline-block;
+            width: 28px; height: 1px;
+            background: var(--cc-color-brand);
+        }
+        .block-label .num { color: var(--cc-color-brand); font-weight: 600; }
+
+        /* ── 块标题 (3xl = 40px, 仅此处) ──────────────── */
+        .block-title {
+            font-size: var(--sz-3xl);       /* 40px */
+            font-weight: 700;
+            line-height: var(--leading-tight);
+            color: var(--cc-color-text);
+            margin-bottom: 1rem;
+        }
+
+        /* ── 引言段落 ─────────────────────────────────── */
+        .lead {
+            font-size: var(--sz-base);      /* 16px */
+            line-height: var(--leading);
+            color: var(--cc-color-text-2);
+            max-width: var(--measure);
+            margin-bottom: 2rem;
+        }
+
+        /* ══════════════════════════════════════════════
+           数字震撼区 — 5 大统计数字
+        ══════════════════════════════════════════════ */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1px;
+            border: 1px solid var(--cc-color-border-med);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        .stat-cell {
+            padding: 1.25rem 1rem;
+            background: var(--cc-color-surface);
+            text-align: center;
+            transition: background 0.15s;
+        }
+        .stat-cell:hover { background: var(--cc-color-surface-2); }
+        .stat-cell + .stat-cell { border-left: 1px solid var(--cc-color-border); }
+
+        .stat-num {
+            font-family: var(--cc-font-mono);
+            font-size: var(--sz-2xl);       /* 28px */
+            font-weight: 700;
+            color: var(--cc-color-brand);
+            line-height: 1.1;
+            margin-bottom: 0.3rem;
+            letter-spacing: -0.02em;
+        }
+        .stat-name {
+            font-size: var(--sz-xs);        /* 12px */
+            color: var(--cc-color-text-2);
+            line-height: 1.3;
+        }
+        .stat-sub {
+            font-family: var(--cc-font-mono);
+            font-size: 11px;
+            color: var(--cc-color-text-3);
+            margin-top: 0.2rem;
+        }
+
+        .stats-footnote {
+            font-family: var(--cc-font-mono);
+            font-size: var(--sz-xs);
+            color: var(--cc-color-text-3);
+            text-align: right;
+            margin-bottom: 2rem;
+        }
+
+        /* ── OS 定义引用块 ────────────────────────────── */
+        .os-quote {
+            border-left: 3px solid var(--cc-color-brand);
+            padding: 0.75rem 1.25rem;
+            margin: 2rem 0;
+            background: var(--cc-color-brand-dim);
+            border-radius: 0 4px 4px 0;
+        }
+        .os-quote-text {
+            font-size: var(--sz-lg);        /* 20px */
+            font-weight: 600;
+            color: var(--cc-color-text);
+            line-height: 1.4;
+            margin-bottom: 0.35rem;
+        }
+        .os-quote-sub {
+            font-size: var(--sz-sm);
+            color: var(--cc-color-text-2);
+            line-height: var(--leading);
+        }
+
+        /* ═══════════════════════════════════════
+           分区分隔
+        ═══════════════════════════════════════ */
+        .section { margin-top: 2.5rem; }
+
+        .section-header {
+            font-size: var(--sz-sm);        /* 14px */
+            font-weight: 600;
+            color: var(--cc-color-text-3);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            font-family: var(--cc-font-mono);
+            margin-bottom: 0.75rem;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .section-header::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--cc-color-border-med);
+        }
+
+        /* ── 源码拆解表 ──────────────────────────────── */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--sz-sm);        /* 14px */
+        }
+        .data-table th {
+            font-family: var(--cc-font-mono);
+            font-size: var(--sz-xs);
+            color: var(--cc-color-text-3);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.35rem 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--cc-color-border-med);
+            font-weight: 500;
+        }
+        .data-table td {
+            padding: 0.45rem 0.75rem;
+            border-bottom: 1px solid var(--cc-color-border);
+            color: var(--cc-color-text-2);
+            vertical-align: middle;
+        }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: var(--cc-color-surface-2); }
+
+        .mono { font-family: var(--cc-font-mono); color: var(--cc-color-text); }
+        .brand { color: var(--cc-color-brand); font-weight: 600; }
+        .muted { color: var(--cc-color-text-3); font-size: var(--sz-xs); }
+
+        /* 小进度条 */
+        .bar-wrap {
+            width: 80px; height: 4px;
+            background: var(--cc-color-surface-3);
+            border-radius: 2px;
+            display: inline-block;
+            vertical-align: middle;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            background: var(--cc-color-brand);
+            border-radius: 2px;
+        }
+
+        /* ── 9 步架构流 ──────────────────────────────── */
+        .arch-flow {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+        .arch-node {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: var(--cc-color-surface);
+            border: 1px solid var(--cc-color-border);
+            border-radius: 4px;
+            font-size: var(--sz-sm);
+        }
+        .arch-node:hover {
+            border-color: var(--cc-color-brand-border);
+            background: var(--cc-color-surface-2);
+        }
+        .arch-idx {
+            font-family: var(--cc-font-mono);
+            font-size: var(--sz-xs);
+            width: 18px; height: 18px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--cc-color-brand);
+            color: var(--cc-color-bg);
+            border-radius: 50%;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .arch-label { color: var(--cc-color-text-2); }
+
+        .arch-subsystems {
+            display: flex; flex-wrap: wrap; gap: 0.4rem;
+            margin-top: 0.75rem;
+        }
+        .arch-tag {
+            font-family: var(--cc-font-mono);
+            font-size: var(--sz-xs);
+            padding: 0.2rem 0.6rem;
+            background: var(--cc-color-surface-2);
+            border: 1px solid var(--cc-color-border-med);
+            border-radius: 3px;
+            color: var(--cc-color-text-3);
+        }
+
+        /* ── Prompt 拆解 ─────────────────────────────── */
+        .prompt-chips {
+            display: flex; flex-wrap: wrap; gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+        .chip {
+            font-family: var(--cc-font-mono);
+            font-size: var(--sz-xs);
+            padding: 0.2rem 0.6rem;
+            background: var(--cc-color-surface-2);
+            border: 1px solid var(--cc-color-border-med);
+            border-radius: 3px;
+            color: var(--cc-color-text-2);
+        }
+        .chip-main {
+            background: var(--cc-color-brand-dim);
+            border-color: var(--cc-color-brand-border);
+            color: var(--cc-color-brand);
+            font-weight: 600;
+        }
+        .prompt-note {
+            font-size: var(--sz-sm);
+            color: var(--cc-color-text-3);
+            margin-top: 0.6rem;
+            padding-top: 0.6rem;
+            border-top: 1px dashed var(--cc-color-border-med);
+        }
+        .prompt-note strong { color: var(--cc-color-text-2); }
+
+        /* ══ 通俗理解小卡 (V3 规范) ═══════════════════
+           13px / 浅灰背景 / 左 3px brand 边框 / 紧凑
+        ═════════════════════════════════════════════ */
+        .insight {
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--cc-color-text-2);
+            background: var(--cc-color-surface-2);
+            border-left: 3px solid var(--cc-color-brand);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0 3px 3px 0;
+            margin-top: 0.75rem;
+        }
+        .insight-label {
+            font-family: var(--cc-font-mono);
+            font-size: 11px;
+            color: var(--cc-color-brand);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 0.2rem;
+        }
+
+        /* ── 脚注/免责 ───────────────────────────────── */
+        .caveat {
+            font-size: var(--sz-sm);
+            line-height: var(--leading);
+            color: var(--cc-color-text-3);
+            border-top: 1px solid var(--cc-color-border-med);
+            padding-top: 1.25rem;
+            margin-top: 2.5rem;
+        }
+        .caveat p + p { margin-top: 0.5rem; }
+        .caveat strong { color: var(--cc-color-text-2); }
+
+        /* ── 响应式 ──────────────────────────────────── */
+        @media (max-width: 700px) {
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+            .stats-grid .stat-cell:nth-child(4),
+            .stats-grid .stat-cell:nth-child(5) {
+                border-left: none;
+                border-top: 1px solid var(--cc-color-border);
+            }
+            .arch-flow { grid-template-columns: 1fr 1fr; }
+            .sz-3xl { font-size: 1.875rem; }
+        }
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .arch-flow { grid-template-columns: 1fr; }
+            .page { padding: 2rem 1rem 4rem; }
+        }
+    </style>
+</head>
+<body>
+    <button class="toggle-btn" onclick="toggleTheme()">◐ 主题</button>
+
+    <div class="page">
+
+        <!-- ① 块标签 -->
+        <div class="block-label">
+            <span>序章</span>
+            <span class="num">Block 04</span>
+            <span>数字震撼</span>
+        </div>
+
+        <!-- ② 块标题 (3xl = 40px, 全文最大) -->
+        <h1 class="block-title">打开引擎盖</h1>
+
+        <!-- ③ 引言 -->
+        <p class="lead">
+            它有自己的进程调度器、安全沙箱、文件版本管理、多实例协调器、遥测管线、插件生态——
+            如果你非要用一个词来描述它，最准确的说法是……
+        </p>
+
+        <!-- ④ 5 大震撼数字 -->
+        <div class="stats-grid">
+            <div class="stat-cell">
+                <div class="stat-num" id="n1">1,884</div>
+                <div class="stat-name">TypeScript 文件</div>
+                <div class="stat-sub">1,332 .ts + 552 .tsx</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-num" id="n2">476,875</div>
+                <div class="stat-name">有效代码行</div>
+                <div class="stat-sub">non-blank lines</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-num" id="n3">40</div>
+                <div class="stat-name">AI 工具</div>
+                <div class="stat-sub">内置 core tools</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-num" id="n4">98</div>
+                <div class="stat-name">斜杠命令</div>
+                <div class="stat-sub">86 子目录 + 12 根</div>
+            </div>
+            <div class="stat-cell">
+                <div class="stat-num" id="n5">185</div>
+                <div class="stat-name">独立 Prompt</div>
+                <div class="stat-sub">穷尽审计 · 黄金资产</div>
+            </div>
+        </div>
+        <div class="stats-footnote">
+            含空行共 512,695 行 · 35 个顶层子系统 · 93.0% 有效代码率
+        </div>
+
+        <!-- ⑤ OS 定义 -->
+        <div class="os-quote">
+            <div class="os-quote-text">「一个为 AI 智能体设计的操作系统。」</div>
+            <div class="os-quote-sub">只不过它管理的不是硬件进程，而是 AI 智能体的生命周期。</div>
+        </div>
+
+        <!-- ⑥ 源码拆解表 -->
+        <div class="section">
+            <div class="section-header">源码规模拆解</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>子系统 / 文件</th>
+                        <th>行数</th>
+                        <th>占比</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="mono">utils/</span> <span class="muted">最大子系统</span></td>
+                        <td class="brand mono">180,472</td>
+                        <td class="muted">37.8%</td>
+                        <td><span class="bar-wrap"><span class="bar-fill" style="width:100%"></span></span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="mono">cli/print.ts</span> <span class="muted">最大单文件</span></td>
+                        <td class="brand mono">5,594</td>
+                        <td class="muted">1.17%</td>
+                        <td><span class="bar-wrap"><span class="bar-fill" style="width:100%"></span></span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="mono">utils/messages.ts</span></td>
+                        <td class="mono">5,512</td>
+                        <td class="muted">1.15%</td>
+                        <td><span class="bar-wrap"><span class="bar-fill" style="width:98.5%"></span></span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="mono">utils/sessionStorage.ts</span></td>
+                        <td class="mono">5,105</td>
+                        <td class="muted">1.07%</td>
+                        <td><span class="bar-wrap"><span class="bar-fill" style="width:91.3%"></span></span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="mono">安全关键词</span> <span class="muted">permission/auth/sandbox…</span></td>
+                        <td class="mono">4,709</td>
+                        <td class="muted">—</td>
+                        <td><span class="bar-wrap"><span class="bar-fill" style="width:84%"></span></span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="mono">TODO / FIXME / HACK</span></td>
+                        <td class="mono">138 / 0 / 0</td>
+                        <td class="muted">&lt; 0.03%</td>
+                        <td><span class="bar-wrap"><span class="bar-fill" style="width:2.5%"></span></span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="insight">
+                <div class="insight-label">通俗理解</div>
+                138 个 TODO、0 个 FIXME、0 个 HACK——生产级工程代码的纪律感，远超大多数同等规模的开源项目。
+            </div>
+        </div>
+
+        <!-- ⑦ 9 步架构流 -->
+        <div class="section">
+            <div class="section-header">九步请求旅程（每次回复的完整路径）</div>
+            <div class="arch-flow">
+                <div class="arch-node">
+                    <span class="arch-idx">1</span>
+                    <span class="arch-label">CLI 入口</span>
+                </div>
+                <div class="arch-node">
+                    <span class="arch-idx">2</span>
+                    <span class="arch-label">权限系统</span>
+                </div>
+                <div class="arch-node">
+                    <span class="arch-idx">3</span>
+                    <span class="arch-label">Prompt 组装</span>
+                </div>
+                <div class="arch-node">
+                    <span class="arch-idx">4</span>
+                    <span class="arch-label">Query Loop</span>
+                </div>
+                <div class="arch-node">
+                    <span class="arch-idx">5</span>
+                    <span class="arch-label">API 客户端</span>
+                </div>
+                <div class="arch-node">
+                    <span class="arch-idx">6</span>
+                    <span class="arch-label">响应解析</span>
+                </div>
+                <div class="arch-node">
+                    <span class="arch-idx">7</span>
+                    <span class="arch-label">工具调度器</span>
+                </div>
+                <div class="arch-node">
+                    <span class="arch-idx">8</span>
+                    <span class="arch-label">Agent 协调</span>
+                </div>
+                <div class="arch-node">
+                    <span class="arch-idx">9</span>
+                    <span class="arch-label">输出渲染</span>
+                </div>
+            </div>
+            <div class="arch-subsystems">
+                <span class="muted" style="font-size:11px;margin-right:0.25rem">六大支撑子系统 →</span>
+                <span class="arch-tag">权限</span>
+                <span class="arch-tag">配置</span>
+                <span class="arch-tag">MCP</span>
+                <span class="arch-tag">Hooks</span>
+                <span class="arch-tag">沙箱</span>
+                <span class="arch-tag">上下文</span>
+            </div>
+
+            <div class="insight">
+                <div class="insight-label">通俗理解</div>
+                一次看似简单的回复背后，<strong style="color:var(--cc-color-brand)">最多 7 个 AI 实例同时工作</strong>——
+                主 Agent 拆解任务，子 Agent 并行执行，结果汇总后统一输出。
+                就像外卖平台同时派出多辆骑手，最快的那条路线决定你何时收到餐。
+            </div>
+        </div>
+
+        <!-- ⑧ 185 Prompt 拆解 -->
+        <div class="section">
+            <div class="section-header">185 个独立 Prompt 单元构成</div>
+            <div class="prompt-chips">
+                <span class="chip chip-main">185 总计</span>
+                <span class="chip">24 系统段</span>
+                <span class="chip">54 工具描述</span>
+                <span class="chip">12 子 Agent</span>
+                <span class="chip">20 Skill</span>
+                <span class="chip">19 服务层</span>
+                <span class="chip">12 记忆系统</span>
+            </div>
+            <div class="prompt-note">
+                最长单一 Prompt：<strong>约 12,000 字</strong>
+                （P179 · <code style="font-size:12px">NEW_INIT_PROMPT</code> / <code style="font-size:12px">/init</code> 命令的 8 阶段引导流程）
+            </div>
+        </div>
+
+        <!-- ⑨ 免责/通俗理解 -->
+        <div class="caveat">
+            <p>
+                <strong>关于"操作系统"类比：</strong>
+                这是一个帮助理解的框架，不是精确的技术定义——Claude Code 运行在 Node.js 之上，本身仍是用户态应用程序。
+                但它承担的职责（资源调度、安全隔离、生命周期管理、扩展机制）与操作系统高度同构。
+            </p>
+            <p>
+                类比的价值不在于字面准确，而在于借用你已熟悉的心智模型，快速建立对一个全新系统的直觉。
+            </p>
+        </div>
+
+    </div><!-- /.page -->
+
+    <script>
+        /* 主题切换 */
+        (function() {
+            const saved = localStorage.getItem('v3-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        })();
+
+        function toggleTheme() {
+            const el = document.documentElement;
+            const next = el.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            el.setAttribute('data-theme', next);
+            localStorage.setItem('v3-theme', next);
+        }
+
+        /* 数字滚动 (IntersectionObserver，只跑一次) */
+        function animCount(el, target, ms = 1400) {
+            const start = performance.now();
+            const fmt = n => target >= 1000 ? n.toLocaleString() : String(n);
+            function tick(now) {
+                const t = Math.min((now - start) / ms, 1);
+                const ease = 1 - Math.pow(1 - t, 3);
+                el.textContent = fmt(Math.floor(ease * target));
+                if (t < 1) requestAnimationFrame(tick);
+                else el.textContent = fmt(target);
+            }
+            requestAnimationFrame(tick);
+        }
+
+        const targets = [
+            { id: 'n1', val: 1884 },
+            { id: 'n2', val: 476875 },
+            { id: 'n3', val: 40 },
+            { id: 'n4', val: 98 },
+            { id: 'n5', val: 185 },
+        ];
+
+        const grid = document.querySelector('.stats-grid');
+        let fired = false;
+        const obs = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && !fired) {
+                fired = true;
+                targets.forEach(({ id, val }) => {
+                    const el = document.getElementById(id);
+                    if (el) animCount(el, val);
+                });
+            }
+        }, { threshold: 0.3 });
+        if (grid) obs.observe(grid);
+    </script>
+</body>
+</html>
