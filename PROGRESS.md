@@ -2,7 +2,9 @@
 
 > 📌 [黄金资产索引](handoff/golden-assets-index-2026-04-06.md) — 11 件高价值文件全收录，每次写 Brief 前先查，防止重复劳动或遗漏已有资产
 
-> 最后更新：2026-04-07 07:25 — 自主值班轮 #4（终端 #3 凌晨 02:13-07:25，**5 小时 12 分钟**）：🎉 **V2 序章 11/11 全部完成 + 整体评审 9.9/10 + 11/11 toggle 全完整** 🎉。13 atomic commit + 11 块 final HTML + P0/P1/P2 全修完 + **11 块 toggle 一致性 100% 达成**。**Sonnet 副手 38+ 次调度**。最后一轮（Round 13）给 Block 7a/7c/8 做完整 toggle 修复（CSS 结构性转换 @media → [data-theme="light"] + 保留 @media 作 OS 偏好兜底 + 加 toggle button + JS）。剩 11 块 token 命名拉齐 (12h, 3 PR 分批) + Block 6 0.3-A 工具卡 8→43 (需用户提供 SoT) + 网页拼装。
+> 最后更新：2026-04-09 — Sonnet 4.6 值班轮 #5：**V3 序章首版完成** 🎉。用户确认 V2 = 灾难（PPT浮夸/颜色割裂/图表退化），执行 V3 重写。诊断报告：V2 11块 5大病症(颜色割裂/巨号字体/Token命名混乱/图表重造/PPT留白)，全书仅 Block 4 用对品牌色。方案：11块→5逻辑区块合并，V3宪法重建，V1图表 iframe 嵌入。**产出：v3-prologue/prologue-v3-complete.html（1409行，5节，5个V1图嵌入，零clamp，唯一品牌色#f59e0b）**。commit `6410f71` 已推送 GitHub。
+
+> 上一更新：2026-04-07 07:25 — 自主值班轮 #4：🎉 **V2 序章 11/11 全部完成 + 整体评审 9.9/10 + 11/11 toggle 全完整** 🎉
 
 ## 项目概况
 
@@ -14,7 +16,8 @@
 | 完整度 | 83/83 = 4.95/5 avg |
 | 图表进度 | 122/121 生产覆盖 ✅（122 HTML / 121 brief，VIS-0-002 有 B 变体）+ 105/122 placeholder 内联（B 路径 UI 已禁用，待 V2 范式重做）；4 张 v2 升级版在 simple/ 待用户决策是否替换 v1 |
 | 工作区清洁度 | ✅ 142.5 MB 归档（sandbox-astro-spike + test-viz-revisions + test-viz-_archive）+ 7 空文件删除，详见 archive/_archive-log-2026-04-06.md |
-| V2 序章阶段 | 阶段 2.6 ✅ → **阶段 2.7 (11 块 toggle 100% 一致, 9.9/10)** ✅ → 阶段 3 (token 拉齐 + 0.3-A 43 工具卡 + 网页拼装 + 上线) ⏸ |
+| V2 序章阶段 | ~~阶段 2.7~~ ❌ 用户判定V2灾难 → **V3重建 ✅ 2026-04-09** (11块→5节，设计宪法，V1图嵌入) |
+| V3 序章状态 | `v3-prologue/prologue-v3-complete.html` ✅ 首版完成 → 待用户视觉验收 → 集成主站 ⏳ |
 | 主题系统 | 暗/亮/auto 三态切换器 ✅（FOUC 防御 + localStorage 跨 Tab 同步） |
 | Design Tokens | 246 个 `--cc-*` 变量 ✅（atomic + semantic 两层架构） |
 | 源码统计 | 1,902 文件 / 512,695 LOC 全量扫描完成 |
