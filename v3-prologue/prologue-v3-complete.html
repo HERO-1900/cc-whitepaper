@@ -76,9 +76,11 @@
 
     code {
       font-family: var(--cc-font-mono);
-      font-size: var(--sz-xs);
+      font-size: var(--sz-xs);          /* 12px — Stripe code spec */
+      line-height: 1.8;                 /* relaxed for readability */
+      letter-spacing: -0.02em;          /* Claude code spec: -0.32px at 15px */
       background: var(--cc-surface-2);
-      padding: 0.1em 0.35em;
+      padding: 0.1em 0.4em;
       border-radius: 3px;
       color: var(--cc-text-2);
     }
