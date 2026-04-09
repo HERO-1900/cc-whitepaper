@@ -412,8 +412,74 @@
     if (window.GlossarySystem && currentChapter) {
       GlossarySystem.annotate(chapterBody, currentChapter.file);
     }
+    // 章节内 H2/H3 锚点导航（侧边栏第三级）
+    buildChapterSectionNav();
     // Scroll to top
     document.getElementById('chapter-content').scrollTop = 0;
+  }
+
+  // ===== 章节内标题锚点导航 =====
+  let sectionObserver = null;
+
+  function buildChapterSectionNav() {
+    // 清除旧导航
+    const existing = document.getElementById('chapter-section-nav');
+    if (existing) existing.remove();
+    if (sectionObserver) { sectionObserver.disconnect(); sectionObserver = null; }
+
+    const headings = [...chapterBody.querySelectorAll('h2, h3')];
+    if (headings.length < 2) return;
+
+    const nav = document.createElement('div');
+    nav.id = 'chapter-section-nav';
+
+    const title = document.createElement('div');
+    title.className = 'chapter-section-nav-title';
+    title.textContent = '本章目录';
+    nav.appendChild(title);
+
+    const chapterContent = document.getElementById('chapter-content');
+
+    headings.forEach((h, i) => {
+      // 为标题分配锚点 ID
+      if (!h.id) h.id = 'sec-' + i;
+
+      const item = document.createElement('div');
+      item.className = 'chapter-section-item' + (h.tagName === 'H3' ? ' section-h3' : ' section-h2');
+      item.dataset.targetId = h.id;
+      item.textContent = h.textContent.replace(/^#+\s*/, '');
+      item.title = item.textContent;
+
+      item.addEventListener('click', () => {
+        const containerTop = chapterContent.getBoundingClientRect().top;
+        const headingTop = h.getBoundingClientRect().top;
+        const scrollOffset = chapterContent.scrollTop + (headingTop - containerTop) - 24;
+        chapterContent.scrollTo({ top: scrollOffset, behavior: 'smooth' });
+      });
+
+      nav.appendChild(item);
+    });
+
+    toc.appendChild(nav);
+
+    // 滚动监听：高亮当前可见标题
+    const navItems = [...nav.querySelectorAll('.chapter-section-item')];
+    if (typeof IntersectionObserver !== 'undefined') {
+      sectionObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            navItems.forEach(item => {
+              item.classList.toggle('section-active', item.dataset.targetId === entry.target.id);
+            });
+          }
+        });
+      }, {
+        root: chapterContent,
+        rootMargin: '-60px 0px -65% 0px',
+        threshold: 0
+      });
+      headings.forEach(h => sectionObserver.observe(h));
+    }
   }
 
   function escapeHTML(str) {
